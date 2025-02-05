@@ -23,10 +23,6 @@ describe('Provider tests', () => {
     });
 
     it('should create a new provider when provider id does not exists', () => {
-        //const t: LiquidityQueue = new LiquidityQueue(tokenAddress, tokenIdUint8Array, false);
-    });
-
-    it('should create a new provider when provider id does not exists', () => {
         const providerId: u256 = addressToPointerU256(providerAddress1, tokenAddress1);
         const provider: Provider = getProvider(providerId);
 

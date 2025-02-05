@@ -812,6 +812,7 @@ export class LiquidityQueue {
         );
     }
 
+    //!!!! Can be static
     /**
      * tokensToSatoshis(tokenAmount, scaledPrice):
      *   = tokenAmount * QUOTE_SCALE / scaledPrice
@@ -825,6 +826,7 @@ export class LiquidityQueue {
         return SafeMath.div(SafeMath.mul(tokenAmount, LiquidityQueue.QUOTE_SCALE), scaledPrice);
     }
 
+    //!!!! Can be static
     /**
      * satoshisToTokens(satoshis, scaledPrice):
      *   = (satoshis * scaledPrice) / QUOTE_SCALE
@@ -867,15 +869,16 @@ export class LiquidityQueue {
     }
 
     public updateTotalReserve(amount: u256, increase: bool): void {
-        const currentReserve = this._totalReserves.get(this.tokenId) || u256.Zero;
+        const currentReserve = this._totalReserves.get(this.tokenId) || u256.Zero; //!!! Get already return u256.Zero when not found
         const newReserve = increase
             ? SafeMath.add(currentReserve, amount)
             : SafeMath.sub(currentReserve, amount);
         this._totalReserves.set(this.tokenId, newReserve);
     }
 
+    // !!!! Check for overflow???
     public updateTotalReserved(amount: u256, increase: bool): void {
-        const currentReserved = this._totalReserved.get(this.tokenId) || u256.Zero;
+        const currentReserved = this._totalReserved.get(this.tokenId) || u256.Zero; //!!! Get already return u256.Zero when not found
         const newReserved = increase
             ? SafeMath.add(currentReserved, amount)
             : SafeMath.sub(currentReserved, amount);
