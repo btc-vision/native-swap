@@ -59,6 +59,7 @@ export class DynamicFee {
 
         // 2) ratio = tradeSize / REF_TRADE_SIZE
         let ratio = SafeMath.div(tradeSize, REF_TRADE_SIZE);
+        
         if (ratio.isZero()) {
             // if tradeSize < REF_TRADE_SIZE, ratio = 0 => ln(0) => negative
             // we might just let feeBP = baseFee here, or do fallback

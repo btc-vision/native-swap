@@ -41,6 +41,7 @@ class FeeManagerBase {
         return this.SETTINGS.get(2);
     }
 
+    //!!! No default on deploy???
     public set PRICE_PER_USER_IN_PRIORITY_QUEUE_BTC(value: u64) {
         if (value > FeeManagerBase.CAP_PRICE_PER_USER_IN_PRIORITY_QUEUE_BTC) {
             throw new Revert('Price per user in priority queue cannot exceed the cap');

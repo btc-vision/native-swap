@@ -146,6 +146,10 @@ export class LiquidityQueue {
         this.updateVirtualPoolIfNeeded();
     }
 
+    public get volatility(): u256 {
+        return this._dynamicFee.volatility;
+    }
+
     public get p0(): u256 {
         return this._p0.value;
     }
@@ -294,6 +298,7 @@ export class LiquidityQueue {
         const startingIndex = this._providerManager.priorityQueueStartingIndex;
         const realLength = length - startingIndex;
 
+        //!!! When length is 0 => should return 0?
         return (
             realLength * FeeManager.PRICE_PER_USER_IN_PRIORITY_QUEUE_BTC +
             FeeManager.PRIORITY_QUEUE_BASE_FEE
@@ -362,6 +367,12 @@ export class LiquidityQueue {
     }
 
     public save(): void {
+        //!!!! Needs to save this????
+        this._lastVirtualUpdateBlock.save();
+        this._settingPurge.save();
+        this._settings.save();
+        //!!!!
+
         this._providerManager.save();
         this._settingPurge.save();
         this._quoteHistory.save();
@@ -376,22 +387,13 @@ export class LiquidityQueue {
 
     public updateVirtualPoolIfNeeded(): void {
         const currentBlock = Blockchain.block.numberU64;
+
         if (currentBlock <= this.lastVirtualUpdateBlock) {
             return;
         }
 
         let B = this.virtualBTCReserve;
         let T = this.virtualTokenReserve;
-
-        /*Blockchain.log(`##############`);
-        Blockchain.log(`update pool`);
-        Blockchain.log(`Initial B: ${B}`);
-        Blockchain.log(`Initial T: ${T}`);
-        Blockchain.log(`deltaTokensAdd: ${this.deltaTokensAdd}`);
-        Blockchain.log(`deltaBTCBuy: ${this.deltaBTCBuy}`);
-        Blockchain.log(`deltaTokensBuy: ${this.deltaTokensBuy}`);
-        Blockchain.log(`deltaTokensSell: ${this.deltaTokensSell}`);
-        */
 
         // Add tokens from deltaTokensAdd
         const dT_add = this.deltaTokensAdd;
@@ -406,35 +408,31 @@ export class LiquidityQueue {
         if (!dT_buy.isZero()) {
             let Tprime: u256;
             if (u256.ge(dT_buy, T)) {
+                //!!!! That means we bought more tokens than available tokens in the virtual reserve... It is possible????
                 Tprime = u256.One;
             } else {
                 Tprime = SafeMath.sub(T, dT_buy);
             }
 
-            /*Blockchain.log(`T prime: ${Tprime}`);*/
-
             const numerator = SafeMath.mul(B, T);
             let Bprime = SafeMath.div(numerator, Tprime);
             const incB = SafeMath.sub(Bprime, B);
-
-            /*Blockchain.log(`B prime: ${Bprime}`);
-            Blockchain.log(`incB prime: ${incB}`);*/
 
             if (u256.gt(incB, dB_buy)) {
                 Bprime = SafeMath.add(B, dB_buy);
 
                 if (Bprime.isZero()) {
+                    //!!! Impossible to get this state
                     throw new Revert('Bprime is zero');
                 }
 
                 let newTprime = SafeMath.div(numerator, Bprime);
                 if (u256.lt(newTprime, u256.One)) {
+                    //!!!! That means newTprime is 0???
+                    // Impossible to get this
                     newTprime = u256.One;
                 }
                 Tprime = newTprime;
-
-                /*Blockchain.log(`new B prime: ${Bprime}`);
-                Blockchain.log(`new T prime: ${newTprime}`);*/
             }
             B = Bprime;
             T = Tprime;
@@ -445,6 +443,8 @@ export class LiquidityQueue {
         if (!dT_sell.isZero()) {
             const T2 = SafeMath.add(T, dT_sell);
             const numerator = SafeMath.mul(B, T);
+
+            //!!!! Could not happend... impossible because dt_sell will always be > 0
             if (T2.isZero()) {
                 throw new Revert('T2 is zero');
             }
@@ -453,21 +453,15 @@ export class LiquidityQueue {
             T = T2;
         }
 
+        //!!! Should check isZero instead
+        // This means will reset virtualTokenReserve to 1 if it was 0?????
         if (u256.lt(T, u256.One)) {
             T = u256.One;
         }
 
-        /*Blockchain.log(`New B: ${B}`);
-        Blockchain.log(`New T: ${T}`);*/
-
         this.virtualBTCReserve = B;
         this.virtualTokenReserve = T;
-
-        // Reset accumulators
-        this.deltaTokensAdd = u256.Zero;
-        this.deltaBTCBuy = u256.Zero;
-        this.deltaTokensBuy = u256.Zero;
-        this.deltaTokensSell = u256.Zero;
+        this.ResetAccumulators();
 
         // Compute volatility
         this._dynamicFee.volatility = this.computeVolatility(
@@ -476,7 +470,6 @@ export class LiquidityQueue {
         );
 
         this.lastVirtualUpdateBlock = currentBlock;
-        /*Blockchain.log(`##############`);*/
     }
 
     public getUtilizationRatio(): u256 {
@@ -496,7 +489,7 @@ export class LiquidityQueue {
 
         // 2) The quoted price at the time of reservation
         const blockNumber: u64 = reservation.createdAt % <u64>(u32.MAX_VALUE - 1);
-        const quoteAtReservation = this._quoteHistory.get(blockNumber);
+        const quoteAtReservation = this.getBlockQuote(blockNumber);
         if (quoteAtReservation.isZero()) {
             throw new Revert(
                 `Quote at reservation is zero. (createdAt: ${blockNumber}, quoteAtReservation: ${quoteAtReservation})`,
@@ -751,29 +744,6 @@ export class LiquidityQueue {
         this._providerManager.setBTCowedReserved(providerId, amount);
     }
 
-    /*public getMaximumTokensLeftBeforeCap(): u256 {
-        // how many tokens are currently liquid vs. reserved
-        const reservedAmount: u256 = this.reservedLiquidity;
-        const totalLiquidity: u256 = this.liquidity;
-        const a: u256 = u256.fromU64(10_000);
-
-        if (totalLiquidity.isZero()) {
-            return u256.Zero;
-        }
-
-        const reservedRatio: u256 = SafeMath.div(SafeMath.mul(reservedAmount, a), totalLiquidity);
-        let leftoverRatio: u256 = SafeMath.sub(
-            u256.fromU64(this.maxReserves5BlockPercent),
-            reservedRatio,
-        );
-
-        if (leftoverRatio.toI64() < 0) {
-            leftoverRatio = u256.Zero;
-        }
-
-        return SafeMath.div(SafeMath.mul(totalLiquidity, leftoverRatio), a);
-    }*/
-
     public getMaximumTokensLeftBeforeCap(): u256 {
         // how many tokens are currently liquid vs. reserved
         const reservedAmount: u256 = this.reservedLiquidity;
@@ -811,6 +781,29 @@ export class LiquidityQueue {
             LiquidityQueue.QUOTE_SCALE,
         );
     }
+
+    /*public getMaximumTokensLeftBeforeCap(): u256 {
+        // how many tokens are currently liquid vs. reserved
+        const reservedAmount: u256 = this.reservedLiquidity;
+        const totalLiquidity: u256 = this.liquidity;
+        const a: u256 = u256.fromU64(10_000);
+
+        if (totalLiquidity.isZero()) {
+            return u256.Zero;
+        }
+
+        const reservedRatio: u256 = SafeMath.div(SafeMath.mul(reservedAmount, a), totalLiquidity);
+        let leftoverRatio: u256 = SafeMath.sub(
+            u256.fromU64(this.maxReserves5BlockPercent),
+            reservedRatio,
+        );
+
+        if (leftoverRatio.toI64() < 0) {
+            leftoverRatio = u256.Zero;
+        }
+
+        return SafeMath.div(SafeMath.mul(totalLiquidity, leftoverRatio), a);
+    }*/
 
     //!!!! Can be static
     /**
@@ -864,10 +857,16 @@ export class LiquidityQueue {
             throw new Revert('Block number too large, max array size.');
         }
 
+        //!!! Why??? Already check before
         const blockNumberU32: u64 = Blockchain.block.numberU64 % <u64>(u32.MAX_VALUE - 1);
         this._quoteHistory.set(blockNumberU32, this.quote());
     }
 
+    public getBlockQuote(blockNumber: u64): u256 {
+        return this._quoteHistory.get(blockNumber);
+    }
+
+    // !!!! Check for overflow???
     public updateTotalReserve(amount: u256, increase: bool): void {
         const currentReserve = this._totalReserves.get(this.tokenId) || u256.Zero; //!!! Get already return u256.Zero when not found
         const newReserve = increase
@@ -896,17 +895,25 @@ export class LiquidityQueue {
         // TransferHelper.safeTransfer(this.token, MOTOSWAP, feeMoto);
     }
 
+    private ResetAccumulators(): void {
+        this.deltaTokensAdd = u256.Zero;
+        this.deltaBTCBuy = u256.Zero;
+        this.deltaTokensBuy = u256.Zero;
+        this.deltaTokensSell = u256.Zero;
+    }
+
     private computeVolatility(
         currentBlock: u64,
         windowSize: u32 = LiquidityQueue.VOLATILITY_WINDOW_BLOCKS,
     ): u256 {
         // current quote
         const blockNumber: u64 = currentBlock % <u64>(u32.MAX_VALUE - 1);
-        const currentQuote = this._quoteHistory.get(blockNumber);
+        const currentQuote = this.getBlockQuote(blockNumber);
 
+        //!!! What if windowSize >currentBlock???
         // older quote from (currentBlock - windowSize)
         const oldBlock = (currentBlock - windowSize) % <u64>(u32.MAX_VALUE - 1);
-        const oldQuote = this._quoteHistory.get(oldBlock);
+        const oldQuote = this.getBlockQuote(oldBlock);
 
         if (oldQuote.isZero() || currentQuote.isZero()) {
             // fallback if no data
@@ -918,10 +925,6 @@ export class LiquidityQueue {
         if (diff.toI64() < 0) {
             diff = u256.mul(diff, u256.fromI64(-1));
         }
-
-        //Blockchain.log(
-        //    `diff: ${diff.toString()}, oldQuote: ${oldQuote.toString()}, currentQuote: ${currentQuote.toString()}`,
-        //);
 
         // ratio = (|current - old| / old) * 10000 (for basis point)
         return SafeMath.div(SafeMath.mul(diff, u256.fromU64(10000)), oldQuote);
@@ -1001,13 +1004,11 @@ export class LiquidityQueue {
                         );
                     }
 
-                    //Blockchain.log(`Purging provider: ${provider.providerId} - ${providerIndex} - ${queueType} - ${reservedAmount}`);
-
                     if (provider.pendingRemoval && queueType === LIQUIDITY_REMOVAL_TYPE) {
                         const providerId = provider.providerId;
 
                         const blockNumber: u64 = reservation.createdAt % <u64>(u32.MAX_VALUE - 1);
-                        const currentQuoteAtThatTime = this._quoteHistory.get(blockNumber);
+                        const currentQuoteAtThatTime = this.getBlockQuote(blockNumber);
 
                         // figure out how many sat was associated with 'reservedAmount'
                         const costInSats = this.tokensToSatoshis(
