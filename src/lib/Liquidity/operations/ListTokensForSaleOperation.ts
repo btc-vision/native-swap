@@ -133,7 +133,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         const wasNormal =
             !this.provider.isPriority() && this.provider.isActive() && this.usePriorityQueue;
 
-        if (!this.oldLiquidity.isZero()) {
+        if (!this.oldLiquidity.isZero() && this.usePriorityQueue !== this.provider.isPriority()) {
             throw new Revert(`You must cancel your listings before using the priority queue.`);
         }
 
