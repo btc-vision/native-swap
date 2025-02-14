@@ -12,6 +12,7 @@ import {
     createProviders,
     createReservation,
     createReservationId,
+    msgSender1,
     ownerAddress1,
     providerAddress1,
     providerAddress2,
@@ -25,7 +26,12 @@ import {
 } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../lib/FeeManager';
-import { LIQUIDITY_REMOVAL_TYPE, NORMAL_TYPE, Reservation } from '../lib/Reservation';
+import {
+    LIQUIDITY_REMOVAL_TYPE,
+    NORMAL_TYPE,
+    PRIORITY_TYPE,
+    Reservation,
+} from '../lib/Reservation';
 
 describe('Liquidity queue tests', () => {
     beforeEach(() => {
@@ -549,7 +555,14 @@ describe('Liquidity queue tests', () => {
     });
 
     it('should correctly compute the fees when calling computeFees', () => {
-        //!!!! TODO:
+        const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+        queue.updateTotalReserve(u256.fromU32(100000), true);
+        queue.updateTotalReserved(u256.fromU32(10000), true);
+
+        const fees = queue.computeFees(u256.fromU32(20000), u256.fromU32(100000));
+
+        expect(fees).toStrictEqual(u256.fromU32(46));
     });
 
     it('should get FeeManager.PRIORITY_QUEUE_BASE_FEE as priority fees when calling getCostPriorityFee and no provider in priority queue', () => {
@@ -958,6 +971,85 @@ describe('Liquidity queue reservation lists tests', () => {
 
         expect(list3TokenActive.get(0)).toBeFalsy();
         expect(list3TokenActive.get(1)).toBeFalsy();
+    });
+
+    it('should throw if reservation is not valid when calling getReservationWithExpirationChecks', () => {
+        setBlockchainEnvironment(0);
+
+        expect(() => {
+            const reservation = new Reservation(tokenAddress1, msgSender1);
+            expect(reservation.valid()).toBeFalsy();
+
+            const queue: LiquidityQueue = new LiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+
+            queue.getReservationWithExpirationChecks();
+        }).toThrow();
+    });
+
+    it("should throw if createdAt + getActivationDelay > current block => 'Too early' when calling getReservationWithExpirationChecks", () => {
+        setBlockchainEnvironment(0);
+
+        expect(() => {
+            const reservation = new Reservation(tokenAddress1, msgSender1);
+            reservation.reserveAtIndex(0, u128.fromU64(1000), PRIORITY_TYPE);
+            reservation.setActivationDelay(2);
+            reservation.setExpirationBlock(LiquidityQueue.RESERVATION_EXPIRE_AFTER);
+            expect(reservation.valid()).toBeTruthy();
+            reservation.save();
+
+            setBlockchainEnvironment(1);
+            const queue: LiquidityQueue = new LiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+
+            queue.getReservationWithExpirationChecks();
+        }).toThrow();
+    });
+
+    it("should throw if getActivationDelay = 0 and createdAt = current block => 'Too early' when calling getReservationWithExpirationChecks", () => {
+        setBlockchainEnvironment(0);
+
+        expect(() => {
+            const reservation = new Reservation(tokenAddress1, msgSender1);
+            reservation.reserveAtIndex(0, u128.fromU64(1000), PRIORITY_TYPE);
+            reservation.setActivationDelay(0);
+            reservation.setExpirationBlock(LiquidityQueue.RESERVATION_EXPIRE_AFTER);
+            expect(reservation.valid()).toBeTruthy();
+            reservation.save();
+
+            setBlockchainEnvironment(0);
+            const queue: LiquidityQueue = new LiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+
+            queue.getReservationWithExpirationChecks();
+        }).toThrow();
+    });
+
+    it('should return reservation if createdAt + getActivationDelay <= current block when calling getReservationWithExpirationChecks', () => {
+        setBlockchainEnvironment(0);
+
+        const reservation = new Reservation(tokenAddress1, msgSender1);
+        reservation.reserveAtIndex(0, u128.fromU64(1000), PRIORITY_TYPE);
+        reservation.setActivationDelay(2);
+        reservation.setExpirationBlock(LiquidityQueue.RESERVATION_EXPIRE_AFTER);
+        expect(reservation.valid()).toBeTruthy();
+        reservation.save();
+
+        setBlockchainEnvironment(2);
+        const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+        const result = queue.getReservationWithExpirationChecks();
+
+        expect(result.reservationId).toStrictEqual(reservation.reservationId);
     });
 });
 

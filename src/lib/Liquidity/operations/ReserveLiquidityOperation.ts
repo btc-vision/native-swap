@@ -13,6 +13,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     private readonly minimumAmountOut: u256;
     private readonly providerId: u256;
     private readonly forLP: bool;
+    private readonly activationDelay: u8;
 
     constructor(
         liquidityQueue: LiquidityQueue,
@@ -21,6 +22,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         maximumAmountIn: u256,
         minimumAmountOut: u256,
         forLP: bool,
+        activationDelay: u8,
     ) {
         super(liquidityQueue);
 
@@ -29,6 +31,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.maximumAmountIn = maximumAmountIn;
         this.minimumAmountOut = minimumAmountOut;
         this.forLP = forLP;
+        this.activationDelay = activationDelay;
     }
 
     public execute(): void {
@@ -246,6 +249,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         this.liquidityQueue.updateTotalReserved(tokensReserved, true);
 
+        reservation.setActivationDelay(this.activationDelay);
         reservation.reservedLP = this.forLP;
         reservation.setExpirationBlock(
             Blockchain.block.numberU64 + LiquidityQueue.RESERVATION_EXPIRE_AFTER,

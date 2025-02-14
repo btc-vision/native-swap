@@ -300,8 +300,9 @@ export class NativeSwap extends OP_NET {
         const maximumAmountIn: u256 = calldata.readU256();
         const minimumAmountOut: u256 = calldata.readU256();
         const forLP: bool = calldata.readBoolean();
+        const activationDelay: u8 = calldata.readU8();
 
-        return this._reserve(token, maximumAmountIn, minimumAmountOut, forLP);
+        return this._reserve(token, maximumAmountIn, minimumAmountOut, forLP, activationDelay);
     }
 
     private _reserve(
@@ -309,8 +310,10 @@ export class NativeSwap extends OP_NET {
         maximumAmountIn: u256,
         minimumAmountOut: u256,
         forLP: bool,
+        activationDelay: u8,
     ): BytesWriter {
         this.ensureValidTokenAddress(token);
+        this.ensureValidActivationDelay(activationDelay);
         this.ensureMaximumAmountInNotZero(maximumAmountIn);
         this.ensureMaximumAmountInNotBelowTradeSize(maximumAmountIn);
 
@@ -328,6 +331,7 @@ export class NativeSwap extends OP_NET {
             maximumAmountIn,
             minimumAmountOut,
             forLP,
+            activationDelay,
         );
 
         operation.execute();
@@ -496,6 +500,12 @@ export class NativeSwap extends OP_NET {
     ): void {
         if (antiBotEnabledFor !== 0 && antiBotMaximumTokensPerReservation.isZero()) {
             throw new Revert('NATIVE_SWAP: Anti-bot max tokens per reservation cannot be zero');
+        }
+    }
+
+    private ensureValidActivationDelay(activationDelay: u8): void {
+        if (activationDelay > 3) {
+            throw new Revert('NATIVE_SWAP: Activation delay cannot be greater than 3');
         }
     }
 

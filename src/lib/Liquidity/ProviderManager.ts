@@ -367,7 +367,6 @@ export class ProviderManager {
             } else {
                 // If not pending removal, remove from queue
                 this.removePendingLiquidityProviderFromRemovalQueue(provider, i);
-                //TODO:!!!! in removeliquidity we must check if user have listed tokens. If so revert the removeliquidity
             }
 
             if (this.currentIndexRemoval == u64.MAX_VALUE) {

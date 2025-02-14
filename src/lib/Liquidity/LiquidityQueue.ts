@@ -656,15 +656,20 @@ export class LiquidityQueue {
     public getReservationWithExpirationChecks(): Reservation {
         const reservation = new Reservation(this.token, Blockchain.tx.sender);
         if (!reservation.valid()) {
-            throw new Revert('No active reservation for this address.');
+            throw new Revert('No valid reservation for this address.');
         }
 
-        // TODO: !!!! Add block threshold. to prevent mev attack, user must set number of block to wait
-        if (
-            reservation.expirationBlock() - LiquidityQueue.RESERVATION_EXPIRE_AFTER ===
-            Blockchain.block.numberU64
-        ) {
-            throw new Revert('Too early');
+        if (reservation.getActivationDelay() === 0) {
+            if (reservation.createdAt === Blockchain.block.numberU64) {
+                throw new Revert('Too early');
+            }
+        } else {
+            if (
+                reservation.createdAt + reservation.getActivationDelay() >
+                Blockchain.block.numberU64
+            ) {
+                throw new Revert('Too early');
+            }
         }
 
         return reservation;
@@ -1011,7 +1016,6 @@ export class LiquidityQueue {
             case PRIORITY_TYPE: {
                 return this._providerManager.getFromPriorityQueue(providerIndex);
             }
-            // !!! TEST MAYBE BROKEN
             case LIQUIDITY_REMOVAL_TYPE: {
                 return this._providerManager.getFromRemovalQueue(providerIndex);
             }

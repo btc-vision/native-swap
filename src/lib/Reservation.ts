@@ -88,6 +88,14 @@ export class Reservation {
         return this.userReservation.getPurgeIndex();
     }
 
+    public setActivationDelay(delay: u8): void {
+        this.userReservation.setActivationDelay(delay);
+    }
+
+    public getActivationDelay(): u8 {
+        return this.userReservation.getActivationDelay();
+    }
+
     public timeout(): void {
         this.userReservation.timeout();
     }

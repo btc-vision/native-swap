@@ -33,6 +33,15 @@ describe('UserReservation tests', () => {
         expect(userReservation.getPurgeIndex()).toStrictEqual(10);
     });
 
+    it('should correctly get/set activation delay', () => {
+        const reservation = generateReservationId(tokenAddress1, providerAddress1);
+
+        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation);
+        userReservation.setActivationDelay(1);
+
+        expect(userReservation.getActivationDelay()).toStrictEqual(1);
+    });
+
     it('should correctly get/set expiration block when greater than current block number', () => {
         setBlockchainEnvironment(1);
 
@@ -88,11 +97,13 @@ describe('UserReservation tests', () => {
         const reservation = generateReservationId(tokenAddress1, providerAddress1);
         const expirationBlock: u64 = 10;
         const purgeIndex: u32 = 11;
+        const activationDelay: u8 = 1;
 
         const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation.toU256());
         userReservation.reservedForLiquidityPool = true;
         userReservation.setExpirationBlock(expirationBlock);
         userReservation.setPurgeIndex(purgeIndex);
+        userReservation.setActivationDelay(activationDelay);
 
         userReservation.reset(false);
 
@@ -100,6 +111,7 @@ describe('UserReservation tests', () => {
         expect(userReservation.getExpirationBlock()).toStrictEqual(0);
         expect(userReservation.reservedForLiquidityPool).toBeFalsy();
         expect(userReservation.getPurgeIndex()).toStrictEqual(u32.MAX_VALUE);
+        expect(userReservation.getActivationDelay()).toStrictEqual(0);
     });
 
     it('should restore value to default when calling reset with timeout', () => {
@@ -107,11 +119,13 @@ describe('UserReservation tests', () => {
         const reservation = generateReservationId(tokenAddress1, providerAddress1);
         const expirationBlock: u64 = 10;
         const purgeIndex: u32 = 11;
+        const activationDelay: u8 = 1;
 
         const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation.toU256());
         userReservation.reservedForLiquidityPool = true;
         userReservation.setExpirationBlock(expirationBlock);
         userReservation.setPurgeIndex(purgeIndex);
+        userReservation.setActivationDelay(activationDelay);
 
         userReservation.reset(true);
 
@@ -119,17 +133,20 @@ describe('UserReservation tests', () => {
         expect(userReservation.getExpirationBlock()).toStrictEqual(expirationBlock);
         expect(userReservation.reservedForLiquidityPool).toBeFalsy();
         expect(userReservation.getPurgeIndex()).toStrictEqual(u32.MAX_VALUE);
+        expect(userReservation.getActivationDelay()).toStrictEqual(0);
     });
 
     it('should correctly persists the values when saved', () => {
         const reservation = generateReservationId(tokenAddress1, providerAddress1);
         const expirationBlock: u64 = 10;
         const purgeIndex: u32 = 11;
+        const activationDelay: u8 = 2;
 
         const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation.toU256());
         userReservation.reservedForLiquidityPool = true;
         userReservation.setExpirationBlock(expirationBlock);
         userReservation.setPurgeIndex(purgeIndex);
+        userReservation.setActivationDelay(activationDelay);
 
         userReservation.save();
 
@@ -137,6 +154,7 @@ describe('UserReservation tests', () => {
         expect(userReservation2.getPurgeIndex()).toStrictEqual(purgeIndex);
         expect(userReservation2.getExpirationBlock()).toStrictEqual(expirationBlock);
         expect(userReservation2.reservedForLiquidityPool).toBeTruthy();
+        expect(userReservation.getActivationDelay()).toStrictEqual(activationDelay);
     });
 
     it('should correctly convert flags to byte[] when all true', () => {

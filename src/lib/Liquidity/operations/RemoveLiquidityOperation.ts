@@ -23,6 +23,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
         // 1. Check that this provider is actually an LP
         this.ensureLiquidityProvider();
         this.ensureNotInitialProvider();
+        this.ensureProviderHasNoListedTokens();
 
         // 2. Figure out how much BTC they are "owed" (the virtual side),
         //    and how many tokens they currently have "locked in" the pool.
@@ -84,6 +85,12 @@ export class RemoveLiquidityOperation extends BaseOperation {
     private ensureTokenAmountNotZero(tokenAmount: u256): void {
         if (tokenAmount.isZero()) {
             throw new Revert('You have no tokens to remove.');
+        }
+    }
+
+    private ensureProviderHasNoListedTokens(): void {
+        if (!this.provider.liquidity.isZero()) {
+            throw new Revert('You cannot remove your liquidity because you have active listing.');
         }
     }
 
