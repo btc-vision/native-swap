@@ -192,22 +192,17 @@ export class ProviderManager {
     }
 
     public resetProvider(provider: Provider, burnRemainingFunds: boolean = true): void {
-        //!!! Allow to burn initialprovider fund???
         if (burnRemainingFunds && !provider.liquidity.isZero()) {
             TransferHelper.safeTransfer(this.token, Address.dead(), provider.liquidity.toU256());
         }
 
         if (!u256.eq(provider.providerId, this._initialLiquidityProvider.value)) {
             if (provider.isPriority()) {
-                this._priorityQueue.delete(provider.indexedAt); //!!! Should check if in queue???
+                this._priorityQueue.delete(provider.indexedAt);
             } else {
-                this._queue.delete(provider.indexedAt); //!!! Should check if in queue??? Should check if not removal???
+                this._queue.delete(provider.indexedAt);
             }
         }
-
-        //Blockchain.log(
-        //    `Provider ${provider.providerId} removed from queue, remaining liquidity: ${provider.liquidity.toString()}`,
-        //);
 
         provider.reset();
     }
@@ -344,7 +339,12 @@ export class ProviderManager {
             if (provider.pendingRemoval && provider.isLp) {
                 const owedBTC = this.getBTCowed(providerId);
                 const reservedBTC = this.getBTCowedReserved(providerId);
-                const left = SafeMath.sub(owedBTC, reservedBTC); //!!! Overflow here
+
+                if (u256.gt(reservedBTC, owedBTC)) {
+                    throw new Revert(`Impossible state: reservedBTC cannot be > owedBTC`);
+                }
+
+                const left = SafeMath.sub(owedBTC, reservedBTC);
                 if (!left.isZero() && u256.gt(left, this.strictMinimumProviderReservationAmount)) {
                     // This is the next valid removal provider. We do NOT
                     // check provider.liquidity here, because they've already
@@ -357,7 +357,6 @@ export class ProviderManager {
                     return provider;
                 } else {
                     if (u256.lt(owedBTC, this.strictMinimumProviderReservationAmount)) {
-                        //Blockchain.log(`Provider ${providerId} has owed BTC less than minimum`);
                         // If they don't have owed BTC, they can be removed from queue
                         //this.removePendingLiquidityProviderFromRemovalQueue(provider, i);
                         throw new Revert(
@@ -500,23 +499,19 @@ export class ProviderManager {
     private getNextInitialProvider(): Provider | null {
         if (!this._initialLiquidityProvider.value.isZero()) {
             const initProvider = getProvider(this._initialLiquidityProvider.value);
-            //Blockchain.log(`Is active: ${initProvider.isActive()}`);
 
             if (initProvider.isActive()) {
-                //!!!! Overflow here
+                if (initProvider.reserved > initProvider.liquidity) {
+                    throw new Revert(`Impossible state: reserved cannot be > liquidity.`);
+                }
+
                 const availableLiquidity: u128 = SafeMath.sub128(
                     initProvider.liquidity,
                     initProvider.reserved,
                 );
 
-                //Blockchain.log(`Available liquidity: ${availableLiquidity.toString()}`);
-                //Blockchain.log(
-                //    `Reserved liquidity: ${initProvider.reserved.toString()}, liquidity: ${initProvider.liquidity.toString()}`,
-                //);
-
-                // !!!! It is ok when availableLiquidity = 0
                 if (!availableLiquidity.isZero()) {
-                    initProvider.indexedAt = u32.MAX_VALUE; //!!!! Ca sert a quoi? devrait etre u64????
+                    initProvider.indexedAt = u32.MAX_VALUE;
                     return initProvider;
                 }
             }

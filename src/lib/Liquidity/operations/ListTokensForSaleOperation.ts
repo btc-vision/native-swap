@@ -11,6 +11,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { getTotalFeeCollected } from '../../../utils/OrderBookUtils';
 import { LiquidityListedEvent } from '../../../events/LiquidityListedEvent';
+import { FeeManager } from '../../FeeManager';
 
 export class ListTokensForSaleOperation extends BaseOperation {
     private readonly providerId: u256;
@@ -104,7 +105,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
     private ensureEnoughPriorityFees(): void {
         const feesCollected: u64 = getTotalFeeCollected();
-        const costPriorityQueue: u64 = this.liquidityQueue.getCostPriorityFee();
+        const costPriorityQueue: u64 = FeeManager.PRIORITY_QUEUE_BASE_FEE;
 
         if (feesCollected < costPriorityQueue) {
             throw new Revert('Not enough fees for priority queue.');

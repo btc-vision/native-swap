@@ -855,32 +855,33 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
         expect(provider1).toBeNull();
     });
 
-    it('should return null when liquidity < reserved', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            tokenId1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
+    it('should revert when liquidity < reserved', () => {
+        expect(() => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                tokenId1,
+                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            );
 
-        const provider = createProvider(
-            providerAddress1,
-            tokenAddress1,
-            false,
-            true,
-            true,
-            '232332d2d3',
-            u256.fromU32(10000),
-            u128.fromU32(1000),
-            u128.fromU32(1600),
-            true,
-            false,
-        );
+            const provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                true,
+                true,
+                '232332d2d3',
+                u256.fromU32(10000),
+                u128.fromU32(1000),
+                u128.fromU32(1600),
+                true,
+                false,
+            );
 
-        manager.initialLiquidityProvider = provider.providerId;
+            manager.initialLiquidityProvider = provider.providerId;
 
-        const provider1 = manager.getNextProviderWithLiquidity();
-        expect(provider1).toBeNull();
+            manager.getNextProviderWithLiquidity();
+        }).toThrow();
     });
 
     it('should return the initial liquidity provider when liquidity > reserved', () => {
@@ -916,7 +917,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
         }
     });
 
-    it('should return the initial liquidity provider when liquidity = reserved', () => {
+    it('should return null when liquidity = reserved', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
@@ -941,11 +942,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
         manager.initialLiquidityProvider = provider.providerId;
 
         const provider1 = manager.getNextProviderWithLiquidity();
-        expect(provider1).not.toBeNull();
-        expect(provider1).toBe(provider);
-
-        if (provider1 !== null) {
-            expect(provider1.indexedAt).toStrictEqual(u32.MAX_VALUE);
-        }
+        expect(provider1).toBeNull();
     });
 });

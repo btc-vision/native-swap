@@ -5,7 +5,6 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 class FeeManagerBase {
     private static CAP_RESERVATION_BASE_FEE: u64 = 100_000;
     private static CAP_PRIORITY_QUEUE_BASE_FEE: u64 = 500_000;
-    private static CAP_PRICE_PER_USER_IN_PRIORITY_QUEUE_BTC: u64 = 10_000;
 
     private readonly SETTINGS: StoredU64 = new StoredU64(
         FEE_SETTINGS_POINTER,
@@ -35,19 +34,6 @@ class FeeManagerBase {
         }
 
         this.SETTINGS.set(1, value);
-    }
-
-    public get PRICE_PER_USER_IN_PRIORITY_QUEUE_BTC(): u64 {
-        return this.SETTINGS.get(2);
-    }
-
-    //!!! No default on deploy???
-    public set PRICE_PER_USER_IN_PRIORITY_QUEUE_BTC(value: u64) {
-        if (value > FeeManagerBase.CAP_PRICE_PER_USER_IN_PRIORITY_QUEUE_BTC) {
-            throw new Revert('Price per user in priority queue cannot exceed the cap');
-        }
-
-        this.SETTINGS.set(2, value);
     }
 
     public save(): void {

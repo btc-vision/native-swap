@@ -8,6 +8,7 @@ import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../lib/Provider';
 import { Reservation } from '../lib/Reservation';
+import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 
 export const providerAddress1: Address = new Address([
     68, 153, 66, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
@@ -68,6 +69,29 @@ export const tokenAddress2: Address = new Address([
     222, 40, 197, 58, 44, 174, 172, 146, 11, 2, 236, 98, 173, 123, 172, 221, 45, 8, 99, 251, 190,
     151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 245,
 ]);
+export const tokenIdUint8Array2: Uint8Array = ripemd160(tokenAddress2);
+export const tokenId2: u256 = u256.fromBytes(tokenAddress2, true);
+
+export const ownerAddress1: Address = new Address([
+    221, 41, 197, 58, 44, 174, 172, 146, 11, 2, 236, 98, 173, 123, 172, 221, 45, 8, 99, 251, 190,
+    151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 240,
+]);
+
+export const ownerAddress2: Address = new Address([
+    214, 32, 197, 58, 44, 174, 172, 146, 11, 2, 236, 98, 173, 123, 172, 221, 45, 8, 99, 251, 190,
+    151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 24,
+]);
+
+export const ownerAddress3: Address = new Address([
+    116, 12, 197, 58, 44, 174, 172, 146, 11, 2, 236, 98, 173, 123, 172, 221, 45, 8, 99, 251, 190,
+    151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 34,
+]);
+
+export const receiverAddress1: string = 'wjo29i3d02jd208j3';
+
+export const receiverAddress2: string = 'cmewj390ujllq23u9';
+
+export const receiverAddress3: string = 'peijkwhjbnafewr27';
 
 export function addressToPointerU256(address: Address, token: Address): u256 {
     const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
@@ -211,6 +235,25 @@ export function generateReservationId(token: Address, owner: Address): u256 {
     const hash2 = hash.slice(0, 16);
 
     return u128.fromBytes(hash2, true).toU256();
+}
+
+export function createReservation(
+    token: Address,
+    owner: Address,
+    useExpirationBlock: boolean = false,
+    expirationBlock: u64 = 0,
+): Reservation {
+    const reservation: Reservation = new Reservation(token, owner);
+
+    if (useExpirationBlock) {
+        reservation.setExpirationBlock(expirationBlock);
+    } else {
+        reservation.setExpirationBlock(
+            Blockchain.block.numberU64 + LiquidityQueue.RESERVATION_EXPIRE_AFTER,
+        );
+    }
+
+    return reservation;
 }
 
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(600);
