@@ -103,7 +103,7 @@ export class NativeSwap extends OP_NET {
             case encodeSelector('getProviderDetails(address)'):
                 return this.getProviderDetails(calldata);
             case encodeSelector('getPriorityQueueCost(address)'):
-                return this.getPriorityQueueCost(calldata);
+                return this.getPriorityQueueCost();
             case encodeSelector('getFees'):
                 return this.getFees(calldata);
             case encodeSelector('getAntibotSettings(address)'):
@@ -131,7 +131,6 @@ export class NativeSwap extends OP_NET {
 
         writer.writeU64(FeeManager.RESERVATION_BASE_FEE);
         writer.writeU64(FeeManager.PRIORITY_QUEUE_BASE_FEE);
-        writer.writeU64(FeeManager.PRICE_PER_USER_IN_PRIORITY_QUEUE_BTC);
 
         return writer;
     }
@@ -141,7 +140,6 @@ export class NativeSwap extends OP_NET {
 
         FeeManager.RESERVATION_BASE_FEE = calldata.readU64();
         FeeManager.PRIORITY_QUEUE_BASE_FEE = calldata.readU64();
-        FeeManager.PRICE_PER_USER_IN_PRIORITY_QUEUE_BTC = calldata.readU64();
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
@@ -178,10 +176,8 @@ export class NativeSwap extends OP_NET {
         return writer;
     }
 
-    private getPriorityQueueCost(calldata: Calldata): BytesWriter {
-        const token = calldata.readAddress();
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
-        const cost = queue.getCostPriorityFee();
+    private getPriorityQueueCost(): BytesWriter {
+        const cost = FeeManager.PRIORITY_QUEUE_BASE_FEE;
 
         const writer = new BytesWriter(U64_BYTE_LENGTH);
         writer.writeU64(cost);

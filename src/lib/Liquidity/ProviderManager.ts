@@ -22,6 +22,7 @@ import { getProvider, Provider } from '../Provider';
 import { StoredMapU256 } from '../../stored/StoredMapU256';
 
 export class ProviderManager {
+    private currentIndex: u64 = 0;
     private readonly _queue: StoredU256Array;
     private readonly _priorityQueue: StoredU256Array;
     private readonly _removalQueue: StoredU256Array;
@@ -29,8 +30,6 @@ export class ProviderManager {
     private readonly _initialLiquidityProvider: StoredU256;
     private readonly _lpBTCowed: StoredMapU256;
     private readonly _lpBTCowedReserved: StoredMapU256;
-
-    private currentIndex: u64 = 0;
     private currentIndexPriority: u64 = 0;
     private currentIndexRemoval: u64 = 0;
 
@@ -66,6 +65,22 @@ export class ProviderManager {
 
     public set previousReservationStandardStartingIndex(value: u64) {
         this._startingIndex.set(0, value);
+    }
+
+    public get removalQueueLength(): u64 {
+        return this._removalQueue.getLength();
+    }
+
+    public get removalQueueStartingIndex(): u64 {
+        return this._removalQueue.startingIndex();
+    }
+
+    public get standardQueueLength(): u64 {
+        return this._queue.getLength();
+    }
+
+    public get standardQueueStartingIndex(): u64 {
+        return this._queue.startingIndex();
     }
 
     public get previousReservationStartingIndex(): u64 {
@@ -160,86 +175,13 @@ export class ProviderManager {
         }
 
         // 3. Then normal queue
-        let provider: Potential<Provider> = null;
-        let providerId: u256;
-
-        const length: u64 = this._queue.getLength();
-        const index: u64 = this._queue.startingIndex();
-
-        if (index > length) {
-            throw new Revert('Starting index exceeds queue length');
+        const provider = this.getNextStandardQueueProvider();
+        if (provider !== null) {
+            return provider;
         }
 
-        if (this.currentIndex === 0) {
-            this.currentIndex = index;
-        }
-
-        while (this.currentIndex < length) {
-            const i: u64 = this.currentIndex;
-            providerId = this._queue.get(i);
-
-            if (providerId === u256.Zero) {
-                this.currentIndex++;
-                continue;
-            }
-            provider = getProvider(providerId);
-
-            if (!provider.isActive()) {
-                this.currentIndex++;
-                continue;
-            }
-
-            if (provider.isPriority()) {
-                this.currentIndex++;
-                continue;
-            }
-
-            if (u128.lt(provider.liquidity, provider.reserved)) {
-                throw new Revert(
-                    `Impossible state: liquidity < reserved for provider ${providerId}.`,
-                );
-            }
-
-            const availableLiquidity: u128 = SafeMath.sub128(provider.liquidity, provider.reserved);
-            if (!availableLiquidity.isZero()) {
-                provider.indexedAt = i;
-                this.currentIndex++;
-                provider.fromRemovalQueue = false;
-                return provider;
-            }
-
-            if (this.currentIndex == u64.MAX_VALUE) {
-                throw new Revert('Index increment overflow');
-            }
-            this.currentIndex++;
-        }
-
-        // fallback to initial liquidity provider
-        if (!this._initialLiquidityProvider.value.isZero()) {
-            const initProvider = getProvider(this._initialLiquidityProvider.value);
-            //Blockchain.log(`Is active: ${initProvider.isActive()}`);
-
-            if (initProvider.isActive()) {
-                const availableLiquidity: u128 = SafeMath.sub128(
-                    initProvider.liquidity,
-                    initProvider.reserved,
-                );
-
-                //Blockchain.log(`Available liquidity: ${availableLiquidity.toString()}`);
-                //Blockchain.log(
-                //    `Reserved liquidity: ${initProvider.reserved.toString()}, liquidity: ${initProvider.liquidity.toString()}`,
-                //);
-
-                if (!availableLiquidity.isZero()) {
-                    initProvider.indexedAt = u32.MAX_VALUE;
-                    return initProvider;
-                }
-            }
-        }
-
-        //Blockchain.log('No provider with liquidity found');
-
-        return null;
+        // 4. Fallback to initial liquidity provider
+        return this.getNextInitialProvider();
     }
 
     public removePendingLiquidityProviderFromRemovalQueue(provider: Provider, i: u64): void {
@@ -261,10 +203,6 @@ export class ProviderManager {
                 this._queue.delete(provider.indexedAt);
             }
         }
-
-        //Blockchain.log(
-        //    `Provider ${provider.providerId} removed from queue, remaining liquidity: ${provider.liquidity.toString()}`,
-        //);
 
         provider.reset();
     }
@@ -344,6 +282,7 @@ export class ProviderManager {
             }
             priorityIndex++;
         }
+
         this.previousReservationStartingIndex = priorityIndex;
     }
 
@@ -373,6 +312,10 @@ export class ProviderManager {
         const length: u64 = this._removalQueue.getLength();
         const index: u64 = this._removalQueue.startingIndex();
 
+        if (index > length) {
+            return null;
+        }
+
         // Initialize our pointer if it’s zero
         if (this.currentIndexRemoval === 0) {
             this.currentIndexRemoval = index;
@@ -396,6 +339,11 @@ export class ProviderManager {
             if (provider.pendingRemoval && provider.isLp) {
                 const owedBTC = this.getBTCowed(providerId);
                 const reservedBTC = this.getBTCowedReserved(providerId);
+
+                if (u256.gt(reservedBTC, owedBTC)) {
+                    throw new Revert(`Impossible state: reservedBTC cannot be > owedBTC`);
+                }
+
                 const left = SafeMath.sub(owedBTC, reservedBTC);
                 if (!left.isZero() && u256.gt(left, this.strictMinimumProviderReservationAmount)) {
                     // This is the next valid removal provider. We do NOT
@@ -409,7 +357,6 @@ export class ProviderManager {
                     return provider;
                 } else {
                     if (u256.lt(owedBTC, this.strictMinimumProviderReservationAmount)) {
-                        //Blockchain.log(`Provider ${providerId} has owed BTC less than minimum`);
                         // If they don't have owed BTC, they can be removed from queue
                         //this.removePendingLiquidityProviderFromRemovalQueue(provider, i);
                         throw new Revert(
@@ -419,10 +366,14 @@ export class ProviderManager {
                 }
             } else {
                 // If not pending removal, remove from queue
-                //this.removePendingLiquidityProviderFromRemovalQueue(provider, i);
-                // !!! TODO: Cannot have this throw in production or it will break the pool
-                throw new Revert(`To be tested.`);
+                this.removePendingLiquidityProviderFromRemovalQueue(provider, i);
+                //TODO:!!!! in removeliquidity we must check if user have listed tokens. If so revert the removeliquidity
             }
+
+            if (this.currentIndexRemoval == u64.MAX_VALUE) {
+                throw new Revert('Index increment overflow');
+            }
+
             this.currentIndexRemoval++;
         }
 
@@ -481,6 +432,89 @@ export class ProviderManager {
             }
 
             this.currentIndexPriority++;
+        }
+
+        return null;
+    }
+
+    private getNextStandardQueueProvider(): Provider | null {
+        let provider: Potential<Provider> = null;
+        let providerId: u256;
+
+        const length: u64 = this._queue.getLength();
+        const index: u64 = this._queue.startingIndex();
+
+        if (index > length) {
+            throw new Revert('Starting index exceeds queue length');
+        }
+
+        if (this.currentIndex === 0) {
+            this.currentIndex = index;
+        }
+
+        while (this.currentIndex < length) {
+            const i: u64 = this.currentIndex;
+            providerId = this._queue.get(i);
+
+            if (providerId === u256.Zero) {
+                this.currentIndex++;
+                continue;
+            }
+            provider = getProvider(providerId);
+
+            if (!provider.isActive()) {
+                this.currentIndex++;
+                continue;
+            }
+
+            if (provider.isPriority()) {
+                throw new Revert(
+                    'Impossible state: provider cannot be priority in standard queue.',
+                );
+            }
+
+            if (u128.lt(provider.liquidity, provider.reserved)) {
+                throw new Revert(
+                    `Impossible state: liquidity < reserved for provider ${providerId}.`,
+                );
+            }
+
+            const availableLiquidity: u128 = SafeMath.sub128(provider.liquidity, provider.reserved);
+            if (!availableLiquidity.isZero()) {
+                provider.indexedAt = i;
+                this.currentIndex++;
+                provider.fromRemovalQueue = false;
+                return provider;
+            }
+
+            if (this.currentIndex == u64.MAX_VALUE) {
+                throw new Revert('Index increment overflow');
+            }
+            this.currentIndex++;
+        }
+
+        return null;
+    }
+
+    private getNextInitialProvider(): Provider | null {
+        if (!this._initialLiquidityProvider.value.isZero()) {
+            const initProvider = getProvider(this._initialLiquidityProvider.value);
+
+            if (initProvider.isActive()) {
+                if (initProvider.reserved > initProvider.liquidity) {
+                    throw new Revert(`Impossible state: reserved cannot be > liquidity.`);
+                }
+
+                const availableLiquidity: u128 = SafeMath.sub128(
+                    initProvider.liquidity,
+                    initProvider.reserved,
+                );
+
+                if (!availableLiquidity.isZero()) {
+                    initProvider.indexedAt = u32.MAX_VALUE;
+                    return initProvider;
+                }
+            }
         }
 
         return null;

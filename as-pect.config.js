@@ -18,7 +18,23 @@ export default {
         return instantiate(binary, createImports({ env: { memory } }));
     },
     /** Enable code coverage. */
-    // coverage: ["assembly/**/*.ts"],
+    coverage: [
+        'src/contracts/**/*.ts',
+        'src/contracts/*.ts',
+        'src/data-types/**/*.ts',
+        'src/data-types/*.ts',
+        'src/utils/**/*.ts',
+        'src/utils/*.ts',
+        'src/events/**/*.ts',
+        'src/events/*.ts',
+        'src/lib/**/*.ts',
+        'src/lib/*.ts',
+        'src/math/**/*.ts',
+        'src/math/*.ts',
+        'src/stored/**/*.ts',
+        'src/stored/*.ts',
+        'src/index.ts',
+    ],
     /**
      * Specify if the binary wasm file should be written to the file system.
      */

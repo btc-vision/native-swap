@@ -251,23 +251,12 @@ export class ReserveLiquidityOperation extends BaseOperation {
             Blockchain.block.numberU64 + LiquidityQueue.RESERVATION_EXPIRE_AFTER,
         );
 
-        const reservationList = this.liquidityQueue.getReservationListForBlock(
+        const index: u32 = this.liquidityQueue.addActiveReservationToList(
             Blockchain.block.numberU64,
+            reservation.reservationId,
         );
 
-        const reservationActiveList = this.liquidityQueue.getActiveReservationListForBlock(
-            Blockchain.block.numberU64,
-        );
-
-        reservationList.push(reservation.reservationId);
-
-        const index: u32 = <u32>(reservationList.getLength() - 1);
         reservation.setPurgeIndex(index);
-        reservationList.save();
-
-        reservationActiveList.set(index, true);
-        reservationActiveList.save();
-
         reservation.save();
 
         this.liquidityQueue.setBlockQuote();

@@ -52,6 +52,23 @@ export class UserReservation {
         }
     }
 
+    public static getPackDefaultValue(): u256 {
+        const bytes = new Uint8Array(32);
+        for (let i: i32 = 0; i < 17; i++) {
+            bytes[i] = 0x00;
+        }
+
+        for (let i: i32 = 17; i < 21; i++) {
+            bytes[i] = 0xff;
+        }
+
+        for (let i: i32 = 21; i < 32; i++) {
+            bytes[i] = 0x00;
+        }
+
+        return u256.fromBytes(bytes, true);
+    }
+
     /**
      * @method getExpirationBlock
      * @description Retrieves the expiration block.
@@ -103,7 +120,12 @@ export class UserReservation {
     @inline
     public getUserTimeoutBlockExpiration(): u64 {
         this.ensureValues();
-        return this.expirationBlock + LiquidityQueue.TIMEOUT_AFTER_EXPIRATION;
+
+        if (this.isTimeout) {
+            return this.expirationBlock + LiquidityQueue.TIMEOUT_AFTER_EXPIRATION;
+        } else {
+            return 0;
+        }
     }
 
     /**
@@ -162,17 +184,6 @@ export class UserReservation {
     }
 
     /**
-     * @method toString
-     * @description Returns a string representation of the UserReservation.
-     * @returns {string} - A string detailing all fields.
-     */
-    @inline
-    public toString(): string {
-        this.ensureValues();
-        return `ExpirationBlock: ${this.expirationBlock}`;
-    }
-
-    /**
      * @method toBytes
      * @description Returns the packed u256 value as a byte array.
      * @returns {u8[]} - The packed u256 value in byte form.
@@ -206,7 +217,11 @@ export class UserReservation {
      */
     private ensureValues(): void {
         if (!this.isLoaded) {
-            const storedU256: u256 = Blockchain.getStorageAt(this.u256Pointer, u256.Zero);
+            const storedU256: u256 = Blockchain.getStorageAt(
+                this.u256Pointer,
+                UserReservation.getPackDefaultValue(),
+            );
+
             const reader = new BytesReader(storedU256.toUint8Array(true));
 
             // Unpack flags (1 byte)
