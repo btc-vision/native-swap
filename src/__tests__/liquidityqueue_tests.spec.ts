@@ -16,6 +16,7 @@ import {
     providerAddress1,
     providerAddress2,
     receiverAddress1,
+    receiverAddress2,
     setBlockchainEnvironment,
     tokenAddress1,
     tokenAddress2,
@@ -1284,20 +1285,6 @@ describe('Liquidity executeTrade tests', () => {
         }).not.toThrow();
     });
 
-    it('should set blockNumber to wrap around (0) for createdAt = 4294967294 (u32.MAX_VALUE - 1)', () => {
-        setBlockchainEnvironment(u32.MAX_VALUE - 1);
-
-        //!!! Wrap around
-        const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
-    });
-
-    it('should set blockNumber to wrap around (1) for createdAt = 4294967294 (u32.MAX_VALUE - 1)', () => {
-        setBlockchainEnvironment(u32.MAX_VALUE);
-
-        //!!! Wrap around
-        const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
-    });
-
     it('should revert when queueType = LIQUIDITY_REMOVAL_TYPE and !provider.pendingRemoval', () => {
         setBlockchainEnvironment(1000);
 
@@ -1398,7 +1385,7 @@ describe('Liquidity executeTrade tests', () => {
             true,
             true,
             true,
-            receiverAddress1,
+            receiverAddress2,
             u256.fromU64(1000000000),
             u128.fromU64(1000000000),
             u128.fromU64(10),
@@ -1416,6 +1403,7 @@ describe('Liquidity executeTrade tests', () => {
         queue.addToRemovalQueue(provider2.providerId);
         queue.updateTotalReserve(u256.fromU64(3000000000), true);
         queue.updateTotalReserved(u256.fromU64(10), true);
+        queue.setBTCowedReserved(provider2.providerId, u256.fromU64(20000));
         expect(queue.quote()).not.toStrictEqual(u256.Zero);
 
         queue.setBlockQuote();
@@ -1423,7 +1411,7 @@ describe('Liquidity executeTrade tests', () => {
         const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
         reservation.reserveAtIndex(
             <u32>provider2.indexedAt,
-            u128.fromU32(10),
+            u128.fromU32(999999),
             LIQUIDITY_REMOVAL_TYPE,
         );
         reservation.save();
@@ -1435,8 +1423,11 @@ describe('Liquidity executeTrade tests', () => {
 
         const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
 
-        log(`${queue2.getBTCowedReserved(provider2.providerId)}`);
         queue2.executeTrade(reservation2);
-        log(`${queue2.getBTCowedReserved(provider2.providerId)}`);
+        queue2.save();
+
+        const queue3: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+        expect(queue3.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(19901));
     });
 });

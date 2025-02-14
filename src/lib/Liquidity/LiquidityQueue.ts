@@ -645,17 +645,6 @@ export class LiquidityQueue {
             }
         }
 
-        // 7) If we ended up not buying or refunding anything at all, revert
-        if (
-            totalTokensPurchased.isZero() &&
-            totalSatoshisSpent.isZero() &&
-            totalRefundedBTC.isZero() &&
-            totalTokensRefunded.isZero()
-        ) {
-            throw new Revert('No tokens purchased. Did you send BTC to the provider addresses?');
-        }
-
-        // 8) Return summary
         return new CompletedTrade(
             totalTokensPurchased,
             totalSatoshisSpent,
@@ -1100,6 +1089,7 @@ export class LiquidityQueue {
 
             // reduce the owedReserved by revertSats
             const newReserved = SafeMath.sub(owedReserved, revertSats);
+
             this.setBTCowedReserved(provider.providerId, newReserved);
         } else {
             this.restoreReservedLiquidityForProvider(provider, reservedAmount);

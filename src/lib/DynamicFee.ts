@@ -5,9 +5,9 @@ import { VOLATILITY_POINTER } from './StoredPointers';
 const REF_TRADE_SIZE: u256 = u256.fromU64(200_000);
 
 export class DynamicFee {
-    public baseFeeBP: u64; // 30 => 0.30%
-    public minFeeBP: u64; // 10 => 0.10%
-    public maxFeeBP: u64; // 200 => 2.00%
+    public baseFeeBP: u64; // 20 => 0.20%
+    public minFeeBP: u64; // 15 => 0.15%
+    public maxFeeBP: u64; // 150 => 1.50%
 
     public alpha: u64; // used for ln(tradeSize/reference)
     public beta: u64; // used for volatility
@@ -19,7 +19,7 @@ export class DynamicFee {
     constructor(tokenId: u256) {
         // defaults - you can adjust or read from storage
         this.baseFeeBP = 20; // 0.20%
-        this.minFeeBP = 15; // 0.10%
+        this.minFeeBP = 15; // 0.15%
         this.maxFeeBP = 150; // 1.50%
 
         this.alpha = 20; // bigger => stronger log effect
@@ -59,7 +59,7 @@ export class DynamicFee {
 
         // 2) ratio = tradeSize / REF_TRADE_SIZE
         let ratio = SafeMath.div(tradeSize, REF_TRADE_SIZE);
-        
+
         if (ratio.isZero()) {
             // if tradeSize < REF_TRADE_SIZE, ratio = 0 => ln(0) => negative
             // we might just let feeBP = baseFee here, or do fallback
