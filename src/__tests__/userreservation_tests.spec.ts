@@ -54,18 +54,6 @@ describe('UserReservation tests', () => {
         expect(userReservation.getExpirationBlock()).toStrictEqual(expirationBlock);
     });
 
-    it('should get 0 as expiration block when smaller/equal to current block number', () => {
-        setBlockchainEnvironment(10);
-
-        const reservation = generateReservationId(tokenAddress1, providerAddress1);
-        const expirationBlock: u64 = 5;
-
-        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation);
-        userReservation.setExpirationBlock(expirationBlock);
-
-        expect(userReservation.getExpirationBlock()).toStrictEqual(0);
-    });
-
     it('should get expiration block + 5 as UserTimeoutBlockExpiration when expiration block greater than current block number', () => {
         setBlockchainEnvironment(5);
 

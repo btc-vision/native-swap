@@ -50,7 +50,12 @@ export class Reservation {
     public get createdAt(): u64 {
         const block: u64 = this.expirationBlock();
 
-        return block - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+        // No opnet transaction under block 100
+        if (block <= LiquidityQueue.RESERVATION_EXPIRE_AFTER) {
+            return 0;
+        } else {
+            return block - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+        }
     }
 
     public get userTimeoutBlockExpiration(): u64 {

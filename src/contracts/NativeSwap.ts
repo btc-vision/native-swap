@@ -223,17 +223,9 @@ export class NativeSwap extends OP_NET {
         const antiBotEnabledFor: u16 = calldata.readU16();
         const antiBotMaximumTokensPerReservation: u256 = calldata.readU256();
         const maxReservesIn5BlocksPercent: u16 = calldata.readU16();
-
-        this.ensureValidReceiverAddress(receiver);
-        this.ensureFloorPriceNotZero(floorPrice);
-        this.ensureInitialLiquidityNotZero(initialLiquidity);
-        this.ensureAntibotSettingsValid(antiBotEnabledFor, antiBotMaximumTokensPerReservation);
-
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
-
-        this.ensureBaseQuoteNotAlreadySet(queue.p0);
-
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
+
         const operation = new CreatePoolOperation(
             queue,
             floorPrice,

@@ -115,6 +115,18 @@ export class ProviderManager {
         return this._priorityQueue.startingIndex();
     }
 
+    public getCurrentIndex(): u64 {
+        return this.currentIndex;
+    }
+
+    public getCurrentIndexPriority(): u64 {
+        return this.currentIndexPriority;
+    }
+
+    public getCurrentIndexRemoval(): u64 {
+        return this.currentIndexRemoval;
+    }
+
     public addToPriorityQueue(providerId: u256): void {
         this._priorityQueue.push(providerId);
     }

@@ -257,3 +257,49 @@ export function createReservation(
 }
 
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(600);
+
+export class TestLiquidityQueue extends LiquidityQueue {
+    public setPreviousReservationStartingIndex(value: u64): void {
+        this._providerManager.previousReservationStartingIndex = value;
+    }
+
+    public setPreviousReservationStandardStartingIndex(value: u64): void {
+        this._providerManager.previousReservationStandardStartingIndex = value;
+    }
+
+    public setPreviousRemovalStartingIndex(value: u64): void {
+        this._providerManager.previousRemovalStartingIndex = value;
+    }
+
+    public getPreviousReservationStartingIndex(): u64 {
+        return this._providerManager.previousReservationStartingIndex;
+    }
+
+    public getPreviousReservationStandardStartingIndex(): u64 {
+        return this._providerManager.previousReservationStandardStartingIndex;
+    }
+
+    public getPreviousRemovalStartingIndex(): u64 {
+        return this._providerManager.previousRemovalStartingIndex;
+    }
+
+    public getCurrentIndex(): u64 {
+        return this._providerManager.getCurrentIndex();
+    }
+
+    public getCurrentIndexPriority(): u64 {
+        return this._providerManager.getCurrentIndexPriority();
+    }
+
+    public getCurrentIndexRemoval(): u64 {
+        return this._providerManager.getCurrentIndexRemoval();
+    }
+
+    public callPurgeReservationsAndRestoreProviders(): void {
+        this.purgeReservationsAndRestoreProviders();
+    }
+
+    public getFromStandardQueue(index: u64): u256 {
+        return this._providerManager.getFromStandardQueue(index);
+    }
+}

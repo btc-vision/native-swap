@@ -79,10 +79,6 @@ export class UserReservation {
     public getExpirationBlock(): u64 {
         this.ensureValues();
 
-        if (this.expirationBlock < Blockchain.block.numberU64) {
-            return 0;
-        }
-
         return this.expirationBlock;
     }
 

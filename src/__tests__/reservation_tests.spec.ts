@@ -14,6 +14,7 @@ import {
     setBlockchainEnvironment,
     tokenAddress1,
 } from './test_helper';
+import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 
 describe('Reservation tests', () => {
     beforeEach(() => {
@@ -52,24 +53,6 @@ describe('Reservation tests', () => {
         expect(reservation.expirationBlock()).toStrictEqual(10);
     });
 
-    it('should get 0 as expiration block when smaller/equal to current block number', () => {
-        setBlockchainEnvironment(10);
-
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        reservation.setExpirationBlock(10);
-
-        expect(reservation.expirationBlock()).toStrictEqual(10);
-
-        setBlockchainEnvironment(10);
-
-        const reservation2: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        reservation2.setExpirationBlock(9);
-
-        expect(reservation2.expirationBlock()).toStrictEqual(0);
-    });
-
     it('should correctly return the createdAt block', () => {
         setBlockchainEnvironment(1);
         const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
@@ -77,6 +60,15 @@ describe('Reservation tests', () => {
         reservation.setExpirationBlock(10);
 
         expect(reservation.createdAt).toStrictEqual(5);
+    });
+
+    it('should return 0 for createdAt when expiration block <= LiquidityQueue.RESERVATION_EXPIRE_AFTER', () => {
+        setBlockchainEnvironment(1);
+        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+        reservation.setExpirationBlock(LiquidityQueue.RESERVATION_EXPIRE_AFTER);
+
+        expect(reservation.createdAt).toStrictEqual(0);
     });
 
     it('should correctly set the purge index', () => {

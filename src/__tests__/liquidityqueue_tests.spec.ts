@@ -16,9 +16,11 @@ import {
     ownerAddress1,
     providerAddress1,
     providerAddress2,
+    providerAddress3,
     receiverAddress1,
     receiverAddress2,
     setBlockchainEnvironment,
+    TestLiquidityQueue,
     tokenAddress1,
     tokenAddress2,
     tokenIdUint8Array1,
@@ -1521,5 +1523,867 @@ describe('Liquidity executeTrade tests', () => {
         const queue3: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
         expect(queue3.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(19901));
+    });
+});
+
+describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
+    beforeEach(() => {
+        clearCachedProviders();
+        Blockchain.clearStorage();
+        Blockchain.clearMockedResults();
+    });
+
+    it('should do nothing if currentBlockNumber <= expireAfter => calls restoreCurrentIndex', () => {
+        setBlockchainEnvironment(3);
+
+        const queue: TestLiquidityQueue = new TestLiquidityQueue(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            false,
+        );
+
+        expect(queue.getCurrentIndexPriority()).toStrictEqual(0);
+        expect(queue.getCurrentIndex()).toStrictEqual(0);
+        expect(queue.getCurrentIndexRemoval()).toStrictEqual(0);
+
+        queue.setPreviousReservationStartingIndex(100);
+        queue.setPreviousReservationStandardStartingIndex(101);
+        queue.setPreviousRemovalStartingIndex(102);
+        queue.callPurgeReservationsAndRestoreProviders();
+
+        expect(queue.getCurrentIndexPriority()).toStrictEqual(100);
+        expect(queue.getCurrentIndex()).toStrictEqual(101);
+        expect(queue.getCurrentIndexRemoval()).toStrictEqual(102);
+    });
+
+    it('should do nothing if lastPurgedBlock >= maxBlockToPurge => calls restoreCurrentIndex', () => {
+        setBlockchainEnvironment(20);
+
+        const queue: TestLiquidityQueue = new TestLiquidityQueue(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            false,
+        );
+
+        expect(queue.getCurrentIndexPriority()).toStrictEqual(0);
+        expect(queue.getCurrentIndex()).toStrictEqual(0);
+        expect(queue.getCurrentIndexRemoval()).toStrictEqual(0);
+
+        queue.setPreviousReservationStartingIndex(100);
+        queue.setPreviousReservationStandardStartingIndex(101);
+        queue.setPreviousRemovalStartingIndex(102);
+        queue.lastPurgedBlock = 15;
+        queue.callPurgeReservationsAndRestoreProviders();
+
+        expect(queue.getCurrentIndexPriority()).toStrictEqual(100);
+        expect(queue.getCurrentIndex()).toStrictEqual(101);
+        expect(queue.getCurrentIndexRemoval()).toStrictEqual(102);
+    });
+
+    it("should do nothing if the block range has no 'active' reservations => after the for loop => updatedOne=false => restoreIndex", () => {
+        setBlockchainEnvironment(6);
+
+        const queue: TestLiquidityQueue = new TestLiquidityQueue(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            false,
+        );
+
+        expect(queue.getCurrentIndexPriority()).toStrictEqual(0);
+        expect(queue.getCurrentIndex()).toStrictEqual(0);
+        expect(queue.getCurrentIndexRemoval()).toStrictEqual(0);
+
+        queue.setPreviousReservationStartingIndex(100);
+        queue.setPreviousReservationStandardStartingIndex(101);
+        queue.setPreviousRemovalStartingIndex(102);
+        queue.lastPurgedBlock = 5;
+        expect(queue.getReservationListForBlock(6).getLength()).toStrictEqual(0);
+
+        queue.callPurgeReservationsAndRestoreProviders();
+
+        expect(queue.getCurrentIndexPriority()).toStrictEqual(100);
+        expect(queue.getCurrentIndex()).toStrictEqual(101);
+        expect(queue.getCurrentIndexRemoval()).toStrictEqual(102);
+    });
+
+    it("should do nothing if the block range has a reservation but not 'active' => after the for loop => updatedOne=false => restoreIndex", () => {
+        setBlockchainEnvironment(100);
+
+        const queue: TestLiquidityQueue = new TestLiquidityQueue(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            false,
+        );
+
+        expect(queue.getCurrentIndexPriority()).toStrictEqual(0);
+        expect(queue.getCurrentIndex()).toStrictEqual(0);
+        expect(queue.getCurrentIndexRemoval()).toStrictEqual(0);
+
+        queue.setPreviousReservationStartingIndex(100);
+        queue.setPreviousReservationStandardStartingIndex(101);
+        queue.setPreviousRemovalStartingIndex(102);
+        queue.lastPurgedBlock = 0;
+        queue.addActiveReservationToList(0, u128.fromU32(1));
+        const reservationActiveList = queue.getActiveReservationListForBlock(0);
+        expect(reservationActiveList.get(0)).toBeTruthy();
+        reservationActiveList.set(0, false);
+        reservationActiveList.save();
+        expect(reservationActiveList.get(0)).toBeFalsy();
+
+        queue.callPurgeReservationsAndRestoreProviders();
+
+        expect(queue.getCurrentIndexPriority()).toStrictEqual(100);
+        expect(queue.getCurrentIndex()).toStrictEqual(101);
+        expect(queue.getCurrentIndexRemoval()).toStrictEqual(102);
+    });
+
+    it('should handle scenario with active reservations => we remove them => updatedOne= true => calls resetStartingIndex + updateTotalReserved', () => {
+        setBlockchainEnvironment(100);
+
+        const provider1: Provider = createProvider(
+            providerAddress1,
+            tokenAddress1,
+            false,
+            true,
+            true,
+            'lwekfopewjfwe',
+            u256.fromU32(10000000),
+            u128.fromU32(10000000),
+            u128.fromU32(1000000),
+            true,
+            false,
+        );
+
+        const provider2: Provider = createProvider(
+            providerAddress2,
+            tokenAddress1,
+            false,
+            true,
+            true,
+            'ddekwpepew',
+            u256.fromU32(10000000),
+            u128.fromU32(10000000),
+            u128.fromU32(1000000),
+            true,
+            false,
+        );
+
+        const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+
+        const queue: TestLiquidityQueue = new TestLiquidityQueue(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            false,
+        );
+
+        queue.initializeInitialLiquidity(
+            u256.fromU32(10000),
+            provider1.providerId,
+            u256.fromU64(10000000),
+            5,
+        );
+
+        queue.setPreviousReservationStartingIndex(100);
+        queue.setPreviousReservationStandardStartingIndex(101);
+        queue.setPreviousRemovalStartingIndex(102);
+        queue.updateTotalReserve(u256.fromU64(10000000), true);
+        queue.updateTotalReserved(u256.fromU64(2000000), true);
+        queue.setBlockQuote();
+        queue.addToStandardQueue(provider2.providerId);
+        queue.lastPurgedBlock = 0;
+        const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
+
+        reservation.setExpirationBlock(90);
+        reservation.setPurgeIndex(purgeIndex);
+        reservation.reserveAtIndex(<u32>provider2.indexedAt, u128.fromU32(1000000), NORMAL_TYPE);
+
+        reservation.save();
+
+        queue.callPurgeReservationsAndRestoreProviders();
+
+        const reservationList = queue.getReservationListForBlock(100);
+        const activereservationList = queue.getActiveReservationListForBlock(100);
+
+        expect(activereservationList.get(purgeIndex)).toBeFalsy();
+        expect(reservationList.getLength()).toStrictEqual(0);
+        expect(queue.getPreviousRemovalStartingIndex()).toStrictEqual(0);
+        expect(queue.getPreviousReservationStandardStartingIndex()).toStrictEqual(0);
+        expect(queue.getPreviousReservationStartingIndex()).toStrictEqual(0);
+        expect(queue.reservedLiquidity).toStrictEqual(u256.fromU32(1000000));
+        expect(queue.lastPurgedBlock).toStrictEqual(100);
+    });
+
+    it('should revert if reservation purge index mismatch', () => {
+        setBlockchainEnvironment(50);
+
+        expect(() => {
+            const provider1: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                true,
+                true,
+                'lwekfopewjfwe',
+                u256.fromU32(10000000),
+                u128.fromU32(10000000),
+                u128.fromU32(1000000),
+                true,
+                false,
+            );
+
+            const provider2: Provider = createProvider(
+                providerAddress2,
+                tokenAddress1,
+                false,
+                true,
+                true,
+                'ddekwpepew',
+                u256.fromU32(10000000),
+                u128.fromU32(10000000),
+                u128.fromU32(1000000),
+                true,
+                false,
+            );
+
+            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+
+            const queue: TestLiquidityQueue = new TestLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+
+            queue.initializeInitialLiquidity(
+                u256.fromU32(10000),
+                provider1.providerId,
+                u256.fromU64(10000000),
+                5,
+            );
+
+            queue.setPreviousReservationStartingIndex(100);
+            queue.setPreviousReservationStandardStartingIndex(101);
+            queue.setPreviousRemovalStartingIndex(102);
+            queue.updateTotalReserve(u256.fromU64(10000000), true);
+            queue.updateTotalReserved(u256.fromU64(2000000), true);
+            queue.setBlockQuote();
+            queue.addToStandardQueue(provider2.providerId);
+            queue.lastPurgedBlock = 0;
+            queue.addActiveReservationToList(0, reservation.reservationId);
+
+            reservation.setExpirationBlock(90);
+            reservation.setPurgeIndex(10000);
+            reservation.reserveAtIndex(
+                <u32>provider2.indexedAt,
+                u128.fromU32(1000000),
+                NORMAL_TYPE,
+            );
+
+            reservation.save();
+
+            queue.callPurgeReservationsAndRestoreProviders();
+        }).toThrow();
+    });
+
+    it('should revert if reservation is not expired', () => {
+        setBlockchainEnvironment(50);
+
+        expect(() => {
+            const provider1: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                true,
+                true,
+                'lwekfopewjfwe',
+                u256.fromU32(10000000),
+                u128.fromU32(10000000),
+                u128.fromU32(1000000),
+                true,
+                false,
+            );
+
+            const provider2: Provider = createProvider(
+                providerAddress2,
+                tokenAddress1,
+                false,
+                true,
+                true,
+                'ddekwpepew',
+                u256.fromU32(10000000),
+                u128.fromU32(10000000),
+                u128.fromU32(1000000),
+                true,
+                false,
+            );
+
+            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+
+            const queue: TestLiquidityQueue = new TestLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+
+            queue.initializeInitialLiquidity(
+                u256.fromU32(10000),
+                provider1.providerId,
+                u256.fromU64(10000000),
+                5,
+            );
+
+            queue.setPreviousReservationStartingIndex(100);
+            queue.setPreviousReservationStandardStartingIndex(101);
+            queue.setPreviousRemovalStartingIndex(102);
+            queue.updateTotalReserve(u256.fromU64(10000000), true);
+            queue.updateTotalReserved(u256.fromU64(2000000), true);
+            queue.setBlockQuote();
+            queue.addToStandardQueue(provider2.providerId);
+            queue.lastPurgedBlock = 0;
+            const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
+
+            reservation.setExpirationBlock(9999);
+            reservation.setPurgeIndex(purgeIndex);
+            reservation.reserveAtIndex(
+                <u32>provider2.indexedAt,
+                u128.fromU32(1000000),
+                NORMAL_TYPE,
+            );
+
+            reservation.save();
+
+            queue.callPurgeReservationsAndRestoreProviders();
+        }).toThrow();
+    });
+
+    it("should revert if reserved amount bigger than provider reserve => 'Impossible: reserved amount bigger...'", () => {
+        setBlockchainEnvironment(100);
+
+        expect(() => {
+            const provider1: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                true,
+                true,
+                'lwekfopewjfwe',
+                u256.fromU32(10000000),
+                u128.fromU32(10000000),
+                u128.fromU32(1000000),
+                true,
+                false,
+            );
+
+            const provider2: Provider = createProvider(
+                providerAddress2,
+                tokenAddress1,
+                false,
+                true,
+                true,
+                'ddekwpepew',
+                u256.fromU32(10000000),
+                u128.fromU32(10000000),
+                u128.fromU32(1000000),
+                true,
+                false,
+            );
+
+            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+
+            const queue: TestLiquidityQueue = new TestLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+
+            queue.initializeInitialLiquidity(
+                u256.fromU32(10000),
+                provider1.providerId,
+                u256.fromU64(10000000),
+                5,
+            );
+
+            queue.setPreviousReservationStartingIndex(100);
+            queue.setPreviousReservationStandardStartingIndex(101);
+            queue.setPreviousRemovalStartingIndex(102);
+            queue.updateTotalReserve(u256.fromU64(10000000), true);
+            queue.updateTotalReserved(u256.fromU64(2000000), true);
+            queue.setBlockQuote();
+            queue.addToStandardQueue(provider2.providerId);
+            queue.lastPurgedBlock = 0;
+            const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
+
+            reservation.setExpirationBlock(90);
+            reservation.setPurgeIndex(purgeIndex);
+            reservation.reserveAtIndex(
+                <u32>provider2.indexedAt,
+                u128.fromU32(100000000),
+                NORMAL_TYPE,
+            );
+
+            reservation.save();
+
+            queue.callPurgeReservationsAndRestoreProviders();
+        }).toThrow();
+    });
+
+    it('should revert when pendingRemoval provider => no quote at block', () => {
+        setBlockchainEnvironment(100);
+
+        expect(() => {
+            const provider1: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                true,
+                true,
+                'lwekfopewjfwe',
+                u256.fromU32(10000000),
+                u128.fromU32(10000000),
+                u128.fromU32(1000000),
+                true,
+                false,
+            );
+
+            const provider2: Provider = createProvider(
+                providerAddress2,
+                tokenAddress1,
+                true,
+                true,
+                true,
+                'ddekwpepew',
+                u256.fromU32(10000000),
+                u128.fromU32(10000000),
+                u128.fromU32(1000000),
+                true,
+                false,
+            );
+
+            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+
+            const queue: TestLiquidityQueue = new TestLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+
+            queue.initializeInitialLiquidity(
+                u256.fromU32(10000),
+                provider1.providerId,
+                u256.fromU64(10000000),
+                5,
+            );
+
+            queue.setPreviousReservationStartingIndex(100);
+            queue.setPreviousReservationStandardStartingIndex(101);
+            queue.setPreviousRemovalStartingIndex(102);
+            queue.updateTotalReserve(u256.fromU64(10000000), true);
+            queue.updateTotalReserved(u256.fromU64(2000000), true);
+            queue.setBlockQuote();
+            queue.addToRemovalQueue(provider2.providerId);
+            queue.lastPurgedBlock = 0;
+            const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
+
+            reservation.setExpirationBlock(90);
+            reservation.setPurgeIndex(purgeIndex);
+            reservation.reserveAtIndex(
+                <u32>provider2.indexedAt,
+                u128.fromU32(1000000),
+                LIQUIDITY_REMOVAL_TYPE,
+            );
+
+            reservation.save();
+
+            queue.callPurgeReservationsAndRestoreProviders();
+        }).toThrow();
+    });
+
+    it('should handle pendingRemoval provider => removal queue => calls purgeAndRestoreProviderRemovalQueue => costInSats < wasReservedSats => clamp by owedReserved', () => {
+        setBlockchainEnvironment(90);
+
+        const provider1: Provider = createProvider(
+            providerAddress1,
+            tokenAddress1,
+            false,
+            true,
+            true,
+            'lwekfopewjfwe',
+            u256.fromU32(10000000),
+            u128.fromU32(10000000),
+            u128.fromU32(1000000),
+            true,
+            false,
+        );
+
+        const provider2: Provider = createProvider(
+            providerAddress2,
+            tokenAddress1,
+            true,
+            true,
+            true,
+            'ddekwpepew',
+            u256.fromU64(10000000),
+            u128.fromU64(10000000),
+            u128.fromU64(1000000),
+            true,
+            false,
+        );
+
+        const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+
+        const queue: TestLiquidityQueue = new TestLiquidityQueue(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            false,
+        );
+
+        queue.initializeInitialLiquidity(
+            u256.fromU32(100000),
+            provider1.providerId,
+            u256.fromU64(20000000),
+            5,
+        );
+
+        queue.setPreviousReservationStartingIndex(100);
+        queue.setPreviousReservationStandardStartingIndex(101);
+        queue.setPreviousRemovalStartingIndex(102);
+        queue.updateTotalReserve(u256.fromU64(20000000), true);
+        queue.updateTotalReserved(u256.fromU64(1000000), true);
+        queue.setBlockQuote();
+        queue.addToRemovalQueue(provider2.providerId);
+        queue.setBTCowedReserved(provider2.providerId, u256.from(100));
+        queue.lastPurgedBlock = 0;
+        const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
+
+        reservation.setExpirationBlock(95);
+        reservation.setPurgeIndex(purgeIndex);
+        reservation.reserveAtIndex(
+            <u32>provider2.indexedAt,
+            u128.fromU64(1000000),
+            LIQUIDITY_REMOVAL_TYPE,
+        );
+
+        reservation.save();
+
+        setBlockchainEnvironment(96);
+        queue.callPurgeReservationsAndRestoreProviders();
+
+        expect(queue.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(90));
+    });
+
+    it('should handle pendingRemoval provider => removal queue => calls purgeAndRestoreProviderRemovalQueue => costInSats < wasReservedSats => clamp by owedReserved', () => {
+        setBlockchainEnvironment(90);
+
+        const provider1: Provider = createProvider(
+            providerAddress1,
+            tokenAddress1,
+            false,
+            true,
+            true,
+            'lwekfopewjfwe',
+            u256.fromU32(10000000),
+            u128.fromU32(10000000),
+            u128.fromU32(1000000),
+            true,
+            false,
+        );
+
+        const provider2: Provider = createProvider(
+            providerAddress2,
+            tokenAddress1,
+            true,
+            true,
+            true,
+            'ddekwpepew',
+            u256.fromU64(10000000),
+            u128.fromU64(10000000),
+            u128.fromU64(1000000),
+            true,
+            false,
+        );
+
+        const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+
+        const queue: TestLiquidityQueue = new TestLiquidityQueue(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            false,
+        );
+
+        queue.initializeInitialLiquidity(
+            u256.fromU32(100000),
+            provider1.providerId,
+            u256.fromU64(20000000),
+            5,
+        );
+
+        queue.setPreviousReservationStartingIndex(100);
+        queue.setPreviousReservationStandardStartingIndex(101);
+        queue.setPreviousRemovalStartingIndex(102);
+        queue.updateTotalReserve(u256.fromU64(20000000), true);
+        queue.updateTotalReserved(u256.fromU64(1000000), true);
+        queue.setBlockQuote();
+        queue.addToRemovalQueue(provider2.providerId);
+        queue.setBTCowedReserved(provider2.providerId, u256.from(100));
+        queue.lastPurgedBlock = 0;
+        const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
+
+        reservation.setExpirationBlock(95);
+        reservation.setPurgeIndex(purgeIndex);
+        reservation.reserveAtIndex(
+            <u32>provider2.indexedAt,
+            u128.fromU64(1000000),
+            LIQUIDITY_REMOVAL_TYPE,
+        );
+
+        reservation.save();
+
+        setBlockchainEnvironment(96);
+        queue.callPurgeReservationsAndRestoreProviders();
+
+        expect(queue.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(90));
+    });
+
+    it('should handle pendingRemoval provider => removal queue => calls purgeAndRestoreProviderRemovalQueue => costInSats > wasReservedSats => clamp by owedReserved', () => {
+        setBlockchainEnvironment(90);
+
+        const provider1: Provider = createProvider(
+            providerAddress1,
+            tokenAddress1,
+            false,
+            true,
+            true,
+            'lwekfopewjfwe',
+            u256.fromU32(10000000),
+            u128.fromU32(10000000),
+            u128.fromU32(1000000),
+            true,
+            false,
+        );
+
+        const provider2: Provider = createProvider(
+            providerAddress2,
+            tokenAddress1,
+            true,
+            true,
+            true,
+            'ddekwpepew',
+            u256.fromU64(10000000),
+            u128.fromU64(10000000),
+            u128.fromU64(1000000),
+            true,
+            false,
+        );
+
+        const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+
+        const queue: TestLiquidityQueue = new TestLiquidityQueue(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            false,
+        );
+
+        queue.initializeInitialLiquidity(
+            u256.fromU32(100000),
+            provider1.providerId,
+            u256.fromU64(20000000),
+            5,
+        );
+
+        queue.setPreviousReservationStartingIndex(100);
+        queue.setPreviousReservationStandardStartingIndex(101);
+        queue.setPreviousRemovalStartingIndex(102);
+        queue.updateTotalReserve(u256.fromU64(20000000), true);
+        queue.updateTotalReserved(u256.fromU64(1000000), true);
+        queue.setBlockQuote();
+        queue.addToRemovalQueue(provider2.providerId);
+        queue.setBTCowedReserved(provider2.providerId, u256.from(9));
+        queue.lastPurgedBlock = 0;
+        const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
+
+        reservation.setExpirationBlock(95);
+        reservation.setPurgeIndex(purgeIndex);
+        reservation.reserveAtIndex(
+            <u32>provider2.indexedAt,
+            u128.fromU64(1000000),
+            LIQUIDITY_REMOVAL_TYPE,
+        );
+
+        reservation.save();
+
+        setBlockchainEnvironment(96);
+        queue.callPurgeReservationsAndRestoreProviders();
+
+        expect(queue.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(0));
+        expect(queue.reservedLiquidity).toStrictEqual(u256.Zero);
+        expect(queue.getPreviousReservationStartingIndex()).toStrictEqual(0);
+        expect(queue.getPreviousRemovalStartingIndex()).toStrictEqual(0);
+        expect(queue.getPreviousReservationStandardStartingIndex()).toStrictEqual(0);
+    });
+
+    it('should handle multiple providers for a reservation', () => {
+        setBlockchainEnvironment(90);
+
+        const provider1: Provider = createProvider(
+            providerAddress1,
+            tokenAddress1,
+            false,
+            true,
+            true,
+            'lwekfopewjfwe',
+            u256.fromU32(10000000),
+            u128.fromU32(10000000),
+            u128.fromU32(0),
+            true,
+            false,
+        );
+
+        const provider2: Provider = createProvider(
+            providerAddress2,
+            tokenAddress1,
+            true,
+            true,
+            true,
+            'ddekwpepew',
+            u256.fromU64(10000000),
+            u128.fromU64(10000000),
+            u128.fromU64(10000000),
+            true,
+            false,
+        );
+
+        const provider3: Provider = createProvider(
+            providerAddress3,
+            tokenAddress1,
+            true,
+            true,
+            true,
+            'ddekwpepew',
+            u256.fromU64(5000000),
+            u128.fromU64(5000000),
+            u128.fromU64(2000000),
+            true,
+            false,
+        );
+
+        const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+        const queue: TestLiquidityQueue = new TestLiquidityQueue(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            false,
+        );
+
+        queue.initializeInitialLiquidity(
+            u256.fromU32(1),
+            provider1.providerId,
+            u256.fromU64(10000000),
+            5,
+        );
+
+        queue.setPreviousReservationStartingIndex(100);
+        queue.setPreviousReservationStandardStartingIndex(101);
+        queue.setPreviousRemovalStartingIndex(102);
+        queue.updateTotalReserve(u256.fromU64(25000000), true);
+        queue.updateTotalReserved(u256.fromU64(12000000), true);
+        queue.setBlockQuote();
+        queue.addToRemovalQueue(provider2.providerId);
+        queue.addToStandardQueue(provider3.providerId);
+        queue.setBTCowedReserved(provider2.providerId, u256.from(10000000));
+        queue.setBTCowedReserved(provider3.providerId, u256.from(2000000));
+        queue.lastPurgedBlock = 0;
+        const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
+
+        reservation.setExpirationBlock(95);
+        reservation.setPurgeIndex(purgeIndex);
+        reservation.reserveAtIndex(
+            <u32>provider2.indexedAt,
+            u128.fromU64(10000000),
+            LIQUIDITY_REMOVAL_TYPE,
+        );
+        reservation.reserveAtIndex(<u32>provider3.indexedAt, u128.fromU64(2000000), NORMAL_TYPE);
+
+        reservation.save();
+
+        setBlockchainEnvironment(96);
+        queue.callPurgeReservationsAndRestoreProviders();
+
+        expect(queue.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.Zero);
+        expect(queue.reservedLiquidity).toStrictEqual(u256.Zero);
+        expect(queue.getPreviousReservationStartingIndex()).toStrictEqual(0);
+        expect(queue.getPreviousRemovalStartingIndex()).toStrictEqual(0);
+        expect(queue.getPreviousReservationStandardStartingIndex()).toStrictEqual(0);
+    });
+
+    it('should handle normal provider for a reservation', () => {
+        setBlockchainEnvironment(90);
+
+        const provider1: Provider = createProvider(
+            providerAddress1,
+            tokenAddress1,
+            false,
+            true,
+            true,
+            'lwekfopewjfwe',
+            u256.fromU32(10000000),
+            u128.fromU32(10000000),
+            u128.fromU32(0),
+            true,
+            false,
+        );
+
+        const provider2: Provider = createProvider(
+            providerAddress2,
+            tokenAddress1,
+            true,
+            true,
+            true,
+            'ddekwpepew',
+            u256.fromU64(10000000),
+            u128.fromU64(10000000),
+            u128.fromU64(9999950),
+            true,
+            false,
+        );
+
+        const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+        const queue: TestLiquidityQueue = new TestLiquidityQueue(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            false,
+        );
+
+        queue.initializeInitialLiquidity(
+            u256.fromU32(1),
+            provider1.providerId,
+            u256.fromU64(10000000),
+            5,
+        );
+
+        queue.setPreviousReservationStartingIndex(100);
+        queue.setPreviousReservationStandardStartingIndex(101);
+        queue.setPreviousRemovalStartingIndex(102);
+        queue.updateTotalReserve(u256.fromU64(20000000), true);
+        queue.updateTotalReserved(u256.fromU64(9999950), true);
+        queue.setBlockQuote();
+        queue.addToStandardQueue(provider2.providerId);
+        queue.lastPurgedBlock = 0;
+        const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
+
+        expect(queue.getFromStandardQueue(provider2.indexedAt)).toStrictEqual(provider2.providerId);
+
+        reservation.setExpirationBlock(95);
+        reservation.setPurgeIndex(purgeIndex);
+        reservation.reserveAtIndex(<u32>provider2.indexedAt, u128.fromU64(100), NORMAL_TYPE);
+
+        reservation.save();
+
+        setBlockchainEnvironment(96);
+        queue.callPurgeReservationsAndRestoreProviders();
+
+        expect(queue.getFromStandardQueue(provider2.indexedAt)).toStrictEqual(u256.Zero);
+        expect(provider2.liquidity).toStrictEqual(u128.Zero);
+        expect(provider2.reserved).toStrictEqual(u128.Zero);
+        expect(queue.getPreviousReservationStartingIndex()).toStrictEqual(0);
+        expect(queue.getPreviousRemovalStartingIndex()).toStrictEqual(0);
+        expect(queue.getPreviousReservationStandardStartingIndex()).toStrictEqual(0);
     });
 });
