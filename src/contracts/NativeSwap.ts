@@ -263,7 +263,6 @@ export class NativeSwap extends OP_NET {
         priority: boolean,
     ): BytesWriter {
         this.ensureValidTokenAddress(token);
-        this.ensureAmountInNotZero(amountIn);
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const tokenId = this.addressToPointer(token);
@@ -486,30 +485,9 @@ export class NativeSwap extends OP_NET {
         return response.readAddress();
     }
 
-    private ensureAntibotSettingsValid(
-        antiBotEnabledFor: u16,
-        antiBotMaximumTokensPerReservation: u256,
-    ): void {
-        if (antiBotEnabledFor !== 0 && antiBotMaximumTokensPerReservation.isZero()) {
-            throw new Revert('NATIVE_SWAP: Anti-bot max tokens per reservation cannot be zero');
-        }
-    }
-
     private ensureValidActivationDelay(activationDelay: u8): void {
         if (activationDelay > 3) {
             throw new Revert('NATIVE_SWAP: Activation delay cannot be greater than 3');
-        }
-    }
-
-    private ensureInitialLiquidityNotZero(initialLiquidity: u128): void {
-        if (initialLiquidity.isZero()) {
-            throw new Revert('NATIVE_SWAP: Initial liquidity cannot be zero');
-        }
-    }
-
-    private ensureFloorPriceNotZero(floorPrice: u256): void {
-        if (floorPrice.isZero()) {
-            throw new Revert('NATIVE_SWAP: Floor price cannot be zero');
         }
     }
 
@@ -534,12 +512,6 @@ export class NativeSwap extends OP_NET {
     private ensurePoolExistsForToken(queue: LiquidityQueue): void {
         if (queue.p0.isZero()) {
             throw new Revert('NATIVE_SWAP: No pool exists for token.');
-        }
-    }
-
-    private ensureAmountInNotZero(amountIn: u128): void {
-        if (amountIn.isZero()) {
-            throw new Revert('NATIVE_SWAP: Amount in cannot be zero');
         }
     }
 
@@ -572,12 +544,6 @@ export class NativeSwap extends OP_NET {
     private ensureValidSignatureLength(signature: Uint8Array): void {
         if (signature.length !== 64) {
             throw new Revert('NATIVE_SWAP: Invalid signature length');
-        }
-    }
-
-    private ensureBaseQuoteNotAlreadySet(p0: u256): void {
-        if (!p0.isZero()) {
-            throw new Revert('Base quote already set');
         }
     }
 }

@@ -63,7 +63,7 @@ export class CreatePoolOperation extends BaseOperation {
         );
         listTokenForSaleOp.execute();
 
-        if (this.antiBotEnabledFor) {
+        if (this.antiBotEnabledFor > 0) {
             this.liquidityQueue.antiBotExpirationBlock =
                 Blockchain.block.numberU64 + u64(this.antiBotEnabledFor);
             this.liquidityQueue.maxTokensPerReservation = this.antiBotMaximumTokensPerReservation;

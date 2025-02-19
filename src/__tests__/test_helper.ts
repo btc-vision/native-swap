@@ -9,6 +9,7 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../lib/Provider';
 import { Reservation } from '../lib/Reservation';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
+import { ProviderManager } from '../lib/Liquidity/ProviderManager';
 
 export const providerAddress1: Address = new Address([
     68, 153, 66, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
@@ -98,6 +99,10 @@ export function addressToPointerU256(address: Address, token: Address): u256 {
     writer.writeAddress(address);
     writer.writeAddress(token);
     return u256.fromBytes(sha256(writer.getBuffer()), true);
+}
+
+export function createProviderId(providerAddress: Address, tokenAddress: Address): u256 {
+    return addressToPointerU256(providerAddress, tokenAddress);
 }
 
 export function createProvider(
@@ -301,5 +306,9 @@ export class TestLiquidityQueue extends LiquidityQueue {
 
     public getFromStandardQueue(index: u64): u256 {
         return this._providerManager.getFromStandardQueue(index);
+    }
+
+    public getProviderManager(): ProviderManager {
+        return this._providerManager;
     }
 }

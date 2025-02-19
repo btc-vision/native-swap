@@ -44,6 +44,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     public execute(): void {
+        this.ensureAmountInNotZero();
         this.ensureNoLiquidityOverflow();
         this.ensureNoActivePositionInPriorityQueue();
 
@@ -59,14 +60,14 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
     private ensureNoLiquidityOverflow(): void {
         if (!u128.lt(this.oldLiquidity, SafeMath.sub128(u128.Max, this.amountIn))) {
-            throw new Revert('Liquidity overflow. Please add a smaller amount.');
+            throw new Revert('NATIVE_SWAP: Liquidity overflow. Please add a smaller amount.');
         }
     }
 
     private ensureNoActivePositionInPriorityQueue(): void {
         if (this.provider.isPriority() && !this.usePriorityQueue) {
             throw new Revert(
-                'You already have an active position in the priority queue. Please use the priority queue.',
+                'NATIVE_SWAP: You already have an active position in the priority queue. Please use the priority queue.',
             );
         }
     }
@@ -74,13 +75,17 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private ensurePriceIsNotZero(): void {
         const currentPrice: u256 = this.liquidityQueue.quote();
         if (currentPrice.isZero()) {
-            throw new Revert('Quote is zero. Please set P0 if you are the owner of the token.');
+            throw new Revert(
+                'NATIVE_SWAP: Quote is zero. Please set P0 if you are the owner of the token.',
+            );
         }
     }
 
     private ensureInitialProviderAddOnce(): void {
         if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProvider)) {
-            throw new Revert(`Initial provider can only add once, if not initialLiquidity.`);
+            throw new Revert(
+                `NATIVE_SWAP: Initial provider can only add once, if not initialLiquidity.`,
+            );
         }
     }
 
@@ -98,7 +103,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
             )
         ) {
             throw new Revert(
-                `Liquidity value is too low in satoshis. (provided: ${liquidityInSatoshis})`,
+                `NATIVE_SWAP: Liquidity value is too low in satoshis. (provided: ${liquidityInSatoshis})`,
             );
         }
     }
@@ -108,7 +113,13 @@ export class ListTokensForSaleOperation extends BaseOperation {
         const costPriorityQueue: u64 = FeeManager.PRIORITY_QUEUE_BASE_FEE;
 
         if (feesCollected < costPriorityQueue) {
-            throw new Revert('Not enough fees for priority queue.');
+            throw new Revert('NATIVE_SWAP: Not enough fees for priority queue.');
+        }
+    }
+
+    private ensureAmountInNotZero(): void {
+        if (this.amountIn.isZero()) {
+            throw new Revert('NATIVE_SWAP: Amount in cannot be zero');
         }
     }
 
@@ -135,15 +146,18 @@ export class ListTokensForSaleOperation extends BaseOperation {
             !this.provider.isPriority() && this.provider.isActive() && this.usePriorityQueue;
 
         if (!this.oldLiquidity.isZero() && this.usePriorityQueue !== this.provider.isPriority()) {
-            throw new Revert(`You must cancel your listings before using the priority queue.`);
+            throw new Revert(
+                `NATIVE_SWAP: You must cancel your listings before using the priority queue.`,
+            );
         }
 
         if (wasNormal) {
-            //oldTax = this.liquidityQueue.computePriorityTax(this.oldLiquidity.toU256()).toU128();
+            //!!!oldTax = this.liquidityQueue.computePriorityTax(this.oldLiquidity.toU256()).toU128();
 
             this.provider.setActive(true, true);
             this.liquidityQueue.addToPriorityQueue(this.providerId);
         } else if (!this.provider.isActive()) {
+            //!!! Should not be set to priority if initial liquidity ????
             this.provider.setActive(true, this.usePriorityQueue);
             if (!this.initialLiquidity) {
                 if (this.usePriorityQueue) {
@@ -187,7 +201,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
     private setProviderReceiver(provider: Provider): void {
         if (!provider.reserved.isZero() && provider.btcReceiver !== this.receiver) {
-            throw new Revert('Cannot change receiver address while reserved.');
+            throw new Revert('NATIVE_SWAP: Cannot change receiver address while reserved.');
         } else if (provider.reserved.isZero()) {
             provider.btcReceiver = this.receiver;
         }
