@@ -47,33 +47,33 @@ export class CancelListingOperation extends BaseOperation {
 
     private ensureProviderIsActive(): void {
         if (!this.provider.isActive()) {
-            throw new Revert("Provider is not active or doesn't exist.");
+            throw new Revert("NATIVE_SWAP: Provider is not active or doesn't exist.");
         }
     }
 
     private ensureNoActiveReservation(): void {
         if (!this.provider.reserved.isZero()) {
-            throw new Revert('Someone have active reservations on your liquidity.');
+            throw new Revert('NATIVE_SWAP: Someone have active reservations on your liquidity.');
         }
     }
 
     private ensureLiquidity(amount: u256): void {
         if (amount.isZero()) {
-            throw new Revert('Provider has no liquidity.');
+            throw new Revert('NATIVE_SWAP: Provider has no liquidity.');
         }
     }
 
     private ensureProviderCannotProvideLiquidity(): void {
         if (this.provider.canProvideLiquidity()) {
             throw new Revert(
-                'You can no longer cancel this listing. Provider is providing liquidity.',
+                'NATIVE_SWAP: You can no longer cancel this listing. Provider is providing liquidity.',
             );
         }
     }
 
     private ensureNotInitialProvider(): void {
         if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProvider)) {
-            throw new Revert('Initial provider cannot cancel listing.');
+            throw new Revert('NATIVE_SWAP: Initial provider cannot cancel listing.');
         }
     }
 

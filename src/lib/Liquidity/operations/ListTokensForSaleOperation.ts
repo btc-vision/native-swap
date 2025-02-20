@@ -44,6 +44,10 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     public execute(): void {
+        if (this.usePriorityQueue) {
+            this.ensureEnoughPriorityFees();
+        }
+
         this.ensureAmountInNotZero();
         this.ensureNoLiquidityOverflow();
         this.ensureNoActivePositionInPriorityQueue();
@@ -141,7 +145,6 @@ export class ListTokensForSaleOperation extends BaseOperation {
         const newTax: u128 = SafeMath.sub128(this.amountIn, newLiquidityNet);
 
         // handle normal->priority
-        //let oldTax: u128 = u128.Zero;
         const wasNormal =
             !this.provider.isPriority() && this.provider.isActive() && this.usePriorityQueue;
 
@@ -152,19 +155,18 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
 
         if (wasNormal) {
-            //!!!oldTax = this.liquidityQueue.computePriorityTax(this.oldLiquidity.toU256()).toU128();
-
             this.provider.setActive(true, true);
             this.liquidityQueue.addToPriorityQueue(this.providerId);
         } else if (!this.provider.isActive()) {
-            //!!! Should not be set to priority if initial liquidity ????
-            this.provider.setActive(true, this.usePriorityQueue);
             if (!this.initialLiquidity) {
+                this.provider.setActive(true, this.usePriorityQueue);
                 if (this.usePriorityQueue) {
                     this.liquidityQueue.addToPriorityQueue(this.providerId);
                 } else {
                     this.liquidityQueue.addToStandardQueue(this.providerId);
                 }
+            } else {
+                this.provider.setActive(true, false);
             }
         }
 
@@ -185,8 +187,6 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private removeTax(provider: Provider, totalTax: u128): void {
-        this.ensureEnoughPriorityFees();
-
         if (totalTax.isZero()) {
             return;
         }

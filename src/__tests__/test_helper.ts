@@ -213,15 +213,19 @@ export function createReservationId(tokenAddress: Address, providerAddress: Addr
     return u128.fromBytes(reservationArrayId, true);
 }
 
-export function setBlockchainEnvironment(currentBlock: u64): void {
+export function setBlockchainEnvironment(
+    currentBlock: u64,
+    sender: Address = msgSender1,
+    origin: Address = msgSender1,
+): void {
     const currentBlockValue: u256 = u256.fromU64(currentBlock);
     const medianTimestamp: u64 = 87129871;
     const safeRnd64: u64 = 3723476278;
 
     const writer: BytesWriter = new BytesWriter(255);
 
-    writer.writeAddress(msgSender1);
-    writer.writeAddress(txOrigin1);
+    writer.writeAddress(sender);
+    writer.writeAddress(origin);
     writer.writeBytes(txId1);
     writer.writeU256(currentBlockValue);
     writer.writeAddress(contractDeployer1);
