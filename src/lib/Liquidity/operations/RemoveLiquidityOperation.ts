@@ -10,8 +10,8 @@ export class RemoveLiquidityOperation extends BaseOperation {
     private readonly amount: u256;
     private readonly provider: Provider;
 
+    //!!!! Amount never used
     constructor(liquidityQueue: LiquidityQueue, providerId: u256, amount: u256) {
-        // Call the BaseOperation constructor
         super(liquidityQueue);
 
         this.providerId = providerId;
@@ -28,6 +28,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
         // 2. Figure out how much BTC they are "owed" (the virtual side),
         //    and how many tokens they currently have "locked in" the pool.
         const btcOwed = this.liquidityQueue.getBTCowed(this.providerId);
+
         this.ensureBTCOwed(btcOwed);
         this.ensureNotInPendingRemoval();
 

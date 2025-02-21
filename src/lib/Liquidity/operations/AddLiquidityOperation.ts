@@ -49,9 +49,6 @@ export class AddLiquidityOperation extends BaseOperation {
             tokensBoughtFromQueue,
         );
 
-        log(`${btcSpent}`);
-        log(`${tokensBoughtFromQueue}`);
-
         // 4. Because the purchase from the queue effectively "used BTC to buy tokens,"
         //    update our totalReserved to un-reserve those tokens.
         this.liquidityQueue.updateTotalReserved(tokensBoughtFromQueue, false);
@@ -77,6 +74,7 @@ export class AddLiquidityOperation extends BaseOperation {
         // 8. Mark the provider as an LP
         this.markProviderAsLPProvider(tokensBoughtFromQueue);
 
+        //!!!! recalc block quote????
         // 9. Clean up providers, recalc block quote
         this.liquidityQueue.cleanUpQueues();
 

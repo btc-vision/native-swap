@@ -50,8 +50,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.ensureEnoughLiquidity();
 
         let tokensRemaining: u256 = this.computeTokenRemaining(currentQuote);
-        //Blockchain.log(`tokensRemaining: ${tokensRemaining}`);
-
         let tokensReserved: u256 = u256.Zero;
         let satSpent: u256 = u256.Zero;
         let lastId: u64 = <u64>u32.MAX_VALUE + <u64>1; // Impossible value
@@ -61,19 +59,13 @@ export class ReserveLiquidityOperation extends BaseOperation {
         while (!tokensRemaining.isZero()) {
             const provider = this.liquidityQueue.getNextProviderWithLiquidity();
             if (provider === null) {
-                //Blockchain.log('No more providers with liquidity => break');
                 break;
             }
 
             // If we see repeated MAX_VALUE => break
             if (provider.indexedAt === u32.MAX_VALUE && lastId === u32.MAX_VALUE) {
-                //Blockchain.log('Repeated MAX_VALUE => break');
                 break;
             }
-
-            //Blockchain.log(
-            //    `Attempting to reserve liquidity from provider, indexed at ${provider.indexedAt}. Provider has ${provider.liquidity} and ${provider.reserved} reserved. Possible to reserve ${SafeMath.sub128(provider.liquidity, provider.reserved)} tokens.`,
-            //);
 
             if (provider.indexedAt === lastId) {
                 throw new Revert(
@@ -154,9 +146,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 this.emitLiquidityReservedEvent(provider.btcReceiver, satWouldSpend.toU128());
             } else {
                 // CASE B: NORMAL / PRIORITY PROVIDER
-                //Blockchain.log(
-                //    'Handling normal/priority provider: ' + provider.indexedAt.toString(),
-                //);
                 const providerLiquidity = SafeMath.sub128(
                     provider.liquidity,
                     provider.reserved,
@@ -173,10 +162,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                         LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
                     )
                 ) {
-                    //Blockchain.log(
-                    //    'Provider liquidity is effectively dust => reset if not reserved',
-                    //);
-
                     if (provider.reserved.isZero()) {
                         this.liquidityQueue.resetProvider(provider);
                     }
@@ -195,30 +180,16 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
                 const leftoverSats = SafeMath.sub(maxCostInSatoshis, costInSatoshis);
                 if (u256.lt(leftoverSats, LiquidityQueue.MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
-                    //Blockchain.log(
-                    //    'Leftover satoshis < MINIMUM_PROVIDER_RESERVATION_AMOUNT => take all',
-                    //);
                     costInSatoshis = maxCostInSatoshis;
                 }
 
                 reserveAmount = this.liquidityQueue.satoshisToTokens(costInSatoshis, currentQuote);
                 if (reserveAmount.isZero()) {
-                    //Blockchain.log('Recomputed reserveAmount is zero => continue');
                     continue;
                 }
 
                 const reserveAmountU128 = reserveAmount.toU128();
                 provider.reserved = SafeMath.add128(provider.reserved, reserveAmountU128);
-
-                /*Blockchain.log(
-                    'Reserving ' +
-                        reserveAmount.toString() +
-                        ' tokens from provider ' +
-                        provider.indexedAt.toString() +
-                        ' costing ' +
-                        costInSatoshis.toString() +
-                        ' satoshis',
-                );*/
 
                 tokensReserved = SafeMath.add(tokensReserved, reserveAmount);
                 satSpent = SafeMath.add(satSpent, costInSatoshis);
