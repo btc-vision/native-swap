@@ -22,7 +22,7 @@ import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { RemoveLiquidityOperation } from '../lib/Liquidity/operations/RemoveLiquidityOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { CreatePoolOperation } from '../lib/Liquidity/operations/CreatePoolOperation';
-import { FEE_COLLECT_SCRIPT_PUBKEY } from '../utils/OrderBookUtils';
+import { FEE_COLLECT_SCRIPT_PUBKEY } from '../utils/NativeSwapUtils';
 import { ReserveLiquidityOperation } from '../lib/Liquidity/operations/ReserveLiquidityOperation';
 import { AddLiquidityOperation } from '../lib/Liquidity/operations/AddLiquidityOperation';
 

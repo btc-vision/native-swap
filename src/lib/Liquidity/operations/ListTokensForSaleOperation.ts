@@ -9,7 +9,7 @@ import {
     SafeMath,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
-import { getTotalFeeCollected } from '../../../utils/OrderBookUtils';
+import { getTotalFeeCollected } from '../../../utils/NativeSwapUtils';
 import { LiquidityListedEvent } from '../../../events/LiquidityListedEvent';
 import { FeeManager } from '../../FeeManager';
 

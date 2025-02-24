@@ -13,10 +13,10 @@ import {
     RESERVATION_INDEXES,
     RESERVATION_PRIORITY,
 } from './StoredPointers';
-import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { UserReservation } from '../data-types/UserReservation';
 import { LiquidityQueue } from './Liquidity/LiquidityQueue';
+import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 
 export const NORMAL_TYPE: u8 = 0;
 export const PRIORITY_TYPE: u8 = 1;

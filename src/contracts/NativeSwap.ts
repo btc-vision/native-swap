@@ -15,9 +15,8 @@ import {
 import { OP_NET } from '@btc-vision/btc-runtime/runtime/contracts/OP_NET';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
-import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { getProvider, saveAllProviders } from '../lib/Provider';
-import { getTotalFeeCollected } from '../utils/OrderBookUtils';
+import { getTotalFeeCollected } from '../utils/NativeSwapUtils';
 import { FeeManager } from '../lib/FeeManager';
 import { AddLiquidityOperation } from '../lib/Liquidity/operations/AddLiquidityOperation';
 import { RemoveLiquidityOperation } from '../lib/Liquidity/operations/RemoveLiquidityOperation';
@@ -27,6 +26,7 @@ import { ReserveLiquidityOperation } from '../lib/Liquidity/operations/ReserveLi
 import { CancelListingOperation } from '../lib/Liquidity/operations/CancelListingOperation';
 import { SwapOperation } from '../lib/Liquidity/operations/SwapOperation';
 import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
+import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 
 /**
  * OrderBook contract for the OP_NET order book system,

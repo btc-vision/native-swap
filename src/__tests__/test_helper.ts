@@ -4,12 +4,12 @@ import {
     Blockchain,
     BytesWriter,
 } from '@btc-vision/btc-runtime/runtime';
-import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../lib/Provider';
 import { Reservation } from '../lib/Reservation';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { ProviderManager } from '../lib/Liquidity/ProviderManager';
+import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 
 export const providerAddress1: Address = new Address([
     68, 153, 66, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
