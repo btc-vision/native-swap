@@ -471,12 +471,15 @@ export class LiquidityQueue {
         let totalSatoshisSpent = u256.Zero;
         let totalRefundedBTC = u256.Zero;
         let totalTokensRefunded = u256.Zero;
+        let tokensReserved = u256.Zero;
 
         // 4) Iterate over each "provider" we had reserved
         for (let i = 0; i < reservedIndexes.length; i++) {
             const providerIndex: u64 = reservedIndexes[i];
             const reservedAmount: u128 = reservedValues[i];
             const queueType: u8 = queueTypes[i];
+
+            tokensReserved = SafeMath.add(tokensReserved, reservedAmount.toU256());
 
             // 4a) Retrieve the correct provider from the queue
             const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
@@ -568,36 +571,35 @@ export class LiquidityQueue {
 
                 this.reportUTXOUsed(provider.btcReceiver, actualSpent.toU64());
             } else {
+                // we need to do it for one first time
                 tokensDesired = SafeMath.min(tokensDesired, reservedAmount.toU256());
                 tokensDesired = SafeMath.min(tokensDesired, provider.liquidity.toU256());
+
                 if (tokensDesired.isZero()) {
-                    // if zero => revert entire chunk
+                    // if zero => ignore entire chunk
                     this.restoreReservedLiquidityForProvider(provider, reservedAmount);
                     continue;
                 }
 
-                // (A) Subtract the entire chunk from provider.reserved in one step
+                // Subtract the entire chunk from provider.reserved in one step
                 //     This ensures we never double-sub leftover + tokensDesired.
                 if (u128.lt(provider.reserved, reservedAmount)) {
                     throw new Revert(
                         `Impossible: provider.reserved < reservedAmount (${provider.reserved} < ${reservedAmount})`,
                     );
                 }
-                provider.reserved = SafeMath.sub128(provider.reserved, reservedAmount);
-
-                // (B) leftover is the portion not actually purchased
-                const tokensDesiredU128 = tokensDesired.toU128();
-                const leftover = SafeMath.sub128(reservedAmount, tokensDesiredU128);
-
-                // (C) Remove leftover from global totalReserved
-                if (!leftover.isZero()) {
-                    this.updateTotalReserved(leftover.toU256(), /*increase=*/ false);
-                }
 
                 // Convert the purchased portion to satoshis
-                satoshisSent = this.tokensToSatoshis(tokensDesired, quoteAtReservation);
+                satoshisSent = this.tokensToSatoshis(
+                    SafeMath.add(tokensDesired, u256.One), // We have to do plus one here due to the round down
+                    quoteAtReservation,
+                );
 
-                // (D) Actually consume tokens from provider.liquidity
+                provider.reserved = SafeMath.sub128(provider.reserved, reservedAmount);
+
+                const tokensDesiredU128 = tokensDesired.toU128();
+
+                // Actually consume tokens from provider.liquidity
                 if (u128.lt(provider.liquidity, tokensDesiredU128)) {
                     throw new Revert('Impossible: liquidity < tokensDesired');
                 }
@@ -620,7 +622,7 @@ export class LiquidityQueue {
 
                 this.resetProviderOnDust(provider, quoteAtReservation);
 
-                // (F) Accumulate user stats
+                // Accumulate user stats
                 totalTokensPurchased = SafeMath.add(totalTokensPurchased, tokensDesired);
                 totalSatoshisSpent = SafeMath.add(totalSatoshisSpent, satoshisSent);
 
@@ -629,6 +631,7 @@ export class LiquidityQueue {
         }
 
         return new CompletedTrade(
+            tokensReserved,
             totalTokensPurchased,
             totalSatoshisSpent,
             totalRefundedBTC,
@@ -945,7 +948,6 @@ export class LiquidityQueue {
 
     private restoreReservedLiquidityForProvider(provider: Provider, reserved: u128): void {
         provider.reserved = SafeMath.sub128(provider.reserved, reserved);
-        provider.liquidity = SafeMath.add128(provider.liquidity, reserved);
 
         this.updateTotalReserved(reserved.toU256(), false);
     }

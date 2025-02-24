@@ -57,6 +57,20 @@ export class ReserveLiquidityOperation extends BaseOperation {
         // We'll loop over providers while tokensRemaining > 0
         let i: u32 = 0;
         while (!tokensRemaining.isZero()) {
+            const tokensRemainingInSatoshis = this.liquidityQueue.tokensToSatoshis(
+                tokensRemaining,
+                currentQuote,
+            );
+
+            if (
+                u256.lt(
+                    tokensRemainingInSatoshis,
+                    LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+                )
+            ) {
+                break;
+            }
+
             const provider = this.liquidityQueue.getNextProviderWithLiquidity();
             if (provider === null) {
                 break;
@@ -78,15 +92,11 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
             // CASE A: REMOVAL-QUEUE PROVIDER
             if (provider.pendingRemoval && provider.isLp && provider.fromRemovalQueue) {
-                //Blockchain.log('Handling provider from removal queue');
                 const owed = this.liquidityQueue.getBTCowed(provider.providerId);
                 if (
                     owed.isZero() ||
                     u256.lt(owed, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)
                 ) {
-                    //Blockchain.log(
-                    //    'This removal provider not owed or is dust, removing and continuing',
-                    //);
                     this.liquidityQueue.removePendingLiquidityProviderFromRemovalQueue(
                         provider,
                         provider.indexedAt,
@@ -104,7 +114,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                         LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
                     )
                 ) {
-                    //Blockchain.log('Sat needed to spend is below the strict minimum => break');
                     break;
                 }
 
@@ -116,7 +125,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     currentQuote,
                 );
                 if (reserveAmount.isZero()) {
-                    //Blockchain.log('Reserve amount is zero after conversion => continue');
                     continue;
                 }
 
@@ -131,12 +139,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 this.liquidityQueue.setBTCowedReserved(provider.providerId, newReserved);
 
                 // Record the reservation
-                /*Blockchain.log(
-                    'Reserving ' +
-                        reserveAmount.toString() +
-                        ' tokens for removal-queue provider at index: ' +
-                        provider.indexedAt.toString(),
-                );*/
                 reservation.reserveAtIndex(
                     <u32>provider.indexedAt,
                     reserveAmount.toU128(),
