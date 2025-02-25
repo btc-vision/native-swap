@@ -590,10 +590,7 @@ export class LiquidityQueue {
                 }
 
                 // Convert the purchased portion to satoshis
-                satoshisSent = this.tokensToSatoshis(
-                    SafeMath.add(tokensDesired, u256.One), // We have to do plus one here due to the round down
-                    quoteAtReservation,
-                );
+                satoshisSent = this.tokensToSatoshis(tokensDesired, quoteAtReservation);
 
                 provider.reserved = SafeMath.sub128(provider.reserved, reservedAmount);
 
@@ -725,7 +722,10 @@ export class LiquidityQueue {
         // => tokensToSats = tokenAmount * QUOTE_SCALE / scaledPrice
 
         // ROUND DOWN
-        return SafeMath.div(SafeMath.mul(tokenAmount, LiquidityQueue.QUOTE_SCALE), scaledPrice);
+        return SafeMath.div(
+            SafeMath.mul(SafeMath.add(tokenAmount, u256.One), LiquidityQueue.QUOTE_SCALE), // We have to do plus one here due to the round down
+            scaledPrice,
+        );
     }
 
     /**

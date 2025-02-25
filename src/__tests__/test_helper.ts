@@ -3,6 +3,7 @@ import {
     ADDRESS_BYTE_LENGTH,
     Blockchain,
     BytesWriter,
+    StoredU256Array,
 } from '@btc-vision/btc-runtime/runtime';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
@@ -24,6 +25,11 @@ export const providerAddress2: Address = new Address([
 export const providerAddress3: Address = new Address([
     84, 79, 41, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
     209, 126, 10, 49, 77, 37, 107, 101, 113, 216,
+]);
+
+export const providerAddress4: Address = new Address([
+    43, 11, 41, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
+    209, 126, 10, 49, 77, 37, 107, 101, 67, 34,
 ]);
 
 export const msgSender1: Address = new Address([
@@ -93,6 +99,8 @@ export const receiverAddress1: string = 'wjo29i3d02jd208j3';
 export const receiverAddress2: string = 'cmewj390ujllq23u9';
 
 export const receiverAddress3: string = 'peijkwhjbnafewr27';
+
+export const receiverAddress4: string = 'cxdkidw9823yh099';
 
 export function addressToPointerU256(address: Address, token: Address): u256 {
     const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
@@ -314,5 +322,19 @@ export class TestLiquidityQueue extends LiquidityQueue {
 
     public getProviderManager(): ProviderManager {
         return this._providerManager;
+    }
+}
+
+export class TestProviderManager extends ProviderManager {
+    public get getStandardQueue(): StoredU256Array {
+        return this._queue;
+    }
+
+    public get getRemovalQueue(): StoredU256Array {
+        return this._removalQueue;
+    }
+
+    public get getPriorityQueue(): StoredU256Array {
+        return this._priorityQueue;
     }
 }

@@ -22,10 +22,10 @@ import { getProvider, Provider } from '../Provider';
 import { StoredMapU256 } from '../../stored/StoredMapU256';
 
 export class ProviderManager {
+    protected readonly _queue: StoredU256Array;
+    protected readonly _priorityQueue: StoredU256Array;
+    protected readonly _removalQueue: StoredU256Array;
     private currentIndex: u64 = 0;
-    private readonly _queue: StoredU256Array;
-    private readonly _priorityQueue: StoredU256Array;
-    private readonly _removalQueue: StoredU256Array;
     private readonly _startingIndex: StoredU64;
     private readonly _initialLiquidityProvider: StoredU256;
     private readonly _lpBTCowed: StoredMapU256;
@@ -152,7 +152,7 @@ export class ProviderManager {
     }
 
     public getBTCowed(providerId: u256): u256 {
-        return this._lpBTCowed.get(providerId) || u256.Zero;
+        return this._lpBTCowed.get(providerId);
     }
 
     public setBTCowed(providerId: u256, amount: u256): void {
@@ -160,7 +160,7 @@ export class ProviderManager {
     }
 
     public getBTCowedReserved(providerId: u256): u256 {
-        return this._lpBTCowedReserved.get(providerId) || u256.Zero;
+        return this._lpBTCowedReserved.get(providerId);
     }
 
     public setBTCowedReserved(providerId: u256, amount: u256): void {
@@ -325,7 +325,7 @@ export class ProviderManager {
         const index: u64 = this._removalQueue.startingIndex();
 
         if (index > length) {
-            return null;
+            throw new Revert('Impossible state: Starting index exceeds queue length');
         }
 
         // Initialize our pointer if it’s zero
@@ -382,7 +382,7 @@ export class ProviderManager {
             }
 
             if (this.currentIndexRemoval == u64.MAX_VALUE) {
-                throw new Revert('Index increment overflow');
+                throw new Revert('Impossible state: Index increment overflow');
             }
 
             this.currentIndexRemoval++;
@@ -399,7 +399,7 @@ export class ProviderManager {
         const index: u64 = this._priorityQueue.startingIndex();
 
         if (index > length) {
-            return null;
+            throw new Revert('Impossible state: Starting index exceeds queue length');
         }
 
         if (this.currentIndexPriority === 0) {
@@ -456,7 +456,7 @@ export class ProviderManager {
         const index: u64 = this._queue.startingIndex();
 
         if (index > length) {
-            throw new Revert('Starting index exceeds queue length');
+            throw new Revert('Impossible state: Starting index exceeds queue length');
         }
 
         if (this.currentIndex === 0) {

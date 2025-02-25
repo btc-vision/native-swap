@@ -476,7 +476,7 @@ describe('Liquidity queue tests', () => {
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
         expect(queue.tokensToSatoshis(u256.fromU32(10000), u256.fromU32(50000))).toStrictEqual(
-            u256.fromU64(20000000),
+            u256.fromU64(20002000),
         );
     });
 
@@ -1522,7 +1522,7 @@ describe('Liquidity executeTrade tests', () => {
 
         const queue3: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        expect(queue3.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(19901));
+        expect(queue3.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(19900));
     });
 });
 

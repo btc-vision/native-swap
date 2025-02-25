@@ -382,15 +382,15 @@ describe('AddLiquidityOperation tests', () => {
         addOp.execute();
 
         expect(TransferHelper.safeTransferFromCalled).toBeTruthy();
-        expect(queue4.liquidity).toStrictEqual(u256.fromString('1000001332666666666666666'));
+        expect(queue4.liquidity).toStrictEqual(u256.fromString('1000001333333333333333333'));
         expect(queue4.reservedLiquidity).toStrictEqual(u256.Zero);
-        expect(queue4.virtualBTCReserve).toStrictEqual(u256.fromU64(1500001998));
+        expect(queue4.virtualBTCReserve).toStrictEqual(u256.fromU64(1500002000));
         expect(queue4.virtualTokenReserve).toStrictEqual(
-            u256.fromString('1000001332666666666666666'),
+            u256.fromString('1000001333333333333333333'),
         );
-        expect(queue4.getBTCowed(providerId2)).toStrictEqual(u256.fromU32(1998));
+        expect(queue4.getBTCowed(providerId2)).toStrictEqual(u256.fromU32(2000));
         expect(provider2.isLp).toBeTruthy();
-        expect(provider2.liquidityProvided).toStrictEqual(u256.fromString('1332666666666666666'));
+        expect(provider2.liquidityProvided).toStrictEqual(u256.fromString('1333333333333333333'));
     });
 
     it('should not allow to add liquidity 2 times for the same reservation', () => {
