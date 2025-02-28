@@ -8,6 +8,8 @@ import {
     Revert,
     SafeMath,
     Selector,
+    StoredAddress,
+    StoredU256,
     U128_BYTE_LENGTH,
     U256_BYTE_LENGTH,
     U64_BYTE_LENGTH,
@@ -26,6 +28,7 @@ import { SwapOperation } from '../lib/Liquidity/operations/SwapOperation';
 import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReentrancyGuard } from '../lib/ReentrancyGuard';
+import { STAKING_CA_POINTER } from '../lib/StoredPointers';
 
 /**
  * OrderBook contract for the OP_NET order book system,
@@ -34,8 +37,14 @@ import { ReentrancyGuard } from '../lib/ReentrancyGuard';
  */
 @final
 export class NativeSwap extends ReentrancyGuard {
+    private readonly minimumTradeSize: u256 = u256.fromU32(10_000); // The minimum trade size in satoshis.
+  
+    public stakingContractAddress: StoredAddress;
+  
     public constructor() {
         super();
+
+        this.stakingContractAddress = new StoredAddress(STAKING_CA_POINTER, Address.dead());
     }
 
     private static get DEPLOYER_SELECTOR(): Selector {
@@ -83,6 +92,8 @@ export class NativeSwap extends ReentrancyGuard {
             }
             case encodeSelector('setFees(uint64,uint64,uint64)'):
                 return this.setFees(calldata);
+            case encodeSelector('setStakingContractAddress(address)'):
+                return this.setStakingContractAddress(calldata);
 
             /** Readable methods */
             case encodeSelector('getReserve(address)'):
@@ -97,6 +108,8 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getFees(calldata);
             case encodeSelector('getAntibotSettings(address)'):
                 return this.getAntibotSettings(calldata);
+            case encodeSelector('getStakingContractAddress'):
+                return this.getStakingContractAddress(calldata);
             default:
                 return super.execute(method, calldata);
         }
@@ -133,6 +146,23 @@ export class NativeSwap extends ReentrancyGuard {
 
         FeeManager.RESERVATION_BASE_FEE = calldata.readU64();
         FeeManager.PRIORITY_QUEUE_BASE_FEE = calldata.readU64();
+
+        const result = new BytesWriter(1);
+        result.writeBoolean(true);
+        return result;
+    }
+
+    private getStakingContractAddress(_calldata: Calldata): BytesWriter {
+        const response = new BytesWriter(ADDRESS_BYTE_LENGTH);
+        response.writeAddress(this.stakingContractAddress.value);
+
+        return response;
+    }
+
+    private setStakingContractAddress(calldata: Calldata): BytesWriter {
+        this.onlyDeployer(Blockchain.tx.sender);
+
+        this.stakingContractAddress.value = calldata.readAddress();
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);

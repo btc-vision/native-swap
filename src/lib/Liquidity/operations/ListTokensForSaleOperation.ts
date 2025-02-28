@@ -7,10 +7,12 @@ import {
     Blockchain,
     Revert,
     SafeMath,
+    StoredAddress,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
 import { getTotalFeeCollected } from '../../../utils/NativeSwapUtils';
 import { LiquidityListedEvent } from '../../../events/LiquidityListedEvent';
+import { STAKING_CA_POINTER } from '../../StoredPointers';
 import { FeeManager } from '../../FeeManager';
 
 export class ListTokensForSaleOperation extends BaseOperation {
@@ -21,6 +23,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private readonly initialLiquidity: boolean;
     private readonly provider: Provider;
     private readonly oldLiquidity: u128;
+    private readonly stakingContractAddress: StoredAddress;
 
     constructor(
         liquidityQueue: LiquidityQueue,
@@ -41,6 +44,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
         const provider = getProvider(providerId);
         this.provider = provider;
         this.oldLiquidity = provider.liquidity;
+
+        this.stakingContractAddress = new StoredAddress(STAKING_CA_POINTER, Address.dead());
     }
 
     public execute(): void {
@@ -196,7 +201,11 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.liquidityQueue.buyTokens(totalTax.toU256(), u256.Zero);
         this.liquidityQueue.updateTotalReserve(totalTax.toU256(), false);
 
-        TransferHelper.safeTransfer(this.liquidityQueue.token, Address.dead(), totalTax.toU256());
+        TransferHelper.safeTransfer(
+            this.liquidityQueue.token,
+            this.stakingContractAddress.value,
+            totalTax.toU256(),
+        );
     }
 
     private setProviderReceiver(provider: Provider): void {
