@@ -22,10 +22,10 @@ import { getProvider, Provider } from '../Provider';
 import { StoredMapU256 } from '../../stored/StoredMapU256';
 
 export class ProviderManager {
+    protected readonly _queue: StoredU256Array;
+    protected readonly _priorityQueue: StoredU256Array;
+    protected readonly _removalQueue: StoredU256Array;
     private currentIndex: u64 = 0;
-    private readonly _queue: StoredU256Array;
-    private readonly _priorityQueue: StoredU256Array;
-    private readonly _removalQueue: StoredU256Array;
     private readonly _startingIndex: StoredU64;
     private readonly _initialLiquidityProvider: StoredU256;
     private readonly _lpBTCowed: StoredMapU256;
@@ -115,6 +115,18 @@ export class ProviderManager {
         return this._priorityQueue.startingIndex();
     }
 
+    public getCurrentIndex(): u64 {
+        return this.currentIndex;
+    }
+
+    public getCurrentIndexPriority(): u64 {
+        return this.currentIndexPriority;
+    }
+
+    public getCurrentIndexRemoval(): u64 {
+        return this.currentIndexRemoval;
+    }
+
     public addToPriorityQueue(providerId: u256): void {
         this._priorityQueue.push(providerId);
     }
@@ -140,7 +152,7 @@ export class ProviderManager {
     }
 
     public getBTCowed(providerId: u256): u256 {
-        return this._lpBTCowed.get(providerId) || u256.Zero;
+        return this._lpBTCowed.get(providerId);
     }
 
     public setBTCowed(providerId: u256, amount: u256): void {
@@ -148,7 +160,7 @@ export class ProviderManager {
     }
 
     public getBTCowedReserved(providerId: u256): u256 {
-        return this._lpBTCowedReserved.get(providerId) || u256.Zero;
+        return this._lpBTCowedReserved.get(providerId);
     }
 
     public setBTCowedReserved(providerId: u256, amount: u256): void {
@@ -313,7 +325,7 @@ export class ProviderManager {
         const index: u64 = this._removalQueue.startingIndex();
 
         if (index > length) {
-            return null;
+            throw new Revert('Impossible state: Starting index exceeds queue length');
         }
 
         // Initialize our pointer if it’s zero
@@ -345,7 +357,7 @@ export class ProviderManager {
                 }
 
                 const left = SafeMath.sub(owedBTC, reservedBTC);
-                if (!left.isZero() && u256.gt(left, this.strictMinimumProviderReservationAmount)) {
+                if (!left.isZero() && u256.ge(left, this.strictMinimumProviderReservationAmount)) {
                     // This is the next valid removal provider. We do NOT
                     // check provider.liquidity here, because they've already
                     // withdrawn tokens. For the AMM, we treat them as if
@@ -359,6 +371,7 @@ export class ProviderManager {
                     if (u256.lt(owedBTC, this.strictMinimumProviderReservationAmount)) {
                         // If they don't have owed BTC, they can be removed from queue
                         //this.removePendingLiquidityProviderFromRemovalQueue(provider, i);
+                        //!!!!!! TODO: Anakun check
                         throw new Revert(
                             `Impossible state: Provider should have been removed from queue during swap operation.`,
                         );
@@ -367,11 +380,10 @@ export class ProviderManager {
             } else {
                 // If not pending removal, remove from queue
                 this.removePendingLiquidityProviderFromRemovalQueue(provider, i);
-                //TODO:!!!! in removeliquidity we must check if user have listed tokens. If so revert the removeliquidity
             }
 
             if (this.currentIndexRemoval == u64.MAX_VALUE) {
-                throw new Revert('Index increment overflow');
+                throw new Revert('Impossible state: Index increment overflow');
             }
 
             this.currentIndexRemoval++;
@@ -388,7 +400,7 @@ export class ProviderManager {
         const index: u64 = this._priorityQueue.startingIndex();
 
         if (index > length) {
-            return null;
+            throw new Revert('Impossible state: Starting index exceeds queue length');
         }
 
         if (this.currentIndexPriority === 0) {
@@ -445,7 +457,7 @@ export class ProviderManager {
         const index: u64 = this._queue.startingIndex();
 
         if (index > length) {
-            throw new Revert('Starting index exceeds queue length');
+            throw new Revert('Impossible state: Starting index exceeds queue length');
         }
 
         if (this.currentIndex === 0) {

@@ -14,6 +14,7 @@ import {
     setBlockchainEnvironment,
     tokenAddress1,
 } from './test_helper';
+import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 
 describe('Reservation tests', () => {
     beforeEach(() => {
@@ -39,6 +40,7 @@ describe('Reservation tests', () => {
         expect(reservation.userTimeoutBlockExpiration).toStrictEqual(0);
         expect(reservation.getPurgeIndex()).toStrictEqual(u32.MAX_VALUE);
         expect(reservation.reservationId).toStrictEqual(reservationId);
+        expect(reservation.getActivationDelay()).toStrictEqual(0);
     });
 
     it('should correctly get/set expiration block when greater than current block number', () => {
@@ -51,24 +53,6 @@ describe('Reservation tests', () => {
         expect(reservation.expirationBlock()).toStrictEqual(10);
     });
 
-    it('should get 0 as expiration block when smaller/equal to current block number', () => {
-        setBlockchainEnvironment(10);
-
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        reservation.setExpirationBlock(10);
-
-        expect(reservation.expirationBlock()).toStrictEqual(10);
-
-        setBlockchainEnvironment(10);
-
-        const reservation2: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        reservation2.setExpirationBlock(9);
-
-        expect(reservation2.expirationBlock()).toStrictEqual(0);
-    });
-
     it('should correctly return the createdAt block', () => {
         setBlockchainEnvironment(1);
         const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
@@ -76,6 +60,15 @@ describe('Reservation tests', () => {
         reservation.setExpirationBlock(10);
 
         expect(reservation.createdAt).toStrictEqual(5);
+    });
+
+    it('should return 0 for createdAt when expiration block <= LiquidityQueue.RESERVATION_EXPIRE_AFTER', () => {
+        setBlockchainEnvironment(1);
+        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+        reservation.setExpirationBlock(LiquidityQueue.RESERVATION_EXPIRE_AFTER);
+
+        expect(reservation.createdAt).toStrictEqual(0);
     });
 
     it('should correctly set the purge index', () => {
@@ -119,6 +112,16 @@ describe('Reservation tests', () => {
         expect(reservation.reservedLP).toBeFalsy();
     });
 
+    it('should correctly set the activation delay', () => {
+        setBlockchainEnvironment(1);
+
+        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+        reservation.setActivationDelay(1);
+
+        expect(reservation.getActivationDelay()).toStrictEqual(1);
+    });
+
     it('should return an empty reservation when loading a non existing reservationId', () => {
         setBlockchainEnvironment(1);
 
@@ -133,6 +136,7 @@ describe('Reservation tests', () => {
         expect(reservation.userTimeoutBlockExpiration).toStrictEqual(0);
         expect(reservation.getPurgeIndex()).toStrictEqual(u32.MAX_VALUE);
         expect(reservation.reservationId).toStrictEqual(reservationId);
+        expect(reservation.getActivationDelay()).toStrictEqual(0);
     });
 
     it('should correctly load a reservation when loading an existing reservationId', () => {
@@ -149,10 +153,12 @@ describe('Reservation tests', () => {
         const expirationBlock: u64 = 10;
         const reservedLP: bool = true;
         const purgeIndex: u32 = 10;
+        const activationDelay: u8 = 2;
 
         reservation.setExpirationBlock(expirationBlock);
         reservation.reservedLP = reservedLP;
         reservation.setPurgeIndex(purgeIndex);
+        reservation.setActivationDelay(activationDelay);
         reservation.reserveAtIndex(1, amount1, LIQUIDITY_REMOVAL_TYPE);
         reservation.reserveAtIndex(2, amount2, PRIORITY_TYPE);
         reservation.reserveAtIndex(3, amount3, NORMAL_TYPE);
@@ -167,6 +173,7 @@ describe('Reservation tests', () => {
         expect(reservation2.expirationBlock()).toStrictEqual(expirationBlock);
         expect(reservation2.reservedLP).toStrictEqual(reservedLP);
         expect(reservation2.getPurgeIndex()).toStrictEqual(purgeIndex);
+        expect(reservation2.getActivationDelay()).toStrictEqual(activationDelay);
         expect(reservation2.userTimeoutBlockExpiration).toStrictEqual(expirationBlock + 5);
         expect(reservation2.reservedIndexes.getLength()).toStrictEqual(3);
         expect(reservation2.reservedValues.getLength()).toStrictEqual(3);
@@ -193,10 +200,12 @@ describe('Reservation tests', () => {
         const expirationBlock: u64 = 10;
         const reservedLP: bool = true;
         const purgeIndex: u32 = 10;
+        const activationDelay: u8 = 2;
 
         reservation.setExpirationBlock(expirationBlock);
         reservation.reservedLP = reservedLP;
         reservation.setPurgeIndex(purgeIndex);
+        reservation.setActivationDelay(activationDelay);
         reservation.reserveAtIndex(1, amount1, LIQUIDITY_REMOVAL_TYPE);
         reservation.reserveAtIndex(2, amount2, PRIORITY_TYPE);
         reservation.reserveAtIndex(3, amount3, NORMAL_TYPE);
@@ -210,6 +219,7 @@ describe('Reservation tests', () => {
         expect(reservation2.expirationBlock()).toStrictEqual(expirationBlock);
         expect(reservation2.reservedLP).toStrictEqual(reservedLP);
         expect(reservation2.getPurgeIndex()).toStrictEqual(purgeIndex);
+        expect(reservation2.getActivationDelay()).toStrictEqual(activationDelay);
         expect(reservation2.userTimeoutBlockExpiration).toStrictEqual(0);
         expect(reservation2.reservedIndexes.getLength()).toStrictEqual(3);
         expect(reservation2.reservedValues.getLength()).toStrictEqual(3);
@@ -231,6 +241,7 @@ describe('Reservation tests', () => {
         expect(reservation2.reservedLP).toBeFalsy();
         expect(reservation2.expirationBlock()).toStrictEqual(0);
         expect(reservation2.userTimeoutBlockExpiration).toStrictEqual(0);
+        expect(reservation2.getActivationDelay()).toStrictEqual(0);
 
         // Ensure deleted value are persisted
         const reservation3: Reservation = Reservation.load(reservationId);
@@ -242,6 +253,7 @@ describe('Reservation tests', () => {
         expect(reservation3.reservedLP).toBeFalsy();
         expect(reservation3.expirationBlock()).toStrictEqual(0);
         expect(reservation3.userTimeoutBlockExpiration).toStrictEqual(0);
+        expect(reservation3.getActivationDelay()).toStrictEqual(0);
     });
 
     it('should be expired when current block > expiration block', () => {

@@ -15,6 +15,7 @@ export class UserReservation {
     private expirationBlock: u64 = 0;
     private priorityIndex: u64 = 0;
     private purgeIndex: u32 = u32.MAX_VALUE;
+    private activationDelay: u8 = 0;
 
     private isTimeout: bool = false;
     private reservedLP: bool = false;
@@ -77,10 +78,6 @@ export class UserReservation {
     @inline
     public getExpirationBlock(): u64 {
         this.ensureValues();
-
-        if (this.expirationBlock < Blockchain.block.numberU64) {
-            return 0;
-        }
 
         return this.expirationBlock;
     }
@@ -165,6 +162,21 @@ export class UserReservation {
         return this.purgeIndex;
     }
 
+    @inline
+    public getActivationDelay(): u8 {
+        this.ensureValues();
+        return this.activationDelay;
+    }
+
+    @inline
+    public setActivationDelay(delay: u8): void {
+        this.ensureValues();
+        if (this.activationDelay != delay) {
+            this.activationDelay = delay;
+            this.isChanged = true;
+        }
+    }
+
     /**
      * @method reset
      * @description Resets all fields to their default values and marks the state as changed.
@@ -174,6 +186,7 @@ export class UserReservation {
         this.priorityIndex = 0;
         this.reservedLP = false;
         this.purgeIndex = u32.MAX_VALUE;
+        this.activationDelay = 0;
 
         if (!isTimeout) {
             this.expirationBlock = 0;
@@ -236,6 +249,9 @@ export class UserReservation {
             // Unpack purgeIndex (4 bytes, little endian)
             this.purgeIndex = reader.readU32();
 
+            // Unpack activation delay (1 byte, little endian)
+            this.activationDelay = reader.readU8();
+
             this.isLoaded = true;
         }
     }
@@ -260,6 +276,9 @@ export class UserReservation {
 
         // Pack purgeIndex (4 bytes, little endian)
         writer.writeU32(this.purgeIndex);
+
+        // Pack activationDelay (1 byte)
+        writer.writeU8(this.activationDelay);
 
         return u256.fromBytes(writer.getBuffer(), true);
     }

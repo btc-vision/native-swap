@@ -13,10 +13,10 @@ import {
     RESERVATION_INDEXES,
     RESERVATION_PRIORITY,
 } from './StoredPointers';
-import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { UserReservation } from '../data-types/UserReservation';
 import { LiquidityQueue } from './Liquidity/LiquidityQueue';
+import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 
 export const NORMAL_TYPE: u8 = 0;
 export const PRIORITY_TYPE: u8 = 1;
@@ -50,7 +50,12 @@ export class Reservation {
     public get createdAt(): u64 {
         const block: u64 = this.expirationBlock();
 
-        return block - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+        // No opnet transaction under block 100
+        if (block <= LiquidityQueue.RESERVATION_EXPIRE_AFTER) {
+            return 0;
+        } else {
+            return block - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+        }
     }
 
     public get userTimeoutBlockExpiration(): u64 {
@@ -86,6 +91,14 @@ export class Reservation {
 
     public getPurgeIndex(): u32 {
         return this.userReservation.getPurgeIndex();
+    }
+
+    public setActivationDelay(delay: u8): void {
+        this.userReservation.setActivationDelay(delay);
+    }
+
+    public getActivationDelay(): u8 {
+        return this.userReservation.getActivationDelay();
     }
 
     public timeout(): void {

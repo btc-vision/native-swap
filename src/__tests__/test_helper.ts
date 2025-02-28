@@ -3,12 +3,14 @@ import {
     ADDRESS_BYTE_LENGTH,
     Blockchain,
     BytesWriter,
+    StoredU256Array,
 } from '@btc-vision/btc-runtime/runtime';
-import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../lib/Provider';
 import { Reservation } from '../lib/Reservation';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
+import { ProviderManager } from '../lib/Liquidity/ProviderManager';
+import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 
 export const providerAddress1: Address = new Address([
     68, 153, 66, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
@@ -23,6 +25,21 @@ export const providerAddress2: Address = new Address([
 export const providerAddress3: Address = new Address([
     84, 79, 41, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
     209, 126, 10, 49, 77, 37, 107, 101, 113, 216,
+]);
+
+export const providerAddress4: Address = new Address([
+    43, 11, 41, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
+    209, 126, 10, 49, 77, 37, 107, 101, 67, 34,
+]);
+
+export const providerAddress5: Address = new Address([
+    109, 98, 200, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71,
+    53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 211,
+]);
+
+export const providerAddress6: Address = new Address([
+    200, 33, 11, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
+    209, 126, 10, 49, 77, 37, 107, 101, 67, 88,
 ]);
 
 export const msgSender1: Address = new Address([
@@ -93,11 +110,21 @@ export const receiverAddress2: string = 'cmewj390ujllq23u9';
 
 export const receiverAddress3: string = 'peijkwhjbnafewr27';
 
+export const receiverAddress4: string = 'cxdkidw9823yh099';
+
+export const receiverAddress5: string = 'jiojijoijoji8j23';
+
+export const receiverAddress6: string = 'fded0e32398hhd2i';
+
 export function addressToPointerU256(address: Address, token: Address): u256 {
     const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
     writer.writeAddress(address);
     writer.writeAddress(token);
     return u256.fromBytes(sha256(writer.getBuffer()), true);
+}
+
+export function createProviderId(providerAddress: Address, tokenAddress: Address): u256 {
+    return addressToPointerU256(providerAddress, tokenAddress);
 }
 
 export function createProvider(
@@ -208,15 +235,19 @@ export function createReservationId(tokenAddress: Address, providerAddress: Addr
     return u128.fromBytes(reservationArrayId, true);
 }
 
-export function setBlockchainEnvironment(currentBlock: u64): void {
+export function setBlockchainEnvironment(
+    currentBlock: u64,
+    sender: Address = msgSender1,
+    origin: Address = msgSender1,
+): void {
     const currentBlockValue: u256 = u256.fromU64(currentBlock);
     const medianTimestamp: u64 = 87129871;
     const safeRnd64: u64 = 3723476278;
 
     const writer: BytesWriter = new BytesWriter(255);
 
-    writer.writeAddress(msgSender1);
-    writer.writeAddress(txOrigin1);
+    writer.writeAddress(sender);
+    writer.writeAddress(origin);
     writer.writeBytes(txId1);
     writer.writeU256(currentBlockValue);
     writer.writeAddress(contractDeployer1);
@@ -257,3 +288,67 @@ export function createReservation(
 }
 
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(600);
+
+export class TestLiquidityQueue extends LiquidityQueue {
+    public setPreviousReservationStartingIndex(value: u64): void {
+        this._providerManager.previousReservationStartingIndex = value;
+    }
+
+    public setPreviousReservationStandardStartingIndex(value: u64): void {
+        this._providerManager.previousReservationStandardStartingIndex = value;
+    }
+
+    public setPreviousRemovalStartingIndex(value: u64): void {
+        this._providerManager.previousRemovalStartingIndex = value;
+    }
+
+    public getPreviousReservationStartingIndex(): u64 {
+        return this._providerManager.previousReservationStartingIndex;
+    }
+
+    public getPreviousReservationStandardStartingIndex(): u64 {
+        return this._providerManager.previousReservationStandardStartingIndex;
+    }
+
+    public getPreviousRemovalStartingIndex(): u64 {
+        return this._providerManager.previousRemovalStartingIndex;
+    }
+
+    public getCurrentIndex(): u64 {
+        return this._providerManager.getCurrentIndex();
+    }
+
+    public getCurrentIndexPriority(): u64 {
+        return this._providerManager.getCurrentIndexPriority();
+    }
+
+    public getCurrentIndexRemoval(): u64 {
+        return this._providerManager.getCurrentIndexRemoval();
+    }
+
+    public callPurgeReservationsAndRestoreProviders(): void {
+        this.purgeReservationsAndRestoreProviders();
+    }
+
+    public getFromStandardQueue(index: u64): u256 {
+        return this._providerManager.getFromStandardQueue(index);
+    }
+
+    public getProviderManager(): ProviderManager {
+        return this._providerManager;
+    }
+}
+
+export class TestProviderManager extends ProviderManager {
+    public get getStandardQueue(): StoredU256Array {
+        return this._queue;
+    }
+
+    public get getRemovalQueue(): StoredU256Array {
+        return this._removalQueue;
+    }
+
+    public get getPriorityQueue(): StoredU256Array {
+        return this._priorityQueue;
+    }
+}

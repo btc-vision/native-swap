@@ -1,4 +1,4 @@
-import { Blockchain } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders } from '../lib/Provider';
 import { AdvancedStoredString } from '../stored/AdvancedStoredString';
 import { u256 } from '@btc-vision/as-bignum/assembly';
@@ -8,6 +8,7 @@ describe('AdvancedStoredString', () => {
         clearCachedProviders();
         Blockchain.clearStorage();
         Blockchain.clearMockedResults();
+        TransferHelper.clearMockedResults();
     });
 
     it('should get an empty string if not yet saved', () => {

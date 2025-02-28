@@ -42,7 +42,6 @@ import { CompletedTrade } from '../CompletedTrade';
 import { DynamicFee } from '../DynamicFee';
 import { ProviderManager } from './ProviderManager';
 
-const ENABLE_TIMEOUT: bool = false;
 const ENABLE_FEES: bool = true;
 
 export class LiquidityQueue {
@@ -55,47 +54,43 @@ export class LiquidityQueue {
 
     public static MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(1000);
     public static MINIMUM_LIQUIDITY_IN_SAT_VALUE_ADD_LIQUIDITY: u256 = u256.fromU32(10_000);
+    public static MINIMUM_TRADE_SIZE_IN_SATOSHIS: u256 = u256.fromU32(10_000);
     public static PERCENT_TOKENS_FOR_PRIORITY_QUEUE: u128 = u128.fromU32(30);
     public static PERCENT_TOKENS_FOR_PRIORITY_FACTOR: u128 = u128.fromU32(1000);
     public static TIMEOUT_AFTER_EXPIRATION: u8 = 5; // 5 blocks timeout
 
     public readonly tokenId: u256;
-
+    protected _providerManager: ProviderManager;
     // "virtual" reserves
     private readonly _virtualBTCReserve: StoredU256;
     private readonly _virtualTokenReserve: StoredU256;
-
     // We'll keep p0 in a pointer
     private readonly _p0: StoredU256;
-
     private readonly _quoteHistory: StoredU256Array;
     private readonly _totalReserves: StoredMapU256;
     private readonly _totalReserved: StoredMapU256;
-
     // We'll store the last block updated
     private readonly _lastVirtualUpdateBlock: StoredU64;
     private readonly _settingPurge: StoredU64;
     private readonly _settings: StoredU64;
     private readonly _maxTokenPerSwap: StoredU256;
-
     // "delta" accumulators - used in updated stepwise logic
     private readonly _deltaTokensAdd: StoredU256;
     private readonly _deltaBTCBuy: StoredU256;
     private readonly _deltaTokensBuy: StoredU256;
     private readonly _deltaTokensSell: StoredU256;
-
-    // Staking contract details
+  
     private readonly stakingContractAddress: StoredAddress;
-
+  
     private consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
-
     private readonly _dynamicFee: DynamicFee;
-    private _providerManager: ProviderManager;
+    private readonly _timeoutEnabled: boolean;
 
     constructor(
         public readonly token: Address,
         public readonly tokenIdUint8Array: Uint8Array,
         purgeOldReservations: boolean,
+        timeoutEnabled: boolean = false,
     ) {
         const tokenId = u256.fromBytes(token, true);
         this.tokenId = tokenId;
@@ -143,6 +138,7 @@ export class LiquidityQueue {
 
         this._settingPurge = new StoredU64(LIQUIDITY_LAST_UPDATE_BLOCK_POINTER, tokenId, u256.Zero);
         this._settings = new StoredU64(RESERVATION_SETTINGS_POINTER, tokenId, u256.Zero);
+        this._timeoutEnabled = timeoutEnabled;
 
         // Staking
         this.stakingContractAddress = new StoredAddress(STAKING_CA_POINTER, Address.dead());
@@ -275,7 +271,7 @@ export class LiquidityQueue {
     }
 
     public get timeOutEnabled(): bool {
-        return ENABLE_TIMEOUT;
+        return this._timeoutEnabled;
     }
 
     public cleanUpQueues(): void {
@@ -291,15 +287,6 @@ export class LiquidityQueue {
         const feeBP = this._dynamicFee.getDynamicFeeBP(totalSatoshisSpent, utilizationRatio);
         return this._dynamicFee.computeFeeAmount(totalTokensPurchased, feeBP);
     }
-
-    /*public computePriorityTax(amount: u256): u256 {
-        const numerator = SafeMath.mul(
-            amount,
-            LiquidityQueue.PERCENT_TOKENS_FOR_PRIORITY_QUEUE.toU256(),
-        );
-
-        return SafeMath.div(numerator, LiquidityQueue.PERCENT_TOKENS_FOR_PRIORITY_FACTOR.toU256());
-    }*/
 
     public getNextProviderWithLiquidity(): Provider | null {
         return this._providerManager.getNextProviderWithLiquidity();
@@ -441,7 +428,6 @@ export class LiquidityQueue {
         this.virtualTokenReserve = T;
         this.ResetAccumulators();
 
-        // Compute volatility
         this._dynamicFee.volatility = this.computeVolatility(
             currentBlock,
             LiquidityQueue.VOLATILITY_WINDOW_BLOCKS,
@@ -497,12 +483,15 @@ export class LiquidityQueue {
         let totalSatoshisSpent = u256.Zero;
         let totalRefundedBTC = u256.Zero;
         let totalTokensRefunded = u256.Zero;
+        let tokensReserved = u256.Zero;
 
         // 4) Iterate over each "provider" we had reserved
         for (let i = 0; i < reservedIndexes.length; i++) {
             const providerIndex: u64 = reservedIndexes[i];
             const reservedAmount: u128 = reservedValues[i];
             const queueType: u8 = queueTypes[i];
+
+            tokensReserved = SafeMath.add(tokensReserved, reservedAmount.toU256());
 
             // 4a) Retrieve the correct provider from the queue
             const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
@@ -594,36 +583,32 @@ export class LiquidityQueue {
 
                 this.reportUTXOUsed(provider.btcReceiver, actualSpent.toU64());
             } else {
+                // we need to do it for one first time
                 tokensDesired = SafeMath.min(tokensDesired, reservedAmount.toU256());
                 tokensDesired = SafeMath.min(tokensDesired, provider.liquidity.toU256());
+
                 if (tokensDesired.isZero()) {
-                    // if zero => revert entire chunk
+                    // if zero => ignore entire chunk
                     this.restoreReservedLiquidityForProvider(provider, reservedAmount);
                     continue;
                 }
 
-                // (A) Subtract the entire chunk from provider.reserved in one step
+                // Subtract the entire chunk from provider.reserved in one step
                 //     This ensures we never double-sub leftover + tokensDesired.
                 if (u128.lt(provider.reserved, reservedAmount)) {
                     throw new Revert(
                         `Impossible: provider.reserved < reservedAmount (${provider.reserved} < ${reservedAmount})`,
                     );
                 }
-                provider.reserved = SafeMath.sub128(provider.reserved, reservedAmount);
-
-                // (B) leftover is the portion not actually purchased
-                const tokensDesiredU128 = tokensDesired.toU128();
-                const leftover = SafeMath.sub128(reservedAmount, tokensDesiredU128);
-
-                // (C) Remove leftover from global totalReserved
-                if (!leftover.isZero()) {
-                    this.updateTotalReserved(leftover.toU256(), /*increase=*/ false);
-                }
 
                 // Convert the purchased portion to satoshis
                 satoshisSent = this.tokensToSatoshis(tokensDesired, quoteAtReservation);
 
-                // (D) Actually consume tokens from provider.liquidity
+                provider.reserved = SafeMath.sub128(provider.reserved, reservedAmount);
+
+                const tokensDesiredU128 = tokensDesired.toU128();
+
+                // Actually consume tokens from provider.liquidity
                 if (u128.lt(provider.liquidity, tokensDesiredU128)) {
                     throw new Revert('Impossible: liquidity < tokensDesired');
                 }
@@ -646,7 +631,7 @@ export class LiquidityQueue {
 
                 this.resetProviderOnDust(provider, quoteAtReservation);
 
-                // (F) Accumulate user stats
+                // Accumulate user stats
                 totalTokensPurchased = SafeMath.add(totalTokensPurchased, tokensDesired);
                 totalSatoshisSpent = SafeMath.add(totalSatoshisSpent, satoshisSent);
 
@@ -655,6 +640,7 @@ export class LiquidityQueue {
         }
 
         return new CompletedTrade(
+            tokensReserved,
             totalTokensPurchased,
             totalSatoshisSpent,
             totalRefundedBTC,
@@ -665,15 +651,20 @@ export class LiquidityQueue {
     public getReservationWithExpirationChecks(): Reservation {
         const reservation = new Reservation(this.token, Blockchain.tx.sender);
         if (!reservation.valid()) {
-            throw new Revert('No active reservation for this address.');
+            throw new Revert('No valid reservation for this address.');
         }
 
-        // TODO: !!!! Add block threshold. to prevent mev attack, user must set number of block to wait
-        if (
-            reservation.expirationBlock() - LiquidityQueue.RESERVATION_EXPIRE_AFTER ===
-            Blockchain.block.numberU64
-        ) {
-            throw new Revert('Too early');
+        if (reservation.getActivationDelay() === 0) {
+            if (reservation.createdAt === Blockchain.block.numberU64) {
+                throw new Revert('Too early');
+            }
+        } else {
+            if (
+                reservation.createdAt + reservation.getActivationDelay() >
+                Blockchain.block.numberU64
+            ) {
+                throw new Revert('Too early');
+            }
         }
 
         return reservation;
@@ -743,7 +734,10 @@ export class LiquidityQueue {
         // => tokensToSats = tokenAmount * QUOTE_SCALE / scaledPrice
 
         // ROUND DOWN
-        return SafeMath.div(SafeMath.mul(tokenAmount, LiquidityQueue.QUOTE_SCALE), scaledPrice);
+        return SafeMath.div(
+            SafeMath.mul(SafeMath.add(tokenAmount, u256.One), LiquidityQueue.QUOTE_SCALE), // We have to do plus one here due to the round down
+            scaledPrice,
+        );
     }
 
     /**
@@ -836,68 +830,19 @@ export class LiquidityQueue {
         }
     }
 
-    private resetProviderOnDust(provider: Provider, quoteAtReservation: u256): void {
-        const satLeftValue = this.tokensToSatoshis(provider.liquidity.toU256(), quoteAtReservation);
-
-        if (u256.lt(satLeftValue, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
-            this._providerManager.resetProvider(provider, false);
-        }
-    }
-
-    private ResetAccumulators(): void {
-        this.deltaTokensAdd = u256.Zero;
-        this.deltaBTCBuy = u256.Zero;
-        this.deltaTokensBuy = u256.Zero;
-        this.deltaTokensSell = u256.Zero;
-    }
-
-    private computeVolatility(
-        currentBlock: u64,
-        windowSize: u32 = LiquidityQueue.VOLATILITY_WINDOW_BLOCKS,
-    ): u256 {
-        // current quote
-        const blockNumber: u64 = currentBlock % <u64>(u32.MAX_VALUE - 1);
-        const currentQuote = this.getBlockQuote(blockNumber);
-
-        // older quote from (currentBlock - windowSize)
-        const oldBlock = (currentBlock - windowSize) % <u64>(u32.MAX_VALUE - 1);
-        const oldQuote = this.getBlockQuote(oldBlock);
-
-        if (oldQuote.isZero() || currentQuote.isZero()) {
-            // fallback if no data
-            return u256.Zero;
-        }
-
-        // WE WANT UNDERFLOW HERE.
-        let diff = u256.sub(currentQuote, oldQuote);
-        if (diff.toI64() < 0) {
-            diff = u256.mul(diff, u256.fromI64(-1));
-        }
-
-        return SafeMath.div(SafeMath.mul(diff, u256.fromU64(10000)), oldQuote);
-    }
-
-    private restoreReservedLiquidityForProvider(provider: Provider, reserved: u128): void {
-        provider.reserved = SafeMath.sub128(provider.reserved, reserved);
-        provider.liquidity = SafeMath.add128(provider.liquidity, reserved);
-
-        this.updateTotalReserved(reserved.toU256(), false);
-    }
-
-    private purgeReservationsAndRestoreProviders(): void {
+    protected purgeReservationsAndRestoreProviders(): void {
         const lastPurgedBlock: u64 = this.lastPurgedBlock;
         const currentBlockNumber: u64 = Blockchain.block.numberU64;
-        const expireAfter: u64 = LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+        let maxBlockToPurge: u64 = lastPurgedBlock + LiquidityQueue.RESERVATION_EXPIRE_AFTER;
 
-        let maxBlockToPurge: u64 = lastPurgedBlock + expireAfter;
-        if (currentBlockNumber > expireAfter) {
-            const maxPossibleBlock = currentBlockNumber - expireAfter;
-            if (maxBlockToPurge > maxPossibleBlock) {
-                maxBlockToPurge = maxPossibleBlock;
-            }
-        } else {
+        if (currentBlockNumber <= LiquidityQueue.RESERVATION_EXPIRE_AFTER) {
             this._providerManager.restoreCurrentIndex();
             return;
+        }
+
+        const maxPossibleBlock = currentBlockNumber - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+        if (maxBlockToPurge > maxPossibleBlock) {
+            maxBlockToPurge = maxPossibleBlock;
         }
 
         if (lastPurgedBlock >= maxBlockToPurge) {
@@ -923,15 +868,8 @@ export class LiquidityQueue {
                 const reservationId = reservationList.get(i);
                 const reservation = Reservation.load(reservationId);
 
-                if (reservation.getPurgeIndex() !== i) {
-                    throw new Revert(
-                        `Impossible: reservation purge index mismatch (expected: ${i}, actual: ${reservation.getPurgeIndex()})`,
-                    );
-                }
-
-                if (!reservation.expired()) {
-                    throw new Revert(`Impossible: reservation is not active, was in active list`);
-                }
+                this.ensureReservationPurgeIndexMatch(reservation.getPurgeIndex(), i);
+                this.ensureReservationExpired(reservation);
 
                 reservation.timeout();
 
@@ -945,47 +883,16 @@ export class LiquidityQueue {
                     const queueType: u8 = queueTypes[j];
                     const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
 
-                    if (u128.lt(provider.reserved, reservedAmount)) {
-                        throw new Revert(
-                            'Impossible: reserved amount bigger than provider reserve',
-                        );
-                    }
+                    this.ensureValidReservedAmount(provider, reservedAmount);
 
                     if (provider.pendingRemoval && queueType === LIQUIDITY_REMOVAL_TYPE) {
-                        const providerId = provider.providerId;
-
-                        const blockNumber: u64 = reservation.createdAt % <u64>(u32.MAX_VALUE - 1);
-                        const currentQuoteAtThatTime = this.getBlockQuote(blockNumber);
-
-                        // figure out how many sat was associated with 'reservedAmount'
-                        const costInSats = this.tokensToSatoshis(
-                            reservedAmount.toU256(),
-                            currentQuoteAtThatTime,
+                        this.purgeAndRestoreProviderRemovalQueue(
+                            provider.providerId,
+                            reservedAmount,
+                            reservation.createdAt,
                         );
-
-                        // clamp by actual `_lpBTCowedReserved`
-                        const wasReservedSats = this.getBTCowedReserved(providerId);
-                        const revertSats = SafeMath.min(costInSats, wasReservedSats);
-
-                        // remove from owedReserved
-                        const newOwedReserved = SafeMath.sub(wasReservedSats, revertSats);
-                        this.setBTCowedReserved(providerId, newOwedReserved);
                     } else {
-                        provider.reserved = SafeMath.sub128(provider.reserved, reservedAmount);
-
-                        const availableLiquidity = SafeMath.sub128(
-                            provider.liquidity,
-                            provider.reserved,
-                        );
-
-                        if (
-                            u128.lt(
-                                availableLiquidity,
-                                LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT.toU128(),
-                            )
-                        ) {
-                            this._providerManager.resetProvider(provider, false);
-                        }
+                        this.purgeAndRestoreProvider(provider, reservedAmount);
                     }
 
                     updatedOne = true;
@@ -999,6 +906,7 @@ export class LiquidityQueue {
                     ),
                 );
                 reservation.delete(true);
+                activeIds.set(i, false);
             }
 
             reservationList.deleteAll();
@@ -1015,6 +923,50 @@ export class LiquidityQueue {
         this.lastPurgedBlock = currentBlockNumber;
     }
 
+    private resetProviderOnDust(provider: Provider, quoteAtReservation: u256): void {
+        const satLeftValue = this.tokensToSatoshis(provider.liquidity.toU256(), quoteAtReservation);
+
+        if (u256.lt(satLeftValue, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
+            this._providerManager.resetProvider(provider, false);
+        }
+    }
+
+    private ResetAccumulators(): void {
+        this.deltaTokensAdd = u256.Zero;
+        this.deltaBTCBuy = u256.Zero;
+        this.deltaTokensBuy = u256.Zero;
+        this.deltaTokensSell = u256.Zero;
+    }
+
+    private computeVolatility(
+        currentBlock: u64,
+        windowSize: u32 = LiquidityQueue.VOLATILITY_WINDOW_BLOCKS,
+    ): u256 {
+        const blockNumber: u64 = currentBlock % <u64>(u32.MAX_VALUE - 1);
+        const currentQuote = this.getBlockQuote(blockNumber);
+
+        // older quote from (currentBlock - windowSize)
+        const oldBlock = (currentBlock - windowSize) % <u64>(u32.MAX_VALUE - 1);
+        const oldQuote = this.getBlockQuote(oldBlock);
+
+        if (oldQuote.isZero() || currentQuote.isZero()) {
+            return u256.Zero;
+        }
+
+        let diff = u256.sub(currentQuote, oldQuote);
+        if (diff.toI64() < 0) {
+            diff = u256.mul(diff, u256.fromI64(-1));
+        }
+
+        return SafeMath.div(SafeMath.mul(diff, u256.fromU64(10000)), oldQuote);
+    }
+
+    private restoreReservedLiquidityForProvider(provider: Provider, reserved: u128): void {
+        provider.reserved = SafeMath.sub128(provider.reserved, reserved);
+
+        this.updateTotalReserved(reserved.toU256(), false);
+    }
+
     private getProviderIfFromQueue(providerIndex: u64, type: u8): u256 {
         switch (type) {
             case NORMAL_TYPE: {
@@ -1023,7 +975,6 @@ export class LiquidityQueue {
             case PRIORITY_TYPE: {
                 return this._providerManager.getFromPriorityQueue(providerIndex);
             }
-            // !!! TEST MAYBE BROKEN
             case LIQUIDITY_REMOVAL_TYPE: {
                 return this._providerManager.getFromRemovalQueue(providerIndex);
             }
@@ -1105,6 +1056,65 @@ export class LiquidityQueue {
             this.setBTCowedReserved(provider.providerId, newReserved);
         } else {
             this.restoreReservedLiquidityForProvider(provider, reservedAmount);
+        }
+    }
+
+    private purgeAndRestoreProviderRemovalQueue(
+        providerId: u256,
+        reservedAmount: u128,
+        createdAt: u64,
+    ): void {
+        const blockNumber: u64 = createdAt % <u64>(u32.MAX_VALUE - 1);
+        const currentQuoteAtThatTime = this.getBlockQuote(blockNumber);
+
+        if (currentQuoteAtThatTime.isZero()) {
+            throw new Revert('Impossible state: No quote at block.');
+        }
+
+        // figure out how many sat was associated with 'reservedAmount'
+        const costInSats = this.tokensToSatoshis(reservedAmount.toU256(), currentQuoteAtThatTime);
+
+        // clamp by actual `_lpBTCowedReserved`
+        const wasReservedSats = this.getBTCowedReserved(providerId);
+        const revertSats = SafeMath.min(costInSats, wasReservedSats);
+
+        // remove from owedReserved
+        const newOwedReserved = SafeMath.sub(wasReservedSats, revertSats);
+        this.setBTCowedReserved(providerId, newOwedReserved);
+    }
+
+    private purgeAndRestoreProvider(provider: Provider, reservedAmount: u128): void {
+        provider.reserved = SafeMath.sub128(provider.reserved, reservedAmount);
+
+        const availableLiquidity = SafeMath.sub128(provider.liquidity, provider.reserved);
+
+        if (
+            u128.lt(
+                availableLiquidity,
+                LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT.toU128(),
+            )
+        ) {
+            this._providerManager.resetProvider(provider, false);
+        }
+    }
+
+    private ensureReservationPurgeIndexMatch(reservationPurgeIndex: u32, currentIndex: u32): void {
+        if (reservationPurgeIndex !== currentIndex) {
+            throw new Revert(
+                `Impossible: reservation purge index mismatch (expected: ${currentIndex}, actual: ${reservationPurgeIndex})`,
+            );
+        }
+    }
+
+    private ensureReservationExpired(reservation: Reservation): void {
+        if (!reservation.expired()) {
+            throw new Revert(`Impossible: reservation is not active, was in active list`);
+        }
+    }
+
+    private ensureValidReservedAmount(provider: Provider, reservedAmount: u128): void {
+        if (u128.lt(provider.reserved, reservedAmount)) {
+            throw new Revert('Impossible: reserved amount bigger than provider reserve');
         }
     }
 }

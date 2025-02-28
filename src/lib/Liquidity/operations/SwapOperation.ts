@@ -27,6 +27,7 @@ export class SwapOperation extends BaseOperation {
         reservationActiveList.set(<u64>reservation.getPurgeIndex(), false);
         reservationActiveList.save();
 
+        const buyer: Address = Blockchain.tx.sender;
         const trade = this.liquidityQueue.executeTrade(reservation);
 
         let totalTokensPurchased = SafeMath.add(
@@ -34,28 +35,27 @@ export class SwapOperation extends BaseOperation {
             trade.totalTokensRefunded,
         );
 
-        const totalTokensPurchasedBeforeFees = totalTokensPurchased.clone();
-
         const totalSatoshisSpent = SafeMath.add(trade.totalSatoshisSpent, trade.totalRefundedBTC);
-        if (this.liquidityQueue.feesEnabled) {
-            const totalFeeTokens = this.liquidityQueue.computeFees(
-                totalTokensPurchased,
-                totalSatoshisSpent,
-            );
 
-            totalTokensPurchased = SafeMath.sub(totalTokensPurchased, totalFeeTokens);
-            this.liquidityQueue.distributeFee(totalFeeTokens);
+        if (!totalTokensPurchased.isZero()) {
+            if (this.liquidityQueue.feesEnabled) {
+                const totalFeeTokens = this.liquidityQueue.computeFees(
+                    totalTokensPurchased,
+                    totalSatoshisSpent,
+                );
+
+                totalTokensPurchased = SafeMath.sub(totalTokensPurchased, totalFeeTokens);
+                this.liquidityQueue.distributeFee(totalFeeTokens);
+            }
+
+            this.liquidityQueue.updateTotalReserved(trade.tokensReserved, false);
+            this.liquidityQueue.updateTotalReserve(totalTokensPurchased, false);
+
+            TransferHelper.safeTransfer(this.liquidityQueue.token, buyer, totalTokensPurchased);
+
+            this.liquidityQueue.buyTokens(totalTokensPurchased, totalSatoshisSpent);
         }
 
-        this.liquidityQueue.updateTotalReserved(totalTokensPurchasedBeforeFees, false);
-        this.liquidityQueue.updateTotalReserve(totalTokensPurchased, false);
-
-        const buyer: Address = Blockchain.tx.sender;
-        TransferHelper.safeTransfer(this.liquidityQueue.token, buyer, totalTokensPurchased);
-
-        this.liquidityQueue.buyTokens(totalTokensPurchased, totalSatoshisSpent);
-
-        // finalize
         this.liquidityQueue.cleanUpQueues();
 
         this.emitSwapExecutedEvent(buyer, totalSatoshisSpent, totalTokensPurchased);
