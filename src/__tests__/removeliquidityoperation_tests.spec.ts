@@ -41,11 +41,7 @@ describe('RemoveLiquidityOperation tests', () => {
             const provider = createProvider(providerAddress1, tokenAddress1, false, false, false);
             const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            const operation = new RemoveLiquidityOperation(
-                queue,
-                provider.providerId,
-                u256.fromU32(1000),
-            );
+            const operation = new RemoveLiquidityOperation(queue, provider.providerId);
 
             operation.execute();
         }).toThrow();
@@ -59,11 +55,7 @@ describe('RemoveLiquidityOperation tests', () => {
             const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.initialLiquidityProvider = provider.providerId;
 
-            const operation = new RemoveLiquidityOperation(
-                queue,
-                provider.providerId,
-                u256.fromU32(1000),
-            );
+            const operation = new RemoveLiquidityOperation(queue, provider.providerId);
 
             operation.execute();
         }).toThrow();
@@ -78,11 +70,7 @@ describe('RemoveLiquidityOperation tests', () => {
 
             const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            const operation = new RemoveLiquidityOperation(
-                queue,
-                provider.providerId,
-                u256.fromU32(1000),
-            );
+            const operation = new RemoveLiquidityOperation(queue, provider.providerId);
 
             operation.execute();
         }).toThrow();
@@ -156,7 +144,7 @@ describe('RemoveLiquidityOperation tests', () => {
             const queue5 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             queue5.setBTCowed(providerId2, u256.Zero);
-            const removeOp = new RemoveLiquidityOperation(queue5, providerId2, u256.fromU64(1000));
+            const removeOp = new RemoveLiquidityOperation(queue5, providerId2);
             removeOp.execute();
             queue5.save();
         }).toThrow();
@@ -228,10 +216,10 @@ describe('RemoveLiquidityOperation tests', () => {
 
             setBlockchainEnvironment(103, providerAddress2, providerAddress2);
             const queue5 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-            const removeOp = new RemoveLiquidityOperation(queue5, providerId2, u256.fromU64(1000));
+            const removeOp = new RemoveLiquidityOperation(queue5, providerId2);
             removeOp.execute();
             queue5.save();
-            const removeOp2 = new RemoveLiquidityOperation(queue5, providerId2, u256.fromU64(1000));
+            const removeOp2 = new RemoveLiquidityOperation(queue5, providerId2);
             removeOp2.execute();
         }).toThrow();
     });
@@ -306,7 +294,7 @@ describe('RemoveLiquidityOperation tests', () => {
 
             provider2.liquidityProvided = u256.Zero;
             const queue5 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-            const removeOp = new RemoveLiquidityOperation(queue5, providerId2, u256.fromU64(1000));
+            const removeOp = new RemoveLiquidityOperation(queue5, providerId2);
             removeOp.execute();
             queue5.save();
         }).toThrow();
@@ -350,7 +338,7 @@ describe('RemoveLiquidityOperation tests', () => {
 
         transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
         transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-        transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 2000));
+        transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 10000));
 
         Blockchain.mockTransactionOutput(transactionOutput);
 
@@ -360,7 +348,7 @@ describe('RemoveLiquidityOperation tests', () => {
             queue3,
             providerId2,
             providerAddress2,
-            u256.fromU64(2000),
+            u256.fromU64(10000),
             u256.Zero,
             true,
             0,
@@ -388,7 +376,7 @@ describe('RemoveLiquidityOperation tests', () => {
         const BTCOwed = queue4.getBTCowed(providerId2);
 
         const queue5 = new TestLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-        const removeOp = new RemoveLiquidityOperation(queue5, providerId2, u256.fromU64(1000));
+        const removeOp = new RemoveLiquidityOperation(queue5, providerId2);
         removeOp.execute();
         queue5.save();
 

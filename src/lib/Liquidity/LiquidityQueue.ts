@@ -39,7 +39,6 @@ import { CompletedTrade } from '../CompletedTrade';
 import { DynamicFee } from '../DynamicFee';
 import { ProviderManager } from './ProviderManager';
 
-const ENABLE_TIMEOUT: bool = false;
 const ENABLE_FEES: bool = true;
 
 export class LiquidityQueue {
@@ -52,6 +51,7 @@ export class LiquidityQueue {
 
     public static MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(1000);
     public static MINIMUM_LIQUIDITY_IN_SAT_VALUE_ADD_LIQUIDITY: u256 = u256.fromU32(10_000);
+    public static MINIMUM_TRADE_SIZE_IN_SATOSHIS: u256 = u256.fromU32(10_000);
     public static PERCENT_TOKENS_FOR_PRIORITY_QUEUE: u128 = u128.fromU32(30);
     public static PERCENT_TOKENS_FOR_PRIORITY_FACTOR: u128 = u128.fromU32(1000);
     public static TIMEOUT_AFTER_EXPIRATION: u8 = 5; // 5 blocks timeout
@@ -78,11 +78,13 @@ export class LiquidityQueue {
     private readonly _deltaTokensSell: StoredU256;
     private consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
     private readonly _dynamicFee: DynamicFee;
+    private readonly _timeoutEnabled: boolean;
 
     constructor(
         public readonly token: Address,
         public readonly tokenIdUint8Array: Uint8Array,
         purgeOldReservations: boolean,
+        timeoutEnabled: boolean = false,
     ) {
         const tokenId = u256.fromBytes(token, true);
         this.tokenId = tokenId;
@@ -130,6 +132,7 @@ export class LiquidityQueue {
 
         this._settingPurge = new StoredU64(LIQUIDITY_LAST_UPDATE_BLOCK_POINTER, tokenId, u256.Zero);
         this._settings = new StoredU64(RESERVATION_SETTINGS_POINTER, tokenId, u256.Zero);
+        this._timeoutEnabled = timeoutEnabled;
 
         if (purgeOldReservations) {
             this.purgeReservationsAndRestoreProviders();
@@ -259,7 +262,7 @@ export class LiquidityQueue {
     }
 
     public get timeOutEnabled(): bool {
-        return ENABLE_TIMEOUT;
+        return this._timeoutEnabled;
     }
 
     public cleanUpQueues(): void {

@@ -357,7 +357,7 @@ export class ProviderManager {
                 }
 
                 const left = SafeMath.sub(owedBTC, reservedBTC);
-                if (!left.isZero() && u256.gt(left, this.strictMinimumProviderReservationAmount)) {
+                if (!left.isZero() && u256.ge(left, this.strictMinimumProviderReservationAmount)) {
                     // This is the next valid removal provider. We do NOT
                     // check provider.liquidity here, because they've already
                     // withdrawn tokens. For the AMM, we treat them as if
@@ -371,6 +371,7 @@ export class ProviderManager {
                     if (u256.lt(owedBTC, this.strictMinimumProviderReservationAmount)) {
                         // If they don't have owed BTC, they can be removed from queue
                         //this.removePendingLiquidityProviderFromRemovalQueue(provider, i);
+                        //!!!!!! TODO: Anakun check
                         throw new Revert(
                             `Impossible state: Provider should have been removed from queue during swap operation.`,
                         );

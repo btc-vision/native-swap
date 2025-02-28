@@ -12,11 +12,9 @@ import {
     U256_BYTE_LENGTH,
     U64_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
-import { OP_NET } from '@btc-vision/btc-runtime/runtime/contracts/OP_NET';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { getProvider, saveAllProviders } from '../lib/Provider';
-import { getTotalFeeCollected } from '../utils/NativeSwapUtils';
 import { FeeManager } from '../lib/FeeManager';
 import { AddLiquidityOperation } from '../lib/Liquidity/operations/AddLiquidityOperation';
 import { RemoveLiquidityOperation } from '../lib/Liquidity/operations/RemoveLiquidityOperation';
@@ -27,6 +25,7 @@ import { CancelListingOperation } from '../lib/Liquidity/operations/CancelListin
 import { SwapOperation } from '../lib/Liquidity/operations/SwapOperation';
 import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
+import { ReentrancyGuard } from '../lib/ReentrancyGuard';
 
 /**
  * OrderBook contract for the OP_NET order book system,
@@ -34,9 +33,7 @@ import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
  * in the LiquidityQueue.
  */
 @final
-export class NativeSwap extends OP_NET {
-    private readonly minimumTradeSize: u256 = u256.fromU32(10_000); // The minimum trade size in satoshis.
-
+export class NativeSwap extends ReentrancyGuard {
     public constructor() {
         super();
     }
@@ -106,6 +103,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private getAntibotSettings(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const token = calldata.readAddress();
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
 
@@ -117,6 +116,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private getFees(_calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const writer = new BytesWriter(3 * U64_BYTE_LENGTH);
 
         writer.writeU64(FeeManager.RESERVATION_BASE_FEE);
@@ -126,6 +127,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private setFees(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         this.onlyDeployer(Blockchain.tx.sender);
 
         FeeManager.RESERVATION_BASE_FEE = calldata.readU64();
@@ -137,6 +140,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private getProviderDetails(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const token = calldata.readAddress();
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const provider = getProvider(providerId);
@@ -150,6 +155,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private getPriorityQueueCost(): BytesWriter {
+        this.checkReentrancy();
+
         const cost = FeeManager.PRIORITY_QUEUE_BASE_FEE;
 
         const writer = new BytesWriter(U64_BYTE_LENGTH);
@@ -158,6 +165,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private addLiquidity(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const token = calldata.readAddress();
         const receiver = calldata.readStringWithLength();
 
@@ -174,12 +183,13 @@ export class NativeSwap extends OP_NET {
     }
 
     private removeLiquidity(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const token = calldata.readAddress();
-        const amount = calldata.readU256();
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
 
-        const operation = new RemoveLiquidityOperation(queue, providerId, amount);
+        const operation = new RemoveLiquidityOperation(queue, providerId);
         operation.execute();
 
         queue.save();
@@ -190,6 +200,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private createPoolWithSignature(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const signature = calldata.readBytesWithLength();
         this.ensureValidSignatureLength(signature);
 
@@ -209,10 +221,18 @@ export class NativeSwap extends OP_NET {
 
         Blockchain.call(token, calldataSend);
 
-        return this.createPool(calldata, token);
+        return this.createPool(calldata, token, false);
     }
 
-    private createPool(calldata: Calldata, token: Address): BytesWriter {
+    private createPool(
+        calldata: Calldata,
+        token: Address,
+        checkReentrancy: boolean = true,
+    ): BytesWriter {
+        if (checkReentrancy) {
+            this.checkReentrancy();
+        }
+
         const tokenOwner = this.getDeployer(token);
 
         this.ensureContractDeployer(tokenOwner);
@@ -246,6 +266,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private listLiquidity(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const token: Address = calldata.readAddress();
         const receiver: string = calldata.readStringWithLength();
 
@@ -287,6 +309,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private reserve(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const token: Address = calldata.readAddress();
         const maximumAmountIn: u256 = calldata.readU256();
         const minimumAmountOut: u256 = calldata.readU256();
@@ -304,16 +328,9 @@ export class NativeSwap extends OP_NET {
         activationDelay: u8,
     ): BytesWriter {
         this.ensureValidTokenAddress(token);
-        this.ensureValidActivationDelay(activationDelay);
-        this.ensureMaximumAmountInNotZero(maximumAmountIn);
-        this.ensureMaximumAmountInNotBelowTradeSize(maximumAmountIn);
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
-        this.ensurePoolExistsForToken(queue);
-
-        const totalFee = getTotalFeeCollected();
-        this.ensureSufficientFeesCollected(totalFee);
 
         const operation = new ReserveLiquidityOperation(
             queue,
@@ -326,7 +343,6 @@ export class NativeSwap extends OP_NET {
         );
 
         operation.execute();
-
         queue.save();
 
         const result = new BytesWriter(1);
@@ -335,6 +351,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private cancelListing(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const token: Address = calldata.readAddress();
         return this._cancelListing(token);
     }
@@ -358,6 +376,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private swap(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const token: Address = calldata.readAddress();
         return this._swap(token);
     }
@@ -382,6 +402,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private getReserve(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const token: Address = calldata.readAddress();
         return this._getReserve(token);
     }
@@ -402,6 +424,8 @@ export class NativeSwap extends OP_NET {
     }
 
     private getQuote(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
+
         const token: Address = calldata.readAddress();
         const satoshisIn: u256 = calldata.readU256();
 
@@ -485,12 +509,6 @@ export class NativeSwap extends OP_NET {
         return response.readAddress();
     }
 
-    private ensureValidActivationDelay(activationDelay: u8): void {
-        if (activationDelay > 3) {
-            throw new Revert('NATIVE_SWAP: Activation delay cannot be greater than 3');
-        }
-    }
-
     private ensureValidReceiverAddress(receiver: string): void {
         if (Blockchain.validateBitcoinAddress(receiver) == false) {
             throw new Revert('NATIVE_SWAP: Invalid receiver address');
@@ -512,20 +530,6 @@ export class NativeSwap extends OP_NET {
     private ensurePoolExistsForToken(queue: LiquidityQueue): void {
         if (queue.p0.isZero()) {
             throw new Revert('NATIVE_SWAP: No pool exists for token.');
-        }
-    }
-
-    private ensureSufficientFeesCollected(totalFee: u64): void {
-        if (totalFee < FeeManager.RESERVATION_BASE_FEE) {
-            throw new Revert('NATIVE_SWAP: Insufficient fees collected');
-        }
-    }
-
-    private ensureMaximumAmountInNotBelowTradeSize(maximumAmountIn: u256): void {
-        if (u256.lt(maximumAmountIn, this.minimumTradeSize)) {
-            throw new Revert(
-                `NATIVE_SWAP: Requested amount is below minimum trade size ${maximumAmountIn} < ${this.minimumTradeSize}`,
-            );
         }
     }
 

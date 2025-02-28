@@ -7,15 +7,12 @@ import { LiquidityRemovedEvent } from '../../../events/LiquidityRemovedEvent';
 
 export class RemoveLiquidityOperation extends BaseOperation {
     private readonly providerId: u256;
-    private readonly amount: u256;
     private readonly provider: Provider;
 
-    //!!!! Amount never used
-    constructor(liquidityQueue: LiquidityQueue, providerId: u256, amount: u256) {
+    constructor(liquidityQueue: LiquidityQueue, providerId: u256) {
         super(liquidityQueue);
 
         this.providerId = providerId;
-        this.amount = amount;
         this.provider = getProvider(providerId);
     }
 

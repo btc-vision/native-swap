@@ -660,7 +660,7 @@ describe('SwapOperation tests', () => {
 
         setBlockchainEnvironment(104, providerAddress3, providerAddress3);
         const queue5 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-        const removeOp = new RemoveLiquidityOperation(queue5, providerId3, u256.fromU32(15600));
+        const removeOp = new RemoveLiquidityOperation(queue5, providerId3);
         removeOp.execute();
         queue5.save();
 
