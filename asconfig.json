@@ -19,7 +19,13 @@
             "initialMemory": 1,
             "maximumMemory": 512,
             "bindings": "esm",
-            "exportStart": "start"
+            "exportStart": "start",
+            "use": [
+                "abort=src/index/abort"
+            ]
         }
+    },
+    "options": {
+        "transform": "@btc-vision/opnet-transform"
     }
 }
