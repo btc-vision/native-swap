@@ -1,5 +1,5 @@
 import { clearCachedProviders } from '../lib/Provider';
-import { Blockchain } from '../../../btc-runtime-new/runtime';
+import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 import { StoredMapU256 } from '../stored/StoredMapU256';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
