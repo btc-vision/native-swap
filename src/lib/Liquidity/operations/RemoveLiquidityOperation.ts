@@ -2,7 +2,7 @@ import { BaseOperation } from './BaseOperation';
 import { LiquidityQueue } from '../LiquidityQueue';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../../Provider';
-import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityRemovedEvent } from '../../../events/LiquidityRemovedEvent';
 
 export class RemoveLiquidityOperation extends BaseOperation {
@@ -35,19 +35,13 @@ export class RemoveLiquidityOperation extends BaseOperation {
         TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, tokenAmount);
 
         // 4. Decrease total reserves
-        this.liquidityQueue.updateTotalReserve(tokenAmount, false);
+        this.liquidityQueue.decreaseTotalReserve(tokenAmount);
         this.provider.liquidityProvided = u256.Zero;
 
         // 5. Also reduce the virtual reserves so the ratio is consistent
         //    but do NOT update deltaTokensSell or deltaTokensBuy.
-        this.liquidityQueue.virtualTokenReserve = SafeMath.sub(
-            this.liquidityQueue.virtualTokenReserve,
-            tokenAmount,
-        );
-        this.liquidityQueue.virtualBTCReserve = SafeMath.sub(
-            this.liquidityQueue.virtualBTCReserve,
-            btcOwed,
-        );
+        this.liquidityQueue.decreaseVirtualTokenReserve(tokenAmount);
+        this.liquidityQueue.decreaseVirtualBTCReserve(btcOwed);
 
         // 6. Finally, queue them up to receive owed BTC from future inflows
         this.provider.pendingRemoval = true;

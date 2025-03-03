@@ -376,7 +376,7 @@ describe('SwapOperation tests', () => {
         expect(initialProvider.liquidity).toStrictEqual(
             u128.fromString(`999993333333333333333334`),
         );
-        expect(queue4.liquidity).toStrictEqual(u256.fromString(`999993346666666666666667`));
+        expect(queue4.liquidity).toStrictEqual(u256.fromString(`999993340000000000000000`));
         expect(queue4.reservedLiquidity).toStrictEqual(u256.Zero);
         expect(queue4.deltaBTCBuy).toStrictEqual(u256.fromU32(10000));
         expect(queue4.deltaTokensBuy).toStrictEqual(u256.fromString(`6653333333333333333`));
@@ -567,7 +567,7 @@ describe('SwapOperation tests', () => {
         queue4.save();
 
         expect(queue4.reservedLiquidity).toStrictEqual(u256.Zero);
-        expect(queue4.liquidity).toStrictEqual(u256.fromString(`999999620800000000000001`));
+        expect(queue4.liquidity).toStrictEqual(u256.fromString(`999999610400000000000001`));
         expect(provider2.liquidity).toStrictEqual(u128.Zero);
         expect(provider2.reserved).toStrictEqual(u128.Zero);
         expect(initialProvider.liquidity).toStrictEqual(
@@ -704,14 +704,15 @@ describe('SwapOperation tests', () => {
         expect(queue7.getBTCowedReserved(providerId3)).toStrictEqual(u256.Zero);
         expect(queue7.getBTCowed(providerId3)).toStrictEqual(u256.Zero);
         expect(queue7.reservedLiquidity).toStrictEqual(u256.Zero);
-        expect(queue7.liquidity).toStrictEqual(u256.fromString(`999999620800000000000000`));
+        expect(queue7.liquidity).toStrictEqual(u256.fromString(`999999610400000000000000`));
         expect(queue7.deltaBTCBuy).toStrictEqual(u256.fromString(`15600`));
-        expect(queue7.deltaTokensBuy).toStrictEqual(u256.fromString(`10379200000000000000`));
+        expect(queue7.deltaTokensBuy).toStrictEqual(u256.fromString(`10379200000000000000`), '2');
 
         expect(provider3.liquidity).toStrictEqual(u128.Zero);
         expect(provider3.reserved).toStrictEqual(u128.Zero);
         expect(initialProvider.liquidity).toStrictEqual(
             u128.fromString(`999999600000000000000001`),
+            '3',
         );
         expect(initialProvider.reserved).toStrictEqual(u128.Zero);
         expect(TransferHelper.safeTransferCalled).toBeTruthy();

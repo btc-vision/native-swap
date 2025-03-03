@@ -115,7 +115,7 @@ describe('RemoveLiquidityOperation tests', () => {
 
             transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
             transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-            transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 2000));
+            transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 12000));
 
             Blockchain.mockTransactionOutput(transactionOutput);
 
@@ -125,7 +125,7 @@ describe('RemoveLiquidityOperation tests', () => {
                 queue3,
                 providerId2,
                 providerAddress2,
-                u256.fromU64(2000),
+                u256.fromU64(12000),
                 u256.Zero,
                 true,
                 0,
@@ -189,7 +189,7 @@ describe('RemoveLiquidityOperation tests', () => {
 
             transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
             transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-            transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 2000));
+            transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 12000));
 
             Blockchain.mockTransactionOutput(transactionOutput);
 
@@ -199,7 +199,7 @@ describe('RemoveLiquidityOperation tests', () => {
                 queue3,
                 providerId2,
                 providerAddress2,
-                u256.fromU64(2000),
+                u256.fromU64(12000),
                 u256.Zero,
                 true,
                 0,
@@ -263,7 +263,7 @@ describe('RemoveLiquidityOperation tests', () => {
 
             transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
             transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-            transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 2000));
+            transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 12000));
 
             Blockchain.mockTransactionOutput(transactionOutput);
 
@@ -273,7 +273,7 @@ describe('RemoveLiquidityOperation tests', () => {
                 queue3,
                 providerId2,
                 providerAddress2,
-                u256.fromU64(2000),
+                u256.fromU64(12000),
                 u256.Zero,
                 true,
                 0,

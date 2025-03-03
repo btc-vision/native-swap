@@ -48,8 +48,8 @@ export class SwapOperation extends BaseOperation {
                 this.liquidityQueue.distributeFee(totalFeeTokens);
             }
 
-            this.liquidityQueue.updateTotalReserved(trade.tokensReserved, false);
-            this.liquidityQueue.updateTotalReserve(totalTokensPurchased, false);
+            this.liquidityQueue.decreaseTotalReserved(trade.tokensReserved);
+            this.liquidityQueue.decreaseTotalReserve(totalTokensPurchased);
 
             TransferHelper.safeTransfer(this.liquidityQueue.token, buyer, totalTokensPurchased);
 

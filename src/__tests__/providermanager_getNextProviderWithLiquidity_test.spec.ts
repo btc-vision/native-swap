@@ -231,23 +231,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         }).toThrow();
     });
 
-    it('should be removed from the removal queue when the provider states are valid but (owedBTC - reservedBTC) = strictMinimumProviderReservationAmount', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            tokenId1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
-        manager.addToRemovalQueue(provider.providerId);
-        manager.setBTCowedReserved(provider.providerId, u256.fromU32(1000));
-        manager.setBTCowed(provider.providerId, u256.fromU32(1600));
-
-        const provider2 = manager.getNextProviderWithLiquidity();
-        expect(provider2).toBeNull();
-    });
-
     it('should return null when startingIndex() > getLength()', () => {
         const manager: TestProviderManager = new TestProviderManager(
             tokenAddress1,

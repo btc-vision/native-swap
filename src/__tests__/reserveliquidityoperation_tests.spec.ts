@@ -466,7 +466,7 @@ describe('ReserveLiquidityOperation tests', () => {
             const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             // Make reservedliquidity > liquidity
-            queue2.updateTotalReserved(SafeMath.add(queue2.liquidity, u256.One), true);
+            queue2.increaseTotalReserved(SafeMath.add(queue2.liquidity, u256.One));
 
             const reserveOp = new ReserveLiquidityOperation(
                 queue2,
@@ -529,7 +529,7 @@ describe('ReserveLiquidityOperation tests', () => {
             );
 
             // Make sure not enough liquidity
-            queue2.updateTotalReserved(SafeMath.sub(queue2.liquidity, u256.One), true);
+            queue2.increaseTotalReserved(SafeMath.sub(queue2.liquidity, u256.One));
 
             reserveOp.execute();
         }).toThrow();
@@ -582,7 +582,7 @@ describe('ReserveLiquidityOperation tests', () => {
             );
 
             // Make sure Minimum liquidity not met
-            queue2.updateTotalReserved(u256.fromString(`49999999000000000000000`), true);
+            queue2.increaseTotalReserved(u256.fromString(`49999999000000000000000`));
 
             reserveOp.execute();
         }).toThrow();

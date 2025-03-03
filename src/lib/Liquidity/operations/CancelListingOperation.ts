@@ -1,7 +1,7 @@
 import { BaseOperation } from './BaseOperation';
 import { LiquidityQueue } from '../LiquidityQueue';
 import { getProvider, Provider } from '../../Provider';
-import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ListingCanceledEvent } from '../../../events/ListingCanceledEvent';
 
@@ -35,11 +35,8 @@ export class CancelListingOperation extends BaseOperation {
         TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
 
         // Decrease the total reserves
-        this.liquidityQueue.updateTotalReserve(amount, false);
-        this.liquidityQueue.deltaTokensSell = SafeMath.add(
-            this.liquidityQueue.deltaTokensSell,
-            amount,
-        );
+        this.liquidityQueue.decreaseTotalReserve(amount);
+        this.liquidityQueue.increaseDeltaTokensSell(amount);
         this.liquidityQueue.cleanUpQueues();
 
         this.emitListingCanceledEvent(amount.toU128());

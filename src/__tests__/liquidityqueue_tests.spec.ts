@@ -1,7 +1,9 @@
 import { clearCachedProviders, Provider } from '../lib/Provider';
 import {
+    Address,
     Blockchain,
     SafeMath,
+    StoredAddress,
     StoredBooleanArray,
     StoredU128Array,
     TransactionOutput,
@@ -21,6 +23,7 @@ import {
     receiverAddress2,
     setBlockchainEnvironment,
     TestLiquidityQueue,
+    testStackingContractAddress,
     tokenAddress1,
     tokenAddress2,
     tokenIdUint8Array1,
@@ -34,6 +37,7 @@ import {
     PRIORITY_TYPE,
     Reservation,
 } from '../lib/Reservation';
+import { STAKING_CA_POINTER } from '../lib/StoredPointers';
 
 describe('Liquidity queue tests', () => {
     beforeEach(() => {
@@ -130,8 +134,8 @@ describe('Liquidity queue tests', () => {
         queue.initialLiquidityProvider = providers[0].providerId;
         queue.lastVirtualUpdateBlock = 888;
         queue.maxTokensPerReservation = u256.fromU32(20000);
-        queue.updateTotalReserve(u256.fromU32(1000), true);
-        queue.updateTotalReserved(u256.fromU32(2000), true);
+        queue.increaseTotalReserve(u256.fromU32(1000));
+        queue.increaseTotalReserved(u256.fromU32(2000));
         queue.deltaTokensAdd = u256.fromU32(10000);
         queue.deltaBTCBuy = u256.fromU32(20000);
         queue.deltaTokensSell = u256.fromU32(30000);
@@ -203,8 +207,8 @@ describe('Liquidity queue tests', () => {
         queue.p0 = u256.fromU32(99999);
         queue.initialLiquidityProvider = providers[0].providerId;
         queue.maxTokensPerReservation = u256.fromU32(20000);
-        queue.updateTotalReserve(u256.fromU32(1000), true);
-        queue.updateTotalReserved(u256.fromU32(2000), true);
+        queue.increaseTotalReserve(u256.fromU32(1000));
+        queue.increaseTotalReserved(u256.fromU32(2000));
         queue.deltaTokensAdd = u256.fromU32(10000);
         queue.deltaBTCBuy = u256.fromU32(20000);
         queue.deltaTokensSell = u256.fromU32(30000);
@@ -289,7 +293,7 @@ describe('Liquidity queue tests', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        queue.updateTotalReserved(u256.fromU32(10000000), true);
+        queue.increaseTotalReserved(u256.fromU32(10000000));
         expect(queue.reservedLiquidity).toStrictEqual(u256.fromU32(10000000));
     });
 
@@ -297,8 +301,8 @@ describe('Liquidity queue tests', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        queue.updateTotalReserved(u256.fromU32(2), true);
-        queue.updateTotalReserved(u256.fromU32(1), false);
+        queue.increaseTotalReserved(u256.fromU32(2));
+        queue.decreaseTotalReserved(u256.fromU32(1));
         expect(queue.reservedLiquidity).toStrictEqual(u256.fromU32(1));
     });
 
@@ -312,8 +316,8 @@ describe('Liquidity queue tests', () => {
                 false,
             );
 
-            queue.updateTotalReserved(u256.Max, true);
-            queue.updateTotalReserved(u256.fromU32(1), true);
+            queue.increaseTotalReserved(u256.Max);
+            queue.increaseTotalReserved(u256.fromU32(1));
         }).toThrow('SafeMath: addition overflow');
     });
 
@@ -327,8 +331,8 @@ describe('Liquidity queue tests', () => {
                 false,
             );
 
-            queue.updateTotalReserved(u256.fromU32(1000), false);
-            queue.updateTotalReserved(u256.fromU32(1001), false);
+            queue.decreaseTotalReserved(u256.fromU32(1000));
+            queue.decreaseTotalReserved(u256.fromU32(1001));
         }).toThrow('SafeMath: subtraction overflow');
     });
 
@@ -336,7 +340,7 @@ describe('Liquidity queue tests', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        queue.updateTotalReserve(u256.fromU32(10000000), true);
+        queue.increaseTotalReserve(u256.fromU32(10000000));
         expect(queue.liquidity).toStrictEqual(u256.fromU32(10000000));
     });
 
@@ -344,8 +348,8 @@ describe('Liquidity queue tests', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        queue.updateTotalReserve(u256.fromU32(2), true);
-        queue.updateTotalReserve(u256.fromU32(1), false);
+        queue.increaseTotalReserve(u256.fromU32(2));
+        queue.decreaseTotalReserve(u256.fromU32(1));
         expect(queue.liquidity).toStrictEqual(u256.fromU32(1));
     });
 
@@ -359,8 +363,8 @@ describe('Liquidity queue tests', () => {
                 false,
             );
 
-            queue.updateTotalReserve(u256.Max, true);
-            queue.updateTotalReserve(u256.fromU32(1), true);
+            queue.increaseTotalReserve(u256.Max);
+            queue.increaseTotalReserve(u256.fromU32(1));
         }).toThrow('SafeMath: addition overflow');
     });
 
@@ -374,8 +378,8 @@ describe('Liquidity queue tests', () => {
                 false,
             );
 
-            queue.updateTotalReserve(u256.fromU32(1000), false);
-            queue.updateTotalReserve(u256.fromU32(1001), false);
+            queue.decreaseTotalReserve(u256.fromU32(1000));
+            queue.decreaseTotalReserve(u256.fromU32(1001));
         }).toThrow('SafeMath: subtraction overflow');
     });
 
@@ -431,7 +435,7 @@ describe('Liquidity queue tests', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        queue.updateTotalReserved(u256.fromU32(10000), true);
+        queue.increaseTotalReserved(u256.fromU32(10000));
         expect(queue.getUtilizationRatio()).toStrictEqual(u256.Zero);
     });
 
@@ -439,7 +443,7 @@ describe('Liquidity queue tests', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        queue.updateTotalReserve(u256.fromU32(10000), true);
+        queue.increaseTotalReserve(u256.fromU32(10000));
         expect(queue.getUtilizationRatio()).toStrictEqual(u256.Zero);
     });
 
@@ -447,8 +451,8 @@ describe('Liquidity queue tests', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        queue.updateTotalReserved(u256.fromU32(9000), true);
-        queue.updateTotalReserve(u256.fromU32(1000), true);
+        queue.increaseTotalReserved(u256.fromU32(9000));
+        queue.increaseTotalReserve(u256.fromU32(1000));
         expect(queue.getUtilizationRatio()).toStrictEqual(u256.fromU32(900));
     });
 
@@ -465,8 +469,8 @@ describe('Liquidity queue tests', () => {
                 u256.One,
             );
 
-            queue.updateTotalReserved(maxValue, true);
-            queue.updateTotalReserve(u256.fromU32(1000), true);
+            queue.increaseTotalReserved(maxValue);
+            queue.increaseTotalReserve(u256.fromU32(1000));
             queue.getUtilizationRatio();
         }).toThrow();
     });
@@ -559,8 +563,8 @@ describe('Liquidity queue tests', () => {
     it('should correctly compute the fees when calling computeFees', () => {
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        queue.updateTotalReserve(u256.fromU32(100000), true);
-        queue.updateTotalReserved(u256.fromU32(10000), true);
+        queue.increaseTotalReserve(u256.fromU32(100000));
+        queue.increaseTotalReserved(u256.fromU32(10000));
 
         const fees = queue.computeFees(u256.fromU32(20000), u256.fromU32(100000));
 
@@ -574,6 +578,25 @@ describe('Liquidity queue tests', () => {
         const cost = FeeManager.PRIORITY_QUEUE_BASE_FEE;
 
         expect(cost).toStrictEqual(FeeManager.PRIORITY_QUEUE_BASE_FEE);
+    });
+
+    it('should return Address.dead when the staking contract address is not initialized', () => {
+        setBlockchainEnvironment(90);
+
+        const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+        expect(queue.stakingContractAddress).toStrictEqual(Address.dead());
+    });
+
+    it('should return the valid staking contract address when initialized', () => {
+        setBlockchainEnvironment(90);
+
+        const stakingContractAddress = new StoredAddress(STAKING_CA_POINTER, Address.dead());
+        stakingContractAddress.value = testStackingContractAddress;
+
+        const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+        expect(queue.stakingContractAddress).toStrictEqual(testStackingContractAddress);
     });
 });
 
@@ -1066,8 +1089,8 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        queue.updateTotalReserved(u256.fromU32(50), true);
-        queue.updateTotalReserve(u256.Zero, true);
+        queue.increaseTotalReserved(u256.fromU32(50));
+        queue.increaseTotalReserve(u256.Zero);
         queue.maxReserves5BlockPercent = 10;
 
         const result = queue.getMaximumTokensLeftBeforeCap();
@@ -1078,8 +1101,8 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        queue.updateTotalReserved(u256.fromU32(90), true);
-        queue.updateTotalReserve(u256.fromU32(100), true);
+        queue.increaseTotalReserved(u256.fromU32(90));
+        queue.increaseTotalReserve(u256.fromU32(100));
         queue.maxReserves5BlockPercent = 80;
 
         const result = queue.getMaximumTokensLeftBeforeCap();
@@ -1090,8 +1113,8 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        queue.updateTotalReserved(u256.fromU32(20), true);
-        queue.updateTotalReserve(u256.fromU32(100), true);
+        queue.increaseTotalReserved(u256.fromU32(20));
+        queue.increaseTotalReserve(u256.fromU32(100));
         queue.maxReserves5BlockPercent = 50;
 
         const result = queue.getMaximumTokensLeftBeforeCap();
@@ -1103,8 +1126,8 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        queue.updateTotalReserved(u256.fromU32(40), true);
-        queue.updateTotalReserve(u256.fromU32(100), true);
+        queue.increaseTotalReserved(u256.fromU32(40));
+        queue.increaseTotalReserve(u256.fromU32(100));
         queue.maxReserves5BlockPercent = 40;
 
         const result = queue.getMaximumTokensLeftBeforeCap();
@@ -1116,8 +1139,8 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        queue.updateTotalReserved(u256.fromU32(1_000_000), true);
-        queue.updateTotalReserve(u256.fromU32(10_000_000), true);
+        queue.increaseTotalReserved(u256.fromU32(1_000_000));
+        queue.increaseTotalReserve(u256.fromU32(10_000_000));
         queue.maxReserves5BlockPercent = 50;
 
         const result = queue.getMaximumTokensLeftBeforeCap();
@@ -1129,8 +1152,8 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        queue.updateTotalReserved(u256.fromU32(50), true);
-        queue.updateTotalReserve(u256.fromU32(100), true);
+        queue.increaseTotalReserved(u256.fromU32(50));
+        queue.increaseTotalReserve(u256.fromU32(100));
         queue.maxReserves5BlockPercent = 0;
 
         const result = queue.getMaximumTokensLeftBeforeCap();
@@ -1141,8 +1164,8 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        queue.updateTotalReserved(u256.fromU32(30), true);
-        queue.updateTotalReserve(u256.fromU32(100), true);
+        queue.increaseTotalReserved(u256.fromU32(30));
+        queue.increaseTotalReserve(u256.fromU32(100));
         queue.maxReserves5BlockPercent = 100;
 
         const result = queue.getMaximumTokensLeftBeforeCap();
@@ -1153,8 +1176,8 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        queue.updateTotalReserved(u256.fromU32(100), true);
-        queue.updateTotalReserve(u256.fromU32(100), true);
+        queue.increaseTotalReserved(u256.fromU32(100));
+        queue.increaseTotalReserve(u256.fromU32(100));
         queue.maxReserves5BlockPercent = 90;
 
         const result = queue.getMaximumTokensLeftBeforeCap();
@@ -1165,8 +1188,8 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        queue.updateTotalReserved(u256.fromU32(500), true);
-        queue.updateTotalReserve(u256.fromU32(500), true);
+        queue.increaseTotalReserved(u256.fromU32(500));
+        queue.increaseTotalReserve(u256.fromU32(500));
         queue.maxReserves5BlockPercent = 100;
 
         const result = queue.getMaximumTokensLeftBeforeCap();
@@ -1177,8 +1200,8 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        queue.updateTotalReserved(u256.fromU32(1), true);
-        queue.updateTotalReserve(u256.fromU32(100), true);
+        queue.increaseTotalReserved(u256.fromU32(1));
+        queue.increaseTotalReserve(u256.fromU32(100));
         queue.maxReserves5BlockPercent = 5;
 
         const result = queue.getMaximumTokensLeftBeforeCap();
@@ -1252,8 +1275,8 @@ describe('Liquidity executeTrade tests', () => {
             5,
         );
 
-        queue.updateTotalReserve(u256.fromU64(2000000000), true);
-        queue.updateTotalReserved(u256.fromU64(10), true);
+        queue.increaseTotalReserve(u256.fromU64(2000000000));
+        queue.increaseTotalReserved(u256.fromU64(10));
         expect(queue.quote()).not.toStrictEqual(u256.Zero);
 
         queue.setBlockQuote();
@@ -1300,8 +1323,8 @@ describe('Liquidity executeTrade tests', () => {
                 5,
             );
 
-            queue.updateTotalReserve(u256.fromU64(2000000000), true);
-            queue.updateTotalReserved(u256.fromU64(10), true);
+            queue.increaseTotalReserve(u256.fromU64(2000000000));
+            queue.increaseTotalReserved(u256.fromU64(10));
             expect(queue.quote()).not.toStrictEqual(u256.Zero);
 
             queue.setBlockQuote();
@@ -1348,8 +1371,8 @@ describe('Liquidity executeTrade tests', () => {
                 5,
             );
 
-            queue.updateTotalReserve(u256.fromU64(2000000000), true);
-            queue.updateTotalReserved(u256.fromU64(10), true);
+            queue.increaseTotalReserve(u256.fromU64(2000000000));
+            queue.increaseTotalReserved(u256.fromU64(10));
             expect(queue.quote()).not.toStrictEqual(u256.Zero);
 
             queue.setBlockQuote();
@@ -1422,8 +1445,8 @@ describe('Liquidity executeTrade tests', () => {
             );
 
             queue.addToRemovalQueue(provider2.providerId);
-            queue.updateTotalReserve(u256.fromU64(3000000000), true);
-            queue.updateTotalReserved(u256.fromU64(10), true);
+            queue.increaseTotalReserve(u256.fromU64(3000000000));
+            queue.increaseTotalReserved(u256.fromU64(10));
             expect(queue.quote()).not.toStrictEqual(u256.Zero);
 
             queue.setBlockQuote();
@@ -1495,8 +1518,8 @@ describe('Liquidity executeTrade tests', () => {
         );
 
         queue.addToRemovalQueue(provider2.providerId);
-        queue.updateTotalReserve(u256.fromU64(3000000000), true);
-        queue.updateTotalReserved(u256.fromU64(10), true);
+        queue.increaseTotalReserve(u256.fromU64(3000000000));
+        queue.increaseTotalReserved(u256.fromU64(10));
         queue.setBTCowedReserved(provider2.providerId, u256.fromU64(20000));
         expect(queue.quote()).not.toStrictEqual(u256.Zero);
 
@@ -1686,8 +1709,8 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         queue.setPreviousReservationStartingIndex(100);
         queue.setPreviousReservationStandardStartingIndex(101);
         queue.setPreviousRemovalStartingIndex(102);
-        queue.updateTotalReserve(u256.fromU64(10000000), true);
-        queue.updateTotalReserved(u256.fromU64(2000000), true);
+        queue.increaseTotalReserve(u256.fromU64(10000000));
+        queue.increaseTotalReserved(u256.fromU64(2000000));
         queue.setBlockQuote();
         queue.addToStandardQueue(provider2.providerId);
         queue.lastPurgedBlock = 0;
@@ -1763,8 +1786,8 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
             queue.setPreviousReservationStartingIndex(100);
             queue.setPreviousReservationStandardStartingIndex(101);
             queue.setPreviousRemovalStartingIndex(102);
-            queue.updateTotalReserve(u256.fromU64(10000000), true);
-            queue.updateTotalReserved(u256.fromU64(2000000), true);
+            queue.increaseTotalReserve(u256.fromU64(10000000));
+            queue.increaseTotalReserved(u256.fromU64(2000000));
             queue.setBlockQuote();
             queue.addToStandardQueue(provider2.providerId);
             queue.lastPurgedBlock = 0;
@@ -1834,8 +1857,8 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
             queue.setPreviousReservationStartingIndex(100);
             queue.setPreviousReservationStandardStartingIndex(101);
             queue.setPreviousRemovalStartingIndex(102);
-            queue.updateTotalReserve(u256.fromU64(10000000), true);
-            queue.updateTotalReserved(u256.fromU64(2000000), true);
+            queue.increaseTotalReserve(u256.fromU64(10000000));
+            queue.increaseTotalReserved(u256.fromU64(2000000));
             queue.setBlockQuote();
             queue.addToStandardQueue(provider2.providerId);
             queue.lastPurgedBlock = 0;
@@ -1905,8 +1928,8 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
             queue.setPreviousReservationStartingIndex(100);
             queue.setPreviousReservationStandardStartingIndex(101);
             queue.setPreviousRemovalStartingIndex(102);
-            queue.updateTotalReserve(u256.fromU64(10000000), true);
-            queue.updateTotalReserved(u256.fromU64(2000000), true);
+            queue.increaseTotalReserve(u256.fromU64(10000000));
+            queue.increaseTotalReserved(u256.fromU64(2000000));
             queue.setBlockQuote();
             queue.addToStandardQueue(provider2.providerId);
             queue.lastPurgedBlock = 0;
@@ -1976,8 +1999,8 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
             queue.setPreviousReservationStartingIndex(100);
             queue.setPreviousReservationStandardStartingIndex(101);
             queue.setPreviousRemovalStartingIndex(102);
-            queue.updateTotalReserve(u256.fromU64(10000000), true);
-            queue.updateTotalReserved(u256.fromU64(2000000), true);
+            queue.increaseTotalReserve(u256.fromU64(10000000));
+            queue.increaseTotalReserved(u256.fromU64(2000000));
             queue.setBlockQuote();
             queue.addToRemovalQueue(provider2.providerId);
             queue.lastPurgedBlock = 0;
@@ -2046,8 +2069,8 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         queue.setPreviousReservationStartingIndex(100);
         queue.setPreviousReservationStandardStartingIndex(101);
         queue.setPreviousRemovalStartingIndex(102);
-        queue.updateTotalReserve(u256.fromU64(20000000), true);
-        queue.updateTotalReserved(u256.fromU64(1000000), true);
+        queue.increaseTotalReserve(u256.fromU64(20000000));
+        queue.increaseTotalReserved(u256.fromU64(1000000));
         queue.setBlockQuote();
         queue.addToRemovalQueue(provider2.providerId);
         queue.setBTCowedReserved(provider2.providerId, u256.from(100));
@@ -2119,8 +2142,8 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         queue.setPreviousReservationStartingIndex(100);
         queue.setPreviousReservationStandardStartingIndex(101);
         queue.setPreviousRemovalStartingIndex(102);
-        queue.updateTotalReserve(u256.fromU64(20000000), true);
-        queue.updateTotalReserved(u256.fromU64(1000000), true);
+        queue.increaseTotalReserve(u256.fromU64(20000000));
+        queue.increaseTotalReserved(u256.fromU64(1000000));
         queue.setBlockQuote();
         queue.addToRemovalQueue(provider2.providerId);
         queue.setBTCowedReserved(provider2.providerId, u256.from(100));
@@ -2192,8 +2215,8 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         queue.setPreviousReservationStartingIndex(100);
         queue.setPreviousReservationStandardStartingIndex(101);
         queue.setPreviousRemovalStartingIndex(102);
-        queue.updateTotalReserve(u256.fromU64(20000000), true);
-        queue.updateTotalReserved(u256.fromU64(1000000), true);
+        queue.increaseTotalReserve(u256.fromU64(20000000));
+        queue.increaseTotalReserved(u256.fromU64(1000000));
         queue.setBlockQuote();
         queue.addToRemovalQueue(provider2.providerId);
         queue.setBTCowedReserved(provider2.providerId, u256.from(9));
@@ -2282,8 +2305,8 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         queue.setPreviousReservationStartingIndex(100);
         queue.setPreviousReservationStandardStartingIndex(101);
         queue.setPreviousRemovalStartingIndex(102);
-        queue.updateTotalReserve(u256.fromU64(25000000), true);
-        queue.updateTotalReserved(u256.fromU64(12000000), true);
+        queue.increaseTotalReserve(u256.fromU64(25000000));
+        queue.increaseTotalReserved(u256.fromU64(12000000));
         queue.setBlockQuote();
         queue.addToRemovalQueue(provider2.providerId);
         queue.addToStandardQueue(provider3.providerId);
@@ -2361,8 +2384,8 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         queue.setPreviousReservationStartingIndex(100);
         queue.setPreviousReservationStandardStartingIndex(101);
         queue.setPreviousRemovalStartingIndex(102);
-        queue.updateTotalReserve(u256.fromU64(20000000), true);
-        queue.updateTotalReserved(u256.fromU64(9999950), true);
+        queue.increaseTotalReserve(u256.fromU64(20000000));
+        queue.increaseTotalReserved(u256.fromU64(9999950));
         queue.setBlockQuote();
         queue.addToStandardQueue(provider2.providerId);
         queue.lastPurgedBlock = 0;

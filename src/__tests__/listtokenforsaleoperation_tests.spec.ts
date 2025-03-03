@@ -1,11 +1,18 @@
 import { clearCachedProviders } from '../lib/Provider';
-import { Blockchain, TransactionOutput, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import {
+    Address,
+    Blockchain,
+    StoredAddress,
+    TransactionOutput,
+    TransferHelper,
+} from '@btc-vision/btc-runtime/runtime';
 import {
     createProvider,
     providerAddress1,
     receiverAddress1,
     setBlockchainEnvironment,
     TestLiquidityQueue,
+    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -14,6 +21,7 @@ import { ListTokensForSaleOperation } from '../lib/Liquidity/operations/ListToke
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../lib/FeeManager';
 import { FEE_COLLECT_SCRIPT_PUBKEY } from '../utils/NativeSwapUtils';
+import { STAKING_CA_POINTER } from '../lib/StoredPointers';
 
 describe('ListTokenForSaleOperation tests', () => {
     beforeEach(() => {
@@ -542,5 +550,42 @@ describe('ListTokenForSaleOperation tests', () => {
         operation.execute();
 
         expect(queue.getBlockQuote(100)).toStrictEqual(u256.fromU64(1000000000000));
+    });
+
+    it('should return Address.dead when the staking contract address is not initialized', () => {
+        setBlockchainEnvironment(90);
+
+        const provider = createProvider(providerAddress1, tokenAddress1);
+        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const operation = new ListTokensForSaleOperation(
+            queue,
+            provider.providerId,
+            u128.fromU64(100000000),
+            receiverAddress1,
+            true,
+            false,
+        );
+
+        expect(operation.stakingContractAddress).toStrictEqual(Address.dead());
+    });
+
+    it('should return the valid staking contract address when initialized', () => {
+        setBlockchainEnvironment(90);
+
+        const stakingContractAddress = new StoredAddress(STAKING_CA_POINTER, Address.dead());
+        stakingContractAddress.value = testStackingContractAddress;
+
+        const provider = createProvider(providerAddress1, tokenAddress1);
+        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const operation = new ListTokensForSaleOperation(
+            queue,
+            provider.providerId,
+            u128.fromU64(100000000),
+            receiverAddress1,
+            true,
+            false,
+        );
+
+        expect(operation.stakingContractAddress).toStrictEqual(testStackingContractAddress);
     });
 });

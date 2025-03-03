@@ -12,6 +12,11 @@ import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { ProviderManager } from '../lib/Liquidity/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 
+export const testStackingContractAddress: Address = new Address([
+    99, 103, 209, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
+    192, 64, 105, 97, 112, 200, 3, 234, 133, 17, 88,
+]);
+
 export const providerAddress1: Address = new Address([
     68, 153, 66, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
     192, 64, 105, 97, 112, 200, 3, 234, 133, 60, 241,

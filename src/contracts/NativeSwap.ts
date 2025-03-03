@@ -9,7 +9,6 @@ import {
     SafeMath,
     Selector,
     StoredAddress,
-    StoredU256,
     U128_BYTE_LENGTH,
     U256_BYTE_LENGTH,
     U64_BYTE_LENGTH,
@@ -37,10 +36,9 @@ import { STAKING_CA_POINTER } from '../lib/StoredPointers';
  */
 @final
 export class NativeSwap extends ReentrancyGuard {
-    private readonly minimumTradeSize: u256 = u256.fromU32(10_000); // The minimum trade size in satoshis.
-  
     public stakingContractAddress: StoredAddress;
-  
+    private readonly minimumTradeSize: u256 = u256.fromU32(10_000); // The minimum trade size in satoshis.
+
     public constructor() {
         super();
 
@@ -81,7 +79,6 @@ export class NativeSwap extends ReentrancyGuard {
             case encodeSelector(
                 'createPool(address,uint256,uint128,string,uint16,uint256,uint16)',
             ): {
-                // aka enable trading
                 const token: Address = calldata.readAddress();
                 return this.createPool(calldata, token);
             }
@@ -131,7 +128,7 @@ export class NativeSwap extends ReentrancyGuard {
     private getFees(_calldata: Calldata): BytesWriter {
         this.checkReentrancy();
 
-        const writer = new BytesWriter(3 * U64_BYTE_LENGTH);
+        const writer = new BytesWriter(2 * U64_BYTE_LENGTH);
 
         writer.writeU64(FeeManager.RESERVATION_BASE_FEE);
         writer.writeU64(FeeManager.PRIORITY_QUEUE_BASE_FEE);
@@ -153,6 +150,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private getStakingContractAddress(_calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
         const response = new BytesWriter(ADDRESS_BYTE_LENGTH);
         response.writeAddress(this.stakingContractAddress.value);
 
@@ -160,6 +158,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private setStakingContractAddress(calldata: Calldata): BytesWriter {
+        this.checkReentrancy();
         this.onlyDeployer(Blockchain.tx.sender);
 
         this.stakingContractAddress.value = calldata.readAddress();
@@ -240,7 +239,7 @@ export class NativeSwap extends ReentrancyGuard {
         const token: Address = calldata.readAddress();
 
         const calldataSend = new BytesWriter(
-            68 + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH + SELECTOR_BYTE_LENGTH,
+            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH + U256_BYTE_LENGTH + 68,
         );
 
         calldataSend.writeSelector(NativeSwap.APPROVE_FROM_SELECTOR);
@@ -305,7 +304,11 @@ export class NativeSwap extends ReentrancyGuard {
 
         const amountIn: u128 = calldata.readU128();
         const priority: boolean = calldata.readBoolean();
-        return this._listLiquidity(token, receiver, amountIn, priority);
+        this._listLiquidity(token, receiver, amountIn, priority);
+
+        const result = new BytesWriter(1);
+        result.writeBoolean(true);
+        return result;
     }
 
     private _listLiquidity(
@@ -313,7 +316,7 @@ export class NativeSwap extends ReentrancyGuard {
         receiver: string,
         amountIn: u128,
         priority: boolean,
-    ): BytesWriter {
+    ): void {
         this.ensureValidTokenAddress(token);
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
@@ -329,13 +332,7 @@ export class NativeSwap extends ReentrancyGuard {
         );
 
         operation.execute();
-
         queue.save();
-
-        // Return success
-        const result = new BytesWriter(1);
-        result.writeBoolean(true);
-        return result;
     }
 
     private reserve(calldata: Calldata): BytesWriter {
@@ -347,7 +344,11 @@ export class NativeSwap extends ReentrancyGuard {
         const forLP: bool = calldata.readBoolean();
         const activationDelay: u8 = calldata.readU8();
 
-        return this._reserve(token, maximumAmountIn, minimumAmountOut, forLP, activationDelay);
+        this._reserve(token, maximumAmountIn, minimumAmountOut, forLP, activationDelay);
+
+        const result = new BytesWriter(1);
+        result.writeBoolean(true);
+        return result;
     }
 
     private _reserve(
@@ -356,7 +357,7 @@ export class NativeSwap extends ReentrancyGuard {
         minimumAmountOut: u256,
         forLP: bool,
         activationDelay: u8,
-    ): BytesWriter {
+    ): void {
         this.ensureValidTokenAddress(token);
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
@@ -374,20 +375,20 @@ export class NativeSwap extends ReentrancyGuard {
 
         operation.execute();
         queue.save();
-
-        const result = new BytesWriter(1);
-        result.writeBoolean(true);
-        return result;
     }
 
     private cancelListing(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
 
         const token: Address = calldata.readAddress();
-        return this._cancelListing(token);
+        this._cancelListing(token);
+
+        const result = new BytesWriter(1);
+        result.writeBoolean(true);
+        return result;
     }
 
-    private _cancelListing(token: Address): BytesWriter {
+    private _cancelListing(token: Address): void {
         this.ensureValidTokenAddress(token);
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
@@ -397,22 +398,21 @@ export class NativeSwap extends ReentrancyGuard {
 
         const operation = new CancelListingOperation(queue, providerId);
         operation.execute();
-
         queue.save();
-
-        const result = new BytesWriter(1);
-        result.writeBoolean(true);
-        return result;
     }
 
     private swap(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
 
         const token: Address = calldata.readAddress();
-        return this._swap(token);
+        this._swap(token);
+
+        const result = new BytesWriter(1);
+        result.writeBoolean(true);
+        return result;
     }
 
-    private _swap(token: Address): BytesWriter {
+    private _swap(token: Address): void {
         this.ensureValidTokenAddress(token);
 
         const queue: LiquidityQueue = this.getLiquidityQueue(
@@ -423,12 +423,7 @@ export class NativeSwap extends ReentrancyGuard {
 
         const operation = new SwapOperation(queue);
         operation.execute();
-
         queue.save();
-
-        const result = new BytesWriter(1);
-        result.writeBoolean(true);
-        return result;
     }
 
     private getReserve(calldata: Calldata): BytesWriter {
@@ -445,7 +440,7 @@ export class NativeSwap extends ReentrancyGuard {
 
         this.ensurePoolExistsForToken(queue);
 
-        const result = new BytesWriter(128);
+        const result = new BytesWriter(4 * U256_BYTE_LENGTH);
         result.writeU256(queue.liquidity);
         result.writeU256(queue.reservedLiquidity);
         result.writeU256(queue.virtualBTCReserve);
@@ -504,7 +499,7 @@ export class NativeSwap extends ReentrancyGuard {
         }
 
         // Prepare output
-        const result = new BytesWriter(104); // 3 * u256
+        const result = new BytesWriter(3 * U256_BYTE_LENGTH + U64_BYTE_LENGTH);
         result.writeU256(tokensOut); // how many tokens
         result.writeU256(requiredSatoshis); // how many sat needed
         result.writeU256(price); // final *scaled* price

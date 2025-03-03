@@ -23,7 +23,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private readonly initialLiquidity: boolean;
     private readonly provider: Provider;
     private readonly oldLiquidity: u128;
-    private readonly stakingContractAddress: StoredAddress;
+    private readonly _stakingContractAddress: StoredAddress;
 
     constructor(
         liquidityQueue: LiquidityQueue,
@@ -45,7 +45,11 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.provider = provider;
         this.oldLiquidity = provider.liquidity;
 
-        this.stakingContractAddress = new StoredAddress(STAKING_CA_POINTER, Address.dead());
+        this._stakingContractAddress = new StoredAddress(STAKING_CA_POINTER, Address.dead());
+    }
+
+    public get stakingContractAddress(): Address {
+        return this._stakingContractAddress.value;
     }
 
     public execute(): void {
@@ -181,7 +185,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.setProviderReceiver(this.provider);
 
         // update total reserves
-        this.liquidityQueue.updateTotalReserve(u256AmountIn, true);
+        this.liquidityQueue.increaseTotalReserve(u256AmountIn);
 
         // if priority => remove tax
         if (this.usePriorityQueue) {
@@ -196,14 +200,14 @@ export class ListTokensForSaleOperation extends BaseOperation {
             return;
         }
 
-        provider.liquidity = SafeMath.sub128(provider.liquidity, totalTax);
+        provider.decreaseLiquidity(totalTax);
 
         this.liquidityQueue.buyTokens(totalTax.toU256(), u256.Zero);
-        this.liquidityQueue.updateTotalReserve(totalTax.toU256(), false);
+        this.liquidityQueue.decreaseTotalReserve(totalTax.toU256());
 
         TransferHelper.safeTransfer(
             this.liquidityQueue.token,
-            this.stakingContractAddress.value,
+            this._stakingContractAddress.value,
             totalTax.toU256(),
         );
     }

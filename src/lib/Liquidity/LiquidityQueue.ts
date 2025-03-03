@@ -79,9 +79,9 @@ export class LiquidityQueue {
     private readonly _deltaBTCBuy: StoredU256;
     private readonly _deltaTokensBuy: StoredU256;
     private readonly _deltaTokensSell: StoredU256;
-  
-    private readonly stakingContractAddress: StoredAddress;
-  
+
+    private readonly _stakingContractAddress: StoredAddress;
+
     private consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
     private readonly _dynamicFee: DynamicFee;
     private readonly _timeoutEnabled: boolean;
@@ -141,13 +141,17 @@ export class LiquidityQueue {
         this._timeoutEnabled = timeoutEnabled;
 
         // Staking
-        this.stakingContractAddress = new StoredAddress(STAKING_CA_POINTER, Address.dead());
+        this._stakingContractAddress = new StoredAddress(STAKING_CA_POINTER, Address.dead());
 
         if (purgeOldReservations) {
             this.purgeReservationsAndRestoreProviders();
         }
 
         this.updateVirtualPoolIfNeeded();
+    }
+
+    public get stakingContractAddress(): Address {
+        return this._stakingContractAddress.value;
     }
 
     public get volatility(): u256 {
@@ -361,8 +365,8 @@ export class LiquidityQueue {
 
     public buyTokens(tokensOut: u256, satoshisIn: u256): void {
         // accumulate
-        this.deltaBTCBuy = SafeMath.add(this.deltaBTCBuy, satoshisIn);
-        this.deltaTokensBuy = SafeMath.add(this.deltaTokensBuy, tokensOut);
+        this.increaseDeltaBTCBuy(satoshisIn);
+        this.increaseDeltaTokensBuy(tokensOut);
     }
 
     public updateVirtualPoolIfNeeded(): void {
@@ -604,7 +608,7 @@ export class LiquidityQueue {
                 // Convert the purchased portion to satoshis
                 satoshisSent = this.tokensToSatoshis(tokensDesired, quoteAtReservation);
 
-                provider.reserved = SafeMath.sub128(provider.reserved, reservedAmount);
+                provider.decreaseReserved(reservedAmount);
 
                 const tokensDesiredU128 = tokensDesired.toU128();
 
@@ -621,13 +625,10 @@ export class LiquidityQueue {
                 ) {
                     provider.enableLiquidityProvision();
                     // track that we effectively "added" them to the virtual pool
-                    this.deltaTokensAdd = SafeMath.add(
-                        this.deltaTokensAdd,
-                        provider.liquidity.toU256(), // updated before the subtraction
-                    );
+                    this.increaseDeltaTokensAdd(provider.liquidity.toU256());
                 }
 
-                provider.liquidity = SafeMath.sub128(provider.liquidity, tokensDesiredU128);
+                provider.decreaseLiquidity(tokensDesiredU128);
 
                 this.resetProviderOnDust(provider, quoteAtReservation);
 
@@ -800,33 +801,73 @@ export class LiquidityQueue {
         return this._quoteHistory.get(blockNumber);
     }
 
-    public updateTotalReserve(amount: u256, increase: bool): void {
+    public increaseVirtualBTCReserve(amount: u256): void {
+        this.virtualBTCReserve = SafeMath.add(this.virtualBTCReserve, amount);
+    }
+
+    public decreaseVirtualBTCReserve(amount: u256): void {
+        this.virtualBTCReserve = SafeMath.sub(this.virtualBTCReserve, amount);
+    }
+
+    public increaseVirtualTokenReserve(amount: u256): void {
+        this.virtualTokenReserve = SafeMath.add(this.virtualTokenReserve, amount);
+    }
+
+    public decreaseVirtualTokenReserve(amount: u256): void {
+        this.virtualTokenReserve = SafeMath.sub(this.virtualTokenReserve, amount);
+    }
+
+    public increaseTotalReserve(amount: u256): void {
         const currentReserve = this._totalReserves.get(this.tokenId);
-        const newReserve = increase
-            ? SafeMath.add(currentReserve, amount)
-            : SafeMath.sub(currentReserve, amount);
+        const newReserve = SafeMath.add(currentReserve, amount);
         this._totalReserves.set(this.tokenId, newReserve);
     }
 
-    public updateTotalReserved(amount: u256, increase: bool): void {
+    public decreaseTotalReserve(amount: u256): void {
+        const currentReserve = this._totalReserves.get(this.tokenId);
+        const newReserve = SafeMath.sub(currentReserve, amount);
+        this._totalReserves.set(this.tokenId, newReserve);
+    }
+
+    public increaseTotalReserved(amount: u256): void {
         const currentReserved = this._totalReserved.get(this.tokenId);
-        const newReserved = increase
-            ? SafeMath.add(currentReserved, amount)
-            : SafeMath.sub(currentReserved, amount);
+        const newReserved = SafeMath.add(currentReserved, amount);
         this._totalReserved.set(this.tokenId, newReserved);
+    }
+
+    public decreaseTotalReserved(amount: u256): void {
+        const currentReserved = this._totalReserved.get(this.tokenId);
+        const newReserved = SafeMath.sub(currentReserved, amount);
+        this._totalReserved.set(this.tokenId, newReserved);
+    }
+
+    public increaseDeltaTokensAdd(amount: u256): void {
+        this.deltaTokensAdd = SafeMath.add(this.deltaTokensAdd, amount);
+    }
+
+    public increaseDeltaTokensBuy(amount: u256): void {
+        this.deltaTokensBuy = SafeMath.add(this.deltaTokensBuy, amount);
+    }
+
+    public increaseDeltaBTCBuy(amount: u256): void {
+        this.deltaBTCBuy = SafeMath.add(this.deltaBTCBuy, amount);
+    }
+
+    public increaseDeltaTokensSell(amount: u256): void {
+        this.deltaTokensSell = SafeMath.add(this.deltaTokensSell, amount);
     }
 
     public distributeFee(totalFee: u256): void {
         const feeLP = SafeMath.div(SafeMath.mul(totalFee, u256.fromU64(50)), u256.fromU64(100));
         const feeMoto = SafeMath.sub(totalFee, feeLP);
         // Do nothing with half the fee
-        this.virtualTokenReserve = SafeMath.add(this.virtualTokenReserve, feeLP);
+        this.increaseVirtualTokenReserve(feeLP);
 
         // Only transfer if the fee is non-zero
         if (feeMoto > u256.Zero) {
             // Send other half of fee to staking contract
-            TransferHelper.safeTransfer(this.token, this.stakingContractAddress.value, feeMoto);
-            this.updateTotalReserve(feeMoto, false);
+            TransferHelper.safeTransfer(this.token, this._stakingContractAddress.value, feeMoto);
+            this.decreaseTotalReserve(feeMoto);
         }
     }
 
@@ -914,7 +955,7 @@ export class LiquidityQueue {
         }
 
         if (updatedOne) {
-            this.updateTotalReserved(totalReservedAmount, false);
+            this.decreaseTotalReserved(totalReservedAmount);
             this._providerManager.resetStartingIndex();
         } else {
             this._providerManager.restoreCurrentIndex();
@@ -962,9 +1003,9 @@ export class LiquidityQueue {
     }
 
     private restoreReservedLiquidityForProvider(provider: Provider, reserved: u128): void {
-        provider.reserved = SafeMath.sub128(provider.reserved, reserved);
+        provider.decreaseReserved(reserved);
 
-        this.updateTotalReserved(reserved.toU256(), false);
+        this.decreaseTotalReserved(reserved.toU256());
     }
 
     private getProviderIfFromQueue(providerIndex: u64, type: u8): u256 {
@@ -1084,7 +1125,7 @@ export class LiquidityQueue {
     }
 
     private purgeAndRestoreProvider(provider: Provider, reservedAmount: u128): void {
-        provider.reserved = SafeMath.sub128(provider.reserved, reservedAmount);
+        provider.decreaseReserved(reservedAmount);
 
         const availableLiquidity = SafeMath.sub128(provider.liquidity, provider.reserved);
 

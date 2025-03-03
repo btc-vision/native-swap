@@ -11,7 +11,7 @@ import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { CancelListingOperation } from '../lib/Liquidity/operations/CancelListingOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
-describe('ListTokenForSaleOperation tests', () => {
+describe('CancelListTokenForSaleOperation tests', () => {
     beforeEach(() => {
         clearCachedProviders();
         Blockchain.clearStorage();
@@ -108,7 +108,7 @@ describe('ListTokenForSaleOperation tests', () => {
         provider.liquidity = u128.fromU64(10000);
 
         const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-        queue.updateTotalReserve(u256.fromU64(1000000000), true);
+        queue.increaseTotalReserve(u256.fromU64(1000000000));
 
         const operation = new CancelListingOperation(queue, provider.providerId);
 

@@ -183,7 +183,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 }
 
                 const reserveAmountU128 = reserveAmount.toU128();
-                provider.reserved = SafeMath.add128(provider.reserved, reserveAmountU128);
+                provider.increaseReserved(reserveAmountU128);
 
                 tokensReserved = SafeMath.add(tokensReserved, reserveAmount);
                 satSpent = SafeMath.add(satSpent, costInSatoshis);
@@ -212,7 +212,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
             );
         }
 
-        this.liquidityQueue.updateTotalReserved(tokensReserved, true);
+        this.liquidityQueue.increaseTotalReserved(tokensReserved);
 
         reservation.setActivationDelay(this.activationDelay);
         reservation.reservedLP = this.forLP;
