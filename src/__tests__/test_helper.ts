@@ -285,7 +285,7 @@ export function createReservation(
         reservation.setExpirationBlock(expirationBlock);
     } else {
         reservation.setExpirationBlock(
-            Blockchain.block.numberU64 + LiquidityQueue.RESERVATION_EXPIRE_AFTER,
+            Blockchain.block.number + LiquidityQueue.RESERVATION_EXPIRE_AFTER,
         );
     }
 

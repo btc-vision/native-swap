@@ -370,7 +370,7 @@ export class LiquidityQueue {
     }
 
     public updateVirtualPoolIfNeeded(): void {
-        const currentBlock = Blockchain.block.numberU64;
+        const currentBlock = Blockchain.block.number;
 
         if (currentBlock <= this.lastVirtualUpdateBlock) {
             return;
@@ -656,13 +656,13 @@ export class LiquidityQueue {
         }
 
         if (reservation.getActivationDelay() === 0) {
-            if (reservation.createdAt === Blockchain.block.numberU64) {
+            if (reservation.createdAt === Blockchain.block.number) {
                 throw new Revert('Too early');
             }
         } else {
             if (
                 reservation.createdAt + reservation.getActivationDelay() >
-                Blockchain.block.numberU64
+                Blockchain.block.number
             ) {
                 throw new Revert('Too early');
             }
@@ -789,11 +789,11 @@ export class LiquidityQueue {
     }
 
     public setBlockQuote(): void {
-        if (<u64>u32.MAX_VALUE - 1 < Blockchain.block.numberU64) {
+        if (<u64>u32.MAX_VALUE - 1 < Blockchain.block.number) {
             throw new Revert('Block number too large, max array size.');
         }
 
-        const blockNumberU32: u64 = Blockchain.block.numberU64 % <u64>(u32.MAX_VALUE - 1);
+        const blockNumberU32: u64 = Blockchain.block.number % <u64>(u32.MAX_VALUE - 1);
         this._quoteHistory.set(blockNumberU32, this.quote());
     }
 
@@ -873,7 +873,7 @@ export class LiquidityQueue {
 
     protected purgeReservationsAndRestoreProviders(): void {
         const lastPurgedBlock: u64 = this.lastPurgedBlock;
-        const currentBlockNumber: u64 = Blockchain.block.numberU64;
+        const currentBlockNumber: u64 = Blockchain.block.number;
         let maxBlockToPurge: u64 = lastPurgedBlock + LiquidityQueue.RESERVATION_EXPIRE_AFTER;
 
         if (currentBlockNumber <= LiquidityQueue.RESERVATION_EXPIRE_AFTER) {
