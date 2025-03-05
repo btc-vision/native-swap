@@ -74,7 +74,7 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.cancelListing(calldata);
             case encodeSelector('addLiquidity(address,string)'):
                 return this.addLiquidity(calldata);
-            case encodeSelector('removeLiquidity(address,uint256)'):
+            case encodeSelector('removeLiquidity(address)'):
                 return this.removeLiquidity(calldata);
             case encodeSelector(
                 'createPool(address,uint256,uint128,string,uint16,uint256,uint16)',
@@ -87,7 +87,7 @@ export class NativeSwap extends ReentrancyGuard {
             ): {
                 return this.createPoolWithSignature(calldata);
             }
-            case encodeSelector('setFees(uint64,uint64,uint64)'):
+            case encodeSelector('setFees(uint64,uint64)'):
                 return this.setFees(calldata);
             case encodeSelector('setStakingContractAddress(address)'):
                 return this.setStakingContractAddress(calldata);
@@ -99,10 +99,10 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getQuote(calldata);
             case encodeSelector('getProviderDetails(address)'):
                 return this.getProviderDetails(calldata);
-            case encodeSelector('getPriorityQueueCost(address)'):
+            case encodeSelector('getPriorityQueueCost'):
                 return this.getPriorityQueueCost();
             case encodeSelector('getFees'):
-                return this.getFees(calldata);
+                return this.getFees();
             case encodeSelector('getAntibotSettings(address)'):
                 return this.getAntibotSettings(calldata);
             case encodeSelector('getStakingContractAddress'):
@@ -125,7 +125,7 @@ export class NativeSwap extends ReentrancyGuard {
         return writer;
     }
 
-    private getFees(_calldata: Calldata): BytesWriter {
+    private getFees(): BytesWriter {
         this.checkReentrancy();
 
         const writer = new BytesWriter(2 * U64_BYTE_LENGTH);
