@@ -135,8 +135,6 @@ tools/db/dump.rdb
 
 *.zip
 
-tools/db/dump.rdb
-
 fixdb/
 /.vs
 .idea
@@ -144,3 +142,5 @@ fixdb/
 build
 debug
 yarn.lock
+
+abi.json

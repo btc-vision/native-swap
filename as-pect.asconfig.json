@@ -5,6 +5,7 @@
                 "./node_modules/@btc-vision/as-covers-assembly/index.ts"
             ],
             "transform": [
+                "@btc-vision/opnet-transform",
                 "@btc-vision/as-covers-transform",
                 "@btc-vision/as-pect-transform"
             ]
