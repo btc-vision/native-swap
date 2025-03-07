@@ -8,8 +8,8 @@ import {
     Revert,
 } from '@btc-vision/btc-runtime/runtime';
 
-const bytes = new Uint8Array(15);
-for (let i: i32 = 0; i < 15; i++) {
+const bytes = new Uint8Array(16);
+for (let i: i32 = 1; i < 16; i++) {
     bytes[i] = 0xff;
 }
 
@@ -53,7 +53,6 @@ export class UserLiquidity {
         this.liquidityPointer = encodePointer(liquidityPointer, buffer);
     }
 
-    //!!!! JFB pourquoi pas bool???
     public get pendingRemoval(): boolean {
         this.ensureValues();
         return this.isPendingRemoval == 1;
@@ -107,7 +106,7 @@ export class UserLiquidity {
         if (flag !== 0 && flag !== 1) {
             throw new Revert('Invalid priority flag value');
         }
-        
+
         this.ensureValues();
         if (this.priorityFlag != flag) {
             this.priorityFlag = flag;
@@ -167,9 +166,9 @@ export class UserLiquidity {
     }
 
     /**
-     * @method setLiquidityAmount
-     * @description Sets the liquidity amount.
-     * @param {u128} amount - The liquidity amount to set.
+     * @method setReservedAmount
+     * @description Sets the reserved amount.
+     * @param {u128} amount - The reserved amount to set.
      */
     @inline
     public setReservedAmount(amount: u128): void {
@@ -208,6 +207,9 @@ export class UserLiquidity {
         this.canProvide = 0;
         this.liquidityAmount = u128.Zero;
         this.reservedAmount = u128.Zero;
+        this.liquidityProvided = u256.Zero;
+        this.pendingRemoval = false;
+        this.setIsLp(false);
         this.isChanged = true;
     }
 
@@ -239,17 +241,6 @@ export class UserLiquidity {
             this.liquidityProvided = liquidityProvided;
             this.liquidityChanged = true;
         }
-    }
-
-    /**
-     * @method toString
-     * @description Returns a string representation of the UserLiquidity.
-     * @returns {string} - A string detailing all fields.
-     */
-    @inline
-    public toString(): string {
-        this.ensureValues();
-        return `ActiveFlag: ${this.activeFlag}, LiquidityAmount: ${this.liquidityAmount.toString()}, ReservedAmount: ${this.reservedAmount.toString()}`;
     }
 
     /**

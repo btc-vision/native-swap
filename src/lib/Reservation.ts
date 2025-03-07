@@ -13,10 +13,10 @@ import {
     RESERVATION_INDEXES,
     RESERVATION_PRIORITY,
 } from './StoredPointers';
-import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { UserReservation } from '../data-types/UserReservation';
 import { LiquidityQueue } from './Liquidity/LiquidityQueue';
+import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 
 export const NORMAL_TYPE: u8 = 0;
 export const PRIORITY_TYPE: u8 = 1;
@@ -42,7 +42,6 @@ export class Reservation {
         const reservation = u128.fromBytes(reservationId, true);
         this.userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation.toU256());
         this.reservationId = reservation;
-
         this.reservedIndexes = new StoredU32Array(RESERVATION_INDEXES, reservationId, u256.Zero);
         this.reservedValues = new StoredU128Array(RESERVATION_AMOUNTS, reservationId, u256.Zero);
         this.reservedPriority = new StoredU8Array(RESERVATION_PRIORITY, reservationId, u256.Zero);
@@ -51,15 +50,16 @@ export class Reservation {
     public get createdAt(): u64 {
         const block: u64 = this.expirationBlock();
 
-        return block - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+        // No opnet transaction under block 100
+        if (block <= LiquidityQueue.RESERVATION_EXPIRE_AFTER) {
+            return 0;
+        } else {
+            return block - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+        }
     }
 
     public get userTimeoutBlockExpiration(): u64 {
         return this.userReservation.getUserTimeoutBlockExpiration();
-    }
-
-    public set userTimeoutBlockExpiration(block: u64) {
-        this.userReservation.setUserTimeoutBlockExpiration(block);
     }
 
     public get reservedLP(): bool {
@@ -76,13 +76,33 @@ export class Reservation {
 
     public static generateId(token: Address, owner: Address): Uint8Array {
         const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
-        writer.writeAddress(owner);
         writer.writeAddress(token);
+        writer.writeAddress(owner);
 
         // only use the first 16 bytes (fit 128 bits)
         // this is a design choice. the odds that two ACTIVE reservations have the same ID is 1 in 2^128
         const hash = ripemd160(writer.getBuffer());
         return hash.slice(0, 16);
+    }
+
+    public setPurgeIndex(index: u32): void {
+        this.userReservation.setPurgeIndex(index);
+    }
+
+    public getPurgeIndex(): u32 {
+        return this.userReservation.getPurgeIndex();
+    }
+
+    public setActivationDelay(delay: u8): void {
+        this.userReservation.setActivationDelay(delay);
+    }
+
+    public getActivationDelay(): u8 {
+        return this.userReservation.getActivationDelay();
+    }
+
+    public timeout(): void {
+        this.userReservation.timeout();
     }
 
     public save(): void {
@@ -93,15 +113,11 @@ export class Reservation {
     }
 
     public expired(): bool {
-        return Blockchain.block.numberU64 > this.userReservation.getExpirationBlock();
+        return Blockchain.block.number > this.userReservation.getExpirationBlock();
     }
 
     public setExpirationBlock(block: u64): void {
         this.userReservation.setExpirationBlock(block);
-    }
-
-    public isActive(): bool {
-        return this.userReservation.getExpirationBlock() > 0;
     }
 
     public valid(): bool {
@@ -112,12 +128,12 @@ export class Reservation {
         return this.userReservation.getExpirationBlock();
     }
 
-    public delete(): void {
+    public delete(isTimeout: boolean): void {
         this.reservedIndexes.reset();
         this.reservedValues.reset();
         this.reservedPriority.reset();
-        this.userReservation.reset();
-        
+        this.userReservation.reset(isTimeout);
+
         this.save();
     }
 

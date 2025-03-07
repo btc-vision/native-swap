@@ -11,6 +11,7 @@ export function getTotalFeeCollected(): u64 {
     // We are certain it's not the first output.
     for (let i = 1; i < outputs.length; i++) {
         const output: TransactionOutput = outputs[i];
+
         if (output.to !== FEE_COLLECT_SCRIPT_PUBKEY) {
             continue;
         }

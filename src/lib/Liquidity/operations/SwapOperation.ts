@@ -12,7 +12,7 @@ import { Reservation } from '../../Reservation';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
 export class SwapOperation extends BaseOperation {
-    constructor(liquidityQueue: LiquidityQueue) {
+    public constructor(liquidityQueue: LiquidityQueue) {
         super(liquidityQueue);
     }
 
@@ -20,6 +20,14 @@ export class SwapOperation extends BaseOperation {
         const reservation = this.liquidityQueue.getReservationWithExpirationChecks();
         this.ensureReservation(reservation);
 
+        const reservationActiveList = this.liquidityQueue.getActiveReservationListForBlock(
+            reservation.createdAt,
+        );
+
+        reservationActiveList.set(<u64>reservation.getPurgeIndex(), false);
+        reservationActiveList.save();
+
+        const buyer: Address = Blockchain.tx.sender;
         const trade = this.liquidityQueue.executeTrade(reservation);
 
         let totalTokensPurchased = SafeMath.add(
@@ -28,26 +36,26 @@ export class SwapOperation extends BaseOperation {
         );
 
         const totalSatoshisSpent = SafeMath.add(trade.totalSatoshisSpent, trade.totalRefundedBTC);
-        if (this.liquidityQueue.feesEnabled) {
-            const totalFeeTokens = this.liquidityQueue.computeFees(
-                totalTokensPurchased,
-                totalSatoshisSpent,
-            );
-            totalTokensPurchased = SafeMath.sub(totalTokensPurchased, totalFeeTokens);
-            this.liquidityQueue.distributeFee(totalFeeTokens);
+
+        if (!totalTokensPurchased.isZero()) {
+            if (this.liquidityQueue.feesEnabled) {
+                const totalFeeTokens = this.liquidityQueue.computeFees(
+                    totalTokensPurchased,
+                    totalSatoshisSpent,
+                );
+
+                totalTokensPurchased = SafeMath.sub(totalTokensPurchased, totalFeeTokens);
+                this.liquidityQueue.distributeFee(totalFeeTokens);
+            }
+
+            this.liquidityQueue.decreaseTotalReserved(trade.tokensReserved);
+            this.liquidityQueue.decreaseTotalReserve(totalTokensPurchased);
+
+            TransferHelper.safeTransfer(this.liquidityQueue.token, buyer, totalTokensPurchased);
+
+            this.liquidityQueue.buyTokens(totalTokensPurchased, totalSatoshisSpent);
         }
 
-        const buyer: Address = Blockchain.tx.sender;
-
-        TransferHelper.safeTransfer(this.liquidityQueue.token, buyer, totalTokensPurchased);
-
-        this.liquidityQueue.updateTotalReserved(totalTokensPurchased, false);
-        this.liquidityQueue.updateTotalReserve(totalTokensPurchased, false);
-
-        this.liquidityQueue.buyTokens(totalTokensPurchased, totalSatoshisSpent);
-
-        // finalize
-        reservation.delete();
         this.liquidityQueue.cleanUpQueues();
 
         this.emitSwapExecutedEvent(buyer, totalSatoshisSpent, totalTokensPurchased);

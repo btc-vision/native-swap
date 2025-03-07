@@ -6,6 +6,8 @@ import { LiquidityReservedEvent } from '../../../events/LiquidityReservedEvent';
 import { MAX_RESERVATION_AMOUNT_PROVIDER } from '../../../data-types/UserLiquidity';
 import { ReservationCreatedEvent } from '../../../events/ReservationCreatedEvent';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { FeeManager } from '../../FeeManager';
+import { getTotalFeeCollected } from '../../../utils/NativeSwapUtils';
 
 export class ReserveLiquidityOperation extends BaseOperation {
     private readonly buyer: Address;
@@ -13,6 +15,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     private readonly minimumAmountOut: u256;
     private readonly providerId: u256;
     private readonly forLP: bool;
+    private readonly activationDelay: u8;
 
     constructor(
         liquidityQueue: LiquidityQueue,
@@ -21,6 +24,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         maximumAmountIn: u256,
         minimumAmountOut: u256,
         forLP: bool,
+        activationDelay: u8,
     ) {
         super(liquidityQueue);
 
@@ -29,41 +33,53 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.maximumAmountIn = maximumAmountIn;
         this.minimumAmountOut = minimumAmountOut;
         this.forLP = forLP;
+        this.activationDelay = activationDelay;
     }
 
     public execute(): void {
-        if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProvider)) {
-            throw new Revert('Cannot reserve initial liquidity provider');
-        }
+        this.ensureNotOwnLiquidity();
+        this.ensureValidActivationDelay(this.activationDelay);
+        this.ensureMaximumAmountInNotZero(this.maximumAmountIn);
+        this.ensureMaximumAmountInNotBelowTradeSize(this.maximumAmountIn);
+        this.ensurePoolExistsForToken(this.liquidityQueue);
 
-        const reservation = new Reservation(this.buyer, this.liquidityQueue.token);
+        const totalFee = getTotalFeeCollected();
+        this.ensureSufficientFeesCollected(totalFee);
+
+        const reservation = new Reservation(this.liquidityQueue.token, this.buyer);
         this.ensureReservationValid(reservation);
         this.ensureUserNotTimedOut(reservation);
 
         const currentQuote = this.liquidityQueue.quote();
         this.ensureCurrentQuoteIsValid(currentQuote);
+
         this.ensureNoBots();
         this.ensureEnoughLiquidity();
 
         let tokensRemaining: u256 = this.computeTokenRemaining(currentQuote);
-
         let tokensReserved: u256 = u256.Zero;
         let satSpent: u256 = u256.Zero;
-        let lastId: u64 = 0;
+        let lastId: u64 = <u64>u32.MAX_VALUE + <u64>1; // Impossible value
 
-        //let i: u32 = 0;
+        // We'll loop over providers while tokensRemaining > 0
+        let i: u32 = 0;
         while (!tokensRemaining.isZero()) {
-            //i++;
+            let tokensRemainingInSatoshis = this.liquidityQueue.tokensToSatoshis(
+                tokensRemaining,
+                currentQuote,
+            );
 
-            // 1) We call getNextProviderWithLiquidity(), which may return a removal-queue provider
-            //    or a normal/priority-queue provider.
+            if (
+                u256.lt(
+                    tokensRemainingInSatoshis,
+                    LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+                )
+            ) {
+                break;
+            }
+
             const provider = this.liquidityQueue.getNextProviderWithLiquidity();
             if (provider === null) {
-                /*if (i === 1) {
-                    throw new Revert(
-                        `Impossible state: no providers even though totalAvailableLiquidity > 0`,
-                    );
-                }*/
                 break;
             }
 
@@ -71,66 +87,44 @@ export class ReserveLiquidityOperation extends BaseOperation {
             if (provider.indexedAt === u32.MAX_VALUE && lastId === u32.MAX_VALUE) {
                 break;
             }
+
+            if (provider.indexedAt === lastId) {
+                throw new Revert(
+                    `Impossible state: repeated provider, ${provider.indexedAt} === ${lastId}, i=${i}`,
+                );
+            }
+
             lastId = provider.indexedAt;
+            i++;
 
             // CASE A: REMOVAL-QUEUE PROVIDER
             if (provider.pendingRemoval && provider.isLp && provider.fromRemovalQueue) {
-                // current actual owed
                 const owed = this.liquidityQueue.getBTCowed(provider.providerId);
-                if (
-                    owed.isZero() ||
-                    u256.lt(owed, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)
-                ) {
-                    // If they're in removal queue but not actually owed anything => skip
-                    this.liquidityQueue.removePendingLiquidityProviderFromRemovalQueue(
-                        provider,
-                        provider.indexedAt,
-                    );
-                    continue;
-                }
-
-                // We break if any provider in the removal queue has less than the minimum owed
-                // DUST. We don't want to reserve liquidity for them.
-                let satWouldSpend = this.liquidityQueue.tokensToSatoshis(
-                    tokensRemaining,
-                    currentQuote,
-                );
-                if (
-                    u256.lt(
-                        satWouldSpend,
-                        LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-                    )
-                ) {
-                    break;
-                }
-
                 const currentReserved = this.liquidityQueue.getBTCowedReserved(provider.providerId);
 
-                // clamp by how much is actually owed
-                satWouldSpend = SafeMath.min(satWouldSpend, SafeMath.sub(owed, currentReserved));
+                tokensRemainingInSatoshis = SafeMath.min(
+                    tokensRemainingInSatoshis,
+                    SafeMath.sub(owed, currentReserved),
+                );
 
-                // now convert that sat amount back to tokens
                 let reserveAmount = this.liquidityQueue.satoshisToTokens(
-                    satWouldSpend,
+                    tokensRemainingInSatoshis,
                     currentQuote,
                 );
+
                 if (reserveAmount.isZero()) {
                     continue;
                 }
 
                 reserveAmount = SafeMath.min(reserveAmount, tokensRemaining);
 
-                // Reserve these tokens (conceptually from the pool)
                 tokensReserved = SafeMath.add(tokensReserved, reserveAmount);
-                satSpent = SafeMath.add(satSpent, satWouldSpend);
+                satSpent = SafeMath.add(satSpent, tokensRemainingInSatoshis);
                 tokensRemaining = SafeMath.sub(tokensRemaining, reserveAmount);
 
-                // Instead of directly reducing `owed`, we move it to `_lpBTCowedReserved`.
-                const newReserved = SafeMath.add(currentReserved, satWouldSpend);
+                // Move owed to owedReserved
+                const newReserved = SafeMath.add(currentReserved, tokensRemainingInSatoshis);
                 this.liquidityQueue.setBTCowedReserved(provider.providerId, newReserved);
-
-                // Note: We do NOT call setBTCowed(providerId, newOwed) here.
-                // That happens only if the trade is actually executed in `executeTrade`.
 
                 // Record the reservation
                 reservation.reserveAtIndex(
@@ -139,10 +133,12 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     LIQUIDITY_REMOVAL_TYPE,
                 );
 
-                this.emitLiquidityReservedEvent(provider.btcReceiver, satWouldSpend.toU128());
+                this.emitLiquidityReservedEvent(
+                    provider.btcReceiver,
+                    tokensRemainingInSatoshis.toU128(),
+                );
             } else {
                 // CASE B: NORMAL / PRIORITY PROVIDER
-                // They do have actual tokens in provider.liquidity
                 const providerLiquidity = SafeMath.sub128(
                     provider.liquidity,
                     provider.reserved,
@@ -152,20 +148,20 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     providerLiquidity,
                     currentQuote,
                 );
+
                 if (
                     u256.lt(
                         maxCostInSatoshis,
                         LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
                     )
                 ) {
-                    // dust => reset if no reserved
                     if (provider.reserved.isZero()) {
                         this.liquidityQueue.resetProvider(provider);
                     }
                     continue;
                 }
 
-                // Try to reserve up to 'tokensRemaining' from this provider
+                // Verify the reserveAmount is smaller than u120 maximum.
                 let reserveAmount = SafeMath.min(
                     SafeMath.min(providerLiquidity, tokensRemaining),
                     MAX_RESERVATION_AMOUNT_PROVIDER.toU256(),
@@ -175,26 +171,24 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     reserveAmount,
                     currentQuote,
                 );
-                const leftoverSats = SafeMath.sub(maxCostInSatoshis, costInSatoshis);
 
-                // If leftover satoshis < MINIMUM_PROVIDER_RESERVATION_AMOUNT => we take everything
+                const leftoverSats = SafeMath.sub(maxCostInSatoshis, costInSatoshis);
                 if (u256.lt(leftoverSats, LiquidityQueue.MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
                     costInSatoshis = maxCostInSatoshis;
                 }
 
-                // Recompute how many tokens that cost can buy
                 reserveAmount = this.liquidityQueue.satoshisToTokens(costInSatoshis, currentQuote);
                 if (reserveAmount.isZero()) {
                     continue;
                 }
 
                 const reserveAmountU128 = reserveAmount.toU128();
-                provider.reserved = SafeMath.add128(provider.reserved, reserveAmountU128);
+                provider.increaseReserved(reserveAmountU128);
 
                 tokensReserved = SafeMath.add(tokensReserved, reserveAmount);
                 satSpent = SafeMath.add(satSpent, costInSatoshis);
 
-                // reduce tokensRemaining
+                // Reduce tokensRemaining
                 if (u256.gt(tokensRemaining, reserveAmount)) {
                     tokensRemaining = SafeMath.sub(tokensRemaining, reserveAmount);
                 } else {
@@ -218,25 +212,23 @@ export class ReserveLiquidityOperation extends BaseOperation {
             );
         }
 
-        // update global reserved
-        this.liquidityQueue.updateTotalReserved(tokensReserved, true);
+        this.liquidityQueue.increaseTotalReserved(tokensReserved);
 
+        reservation.setActivationDelay(this.activationDelay);
         reservation.reservedLP = this.forLP;
-
-        // track the reservation
         reservation.setExpirationBlock(
-            Blockchain.block.numberU64 + LiquidityQueue.RESERVATION_EXPIRE_AFTER,
+            Blockchain.block.number + LiquidityQueue.RESERVATION_EXPIRE_AFTER,
         );
+
+        const index: u32 = this.liquidityQueue.addActiveReservationToList(
+            Blockchain.block.number,
+            reservation.reservationId,
+        );
+
+        reservation.setPurgeIndex(index);
         reservation.save();
 
-        const reservationList = this.liquidityQueue.getReservationListForBlock(
-            Blockchain.block.numberU64,
-        );
-        reservationList.push(reservation.reservationId);
-        reservationList.save();
-
         this.liquidityQueue.setBlockQuote();
-
         this.emitReservationCreatedEvent(tokensReserved, satSpent);
     }
 
@@ -250,17 +242,19 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
     private ensureReservationValid(reservation: Reservation): void {
         if (reservation.valid()) {
-            throw new Revert('Reservation already active');
+            throw new Revert(
+                'NATIVE_SWAP: You already have an active reservation. Swap or wait for expiration before creating another',
+            );
         }
     }
 
     private ensureUserNotTimedOut(reservation: Reservation): void {
         const userTimeoutUntilBlock: u64 = reservation.userTimeoutBlockExpiration;
         if (
-            Blockchain.block.numberU64 <= userTimeoutUntilBlock &&
+            Blockchain.block.number <= userTimeoutUntilBlock &&
             this.liquidityQueue.timeOutEnabled
         ) {
-            throw new Revert('User is timed out');
+            throw new Revert('NATIVE_SWAP: User is timed out');
         }
     }
 
@@ -271,23 +265,20 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private ensureNoBots(): void {
-        if (Blockchain.block.numberU64 <= this.liquidityQueue.antiBotExpirationBlock) {
+        if (Blockchain.block.number <= this.liquidityQueue.antiBotExpirationBlock) {
             if (u256.gt(this.maximumAmountIn, this.liquidityQueue.maxTokensPerReservation)) {
-                throw new Revert('Cannot exceed anti-bot max tokens/reservation');
+                throw new Revert('NATIVE_SWAP: Cannot exceed anti-bot max tokens/reservation');
             }
         }
     }
 
     private ensureEnoughLiquidity(): void {
         if (u256.lt(this.liquidityQueue.liquidity, this.liquidityQueue.reservedLiquidity)) {
-            throw new Revert('Impossible: liquidity < reservedLiquidity');
+            throw new Revert('Impossible state: liquidity < reservedLiquidity');
         }
     }
 
     private computeTokenRemaining(currentQuote: u256): u256 {
-        // The buyer wants to effectively spend up to `maximumAmountIn` satoshis
-        // in order to reserve tokens. We'll convert that to a "max token" value
-        // at the current quote.
         let tokensRemaining: u256 = this.liquidityQueue.satoshisToTokens(
             this.maximumAmountIn,
             currentQuote,
@@ -297,6 +288,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
             this.liquidityQueue.liquidity,
             this.liquidityQueue.reservedLiquidity,
         );
+
         if (u256.lt(totalAvailableLiquidity, tokensRemaining)) {
             tokensRemaining = totalAvailableLiquidity;
         }
@@ -305,29 +297,58 @@ export class ReserveLiquidityOperation extends BaseOperation {
         tokensRemaining = SafeMath.min(tokensRemaining, maxTokensLeftBeforeCap);
 
         if (tokensRemaining.isZero()) {
-            throw new Revert('Not enough liquidity available');
+            throw new Revert('NATIVE_SWAP: Not enough liquidity available');
         }
-
-        // We'll see how many satoshis that "tokensRemaining" would cost at the current quote.
-        // This is to ensure we aren't in a weird mismatch state.
-        //
-        //if (u256.lt(satCostTokenRemaining, maximumAmountIn)) {
-        //    throw new Revert(`Too little liquidity available ${satCostTokenRemaining}`);
-        //}
 
         const satCostTokenRemaining = this.liquidityQueue.tokensToSatoshis(
             tokensRemaining,
             currentQuote,
         );
-        if (
-            u256.lt(
-                satCostTokenRemaining,
-                LiquidityQueue.MINIMUM_LIQUIDITY_IN_SAT_VALUE_ADD_LIQUIDITY,
-            )
-        ) {
-            throw new Revert('Minimum liquidity not met');
+
+        if (u256.lt(satCostTokenRemaining, LiquidityQueue.MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
+            throw new Revert(
+                `NATIVE_SWAP: Minimum liquidity not met (${satCostTokenRemaining} sat)`,
+            );
         }
 
         return tokensRemaining;
+    }
+
+    private ensureMaximumAmountInNotZero(maximumAmountIn: u256): void {
+        if (maximumAmountIn.isZero()) {
+            throw new Revert('NATIVE_SWAP: Maximum amount in cannot be zero');
+        }
+    }
+
+    private ensureMaximumAmountInNotBelowTradeSize(maximumAmountIn: u256): void {
+        if (u256.lt(maximumAmountIn, LiquidityQueue.MINIMUM_TRADE_SIZE_IN_SATOSHIS)) {
+            throw new Revert(
+                `NATIVE_SWAP: Requested amount is below minimum trade size ${maximumAmountIn} < ${LiquidityQueue.MINIMUM_TRADE_SIZE_IN_SATOSHIS}`,
+            );
+        }
+    }
+
+    private ensureValidActivationDelay(activationDelay: u8): void {
+        if (activationDelay > 3) {
+            throw new Revert('NATIVE_SWAP: Activation delay cannot be greater than 3');
+        }
+    }
+
+    private ensurePoolExistsForToken(queue: LiquidityQueue): void {
+        if (queue.p0.isZero()) {
+            throw new Revert('NATIVE_SWAP: No pool exists for token');
+        }
+    }
+
+    private ensureSufficientFeesCollected(totalFee: u64): void {
+        if (totalFee < FeeManager.RESERVATION_BASE_FEE) {
+            throw new Revert('NATIVE_SWAP: Insufficient fees collected');
+        }
+    }
+
+    private ensureNotOwnLiquidity(): void {
+        if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProvider)) {
+            throw new Revert('NATIVE_SWAP: You may not reserve your own liquidity');
+        }
     }
 }

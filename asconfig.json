@@ -7,7 +7,7 @@
             "optimizeLevel": 3,
             "shrinkLevel": 2,
             "converge": true,
-            "noAssert": true,
+            "noAssert": false,
             "disable": [
                 "mutable-globals",
                 "sign-extension",
@@ -18,7 +18,14 @@
             "memoryBase": 0,
             "initialMemory": 1,
             "maximumMemory": 512,
-            "bindings": "esm"
+            "bindings": "esm",
+            "exportStart": "start",
+            "use": [
+                "abort=src/index/abort"
+            ]
         }
+    },
+    "options": {
+        "transform": "@btc-vision/opnet-transform"
     }
 }

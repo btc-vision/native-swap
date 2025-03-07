@@ -1,5 +1,5 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Potential } from '@btc-vision/btc-runtime/runtime';
+import { Potential, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { AdvancedStoredString } from '../stored/AdvancedStoredString';
 import { UserLiquidity } from '../data-types/UserLiquidity';
 import {
@@ -86,6 +86,26 @@ export class Provider {
         return this._btcReceiver as AdvancedStoredString;
     }
 
+    public increaseLiquidityProvided(amount: u256): void {
+        this.liquidityProvided = SafeMath.add(this.liquidityProvided, amount);
+    }
+
+    public increaseLiquidity(amount: u128): void {
+        this.liquidity = SafeMath.add128(this.liquidity, amount);
+    }
+
+    public decreaseLiquidity(amount: u128): void {
+        this.liquidity = SafeMath.sub128(this.liquidity, amount);
+    }
+
+    public increaseReserved(amount: u128): void {
+        this.reserved = SafeMath.add128(this.reserved, amount);
+    }
+
+    public decreaseReserved(amount: u128): void {
+        this.reserved = SafeMath.sub128(this.reserved, amount);
+    }
+
     public enableLiquidityProvision(): void {
         this.userLiquidity.setCanProvideLiquidity(true);
     }
@@ -132,6 +152,14 @@ export function saveAllProviders(): void {
     for (let i: i32 = 0; i < cache.length; i++) {
         cache[i].save();
     }
+}
+
+export function clearCachedProviders(): void {
+    cache.length = 0;
+}
+
+export function getProviderCacheLength(): number {
+    return cache.length;
 }
 
 /**

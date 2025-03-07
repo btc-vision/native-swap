@@ -6,16 +6,19 @@ import {
     encodePointer,
     MemorySlotPointer,
 } from '@btc-vision/btc-runtime/runtime';
+import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 
 @final
 export class UserReservation {
     private readonly u256Pointer: u256;
 
-    private reservedLP: u8 = 0;
-
     private expirationBlock: u64 = 0;
     private priorityIndex: u64 = 0;
-    private userTimeoutBlockExpiration: u64 = 0;
+    private purgeIndex: u32 = u32.MAX_VALUE;
+    private activationDelay: u8 = 0;
+
+    private isTimeout: bool = false;
+    private reservedLP: bool = false;
 
     // Flags to manage state
     private isLoaded: bool = false;
@@ -38,16 +41,33 @@ export class UserReservation {
 
     public get reservedForLiquidityPool(): bool {
         this.ensureValues();
-        return this.reservedLP == 1;
+        return this.reservedLP;
     }
 
     public set reservedForLiquidityPool(value: bool) {
         this.ensureValues();
 
-        if (this.reservedLP != (value ? 1 : 0)) {
-            this.reservedLP = value ? 1 : 0;
+        if (this.reservedLP != value) {
+            this.reservedLP = value;
             this.isChanged = true;
         }
+    }
+
+    public static getPackDefaultValue(): u256 {
+        const bytes = new Uint8Array(32);
+        for (let i: i32 = 0; i < 17; i++) {
+            bytes[i] = 0x00;
+        }
+
+        for (let i: i32 = 17; i < 21; i++) {
+            bytes[i] = 0xff;
+        }
+
+        for (let i: i32 = 21; i < 32; i++) {
+            bytes[i] = 0x00;
+        }
+
+        return u256.fromBytes(bytes, true);
     }
 
     /**
@@ -58,6 +78,7 @@ export class UserReservation {
     @inline
     public getExpirationBlock(): u64 {
         this.ensureValues();
+
         return this.expirationBlock;
     }
 
@@ -71,8 +92,21 @@ export class UserReservation {
         this.ensureValues();
         if (this.expirationBlock != block) {
             this.expirationBlock = block;
+            this.isTimeout = false;
             this.isChanged = true;
         }
+    }
+
+    /**
+     * @method timeout
+     * @description Timeout the user.
+     * @returns {void} - Timeout the user.
+     */
+    @inline
+    public timeout(): void {
+        this.ensureValues();
+        this.isTimeout = true;
+        this.isChanged = true;
     }
 
     /**
@@ -83,20 +117,11 @@ export class UserReservation {
     @inline
     public getUserTimeoutBlockExpiration(): u64 {
         this.ensureValues();
-        return this.userTimeoutBlockExpiration;
-    }
 
-    /**
-     * @method setUserTimeoutBlockExpiration
-     * @description Sets the user timeout block expiration.
-     * @param block - The user timeout block expiration to set.
-     */
-    @inline
-    public setUserTimeoutBlockExpiration(block: u64): void {
-        this.ensureValues();
-        if (this.userTimeoutBlockExpiration != block) {
-            this.userTimeoutBlockExpiration = block;
-            this.isChanged = true;
+        if (this.isTimeout) {
+            return this.expirationBlock + LiquidityQueue.TIMEOUT_AFTER_EXPIRATION;
+        } else {
+            return 0;
         }
     }
 
@@ -113,26 +138,62 @@ export class UserReservation {
     }
 
     /**
+     * @method setPurgeIndex
+     * @description Set purge index.
+     * @returns {void}
+     */
+    @inline
+    public setPurgeIndex(index: u32): void {
+        this.ensureValues();
+        if (this.purgeIndex != index) {
+            this.purgeIndex = index;
+            this.isChanged = true;
+        }
+    }
+
+    /**
+     * @method getPurgeIndex
+     * @description Get purge index.
+     * @returns {u32}
+     */
+    @inline
+    public getPurgeIndex(): u32 {
+        this.ensureValues();
+        return this.purgeIndex;
+    }
+
+    @inline
+    public getActivationDelay(): u8 {
+        this.ensureValues();
+        return this.activationDelay;
+    }
+
+    @inline
+    public setActivationDelay(delay: u8): void {
+        this.ensureValues();
+        if (this.activationDelay != delay) {
+            this.activationDelay = delay;
+            this.isChanged = true;
+        }
+    }
+
+    /**
      * @method reset
      * @description Resets all fields to their default values and marks the state as changed.
      */
     @inline
-    public reset(): void {
-        this.expirationBlock = 0;
+    public reset(isTimeout: boolean): void {
         this.priorityIndex = 0;
-        this.reservedLP = 0;
-        this.isChanged = true;
-    }
+        this.reservedLP = false;
+        this.purgeIndex = u32.MAX_VALUE;
+        this.activationDelay = 0;
 
-    /**
-     * @method toString
-     * @description Returns a string representation of the UserReservation.
-     * @returns {string} - A string detailing all fields.
-     */
-    @inline
-    public toString(): string {
-        this.ensureValues();
-        return `ExpirationBlock: ${this.expirationBlock}`;
+        if (!isTimeout) {
+            this.expirationBlock = 0;
+            this.isTimeout = false;
+        }
+
+        this.isChanged = true;
     }
 
     /**
@@ -148,12 +209,18 @@ export class UserReservation {
     }
 
     private unpackFlags(flag: u8): void {
-        this.reservedLP = flag & 0b1;
+        this.reservedLP = !!(flag & 0b1);
+        this.isTimeout = !!(flag & 0b10);
         // (flag >> 1) & 0b1;
     }
 
     private packFlags(): u8 {
-        return this.reservedLP;
+        let flags: u8 = 0;
+
+        if (this.reservedLP) flags |= 0b1;
+        if (this.isTimeout) flags |= 0b10;
+
+        return flags;
     }
 
     /**
@@ -163,7 +230,11 @@ export class UserReservation {
      */
     private ensureValues(): void {
         if (!this.isLoaded) {
-            const storedU256: u256 = Blockchain.getStorageAt(this.u256Pointer, u256.Zero);
+            const storedU256: u256 = Blockchain.getStorageAt(
+                this.u256Pointer,
+                UserReservation.getPackDefaultValue(),
+            );
+
             const reader = new BytesReader(storedU256.toUint8Array(true));
 
             // Unpack flags (1 byte)
@@ -175,8 +246,11 @@ export class UserReservation {
             // Unpack priorityIndex (8 bytes, little endian)
             this.priorityIndex = reader.readU64();
 
-            // Unpack userTimeoutBlockExpiration (8 bytes, little endian)
-            this.userTimeoutBlockExpiration = reader.readU64();
+            // Unpack purgeIndex (4 bytes, little endian)
+            this.purgeIndex = reader.readU32();
+
+            // Unpack activation delay (1 byte, little endian)
+            this.activationDelay = reader.readU8();
 
             this.isLoaded = true;
         }
@@ -200,8 +274,11 @@ export class UserReservation {
         // Pack priorityIndex (8 bytes, little endian)
         writer.writeU64(this.priorityIndex);
 
-        // Pack userTimeoutBlockExpiration (8 bytes, little endian)
-        writer.writeU64(this.userTimeoutBlockExpiration);
+        // Pack purgeIndex (4 bytes, little endian)
+        writer.writeU32(this.purgeIndex);
+
+        // Pack activationDelay (1 byte)
+        writer.writeU8(this.activationDelay);
 
         return u256.fromBytes(writer.getBuffer(), true);
     }

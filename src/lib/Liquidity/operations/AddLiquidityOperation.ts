@@ -51,20 +51,14 @@ export class AddLiquidityOperation extends BaseOperation {
 
         // 4. Because the purchase from the queue effectively "used BTC to buy tokens,"
         //    update our totalReserved to un-reserve those tokens.
-        this.liquidityQueue.updateTotalReserved(tokensBoughtFromQueue, false);
+        this.liquidityQueue.decreaseTotalReserved(tokensBoughtFromQueue);
 
         // 5. Combine the user’s newly deposited tokens (the "other 50%" side)
         //    into the pool’s total reserves.
-        this.liquidityQueue.updateTotalReserve(tokensBoughtFromQueue, true);
+        this.liquidityQueue.increaseTotalReserve(tokensBoughtFromQueue);
 
-        this.liquidityQueue.virtualBTCReserve = SafeMath.add(
-            this.liquidityQueue.virtualBTCReserve,
-            btcSpent,
-        );
-        this.liquidityQueue.virtualTokenReserve = SafeMath.add(
-            this.liquidityQueue.virtualTokenReserve,
-            tokensBoughtFromQueue,
-        );
+        this.liquidityQueue.increaseVirtualBTCReserve(btcSpent);
+        this.liquidityQueue.increaseVirtualTokenReserve(tokensBoughtFromQueue);
 
         // 7. Credit the user’s "virtual BTC" so they can withdraw it later in removeLiquidity.
         const owedBefore = this.liquidityQueue.getBTCowed(this.providerId);
@@ -74,11 +68,8 @@ export class AddLiquidityOperation extends BaseOperation {
         // 8. Mark the provider as an LP
         this.markProviderAsLPProvider(tokensBoughtFromQueue);
 
-        // 9. Reservation no longer needed
-        reservation.delete();
-
-        // 10. Clean up providers, recalc block quote
-        this.liquidityQueue.cleanUpQueuesAndSetNewQuote();
+        // 9. Clean up providers
+        this.liquidityQueue.cleanUpQueues();
 
         this.emitLiquidityAddedEvent(tokensBoughtFromQueue, btcSpent);
     }
@@ -111,10 +102,7 @@ export class AddLiquidityOperation extends BaseOperation {
             this.providerSelf.btcReceiver = this.receiver;
         }
 
-        this.providerSelf.liquidityProvided = SafeMath.add(
-            this.providerSelf.liquidityProvided,
-            tokensBoughtFromQueue,
-        );
+        this.providerSelf.increaseLiquidityProvided(tokensBoughtFromQueue);
     }
 
     private emitLiquidityAddedEvent(tokensBoughtFromQueue: u256, btcSpent: u256): void {

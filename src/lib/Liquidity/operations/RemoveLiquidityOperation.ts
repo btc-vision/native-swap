@@ -2,20 +2,17 @@ import { BaseOperation } from './BaseOperation';
 import { LiquidityQueue } from '../LiquidityQueue';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../../Provider';
-import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityRemovedEvent } from '../../../events/LiquidityRemovedEvent';
 
 export class RemoveLiquidityOperation extends BaseOperation {
     private readonly providerId: u256;
-    private readonly amount: u256;
     private readonly provider: Provider;
 
-    constructor(liquidityQueue: LiquidityQueue, providerId: u256, amount: u256) {
-        // Call the BaseOperation constructor
+    constructor(liquidityQueue: LiquidityQueue, providerId: u256) {
         super(liquidityQueue);
 
         this.providerId = providerId;
-        this.amount = amount;
         this.provider = getProvider(providerId);
     }
 
@@ -23,10 +20,12 @@ export class RemoveLiquidityOperation extends BaseOperation {
         // 1. Check that this provider is actually an LP
         this.ensureLiquidityProvider();
         this.ensureNotInitialProvider();
+        this.ensureProviderHasNoListedTokens();
 
         // 2. Figure out how much BTC they are "owed" (the virtual side),
         //    and how many tokens they currently have "locked in" the pool.
         const btcOwed = this.liquidityQueue.getBTCowed(this.providerId);
+
         this.ensureBTCOwed(btcOwed);
         this.ensureNotInPendingRemoval();
 
@@ -36,19 +35,13 @@ export class RemoveLiquidityOperation extends BaseOperation {
         TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, tokenAmount);
 
         // 4. Decrease total reserves
-        this.liquidityQueue.updateTotalReserve(tokenAmount, false);
+        this.liquidityQueue.decreaseTotalReserve(tokenAmount);
         this.provider.liquidityProvided = u256.Zero;
 
         // 5. Also reduce the virtual reserves so the ratio is consistent
         //    but do NOT update deltaTokensSell or deltaTokensBuy.
-        this.liquidityQueue.virtualTokenReserve = SafeMath.sub(
-            this.liquidityQueue.virtualTokenReserve,
-            tokenAmount,
-        );
-        this.liquidityQueue.virtualBTCReserve = SafeMath.sub(
-            this.liquidityQueue.virtualBTCReserve,
-            btcOwed,
-        );
+        this.liquidityQueue.decreaseVirtualTokenReserve(tokenAmount);
+        this.liquidityQueue.decreaseVirtualBTCReserve(btcOwed);
 
         // 6. Finally, queue them up to receive owed BTC from future inflows
         this.provider.pendingRemoval = true;
@@ -84,6 +77,12 @@ export class RemoveLiquidityOperation extends BaseOperation {
     private ensureTokenAmountNotZero(tokenAmount: u256): void {
         if (tokenAmount.isZero()) {
             throw new Revert('You have no tokens to remove.');
+        }
+    }
+
+    private ensureProviderHasNoListedTokens(): void {
+        if (!this.provider.liquidity.isZero()) {
+            throw new Revert('You cannot remove your liquidity because you have active listing.');
         }
     }
 
