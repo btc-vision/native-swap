@@ -114,6 +114,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private getAntibotSettings(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
 
         const token = calldata.readAddress();
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
@@ -122,23 +123,27 @@ export class NativeSwap extends ReentrancyGuard {
         writer.writeU64(queue.antiBotExpirationBlock);
         writer.writeU256(queue.maxTokensPerReservation);
 
+        this._stopEntry();
+
         return writer;
     }
 
     private getFees(): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
 
         const writer = new BytesWriter(2 * U64_BYTE_LENGTH);
-
         writer.writeU64(FeeManager.RESERVATION_BASE_FEE);
         writer.writeU64(FeeManager.PRIORITY_QUEUE_BASE_FEE);
+
+        this._stopEntry();
 
         return writer;
     }
 
     private setFees(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
-
+        this._startEntry();
         this.onlyDeployer(Blockchain.tx.sender);
 
         FeeManager.RESERVATION_BASE_FEE = calldata.readU64();
@@ -146,30 +151,42 @@ export class NativeSwap extends ReentrancyGuard {
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
+
+        this._stopEntry();
+
         return result;
     }
 
     private getStakingContractAddress(_calldata: Calldata): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
+
         const response = new BytesWriter(ADDRESS_BYTE_LENGTH);
         response.writeAddress(this.stakingContractAddress.value);
+
+        this._stopEntry();
 
         return response;
     }
 
     private setStakingContractAddress(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
         this.onlyDeployer(Blockchain.tx.sender);
 
         this.stakingContractAddress.value = calldata.readAddress();
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
+
+        this._stopEntry();
+
         return result;
     }
 
     private getProviderDetails(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
 
         const token = calldata.readAddress();
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
@@ -180,25 +197,31 @@ export class NativeSwap extends ReentrancyGuard {
         writer.writeU128(provider.reserved);
         writer.writeStringWithLength(provider.btcReceiver);
 
+        this._stopEntry();
+
         return writer;
     }
 
     private getPriorityQueueCost(): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
 
         const cost = FeeManager.PRIORITY_QUEUE_BASE_FEE;
 
         const writer = new BytesWriter(U64_BYTE_LENGTH);
         writer.writeU64(cost);
+
+        this._stopEntry();
+
         return writer;
     }
 
     private addLiquidity(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
 
         const token = calldata.readAddress();
         const receiver = calldata.readStringWithLength();
-
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
         const operation = new AddLiquidityOperation(queue, providerId, receiver);
@@ -208,28 +231,35 @@ export class NativeSwap extends ReentrancyGuard {
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
+
+        this._stopEntry();
+
         return result;
     }
 
     private removeLiquidity(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
 
         const token = calldata.readAddress();
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
-
         const operation = new RemoveLiquidityOperation(queue, providerId);
-        operation.execute();
 
+        operation.execute();
         queue.save();
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
+
+        this._stopEntry();
+
         return result;
     }
 
     private createPoolWithSignature(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
 
         const signature = calldata.readBytesWithLength();
         this.ensureValidSignatureLength(signature);
@@ -250,7 +280,11 @@ export class NativeSwap extends ReentrancyGuard {
 
         Blockchain.call(token, calldataSend);
 
-        return this.createPool(calldata, token, false);
+        const result = this.createPool(calldata, token, false);
+
+        this._stopEntry();
+
+        return result;
     }
 
     private createPool(
@@ -260,6 +294,7 @@ export class NativeSwap extends ReentrancyGuard {
     ): BytesWriter {
         if (checkReentrancy) {
             this.checkReentrancy();
+            this._startEntry();
         }
 
         const tokenOwner = this.getDeployer(token);
@@ -274,7 +309,6 @@ export class NativeSwap extends ReentrancyGuard {
         const maxReservesIn5BlocksPercent: u16 = calldata.readU16();
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-
         const operation = new CreatePoolOperation(
             queue,
             floorPrice,
@@ -291,11 +325,17 @@ export class NativeSwap extends ReentrancyGuard {
 
         const writer = new BytesWriter(1);
         writer.writeBoolean(true);
+
+        if (checkReentrancy) {
+            this._stopEntry();
+        }
+
         return writer;
     }
 
     private listLiquidity(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
 
         const token: Address = calldata.readAddress();
         const receiver: string = calldata.readStringWithLength();
@@ -304,10 +344,14 @@ export class NativeSwap extends ReentrancyGuard {
 
         const amountIn: u128 = calldata.readU128();
         const priority: boolean = calldata.readBoolean();
+
         this._listLiquidity(token, receiver, amountIn, priority);
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
+
+        this._stopEntry();
+
         return result;
     }
 
@@ -321,7 +365,6 @@ export class NativeSwap extends ReentrancyGuard {
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const tokenId = this.addressToPointer(token);
-
         const queue = this.getLiquidityQueue(token, tokenId, true);
         const operation = new ListTokensForSaleOperation(
             queue,
@@ -336,7 +379,9 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private reserve(calldata: Calldata): BytesWriter {
+        Blockchain.log('in reserve');
         this.checkReentrancy();
+        this._startEntry();
 
         const token: Address = calldata.readAddress();
         const maximumAmountIn: u256 = calldata.readU256();
@@ -348,6 +393,10 @@ export class NativeSwap extends ReentrancyGuard {
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
+
+        this._stopEntry();
+        Blockchain.log('out reserve');
+
         return result;
     }
 
@@ -362,7 +411,6 @@ export class NativeSwap extends ReentrancyGuard {
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
-
         const operation = new ReserveLiquidityOperation(
             queue,
             providerId,
@@ -379,12 +427,16 @@ export class NativeSwap extends ReentrancyGuard {
 
     private cancelListing(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
 
         const token: Address = calldata.readAddress();
         this._cancelListing(token);
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
+
+        this._stopEntry();
+
         return result;
     }
 
@@ -393,22 +445,27 @@ export class NativeSwap extends ReentrancyGuard {
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const tokenId = this.addressToPointer(token);
-
         const queue = this.getLiquidityQueue(token, tokenId, true);
-
         const operation = new CancelListingOperation(queue, providerId);
+
         operation.execute();
         queue.save();
     }
 
     private swap(calldata: Calldata): BytesWriter {
+        Blockchain.log('in swap');
         this.checkReentrancy();
+        this._startEntry();
 
         const token: Address = calldata.readAddress();
         this._swap(token);
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
+
+        this._stopEntry();
+
+        Blockchain.log('out swap');
         return result;
     }
 
@@ -420,17 +477,22 @@ export class NativeSwap extends ReentrancyGuard {
             this.addressToPointer(token),
             false,
         );
-
         const operation = new SwapOperation(queue);
+
         operation.execute();
         queue.save();
     }
 
     private getReserve(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
 
         const token: Address = calldata.readAddress();
-        return this._getReserve(token);
+        const result = this._getReserve(token);
+
+        this._stopEntry();
+
+        return result;
     }
 
     private _getReserve(token: Address): BytesWriter {
@@ -445,16 +507,21 @@ export class NativeSwap extends ReentrancyGuard {
         result.writeU256(queue.reservedLiquidity);
         result.writeU256(queue.virtualBTCReserve);
         result.writeU256(queue.virtualTokenReserve);
+
         return result;
     }
 
     private getQuote(calldata: Calldata): BytesWriter {
         this.checkReentrancy();
+        this._startEntry();
 
         const token: Address = calldata.readAddress();
         const satoshisIn: u256 = calldata.readU256();
+        const result = this._getQuote(token, satoshisIn);
 
-        return this._getQuote(token, satoshisIn);
+        this._stopEntry();
+
+        return result;
     }
 
     /**

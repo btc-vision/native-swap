@@ -601,7 +601,7 @@ export class LiquidityQueue {
                 //     This ensures we never double-sub leftover + tokensDesired.
                 if (u128.lt(provider.reserved, reservedAmount)) {
                     throw new Revert(
-                        `Impossible: provider.reserved < reservedAmount (${provider.reserved} < ${reservedAmount})`,
+                        `Impossible state: provider.reserved < reservedAmount (${provider.reserved} < ${reservedAmount})`,
                     );
                 }
 
@@ -614,7 +614,7 @@ export class LiquidityQueue {
 
                 // Actually consume tokens from provider.liquidity
                 if (u128.lt(provider.liquidity, tokensDesiredU128)) {
-                    throw new Revert('Impossible: liquidity < tokensDesired');
+                    throw new Revert('Impossible state: liquidity < tokensDesired');
                 }
 
                 // Enable provider liquidity, must be done before the subtraction
@@ -1033,7 +1033,7 @@ export class LiquidityQueue {
 
         if (providerId.isZero()) {
             throw new Revert(
-                `Impossible: Critical problem in provider state updates. Pool corrupted.`,
+                `Impossible state: Critical problem in provider state updates. Pool corrupted.`,
             );
         }
 
@@ -1142,20 +1142,20 @@ export class LiquidityQueue {
     private ensureReservationPurgeIndexMatch(reservationPurgeIndex: u32, currentIndex: u32): void {
         if (reservationPurgeIndex !== currentIndex) {
             throw new Revert(
-                `Impossible: reservation purge index mismatch (expected: ${currentIndex}, actual: ${reservationPurgeIndex})`,
+                `Impossible state: reservation purge index mismatch (expected: ${currentIndex}, actual: ${reservationPurgeIndex})`,
             );
         }
     }
 
     private ensureReservationExpired(reservation: Reservation): void {
         if (!reservation.expired()) {
-            throw new Revert(`Impossible: reservation is not active, was in active list`);
+            throw new Revert(`Impossible state: reservation is not active, was in active list`);
         }
     }
 
     private ensureValidReservedAmount(provider: Provider, reservedAmount: u128): void {
         if (u128.lt(provider.reserved, reservedAmount)) {
-            throw new Revert('Impossible: reserved amount bigger than provider reserve');
+            throw new Revert('Impossible state: reserved amount bigger than provider reserve');
         }
     }
 }
