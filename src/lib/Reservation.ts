@@ -113,7 +113,7 @@ export class Reservation {
     }
 
     public expired(): bool {
-        return Blockchain.block.numberU64 > this.userReservation.getExpirationBlock();
+        return Blockchain.block.number > this.userReservation.getExpirationBlock();
     }
 
     public setExpirationBlock(block: u64): void {

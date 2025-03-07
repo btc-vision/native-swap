@@ -217,11 +217,11 @@ export class ReserveLiquidityOperation extends BaseOperation {
         reservation.setActivationDelay(this.activationDelay);
         reservation.reservedLP = this.forLP;
         reservation.setExpirationBlock(
-            Blockchain.block.numberU64 + LiquidityQueue.RESERVATION_EXPIRE_AFTER,
+            Blockchain.block.number + LiquidityQueue.RESERVATION_EXPIRE_AFTER,
         );
 
         const index: u32 = this.liquidityQueue.addActiveReservationToList(
-            Blockchain.block.numberU64,
+            Blockchain.block.number,
             reservation.reservationId,
         );
 
@@ -251,7 +251,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     private ensureUserNotTimedOut(reservation: Reservation): void {
         const userTimeoutUntilBlock: u64 = reservation.userTimeoutBlockExpiration;
         if (
-            Blockchain.block.numberU64 <= userTimeoutUntilBlock &&
+            Blockchain.block.number <= userTimeoutUntilBlock &&
             this.liquidityQueue.timeOutEnabled
         ) {
             throw new Revert('NATIVE_SWAP: User is timed out');
@@ -265,7 +265,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private ensureNoBots(): void {
-        if (Blockchain.block.numberU64 <= this.liquidityQueue.antiBotExpirationBlock) {
+        if (Blockchain.block.number <= this.liquidityQueue.antiBotExpirationBlock) {
             if (u256.gt(this.maximumAmountIn, this.liquidityQueue.maxTokensPerReservation)) {
                 throw new Revert('NATIVE_SWAP: Cannot exceed anti-bot max tokens/reservation');
             }
