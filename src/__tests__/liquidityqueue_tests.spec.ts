@@ -580,7 +580,7 @@ describe('Liquidity queue tests', () => {
         expect(cost).toStrictEqual(FeeManager.PRIORITY_QUEUE_BASE_FEE);
     });
 
-    it('should return Address.dead when the staking contract address is not initialized', () => {
+    /*it('should return Address.dead when the staking contract address is not initialized', () => {
         setBlockchainEnvironment(90);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -597,7 +597,7 @@ describe('Liquidity queue tests', () => {
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
         expect(queue.stakingContractAddress).toStrictEqual(testStackingContractAddress);
-    });
+    });*/
 });
 
 describe('Liquidity queue updateVirtualPool tests', () => {

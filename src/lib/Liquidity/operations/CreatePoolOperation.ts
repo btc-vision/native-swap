@@ -1,7 +1,7 @@
 import { BaseOperation } from './BaseOperation';
 import { LiquidityQueue } from '../LiquidityQueue';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Blockchain, Revert } from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, Revert } from '@btc-vision/btc-runtime/runtime';
 import { ListTokensForSaleOperation } from './ListTokensForSaleOperation';
 
 export class CreatePoolOperation extends BaseOperation {
@@ -22,6 +22,7 @@ export class CreatePoolOperation extends BaseOperation {
         antiBotEnabledFor: u16,
         antiBotMaximumTokensPerReservation: u256,
         maxReservesIn5BlocksPercent: u16,
+        private readonly stakingAddress: Address,
     ) {
         super(liquidityQueue);
 
@@ -58,9 +59,11 @@ export class CreatePoolOperation extends BaseOperation {
             this.providerId,
             this.initialLiquidity,
             this.receiver,
+            this.stakingAddress,
             false,
             true,
         );
+
         listTokenForSaleOp.execute();
 
         if (this.antiBotEnabledFor > 0) {

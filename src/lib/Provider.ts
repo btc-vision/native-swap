@@ -1,5 +1,5 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Potential, SafeMath } from '@btc-vision/btc-runtime/runtime';
+import { Potential, SafeMath, u256To30Bytes } from '@btc-vision/btc-runtime/runtime';
 import { AdvancedStoredString } from '../stored/AdvancedStoredString';
 import { UserLiquidity } from '../data-types/UserLiquidity';
 import {
@@ -13,15 +13,20 @@ export class Provider {
     public indexedAt: u64 = 0;
     public fromRemovalQueue: bool = false;
 
-    private userLiquidity: UserLiquidity;
+    private readonly userLiquidity: UserLiquidity;
+    private readonly providerBuffer: Uint8Array;
 
     constructor(providerId: u256) {
         this.providerId = providerId;
 
+        // discard 2 bytes.
+        const providerBuffer = u256To30Bytes(providerId);
+        this.providerBuffer = providerBuffer;
+
         this.userLiquidity = new UserLiquidity(
             PROVIDER_LIQUIDITY_POINTER,
             LIQUIDITY_PROVIDER_POINTER,
-            providerId,
+            providerBuffer,
         );
     }
 
@@ -77,7 +82,7 @@ export class Provider {
 
     private get loaderReceiver(): AdvancedStoredString {
         if (this._btcReceiver === null) {
-            const loader = new AdvancedStoredString(PROVIDER_ADDRESS_POINTER, this.providerId);
+            const loader = new AdvancedStoredString(PROVIDER_ADDRESS_POINTER, this.providerBuffer);
             this._btcReceiver = loader;
 
             return loader;
@@ -90,9 +95,9 @@ export class Provider {
         this.liquidityProvided = SafeMath.add(this.liquidityProvided, amount);
     }
 
-    public increaseLiquidity(amount: u128): void {
+    /*public increaseLiquidity(amount: u128): void {
         this.liquidity = SafeMath.add128(this.liquidity, amount);
-    }
+    }*/
 
     public decreaseLiquidity(amount: u128): void {
         this.liquidity = SafeMath.sub128(this.liquidity, amount);

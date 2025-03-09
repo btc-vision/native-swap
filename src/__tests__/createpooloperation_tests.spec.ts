@@ -1,5 +1,5 @@
 import { clearCachedProviders, getProvider } from '../lib/Provider';
-import { Blockchain } from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain } from '@btc-vision/btc-runtime/runtime';
 import { CreatePoolOperation } from '../lib/Liquidity/operations/CreatePoolOperation';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import {
@@ -36,6 +36,7 @@ describe('CreatePoolOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             operation.execute();
@@ -58,6 +59,7 @@ describe('CreatePoolOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             operation.execute();
@@ -80,6 +82,7 @@ describe('CreatePoolOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             operation.execute();
@@ -102,6 +105,7 @@ describe('CreatePoolOperation tests', () => {
                 10,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             operation.execute();
@@ -124,6 +128,7 @@ describe('CreatePoolOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             operation.execute();
@@ -140,6 +145,7 @@ describe('CreatePoolOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             operation2.execute();
@@ -163,6 +169,7 @@ describe('CreatePoolOperation tests', () => {
             10,
             u256.fromU32(20),
             5,
+            Address.dead(),
         );
 
         operation.execute();
@@ -206,6 +213,7 @@ describe('CreatePoolOperation tests', () => {
             10,
             u256.fromU32(20),
             5,
+            Address.dead(),
         );
 
         operation.execute();
@@ -229,6 +237,7 @@ describe('CreatePoolOperation tests', () => {
             0,
             u256.fromU32(20),
             5,
+            Address.dead(),
         );
 
         operation.execute();

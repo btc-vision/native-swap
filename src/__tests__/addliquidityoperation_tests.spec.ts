@@ -1,5 +1,6 @@
 import { clearCachedProviders, getProvider } from '../lib/Provider';
 import {
+    Address,
     Blockchain,
     SafeMath,
     TransactionOutput,
@@ -92,6 +93,7 @@ describe('AddLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -148,6 +150,7 @@ describe('AddLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -212,6 +215,7 @@ describe('AddLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -276,6 +280,7 @@ describe('AddLiquidityOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -341,6 +346,7 @@ describe('AddLiquidityOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -420,6 +426,7 @@ describe('AddLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();

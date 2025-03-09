@@ -3,7 +3,7 @@ import { LIQUIDITY_PROVIDER_POINTER, PROVIDER_LIQUIDITY_POINTER } from '../lib/S
 import { UserLiquidity } from '../data-types/UserLiquidity';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
-const providerId: u256 = u256.fromU32(1);
+const providerId: Uint8Array = u256.fromU32(1).toUint8Array(true);
 
 describe('UserLiquidity tests', () => {
     beforeEach(() => {
@@ -286,10 +286,8 @@ describe('UserLiquidity tests', () => {
         userLiquidity.setCanProvideLiquidity(true);
         userLiquidity.setIsLp(true);
 
-        const bytes: u8[] = userLiquidity.toBytes();
-        const packed: u256 = u256.fromBytes(bytes);
-
-        const reader = new BytesReader(packed.toUint8Array());
+        const bytes: Uint8Array = userLiquidity.toBytes();
+        const reader = new BytesReader(bytes);
         const flags: u8 = reader.readU8();
 
         const activeFlag: u8 = flags & 0b1;
@@ -318,9 +316,8 @@ describe('UserLiquidity tests', () => {
         userLiquidity.setCanProvideLiquidity(false);
         userLiquidity.setIsLp(false);
 
-        const bytes: u8[] = userLiquidity.toBytes();
-        const packed: u256 = u256.fromBytes(bytes);
-        const reader = new BytesReader(packed.toUint8Array());
+        const bytes: Uint8Array = userLiquidity.toBytes();
+        const reader = new BytesReader(bytes);
         const flags: u8 = reader.readU8();
 
         const activeFlag: u8 = flags & 0b1;

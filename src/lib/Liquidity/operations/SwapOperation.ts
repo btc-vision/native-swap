@@ -12,7 +12,10 @@ import { Reservation } from '../../Reservation';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
 export class SwapOperation extends BaseOperation {
-    public constructor(liquidityQueue: LiquidityQueue) {
+    public constructor(
+        liquidityQueue: LiquidityQueue,
+        private readonly stakingAddress: Address = Address.dead(),
+    ) {
         super(liquidityQueue);
     }
 
@@ -44,8 +47,8 @@ export class SwapOperation extends BaseOperation {
                     totalSatoshisSpent,
                 );
 
-                totalTokensPurchased = SafeMath.sub(totalTokensPurchased, totalFeeTokens);
-                this.liquidityQueue.distributeFee(totalFeeTokens);
+                //totalTokensPurchased = SafeMath.sub(totalTokensPurchased, totalFeeTokens);
+                this.liquidityQueue.distributeFee(totalFeeTokens, this.stakingAddress);
             }
 
             this.liquidityQueue.decreaseTotalReserved(trade.tokensReserved);

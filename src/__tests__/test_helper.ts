@@ -179,7 +179,7 @@ export function createProviders(
     const providers: Provider[] = [];
 
     for (let i: u8 = startIndex; i < nbProviderToAdd + startIndex; i++) {
-        let address: Address = new Address([
+        const address: Address = new Address([
             68,
             153,
             66,
@@ -245,32 +245,31 @@ export function setBlockchainEnvironment(
     sender: Address = msgSender1,
     origin: Address = msgSender1,
 ): void {
-    const currentBlockValue: u256 = u256.fromU64(currentBlock);
     const medianTimestamp: u64 = 87129871;
-    const safeRnd64: u64 = 3723476278;
+    const writer: BytesWriter = new BytesWriter(208);
 
-    const writer: BytesWriter = new BytesWriter(255);
+    writer.writeBytes(new Uint8Array(32));
+    writer.writeU64(currentBlock);
+    writer.writeU64(medianTimestamp);
+
+    writer.writeBytes(txId1);
+
+    writer.writeAddress(contractAddress1);
+    writer.writeAddress(contractDeployer1);
 
     writer.writeAddress(sender);
     writer.writeAddress(origin);
-    writer.writeBytes(txId1);
-    writer.writeU256(currentBlockValue);
-    writer.writeAddress(contractDeployer1);
-    writer.writeAddress(contractAddress1);
-    writer.writeU64(medianTimestamp);
-    writer.writeU64(safeRnd64);
 
-    Blockchain.setEnvironment(writer.getBuffer());
+    Blockchain.setEnvironmentVariables(writer.getBuffer());
 }
 
-export function generateReservationId(token: Address, owner: Address): u256 {
+export function generateReservationId(token: Address, owner: Address): Uint8Array {
     const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
     writer.writeAddress(token);
     writer.writeAddress(owner);
-    const hash = ripemd160(writer.getBuffer());
-    const hash2 = hash.slice(0, 16);
 
-    return u128.fromBytes(hash2, true).toU256();
+    const hash = ripemd160(writer.getBuffer());
+    return hash.slice(0, 16);
 }
 
 export function createReservation(

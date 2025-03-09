@@ -1,16 +1,16 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Blockchain,
     BytesReader,
     BytesWriter,
+    EMPTY_BUFFER,
     encodePointer,
-    MemorySlotPointer,
 } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
+import { eqUint } from '../../../btc-runtime/runtime/generic/MapUint8Array';
 
 @final
 export class UserReservation {
-    private readonly u256Pointer: u256;
+    private readonly pointerBuffer: Uint8Array;
 
     private expirationBlock: u64 = 0;
     private priorityIndex: u64 = 0;
@@ -27,16 +27,18 @@ export class UserReservation {
     /**
      * @constructor
      * @param {u16} pointer - The primary pointer identifier.
-     * @param {MemorySlotPointer} subPointer - The sub-pointer for memory slot addressing.
+     * @param subPointer
      */
     constructor(
         public pointer: u16,
-        public subPointer: MemorySlotPointer,
+        public subPointer: Uint8Array,
     ) {
-        const writer = new BytesWriter(32);
-        writer.writeU256(subPointer);
+        assert(
+            subPointer.length <= 30,
+            `You must pass a 30 bytes sub-pointer. (UserReservation, got ${subPointer.length})`,
+        );
 
-        this.u256Pointer = encodePointer(pointer, writer.getBuffer());
+        this.pointerBuffer = encodePointer(pointer, subPointer);
     }
 
     public get reservedForLiquidityPool(): bool {
@@ -53,7 +55,7 @@ export class UserReservation {
         }
     }
 
-    public static getPackDefaultValue(): u256 {
+    public static getPackDefaultValue(): Uint8Array {
         const bytes = new Uint8Array(32);
         for (let i: i32 = 0; i < 17; i++) {
             bytes[i] = 0x00;
@@ -67,7 +69,7 @@ export class UserReservation {
             bytes[i] = 0x00;
         }
 
-        return u256.fromBytes(bytes, true);
+        return bytes;
     }
 
     /**
@@ -132,7 +134,8 @@ export class UserReservation {
     public save(): void {
         if (this.isChanged) {
             const packed = this.packValues();
-            Blockchain.setStorageAt(this.u256Pointer, packed);
+            Blockchain.setStorageAt(this.pointerBuffer, packed);
+
             this.isChanged = false;
         }
     }
@@ -199,13 +202,12 @@ export class UserReservation {
     /**
      * @method toBytes
      * @description Returns the packed u256 value as a byte array.
-     * @returns {u8[]} - The packed u256 value in byte form.
+     * @returns data {Uint8Array} - The packed u256 value in byte form.
      */
     @inline
-    public toBytes(): u8[] {
+    public toBytes(): Uint8Array {
         this.ensureValues();
-        const packed = this.packValues();
-        return packed.toBytes();
+        return this.packValues();
     }
 
     private unpackFlags(flag: u8): void {
@@ -230,12 +232,13 @@ export class UserReservation {
      */
     private ensureValues(): void {
         if (!this.isLoaded) {
-            const storedU256: u256 = Blockchain.getStorageAt(
-                this.u256Pointer,
-                UserReservation.getPackDefaultValue(),
-            );
+            let storedData: Uint8Array = Blockchain.getStorageAt(this.pointerBuffer);
 
-            const reader = new BytesReader(storedU256.toUint8Array(true));
+            if (eqUint(storedData, EMPTY_BUFFER)) {
+                storedData = UserReservation.getPackDefaultValue();
+            }
+
+            const reader = new BytesReader(storedData);
 
             // Unpack flags (1 byte)
             this.unpackFlags(reader.readU8());
@@ -262,7 +265,7 @@ export class UserReservation {
      * @description Packs the internal fields into a single u256 value for storage.
      * @returns {u256} - The packed u256 value.
      */
-    private packValues(): u256 {
+    private packValues(): Uint8Array {
         const writer = new BytesWriter(32);
 
         // Pack flags (1 byte)
@@ -280,6 +283,6 @@ export class UserReservation {
         // Pack activationDelay (1 byte)
         writer.writeU8(this.activationDelay);
 
-        return u256.fromBytes(writer.getBuffer(), true);
+        return writer.getBuffer();
     }
 }

@@ -13,7 +13,7 @@ import {
     RESERVATION_INDEXES,
     RESERVATION_PRIORITY,
 } from './StoredPointers';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128 } from '@btc-vision/as-bignum/assembly';
 import { UserReservation } from '../data-types/UserReservation';
 import { LiquidityQueue } from './Liquidity/LiquidityQueue';
 import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
@@ -39,12 +39,11 @@ export class Reservation {
             reservationId = Reservation.generateId(token, owner);
         }
 
-        const reservation = u128.fromBytes(reservationId, true);
-        this.userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation.toU256());
-        this.reservationId = reservation;
-        this.reservedIndexes = new StoredU32Array(RESERVATION_INDEXES, reservationId, u256.Zero);
-        this.reservedValues = new StoredU128Array(RESERVATION_AMOUNTS, reservationId, u256.Zero);
-        this.reservedPriority = new StoredU8Array(RESERVATION_PRIORITY, reservationId, u256.Zero);
+        this.userReservation = new UserReservation(RESERVATION_ID_POINTER, reservationId);
+        this.reservationId = u128.fromBytes(reservationId, true);
+        this.reservedIndexes = new StoredU32Array(RESERVATION_INDEXES, reservationId);
+        this.reservedValues = new StoredU128Array(RESERVATION_AMOUNTS, reservationId);
+        this.reservedPriority = new StoredU8Array(RESERVATION_PRIORITY, reservationId);
     }
 
     public get createdAt(): u64 {

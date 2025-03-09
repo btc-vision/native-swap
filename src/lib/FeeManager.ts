@@ -1,16 +1,11 @@
 import { Revert, StoredU64 } from '@btc-vision/btc-runtime/runtime';
 import { FEE_SETTINGS_POINTER } from './StoredPointers';
-import { u256 } from '@btc-vision/as-bignum/assembly';
 
 class FeeManagerBase {
     private static CAP_RESERVATION_BASE_FEE: u64 = 100_000;
     private static CAP_PRIORITY_QUEUE_BASE_FEE: u64 = 500_000;
 
-    private readonly SETTINGS: StoredU64 = new StoredU64(
-        FEE_SETTINGS_POINTER,
-        u256.Zero,
-        u256.Zero,
-    );
+    private readonly SETTINGS: StoredU64 = new StoredU64(FEE_SETTINGS_POINTER, new Uint8Array(30));
 
     public get RESERVATION_BASE_FEE(): u64 {
         return this.SETTINGS.get(0);
