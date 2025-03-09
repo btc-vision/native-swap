@@ -846,8 +846,8 @@ export class LiquidityQueue {
     }
 
     public distributeFee(totalFee: u256, _stakingAddress: Address): void {
-        const feeLP = SafeMath.div(SafeMath.mul(totalFee, u256.fromU64(50)), u256.fromU64(100));
-        const feeMoto = SafeMath.sub(totalFee, feeLP);
+        //const feeLP = SafeMath.div(SafeMath.mul(totalFee, u256.fromU64(50)), u256.fromU64(100));
+        //const feeMoto = SafeMath.sub(totalFee, feeLP);
 
         // Do nothing with half the fee
         //this.increaseVirtualTokenReserve(feeLP);
