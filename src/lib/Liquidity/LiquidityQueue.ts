@@ -41,7 +41,6 @@ import { ProviderManager } from './ProviderManager';
 
 const ENABLE_FEES: bool = true;
 
-@final
 export class LiquidityQueue {
     public static QUOTE_SCALE: u256 = u256.fromU64(100_000_000); // 1e8
 
