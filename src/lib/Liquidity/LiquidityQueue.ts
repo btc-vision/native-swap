@@ -856,7 +856,7 @@ export class LiquidityQueue {
         //if (feeMoto > u256.Zero) {
         // Send other half of fee to staking contract
         //    TransferHelper.safeTransfer(this.token, stakingAddress, feeMoto);
-        //this.decreaseTotalReserve(feeLP);
+        this.decreaseTotalReserve(totalFee);
         //}
     }
 
