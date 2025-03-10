@@ -11,9 +11,9 @@
   "author": "MotoSwap",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^22.10.5",
-    "assemblyscript": "^0.27.31",
-    "prettier": "^3.4.2"
+    "@types/node": "^22.13.10",
+    "assemblyscript": "^0.27.34",
+    "prettier": "^3.5.3"
   },
   "keywords": [
     "bitcoin",
@@ -28,8 +28,8 @@
   "homepage": "https://opnet.org",
   "type": "module",
   "dependencies": {
-    "@assemblyscript/loader": "^0.27.31",
-    "@btc-vision/as-bignum": "^0.0.4",
+    "@assemblyscript/loader": "^0.27.34",
+    "@btc-vision/as-bignum": "^0.0.5",
     "@btc-vision/as-covers-assembly": "^0.4.2",
     "@btc-vision/as-covers-transform": "^0.4.3",
     "@btc-vision/as-pect-assembly": "^8.1.0",
@@ -37,10 +37,10 @@
     "@btc-vision/as-pect-transform": "^8.1.0",
     "@btc-vision/btc-runtime": "file:../btc-runtime",
     "@btc-vision/opnet-transform": "file:../opnet-transform",
-    "@eslint/js": "^9.17.0",
+    "@eslint/js": "^9.22.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.18.2",
+    "typescript-eslint": "^8.26.0",
     "yaml": "^2.7.0"
   }
 }
