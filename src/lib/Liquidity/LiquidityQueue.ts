@@ -10,6 +10,7 @@ import {
     StoredU256Array,
     StoredU64,
     TransactionOutput,
+    TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
@@ -845,19 +846,19 @@ export class LiquidityQueue {
         this.deltaTokensSell = SafeMath.add(this.deltaTokensSell, amount);
     }
 
-    public distributeFee(totalFee: u256, _stakingAddress: Address): void {
-        //const feeLP = SafeMath.div(SafeMath.mul(totalFee, u256.fromU64(50)), u256.fromU64(100));
-        //const feeMoto = SafeMath.sub(totalFee, feeLP);
+    public distributeFee(totalFee: u256, stakingAddress: Address): void {
+        const feeLP = SafeMath.div(SafeMath.mul(totalFee, u256.fromU64(50)), u256.fromU64(100));
+        const feeMoto = SafeMath.sub(totalFee, feeLP);
 
         // Do nothing with half the fee
-        //this.increaseVirtualTokenReserve(feeLP);
+        this.increaseVirtualTokenReserve(feeLP);
 
         // Only transfer if the fee is non-zero
-        //if (feeMoto > u256.Zero) {
-        // Send other half of fee to staking contract
-        //    TransferHelper.safeTransfer(this.token, stakingAddress, feeMoto);
-        this.decreaseTotalReserve(totalFee);
-        //}
+        if (feeMoto > u256.Zero) {
+            // Send other half of fee to staking contract
+            TransferHelper.safeTransfer(this.token, stakingAddress, feeMoto);
+            this.decreaseTotalReserve(feeMoto);
+        }
     }
 
     protected purgeReservationsAndRestoreProviders(): void {
