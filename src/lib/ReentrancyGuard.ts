@@ -15,7 +15,7 @@ const statusPointer: u16 = Blockchain.nextPointer;
 
 export class ReentrancyGuard extends OP_NET {
     protected readonly _status: StoredU256;
-    private readonly disabled: boolean = true;
+    private readonly disabled: boolean = false;
 
     public constructor() {
         super();
