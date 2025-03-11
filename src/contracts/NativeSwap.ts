@@ -85,7 +85,7 @@ export class NativeSwap extends ReentrancyGuard {
         this._startEntry();
 
         switch (method) {
-            case encodeSelector('reserve(address,uint256,uint256,bool)'):
+            case encodeSelector('reserve(address,uint256,uint256,bool,uint8)'):
                 return this.reserve(calldata);
             case encodeSelector('swap(address)'):
                 return this.swap(calldata);
