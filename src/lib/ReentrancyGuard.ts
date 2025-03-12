@@ -15,11 +15,12 @@ const statusPointer: u16 = Blockchain.nextPointer;
 
 export class ReentrancyGuard extends OP_NET {
     protected readonly _status: StoredU256;
+    private readonly disabled: boolean = false;
 
     public constructor() {
         super();
 
-        this._status = new StoredU256(statusPointer, u256.Zero, u256.Zero);
+        this._status = new StoredU256(statusPointer, new Uint8Array(30));
     }
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
@@ -31,14 +32,14 @@ export class ReentrancyGuard extends OP_NET {
         }
     }
 
-    public status(callData: Calldata): BytesWriter {
+    public status(_calldata: Calldata): BytesWriter {
         const response = new BytesWriter(U256_BYTE_LENGTH);
         response.writeU256(this._nonces());
         return response;
     }
 
     public checkReentrancy(): void {
-        if (u256.eq(this._nonces(), u256.One)) {
+        if (!this.disabled && u256.eq(this._nonces(), u256.One)) {
             throw new Revert(`NATIVE_SWAP: LOCKED`);
         }
     }

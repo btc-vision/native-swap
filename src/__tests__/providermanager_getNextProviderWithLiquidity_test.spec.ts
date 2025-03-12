@@ -9,7 +9,6 @@ import {
     STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
     TestProviderManager,
     tokenAddress1,
-    tokenId1,
     tokenIdUint8Array1,
 } from './test_helper';
 
@@ -25,7 +24,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -67,7 +65,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -102,7 +99,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -125,7 +121,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -149,7 +144,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -174,7 +168,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -198,7 +191,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -218,7 +210,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                tokenId1,
                 STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
             );
 
@@ -235,7 +226,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const manager: TestProviderManager = new TestProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -253,7 +243,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -275,7 +264,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -329,7 +317,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -388,7 +375,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -423,7 +409,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -459,7 +444,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                tokenId1,
                 STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
             );
 
@@ -493,7 +477,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                tokenId1,
                 STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
             );
 
@@ -521,7 +504,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
         /*const manager: TestProviderManager = new TestProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -547,7 +529,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -601,7 +582,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -660,7 +640,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -695,7 +674,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -731,7 +709,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                tokenId1,
                 STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
             );
 
@@ -765,7 +742,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                tokenId1,
                 STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
             );
 
@@ -793,7 +769,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
         /*const manager: TestProviderManager = new TestProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -820,7 +795,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -849,7 +823,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                tokenId1,
                 STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
             );
 
@@ -877,7 +850,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -910,7 +882,6 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 

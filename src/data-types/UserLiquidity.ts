@@ -4,7 +4,6 @@ import {
     BytesReader,
     BytesWriter,
     encodePointer,
-    MemorySlotPointer,
     Revert,
 } from '@btc-vision/btc-runtime/runtime';
 
@@ -17,8 +16,8 @@ export const MAX_RESERVATION_AMOUNT_PROVIDER = u128.fromBytes(bytes, true);
 
 @final
 export class UserLiquidity {
-    private readonly u256Pointer: u256;
-    private readonly liquidityPointer: u256;
+    private readonly pointerBuffer: Uint8Array;
+    private readonly liquidityPointer: Uint8Array;
 
     // Internal fields representing the components of UserLiquidity
     private activeFlag: u8 = 0;
@@ -41,16 +40,16 @@ export class UserLiquidity {
      * @constructor
      * @param {u16} pointer - The primary pointer identifier.
      * @param {u16} liquidityPointer - The liquidity pointer identifier.
-     * @param {MemorySlotPointer} subPointer - The sub-pointer for memory slot addressing.
+     * @param subPointer - The sub-pointer for memory slot addressing.
      */
-    constructor(pointer: u16, liquidityPointer: u16, subPointer: MemorySlotPointer) {
-        const writer = new BytesWriter(32);
-        writer.writeU256(subPointer);
+    constructor(pointer: u16, liquidityPointer: u16, subPointer: Uint8Array) {
+        assert(
+            subPointer.length <= 30,
+            `You must pass a 30 bytes sub-pointer. (UserLiquidity, got ${subPointer.length})`,
+        );
 
-        const buffer: Uint8Array = writer.getBuffer();
-
-        this.u256Pointer = encodePointer(pointer, buffer);
-        this.liquidityPointer = encodePointer(liquidityPointer, buffer);
+        this.pointerBuffer = encodePointer(pointer, subPointer);
+        this.liquidityPointer = encodePointer(liquidityPointer, subPointer);
     }
 
     public get pendingRemoval(): boolean {
@@ -186,12 +185,15 @@ export class UserLiquidity {
     public save(): void {
         if (this.isChanged) {
             const packed = this.packValues();
-            Blockchain.setStorageAt(this.u256Pointer, packed);
+            Blockchain.setStorageAt(this.pointerBuffer, packed);
             this.isChanged = false;
         }
 
         if (this.liquidityChanged) {
-            Blockchain.setStorageAt(this.liquidityPointer, this.liquidityProvided);
+            Blockchain.setStorageAt(
+                this.liquidityPointer,
+                this.liquidityProvided.toUint8Array(true),
+            );
             this.liquidityChanged = false;
         }
     }
@@ -246,18 +248,19 @@ export class UserLiquidity {
     /**
      * @method toBytes
      * @description Returns the packed u256 value as a byte array.
-     * @returns {u8[]} - The packed u256 value in byte form.
+     * @returns The packed u256 value in byte form.
      */
     @inline
-    public toBytes(): u8[] {
+    public toBytes(): Uint8Array {
         this.ensureValues();
-        const packed = this.packValues();
-        return packed.toBytes();
+        return this.packValues();
     }
 
     private ensureLoadedLiquidity(): void {
         if (!this.isLoadedProvider) {
-            this.liquidityProvided = Blockchain.getStorageAt(this.liquidityPointer, u256.Zero);
+            const data = Blockchain.getStorageAt(this.liquidityPointer);
+
+            this.liquidityProvided = u256.fromBytes(data, true);
             this.isLoadedProvider = true;
         }
     }
@@ -269,8 +272,8 @@ export class UserLiquidity {
      */
     private ensureValues(): void {
         if (!this.isLoaded) {
-            const storedU256: u256 = Blockchain.getStorageAt(this.u256Pointer, u256.Zero);
-            const reader = new BytesReader(storedU256.toUint8Array());
+            const storedData: Uint8Array = Blockchain.getStorageAt(this.pointerBuffer);
+            const reader = new BytesReader(storedData);
 
             const flag = reader.readU8();
 
@@ -299,9 +302,9 @@ export class UserLiquidity {
      * @private
      * @method packValues
      * @description Packs the internal fields into a single u256 value for storage.
-     * @returns {u256} - The packed u256 value.
+     * @returns The packed u256 value.
      */
-    private packValues(): u256 {
+    private packValues(): Uint8Array {
         const writer = new BytesWriter(32);
         const flag: u8 =
             this.activeFlag |
@@ -320,13 +323,6 @@ export class UserLiquidity {
             writer.writeU8(bytes[i] || 0);
         }
 
-        //bytes[15] = 0;
-
-        //const checksum = u128.fromBytes(bytes, false);
-        //if (!u128.eq(checksum, this.reservedAmount)) {
-        //    throw new Revert('Precision loss in packing reserved amount');
-        //}
-
-        return u256.fromBytes(writer.getBuffer());
+        return writer.getBuffer();
     }
 }

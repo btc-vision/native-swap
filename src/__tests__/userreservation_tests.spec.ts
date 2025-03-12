@@ -1,7 +1,6 @@
 import { UserReservation } from '../data-types/UserReservation';
 import { RESERVATION_ID_POINTER } from '../lib/StoredPointers';
 import { Blockchain, BytesReader } from '@btc-vision/btc-runtime/runtime';
-import { u256 } from '@btc-vision/as-bignum/assembly';
 import {
     generateReservationId,
     providerAddress1,
@@ -82,12 +81,13 @@ describe('UserReservation tests', () => {
 
     it('should restore value to default when calling reset with no timeout', () => {
         setBlockchainEnvironment(5);
+
         const reservation = generateReservationId(tokenAddress1, providerAddress1);
         const expirationBlock: u64 = 10;
         const purgeIndex: u32 = 11;
         const activationDelay: u8 = 1;
 
-        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation.toU256());
+        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation);
         userReservation.reservedForLiquidityPool = true;
         userReservation.setExpirationBlock(expirationBlock);
         userReservation.setPurgeIndex(purgeIndex);
@@ -104,12 +104,13 @@ describe('UserReservation tests', () => {
 
     it('should restore value to default when calling reset with timeout', () => {
         setBlockchainEnvironment(5);
+
         const reservation = generateReservationId(tokenAddress1, providerAddress1);
         const expirationBlock: u64 = 10;
         const purgeIndex: u32 = 11;
         const activationDelay: u8 = 1;
 
-        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation.toU256());
+        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation);
         userReservation.reservedForLiquidityPool = true;
         userReservation.setExpirationBlock(expirationBlock);
         userReservation.setPurgeIndex(purgeIndex);
@@ -130,7 +131,7 @@ describe('UserReservation tests', () => {
         const purgeIndex: u32 = 11;
         const activationDelay: u8 = 2;
 
-        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation.toU256());
+        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation);
         userReservation.reservedForLiquidityPool = true;
         userReservation.setExpirationBlock(expirationBlock);
         userReservation.setPurgeIndex(purgeIndex);
@@ -138,7 +139,7 @@ describe('UserReservation tests', () => {
 
         userReservation.save();
 
-        const userReservation2 = new UserReservation(RESERVATION_ID_POINTER, reservation.toU256());
+        const userReservation2 = new UserReservation(RESERVATION_ID_POINTER, reservation);
         expect(userReservation2.getPurgeIndex()).toStrictEqual(purgeIndex);
         expect(userReservation2.getExpirationBlock()).toStrictEqual(expirationBlock);
         expect(userReservation2.reservedForLiquidityPool).toBeTruthy();
@@ -150,15 +151,14 @@ describe('UserReservation tests', () => {
         const expirationBlock: u64 = 10;
         const purgeIndex: u32 = 11;
 
-        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation.toU256());
+        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation);
         userReservation.reservedForLiquidityPool = true;
         userReservation.setExpirationBlock(expirationBlock);
         userReservation.setPurgeIndex(purgeIndex);
         userReservation.timeout();
 
-        const bytes: u8[] = userReservation.toBytes();
-        const packed: u256 = u256.fromBytes(bytes);
-        const reader = new BytesReader(packed.toUint8Array(true));
+        const bytes: Uint8Array = userReservation.toBytes();
+        const reader = new BytesReader(bytes);
         const flags: u8 = reader.readU8();
 
         const reservedLP: bool = !!(flags & 0b1);
@@ -173,14 +173,13 @@ describe('UserReservation tests', () => {
         const expirationBlock: u64 = 10;
         const purgeIndex: u32 = 11;
 
-        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation.toU256());
+        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation);
         userReservation.reservedForLiquidityPool = false;
         userReservation.setExpirationBlock(expirationBlock);
         userReservation.setPurgeIndex(purgeIndex);
 
-        const bytes: u8[] = userReservation.toBytes();
-        const packed: u256 = u256.fromBytes(bytes);
-        const reader = new BytesReader(packed.toUint8Array(true));
+        const bytes: Uint8Array = userReservation.toBytes();
+        const reader = new BytesReader(bytes);
         const flags: u8 = reader.readU8();
 
         const reservedLP: bool = !!(flags & 0b1);

@@ -1,5 +1,6 @@
 import { clearCachedProviders, getProvider } from '../lib/Provider';
 import {
+    Address,
     Blockchain,
     SafeMath,
     TransactionOutput,
@@ -63,6 +64,7 @@ describe('SwapOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -119,6 +121,7 @@ describe('SwapOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -188,6 +191,7 @@ describe('SwapOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -264,6 +268,7 @@ describe('SwapOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -336,6 +341,7 @@ describe('SwapOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -409,6 +415,7 @@ describe('SwapOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -423,6 +430,7 @@ describe('SwapOperation tests', () => {
             providerId2,
             u128.fromString(`10000000000000000000`),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );
@@ -505,6 +513,7 @@ describe('SwapOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -519,6 +528,7 @@ describe('SwapOperation tests', () => {
             providerId2,
             u128.fromString(`10000000000000000000`),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );
@@ -605,6 +615,7 @@ describe('SwapOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -620,6 +631,7 @@ describe('SwapOperation tests', () => {
             providerId2,
             u128.fromString(`10000000000000000000`),
             receiverAddress2,
+            Address.dead(),
             false,
             false,
         );
@@ -746,6 +758,7 @@ describe('SwapOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -761,6 +774,7 @@ describe('SwapOperation tests', () => {
             providerId2,
             u128.fromString(`10000000000000000000`),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );
@@ -777,6 +791,7 @@ describe('SwapOperation tests', () => {
             providerId3,
             u128.fromString(`10000000000000000000`),
             receiverAddress2,
+            Address.dead(),
             true,
             false,
         );
@@ -786,7 +801,6 @@ describe('SwapOperation tests', () => {
 
         setBlockchainEnvironment(103, providerAddress4, providerAddress4);
         const providerId4 = createProviderId(providerAddress4, tokenAddress1);
-        const provider4 = getProvider(providerId4);
         const queue4 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const reserveOp = new ReserveLiquidityOperation(
             queue4,

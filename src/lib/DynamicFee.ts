@@ -16,7 +16,7 @@ export class DynamicFee {
     // store volatility in scaled form
     private readonly _volatility: StoredU256;
 
-    constructor(tokenId: u256) {
+    constructor(tokenId: Uint8Array) {
         // defaults - you can adjust or read from storage
         this.baseFeeBP = 20; // 0.20%
         this.minFeeBP = 15; // 0.15%
@@ -26,7 +26,7 @@ export class DynamicFee {
         this.beta = 15;
         this.gamma = 3;
 
-        this._volatility = new StoredU256(VOLATILITY_POINTER, tokenId, u256.Zero);
+        this._volatility = new StoredU256(VOLATILITY_POINTER, tokenId);
     }
 
     public get volatility(): u256 {

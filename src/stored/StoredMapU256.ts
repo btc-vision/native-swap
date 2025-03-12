@@ -1,4 +1,4 @@
-import { Blockchain, BytesWriter, encodePointer } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, BytesWriter, EMPTY_BUFFER, encodePointerUnknownLength } from '@btc-vision/btc-runtime/runtime';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
 /**
@@ -7,9 +7,9 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 @final
 export class StoredMapU256 {
     private readonly pointer: u16;
-    private readonly subPointer: u256;
+    private readonly subPointer: Uint8Array;
 
-    constructor(pointer: u16, subPointer: u256 = u256.Zero) {
+    constructor(pointer: u16, subPointer: Uint8Array = new Uint8Array(30)) {
         this.pointer = pointer;
         this.subPointer = subPointer;
     }
@@ -21,7 +21,7 @@ export class StoredMapU256 {
      */
     public set(key: u256, value: u256): void {
         const keyPointer = this.getKeyPointer(key);
-        Blockchain.setStorageAt(keyPointer, value);
+        Blockchain.setStorageAt(keyPointer, value.toUint8Array(true));
     }
 
     /**
@@ -31,7 +31,7 @@ export class StoredMapU256 {
      */
     public get(key: u256): u256 {
         const keyPointer = this.getKeyPointer(key);
-        return Blockchain.getStorageAt(keyPointer, u256.Zero);
+        return u256.fromUint8ArrayBE(Blockchain.getStorageAt(keyPointer));
     }
 
     /**
@@ -40,7 +40,7 @@ export class StoredMapU256 {
      */
     public delete(key: u256): void {
         const keyPointer = this.getKeyPointer(key);
-        Blockchain.setStorageAt(keyPointer, u256.Zero);
+        Blockchain.setStorageAt(keyPointer, EMPTY_BUFFER);
     }
 
     /**
@@ -48,11 +48,12 @@ export class StoredMapU256 {
      * @param key - The key of type K.
      * @returns The storage pointer as u256.
      */
-    private getKeyPointer(key: u256): u256 {
+    private getKeyPointer(key: u256): Uint8Array {
         const writer = new BytesWriter(64);
 
-        writer.writeU256(this.subPointer);
+        writer.writeBytes(this.subPointer);
         writer.writeU256(key);
-        return encodePointer(this.pointer, writer.getBuffer());
+
+        return encodePointerUnknownLength(this.pointer, writer.getBuffer());
     }
 }

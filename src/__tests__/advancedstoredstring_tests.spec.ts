@@ -1,7 +1,6 @@
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders } from '../lib/Provider';
 import { AdvancedStoredString } from '../stored/AdvancedStoredString';
-import { u256 } from '@btc-vision/as-bignum/assembly';
 
 describe('AdvancedStoredString', () => {
     beforeEach(() => {
@@ -12,13 +11,16 @@ describe('AdvancedStoredString', () => {
     });
 
     it('should get an empty string if not yet saved', () => {
-        const store = new AdvancedStoredString(<u16>1, u256.Zero);
+        const store = new AdvancedStoredString(<u16>1, new Uint8Array(30));
         const val = store.value;
         expect(val).toStrictEqual('');
     });
 
     it('should set a short string (<28 bytes) and retrieve it', () => {
-        const store = new AdvancedStoredString(<u16>10, u256.fromU64(20));
+        const buffer = new Uint8Array(30);
+        buffer[0] = 20;
+
+        const store = new AdvancedStoredString(<u16>10, buffer);
         store.value = 'HelloWorld';
 
         const val = store.value;
@@ -26,7 +28,7 @@ describe('AdvancedStoredString', () => {
     });
 
     it('should handle empty string => no chunk, read => empty', () => {
-        const store = new AdvancedStoredString(<u16>0, u256.Zero);
+        const store = new AdvancedStoredString(<u16>0, new Uint8Array(30));
         store.value = '';
         const val = store.value;
         expect(val).toStrictEqual('');
@@ -34,7 +36,7 @@ describe('AdvancedStoredString', () => {
 
     it('should throw if length > 2048', () => {
         expect(() => {
-            const store = new AdvancedStoredString(<u16>2, u256.Zero);
+            const store = new AdvancedStoredString(<u16>2, new Uint8Array(30));
             let bigStr = '';
             for (let i = 0; i < 2050; i++) {
                 bigStr += 'A';
@@ -45,7 +47,7 @@ describe('AdvancedStoredString', () => {
     });
 
     it('should set a 28-byte string => fits exactly in first chunk after 4 bytes used for length', () => {
-        const store = new AdvancedStoredString(<u16>3, u256.Zero);
+        const store = new AdvancedStoredString(<u16>3, new Uint8Array(30));
 
         let str28 = '';
         for (let i = 0; i < 28; i++) {
@@ -57,7 +59,7 @@ describe('AdvancedStoredString', () => {
     });
 
     it('should set a >28 bytes but <=32 => second chunk usage test', () => {
-        const store = new AdvancedStoredString(<u16>4, u256.Zero);
+        const store = new AdvancedStoredString(<u16>4, new Uint8Array(30));
         let str = 'ABCDEFGHIJKLMNOPQRSTUVWX';
 
         for (let i = str.length; i < 30; i++) {
@@ -69,7 +71,7 @@ describe('AdvancedStoredString', () => {
     });
 
     it('should set a large multi-chunk string (e.g. 100 bytes) and read it back', () => {
-        const store = new AdvancedStoredString(<u16>5, u256.Zero);
+        const store = new AdvancedStoredString(<u16>5, new Uint8Array(30));
         let str100 = '';
         for (let i = 0; i < 100; i++) {
             str100 += String.fromCharCode(65 + (i % 26));
@@ -81,14 +83,14 @@ describe('AdvancedStoredString', () => {
     });
 
     it('should overwrite existing string if set again', () => {
-        const store = new AdvancedStoredString(<u16>6, u256.Zero);
+        const store = new AdvancedStoredString(<u16>6, new Uint8Array(30));
         store.value = 'firstVal';
         store.value = 'secondVal';
         expect(store.value).toStrictEqual('secondVal');
     });
 
     it('should load a 75-byte string spanning multiple while loop iterations', () => {
-        const store = new AdvancedStoredString(<u16>7, u256.Zero);
+        const store = new AdvancedStoredString(<u16>7, new Uint8Array(30));
 
         let s75 = '';
         for (let i = 0; i < 75; i++) {
@@ -97,7 +99,7 @@ describe('AdvancedStoredString', () => {
 
         store.value = s75;
 
-        const store2 = new AdvancedStoredString(<u16>7, u256.Zero);
+        const store2 = new AdvancedStoredString(<u16>7, new Uint8Array(30));
         expect(store2.value).toStrictEqual(s75);
     });
 });

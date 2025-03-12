@@ -4,7 +4,6 @@ import {
     BytesWriter,
     Revert,
     SafeMath,
-    StoredAddress,
     StoredBooleanArray,
     StoredU128Array,
     StoredU256,
@@ -31,7 +30,6 @@ import {
     LIQUIDITY_VIRTUAL_T_POINTER,
     RESERVATION_IDS_BY_BLOCK_POINTER,
     RESERVATION_SETTINGS_POINTER,
-    STAKING_CA_POINTER,
     TOTAL_RESERVES_POINTER,
 } from '../StoredPointers';
 
@@ -61,28 +59,31 @@ export class LiquidityQueue {
 
     public readonly tokenId: u256;
     protected _providerManager: ProviderManager;
+
     // "virtual" reserves
     private readonly _virtualBTCReserve: StoredU256;
     private readonly _virtualTokenReserve: StoredU256;
+
     // We'll keep p0 in a pointer
     private readonly _p0: StoredU256;
     private readonly _quoteHistory: StoredU256Array;
     private readonly _totalReserves: StoredMapU256;
     private readonly _totalReserved: StoredMapU256;
+
     // We'll store the last block updated
     private readonly _lastVirtualUpdateBlock: StoredU64;
     private readonly _settingPurge: StoredU64;
     private readonly _settings: StoredU64;
     private readonly _maxTokenPerSwap: StoredU256;
+
     // "delta" accumulators - used in updated stepwise logic
     private readonly _deltaTokensAdd: StoredU256;
     private readonly _deltaBTCBuy: StoredU256;
     private readonly _deltaTokensBuy: StoredU256;
     private readonly _deltaTokensSell: StoredU256;
 
-    private readonly _stakingContractAddress: StoredAddress;
-
     private consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
+
     private readonly _dynamicFee: DynamicFee;
     private readonly _timeoutEnabled: boolean;
 
@@ -92,66 +93,54 @@ export class LiquidityQueue {
         purgeOldReservations: boolean,
         timeoutEnabled: boolean = false,
     ) {
-        const tokenId = u256.fromBytes(token, true);
-        this.tokenId = tokenId;
+        this.tokenId = u256.fromBytes(token, true);
 
-        this._dynamicFee = new DynamicFee(tokenId);
+        this._dynamicFee = new DynamicFee(tokenIdUint8Array);
         this._providerManager = new ProviderManager(
             token,
             tokenIdUint8Array,
-            tokenId,
             LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
         this._quoteHistory = new StoredU256Array(
             LIQUIDITY_QUOTE_HISTORY_POINTER,
             tokenIdUint8Array,
-            u256.Zero,
         );
 
         // virtual reserves
-        this._virtualBTCReserve = new StoredU256(LIQUIDITY_VIRTUAL_BTC_POINTER, tokenId, u256.Zero);
-        this._virtualTokenReserve = new StoredU256(LIQUIDITY_VIRTUAL_T_POINTER, tokenId, u256.Zero);
-        this._p0 = new StoredU256(LIQUIDITY_P0_POINTER, tokenId, u256.Zero);
+        this._virtualBTCReserve = new StoredU256(LIQUIDITY_VIRTUAL_BTC_POINTER, tokenIdUint8Array);
+        this._virtualTokenReserve = new StoredU256(LIQUIDITY_VIRTUAL_T_POINTER, tokenIdUint8Array);
+        this._p0 = new StoredU256(LIQUIDITY_P0_POINTER, tokenIdUint8Array);
 
         // accumulators
-        this._deltaTokensAdd = new StoredU256(DELTA_TOKENS_ADD, tokenId, u256.Zero);
-        this._deltaBTCBuy = new StoredU256(DELTA_BTC_BUY, tokenId, u256.Zero);
-        this._deltaTokensBuy = new StoredU256(DELTA_TOKENS_BUY, tokenId, u256.Zero);
-        this._deltaTokensSell = new StoredU256(DELTA_TOKENS_SELL, tokenId, u256.Zero);
+        this._deltaTokensAdd = new StoredU256(DELTA_TOKENS_ADD, tokenIdUint8Array);
+        this._deltaBTCBuy = new StoredU256(DELTA_BTC_BUY, tokenIdUint8Array);
+        this._deltaTokensBuy = new StoredU256(DELTA_TOKENS_BUY, tokenIdUint8Array);
+        this._deltaTokensSell = new StoredU256(DELTA_TOKENS_SELL, tokenIdUint8Array);
 
         // last block
         this._lastVirtualUpdateBlock = new StoredU64(
             LAST_VIRTUAL_BLOCK_UPDATE_POINTER,
-            tokenId,
-            u256.Zero,
+            tokenIdUint8Array,
         );
 
         this._maxTokenPerSwap = new StoredU256(
             ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
-            tokenId,
-            u256.Zero,
+            tokenIdUint8Array,
         );
 
         this._totalReserves = new StoredMapU256(TOTAL_RESERVES_POINTER);
         this._totalReserved = new StoredMapU256(LIQUIDITY_RESERVED_POINTER);
 
-        this._settingPurge = new StoredU64(LIQUIDITY_LAST_UPDATE_BLOCK_POINTER, tokenId, u256.Zero);
-        this._settings = new StoredU64(RESERVATION_SETTINGS_POINTER, tokenId, u256.Zero);
+        this._settingPurge = new StoredU64(LIQUIDITY_LAST_UPDATE_BLOCK_POINTER, tokenIdUint8Array);
+        this._settings = new StoredU64(RESERVATION_SETTINGS_POINTER, tokenIdUint8Array);
         this._timeoutEnabled = timeoutEnabled;
-
-        // Staking
-        this._stakingContractAddress = new StoredAddress(STAKING_CA_POINTER, Address.dead());
 
         if (purgeOldReservations) {
             this.purgeReservationsAndRestoreProviders();
         }
 
         this.updateVirtualPoolIfNeeded();
-    }
-
-    public get stakingContractAddress(): Address {
-        return this._stakingContractAddress.value;
     }
 
     public get volatility(): u256 {
@@ -296,9 +285,9 @@ export class LiquidityQueue {
         return this._providerManager.getNextProviderWithLiquidity();
     }
 
-    public removePendingLiquidityProviderFromRemovalQueue(provider: Provider, i: u64): void {
+    /*public removePendingLiquidityProviderFromRemovalQueue(provider: Provider, i: u64): void {
         this._providerManager.removePendingLiquidityProviderFromRemovalQueue(provider, i);
-    }
+    }*/
 
     public getTokensAfterTax(amountIn: u128): u128 {
         const tokensForPriorityQueue: u128 = SafeMath.div128(
@@ -776,7 +765,7 @@ export class LiquidityQueue {
         writer.writeBytes(this.tokenIdUint8Array);
 
         const keyBytes = writer.getBuffer();
-        return new StoredU128Array(RESERVATION_IDS_BY_BLOCK_POINTER, keyBytes, u256.Zero);
+        return new StoredU128Array(RESERVATION_IDS_BY_BLOCK_POINTER, keyBytes);
     }
 
     public getActiveReservationListForBlock(blockNumber: u64): StoredBooleanArray {
@@ -785,7 +774,7 @@ export class LiquidityQueue {
         writer.writeBytes(this.tokenIdUint8Array);
 
         const keyBytes = writer.getBuffer();
-        return new StoredBooleanArray(ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER, keyBytes, u256.Zero);
+        return new StoredBooleanArray(ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER, keyBytes);
     }
 
     public setBlockQuote(): void {
@@ -857,16 +846,17 @@ export class LiquidityQueue {
         this.deltaTokensSell = SafeMath.add(this.deltaTokensSell, amount);
     }
 
-    public distributeFee(totalFee: u256): void {
+    public distributeFee(totalFee: u256, stakingAddress: Address): void {
         const feeLP = SafeMath.div(SafeMath.mul(totalFee, u256.fromU64(50)), u256.fromU64(100));
         const feeMoto = SafeMath.sub(totalFee, feeLP);
+
         // Do nothing with half the fee
         this.increaseVirtualTokenReserve(feeLP);
 
         // Only transfer if the fee is non-zero
         if (feeMoto > u256.Zero) {
             // Send other half of fee to staking contract
-            TransferHelper.safeTransfer(this.token, this._stakingContractAddress.value, feeMoto);
+            TransferHelper.safeTransfer(this.token, stakingAddress, feeMoto);
             this.decreaseTotalReserve(feeMoto);
         }
     }

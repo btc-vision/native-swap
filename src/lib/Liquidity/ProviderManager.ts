@@ -25,38 +25,35 @@ export class ProviderManager {
     protected readonly _queue: StoredU256Array;
     protected readonly _priorityQueue: StoredU256Array;
     protected readonly _removalQueue: StoredU256Array;
+
     private currentIndex: u64 = 0;
+
     private readonly _startingIndex: StoredU64;
     private readonly _initialLiquidityProvider: StoredU256;
     private readonly _lpBTCowed: StoredMapU256;
     private readonly _lpBTCowedReserved: StoredMapU256;
+
     private currentIndexPriority: u64 = 0;
     private currentIndexRemoval: u64 = 0;
 
     constructor(
         public readonly token: Address,
         public readonly tokenIdUint8Array: Uint8Array,
-        public readonly tokenId: u256,
         public readonly strictMinimumProviderReservationAmount: u256,
     ) {
-        this._queue = new StoredU256Array(LIQUIDITY_QUEUE_POINTER, tokenIdUint8Array, u256.Zero);
+        this._queue = new StoredU256Array(LIQUIDITY_QUEUE_POINTER, tokenIdUint8Array);
 
         this._priorityQueue = new StoredU256Array(
             LIQUIDITY_PRIORITY_QUEUE_POINTER,
             tokenIdUint8Array,
-            u256.Zero,
         );
 
-        this._removalQueue = new StoredU256Array(
-            REMOVAL_QUEUE_POINTER,
-            tokenIdUint8Array,
-            u256.Zero,
-        );
+        this._removalQueue = new StoredU256Array(REMOVAL_QUEUE_POINTER, tokenIdUint8Array);
 
-        this._initialLiquidityProvider = new StoredU256(INITIAL_LIQUIDITY, tokenId, u256.Zero);
+        this._initialLiquidityProvider = new StoredU256(INITIAL_LIQUIDITY, tokenIdUint8Array);
         this._lpBTCowed = new StoredMapU256(LP_BTC_OWED_POINTER);
         this._lpBTCowedReserved = new StoredMapU256(LP_BTC_OWED_RESERVED_POINTER);
-        this._startingIndex = new StoredU64(STARTING_INDEX_POINTER, tokenId, u256.Zero);
+        this._startingIndex = new StoredU64(STARTING_INDEX_POINTER, tokenIdUint8Array);
     }
 
     public get previousReservationStandardStartingIndex(): u64 {

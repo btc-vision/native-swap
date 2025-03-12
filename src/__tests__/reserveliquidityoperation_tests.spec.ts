@@ -1,4 +1,4 @@
-import { Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders, getProvider } from '../lib/Provider';
 import {
     createProvider,
@@ -174,6 +174,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -224,6 +225,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -288,6 +290,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -352,6 +355,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -406,6 +410,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 10,
                 u256.fromU32(15000),
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -455,6 +460,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 10,
                 u256.fromU32(15000),
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -508,6 +514,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 10,
                 u256.fromU32(15000),
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -561,6 +568,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 10,
                 u256.fromU32(15000),
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -613,6 +621,7 @@ describe('ReserveLiquidityOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -627,6 +636,7 @@ describe('ReserveLiquidityOperation tests', () => {
             providerId1,
             u128.fromString(`10000000000000000000`),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );
@@ -683,6 +693,7 @@ describe('ReserveLiquidityOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -697,6 +708,7 @@ describe('ReserveLiquidityOperation tests', () => {
             providerId1,
             u128.fromString(`10000000000000000000`),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );
@@ -737,7 +749,6 @@ describe('ReserveLiquidityOperation tests', () => {
         Blockchain.mockValidateBitcoinAddressResult(true);
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-        const initProvider = getProvider(initialProviderId);
         const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
@@ -754,6 +765,7 @@ describe('ReserveLiquidityOperation tests', () => {
             0,
             u256.Zero,
             100,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -769,6 +781,7 @@ describe('ReserveLiquidityOperation tests', () => {
             providerId1,
             u128.sub(u128.Max, u128.One),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );
@@ -809,7 +822,6 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.mockValidateBitcoinAddressResult(true);
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const initProvider = getProvider(initialProviderId);
             const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
@@ -830,6 +842,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
+                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -844,6 +857,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`10000000000000000000`),
                 receiverAddress1,
+                Address.dead(),
                 false,
                 false,
             );
@@ -875,7 +889,6 @@ describe('ReserveLiquidityOperation tests', () => {
         Blockchain.mockValidateBitcoinAddressResult(true);
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-        const initProvider = getProvider(initialProviderId);
         const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
@@ -896,6 +909,7 @@ describe('ReserveLiquidityOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -910,6 +924,7 @@ describe('ReserveLiquidityOperation tests', () => {
             providerId1,
             u128.fromString(`10000000000000000000`),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );
@@ -964,7 +979,6 @@ describe('ReserveLiquidityOperation tests', () => {
         Blockchain.mockValidateBitcoinAddressResult(true);
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-        const initProvider = getProvider(initialProviderId);
         const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
@@ -985,6 +999,7 @@ describe('ReserveLiquidityOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -999,6 +1014,7 @@ describe('ReserveLiquidityOperation tests', () => {
             providerId1,
             u128.fromString(`10000000000000000000`),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );
@@ -1041,7 +1057,6 @@ describe('ReserveLiquidityOperation tests', () => {
         Blockchain.mockValidateBitcoinAddressResult(true);
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-        const initProvider = getProvider(initialProviderId);
         const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
@@ -1062,6 +1077,7 @@ describe('ReserveLiquidityOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -1077,6 +1093,7 @@ describe('ReserveLiquidityOperation tests', () => {
             providerId1,
             u128.fromString(`10000000000000000000`),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );
@@ -1127,6 +1144,7 @@ describe('ReserveLiquidityOperation tests', () => {
             0,
             u256.Zero,
             5,
+            Address.dead(),
         );
 
         createPoolOp.execute();
@@ -1142,6 +1160,7 @@ describe('ReserveLiquidityOperation tests', () => {
             providerId1,
             u128.fromString(`10000000000000000000`),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );

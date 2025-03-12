@@ -9,7 +9,6 @@ import {
     providerAddress3,
     STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
     tokenAddress1,
-    tokenId1,
     tokenIdUint8Array1,
 } from './test_helper';
 
@@ -25,7 +24,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -49,7 +47,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -73,7 +70,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -100,7 +96,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -127,7 +122,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -154,7 +148,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -181,7 +174,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -210,7 +202,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -241,7 +232,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -275,7 +265,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -308,7 +297,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -341,7 +329,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -374,7 +361,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -407,7 +393,6 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -439,7 +424,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -464,7 +448,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -489,7 +472,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -519,7 +501,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -549,7 +530,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -579,7 +559,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -609,7 +588,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -642,7 +620,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -676,7 +653,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -715,7 +691,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -753,7 +728,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -791,7 +765,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -829,7 +802,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -867,7 +839,6 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -904,7 +875,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -929,7 +899,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -954,7 +923,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -984,7 +952,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -1014,7 +981,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -1044,7 +1010,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -1074,7 +1039,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -1107,7 +1071,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -1141,7 +1104,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
@@ -1180,7 +1142,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1218,7 +1179,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1256,7 +1216,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1294,7 +1253,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1332,7 +1290,6 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            tokenId1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);

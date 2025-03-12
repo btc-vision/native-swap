@@ -2,7 +2,6 @@ import { clearCachedProviders } from '../lib/Provider';
 import {
     Address,
     Blockchain,
-    StoredAddress,
     TransactionOutput,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
@@ -12,7 +11,6 @@ import {
     receiverAddress1,
     setBlockchainEnvironment,
     TestLiquidityQueue,
-    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -21,7 +19,6 @@ import { ListTokensForSaleOperation } from '../lib/Liquidity/operations/ListToke
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../lib/FeeManager';
 import { FEE_COLLECT_SCRIPT_PUBKEY } from '../utils/NativeSwapUtils';
-import { STAKING_CA_POINTER } from '../lib/StoredPointers';
 
 describe('ListTokenForSaleOperation tests', () => {
     beforeEach(() => {
@@ -42,6 +39,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u256.fromU64(111),
                 u128.Zero,
                 receiverAddress1,
+                Address.dead(),
                 false,
                 false,
             );
@@ -65,6 +63,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.providerId,
                 u128.fromU64(100),
                 receiverAddress1,
+                Address.dead(),
                 false,
                 false,
             );
@@ -87,6 +86,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.providerId,
                 u128.fromU64(100),
                 receiverAddress1,
+                Address.dead(),
                 false,
                 false,
             );
@@ -110,6 +110,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.providerId,
                 u128.fromU64(100),
                 receiverAddress1,
+                Address.dead(),
                 false,
                 false,
             );
@@ -135,6 +136,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.providerId,
                 u128.fromU64(100),
                 receiverAddress1,
+                Address.dead(),
                 false,
                 false,
             );
@@ -159,6 +161,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.providerId,
                 u128.fromU64(100),
                 receiverAddress1,
+                Address.dead(),
                 false,
                 false,
             );
@@ -195,6 +198,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.providerId,
                 u128.fromU64(100000000),
                 receiverAddress1,
+                Address.dead(),
                 true,
                 false,
             );
@@ -231,6 +235,7 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.providerId,
             u128.fromU64(100000000),
             receiverAddress1,
+            Address.dead(),
             true,
             false,
         );
@@ -270,6 +275,7 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.providerId,
             u128.fromU64(100000000),
             receiverAddress1,
+            Address.dead(),
             true,
             false,
         );
@@ -302,6 +308,7 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.providerId,
             u128.fromU64(100000000),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );
@@ -335,6 +342,7 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.providerId,
             u128.fromU64(100000000),
             receiverAddress1,
+            Address.dead(),
             false,
             true,
         );
@@ -364,6 +372,7 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.providerId,
             u128.fromU64(100000000),
             receiverAddress1,
+            Address.dead(),
             false,
             true,
         );
@@ -391,6 +400,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.providerId,
                 u128.fromU64(100000000),
                 receiverAddress1,
+                Address.dead(),
                 false,
                 true,
             );
@@ -416,6 +426,7 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.providerId,
             u128.fromU64(100000000),
             receiverAddress1,
+            Address.dead(),
             false,
             true,
         );
@@ -444,6 +455,7 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.providerId,
             u128.fromU64(100000000),
             receiverAddress1,
+            Address.dead(),
             false,
             true,
         );
@@ -477,6 +489,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.providerId,
                 u128.fromU64(100000000),
                 receiverAddress1,
+                Address.dead(),
                 true,
                 false,
             );
@@ -510,6 +523,7 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.providerId,
             u128.fromU64(100000000),
             receiverAddress1,
+            Address.dead(),
             true,
             false,
         );
@@ -543,6 +557,7 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.providerId,
             u128.fromU64(100000000),
             receiverAddress1,
+            Address.dead(),
             false,
             false,
         );
@@ -552,7 +567,7 @@ describe('ListTokenForSaleOperation tests', () => {
         expect(queue.getBlockQuote(100)).toStrictEqual(u256.fromU64(1000000000000));
     });
 
-    it('should return Address.dead when the staking contract address is not initialized', () => {
+    /*it('should return Address.dead when the staking contract address is not initialized', () => {
         setBlockchainEnvironment(90);
 
         const provider = createProvider(providerAddress1, tokenAddress1);
@@ -562,6 +577,7 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.providerId,
             u128.fromU64(100000000),
             receiverAddress1,
+            Address.dead(),
             true,
             false,
         );
@@ -582,10 +598,11 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.providerId,
             u128.fromU64(100000000),
             receiverAddress1,
+            Address.dead(),
             true,
             false,
         );
 
         expect(operation.stakingContractAddress).toStrictEqual(testStackingContractAddress);
-    });
+    });*/
 });
