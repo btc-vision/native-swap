@@ -67,11 +67,9 @@ export class NativeSwap extends ReentrancyGuard {
 
     public override onDeployment(_calldata: Calldata): void {
         FeeManager.onDeploy();
-        Blockchain.log(`in onDeployment`);
     }
 
     public override onExecutionCompleted(): void {
-        Blockchain.log(`in onExecutionCompleted`);
         FeeManager.save();
         saveAllProviders();
 
@@ -80,8 +78,6 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        Blockchain.log(`in execute`);
-
         // Ensure that the reentrancy guard is not active
         this.checkReentrancy();
 
