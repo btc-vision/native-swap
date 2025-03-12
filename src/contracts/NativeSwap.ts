@@ -29,7 +29,7 @@ import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/leng
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReentrancyGuard } from '../lib/ReentrancyGuard';
 import { STAKING_CA_POINTER } from '../lib/StoredPointers';
-import { eqUint } from '../../../btc-runtime/runtime/generic/MapUint8Array';
+import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 
 /**
  * OrderBook contract for the OP_NET order book system,
@@ -53,7 +53,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private static get APPROVE_FROM_SELECTOR(): Selector {
-        return encodeSelector('approveFrom(address,uint256,uint64,bytes)');
+        return encodeSelector('approveFrom(address,uint256,uint256,bytes)');
     }
 
     public get stakingContractAddress(): Address {
@@ -67,9 +67,11 @@ export class NativeSwap extends ReentrancyGuard {
 
     public override onDeployment(_calldata: Calldata): void {
         FeeManager.onDeploy();
+        Blockchain.log(`in onDeployment`);
     }
 
     public override onExecutionCompleted(): void {
+        Blockchain.log(`in onExecutionCompleted`);
         FeeManager.save();
         saveAllProviders();
 
@@ -78,6 +80,8 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
+        Blockchain.log(`in execute`);
+
         // Ensure that the reentrancy guard is not active
         this.checkReentrancy();
 
