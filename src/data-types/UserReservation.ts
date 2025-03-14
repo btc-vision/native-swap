@@ -263,7 +263,7 @@ export class UserReservation {
      * @private
      * @method packValues
      * @description Packs the internal fields into a single u256 value for storage.
-     * @returns {u256} - The packed u256 value.
+     * @returns {Uint8Array} - The packed u256 value.
      */
     private packValues(): Uint8Array {
         const writer = new BytesWriter(32);
