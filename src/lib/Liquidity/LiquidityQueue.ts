@@ -147,14 +147,6 @@ export class LiquidityQueue {
         return this._dynamicFee.volatility;
     }
 
-    public get p0(): u256 {
-        return this._p0.value;
-    }
-
-    public set p0(value: u256) {
-        this._p0.value = value;
-    }
-
     public get initialLiquidityProvider(): u256 {
         return this._providerManager.initialLiquidityProvider;
     }
@@ -331,7 +323,6 @@ export class LiquidityQueue {
         initialLiquidity: u256,
         maxReserves5BlockPercent: u64,
     ): void {
-        this.p0 = floorPrice;
         this.initialLiquidityProvider = providerId;
 
         // The contract simulates BTC side:

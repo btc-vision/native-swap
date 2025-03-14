@@ -43,7 +43,7 @@ export class CreatePoolOperation extends BaseOperation {
             this.antiBotEnabledFor,
             this.antiBotMaximumTokensPerReservation,
         );
-        this.ensureBaseQuoteNotAlreadySet(this.liquidityQueue.p0);
+        this.ensureBaseQuoteNotAlreadySet(this.liquidityQueue.initialLiquidityProvider);
 
         this.liquidityQueue.initializeInitialLiquidity(
             this.floorPrice,

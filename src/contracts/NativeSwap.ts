@@ -546,8 +546,8 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private ensurePoolExistsForToken(queue: LiquidityQueue): void {
-        if (queue.p0.isZero()) {
-            throw new Revert('NATIVE_SWAP: No pool exists for token.');
+        if(queue.initialLiquidityProvider.isZero()) {
+            throw new Revert('NATIVE_SWAP: Pool does not exist for token');
         }
     }
 

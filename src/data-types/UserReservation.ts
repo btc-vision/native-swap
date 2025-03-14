@@ -6,7 +6,7 @@ import {
     encodePointer,
 } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
-import { eqUint } from '../../../btc-runtime/runtime/generic/MapUint8Array';
+import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 
 @final
 export class UserReservation {
