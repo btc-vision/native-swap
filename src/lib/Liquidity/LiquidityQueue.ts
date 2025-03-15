@@ -23,7 +23,6 @@ import {
     DELTA_TOKENS_SELL,
     LAST_VIRTUAL_BLOCK_UPDATE_POINTER,
     LIQUIDITY_LAST_UPDATE_BLOCK_POINTER,
-    LIQUIDITY_P0_POINTER,
     LIQUIDITY_QUOTE_HISTORY_POINTER,
     LIQUIDITY_RESERVED_POINTER,
     LIQUIDITY_VIRTUAL_BTC_POINTER,
@@ -65,7 +64,6 @@ export class LiquidityQueue {
     private readonly _virtualTokenReserve: StoredU256;
 
     // We'll keep p0 in a pointer
-    private readonly _p0: StoredU256;
     private readonly _quoteHistory: StoredU256Array;
     private readonly _totalReserves: StoredMapU256;
     private readonly _totalReserved: StoredMapU256;
@@ -110,7 +108,6 @@ export class LiquidityQueue {
         // virtual reserves
         this._virtualBTCReserve = new StoredU256(LIQUIDITY_VIRTUAL_BTC_POINTER, tokenIdUint8Array);
         this._virtualTokenReserve = new StoredU256(LIQUIDITY_VIRTUAL_T_POINTER, tokenIdUint8Array);
-        this._p0 = new StoredU256(LIQUIDITY_P0_POINTER, tokenIdUint8Array);
 
         // accumulators
         this._deltaTokensAdd = new StoredU256(DELTA_TOKENS_ADD, tokenIdUint8Array);
