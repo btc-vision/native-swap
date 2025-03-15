@@ -202,7 +202,6 @@ describe('CreatePoolOperation tests', () => {
         const queue2 = new TestLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const provider = getProvider(initialProviderId);
 
-        expect(queue2.p0).toStrictEqual(u256.fromU64(100));
         expect(queue2.initialLiquidityProvider).toStrictEqual(initialProviderId);
         expect(queue2.virtualBTCReserve).toStrictEqual(u256.fromU64(10000));
         expect(queue2.virtualTokenReserve).toStrictEqual(u256.fromU64(1000000));

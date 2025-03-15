@@ -1,9 +1,7 @@
 import { clearCachedProviders, Provider } from '../lib/Provider';
 import {
-    Address,
     Blockchain,
     SafeMath,
-    StoredAddress,
     StoredBooleanArray,
     StoredU128Array,
     TransactionOutput,
@@ -23,7 +21,6 @@ import {
     receiverAddress2,
     setBlockchainEnvironment,
     TestLiquidityQueue,
-    testStackingContractAddress,
     tokenAddress1,
     tokenAddress2,
     tokenIdUint8Array1,
@@ -37,7 +34,6 @@ import {
     PRIORITY_TYPE,
     Reservation,
 } from '../lib/Reservation';
-import { STAKING_CA_POINTER } from '../lib/StoredPointers';
 
 describe('Liquidity queue tests', () => {
     beforeEach(() => {
@@ -51,7 +47,6 @@ describe('Liquidity queue tests', () => {
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        expect(queue.p0).toStrictEqual(u256.Zero);
         expect(queue.initialLiquidityProvider).toStrictEqual(u256.Zero);
         expect(queue.virtualBTCReserve).toStrictEqual(u256.Zero);
         expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
@@ -73,7 +68,6 @@ describe('Liquidity queue tests', () => {
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        expect(queue.p0).toStrictEqual(u256.Zero);
         expect(queue.initialLiquidityProvider).toStrictEqual(u256.Zero);
         expect(queue.virtualBTCReserve).toStrictEqual(u256.Zero);
         expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(1));
@@ -130,7 +124,6 @@ describe('Liquidity queue tests', () => {
             queue.addToPriorityQueue(providers[i].providerId);
         }
 
-        queue.p0 = u256.fromU32(99999);
         queue.initialLiquidityProvider = providers[0].providerId;
         queue.lastVirtualUpdateBlock = 888;
         queue.maxTokensPerReservation = u256.fromU32(20000);
@@ -145,7 +138,6 @@ describe('Liquidity queue tests', () => {
 
         const queue2: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        expect(queue2.p0).toStrictEqual(queue.p0);
         expect(queue2.initialLiquidityProvider).toStrictEqual(queue.initialLiquidityProvider);
         expect(queue2.lastVirtualUpdateBlock).toStrictEqual(queue.lastVirtualUpdateBlock);
         expect(queue2.maxTokensPerReservation).toStrictEqual(queue.maxTokensPerReservation);
@@ -204,7 +196,6 @@ describe('Liquidity queue tests', () => {
             queue.addToPriorityQueue(providers[i].providerId);
         }
 
-        queue.p0 = u256.fromU32(99999);
         queue.initialLiquidityProvider = providers[0].providerId;
         queue.maxTokensPerReservation = u256.fromU32(20000);
         queue.increaseTotalReserve(u256.fromU32(1000));
@@ -223,14 +214,6 @@ describe('Liquidity queue tests', () => {
         // The goal is only to check if updateVirtualPoolIfNeeded has been called.
         const queue2: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
         expect(queue2.lastVirtualUpdateBlock).toStrictEqual(2);
-    });
-
-    it('should correctly get/set p0 value', () => {
-        setBlockchainEnvironment(1);
-        const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-
-        queue.p0 = u256.fromU32(1000);
-        expect(queue.p0).toStrictEqual(u256.fromU32(1000));
     });
 
     it('should correctly get/set initialLiquidityProvider value', () => {
@@ -529,7 +512,6 @@ describe('Liquidity queue tests', () => {
 
         const virtualBTCReserve = SafeMath.div(u256.fromU32(888888), u256.fromU32(99999));
 
-        expect(queue.p0).toStrictEqual(u256.fromU32(99999));
         expect(queue.initialLiquidityProvider).toStrictEqual(u256.fromU32(10000));
         expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(888888));
         expect(queue.maxReserves5BlockPercent).toStrictEqual(10);
