@@ -190,10 +190,10 @@ export class UserReservation {
         this.reservedLP = false;
         this.purgeIndex = u32.MAX_VALUE;
         this.activationDelay = 0;
+        this.isTimeout = isTimeout;
 
         if (!isTimeout) {
             this.expirationBlock = 0;
-            this.isTimeout = false;
         }
 
         this.isChanged = true;

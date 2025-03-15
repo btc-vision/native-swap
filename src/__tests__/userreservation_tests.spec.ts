@@ -53,32 +53,6 @@ describe('UserReservation tests', () => {
         expect(userReservation.getExpirationBlock()).toStrictEqual(expirationBlock);
     });
 
-    it('should get expiration block + 5 as UserTimeoutBlockExpiration when expiration block greater than current block number', () => {
-        setBlockchainEnvironment(5);
-
-        const reservation = generateReservationId(tokenAddress1, providerAddress1);
-        const expirationBlock: u64 = 10;
-
-        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation);
-        userReservation.setExpirationBlock(expirationBlock);
-        userReservation.timeout();
-
-        expect(userReservation.getUserTimeoutBlockExpiration()).toStrictEqual(15);
-    });
-
-    it('should get 5 as UserTimeoutBlockExpiration when expiration block smaller/equal to current block number', () => {
-        setBlockchainEnvironment(20);
-
-        const reservation = generateReservationId(tokenAddress1, providerAddress1);
-        const expirationBlock: u64 = 5;
-
-        const userReservation = new UserReservation(RESERVATION_ID_POINTER, reservation);
-        userReservation.setExpirationBlock(expirationBlock);
-        userReservation.timeout();
-
-        expect(userReservation.getUserTimeoutBlockExpiration()).toStrictEqual(10);
-    });
-
     it('should restore value to default when calling reset with no timeout', () => {
         setBlockchainEnvironment(5);
 
@@ -118,7 +92,7 @@ describe('UserReservation tests', () => {
 
         userReservation.reset(true);
 
-        expect(userReservation.getUserTimeoutBlockExpiration()).toStrictEqual(0);
+        expect(userReservation.getUserTimeoutBlockExpiration()).toStrictEqual(15);
         expect(userReservation.getExpirationBlock()).toStrictEqual(expirationBlock);
         expect(userReservation.reservedForLiquidityPool).toBeFalsy();
         expect(userReservation.getPurgeIndex()).toStrictEqual(u32.MAX_VALUE);

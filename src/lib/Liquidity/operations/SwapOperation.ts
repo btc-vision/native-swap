@@ -23,13 +23,6 @@ export class SwapOperation extends BaseOperation {
         const reservation = this.liquidityQueue.getReservationWithExpirationChecks();
         this.ensureReservation(reservation);
 
-        const reservationActiveList = this.liquidityQueue.getActiveReservationListForBlock(
-            reservation.createdAt,
-        );
-
-        reservationActiveList.set(<u64>reservation.getPurgeIndex(), false);
-        reservationActiveList.save();
-
         const buyer: Address = Blockchain.tx.sender;
         const trade = this.liquidityQueue.executeTrade(reservation);
 

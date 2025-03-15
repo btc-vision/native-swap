@@ -847,4 +847,137 @@ describe('SwapOperation tests', () => {
         expect(reservationActiveList.get(0)).toBeFalsy();
         expect(TransferHelper.safeTransferCalled).toBeTruthy();
     });
+
+    it('should executeTrade, swap, add liquidity then purged correctly, then swap', () => {
+        setBlockchainEnvironment(100, msgSender1, msgSender1);
+        Blockchain.mockValidateBitcoinAddressResult(true);
+
+        const initialProviderId = createProviderId(msgSender1, tokenAddress1);
+        let initialProvider = getProvider(initialProviderId);
+        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+        const floorPrice: u256 = SafeMath.div(
+            SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
+            u256.fromU32(1500),
+        );
+        const initialLiquidity = SafeMath.mul128(
+            u128.fromU32(1000000),
+            SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
+        );
+
+        const createPoolOp = new CreatePoolOperation(
+            queue,
+            floorPrice,
+            initialProviderId,
+            initialLiquidity,
+            receiverAddress1,
+            0,
+            u256.Zero,
+            5,
+            Address.dead(),
+        );
+
+        createPoolOp.execute();
+        queue.setBlockQuote();
+        queue.save();
+
+        setBlockchainEnvironment(101, providerAddress2, providerAddress2);
+        const providerId2 = createProviderId(providerAddress2, tokenAddress1);
+        const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const reserveOp = new ReserveLiquidityOperation(
+            queue3,
+            providerId2,
+            providerAddress2,
+            u256.fromU64(20000000),
+            u256.Zero,
+            false,
+            0,
+        );
+
+        reserveOp.execute();
+        queue3.save();
+
+        setBlockchainEnvironment(102, providerAddress2, providerAddress2);
+        const transactionOutput: TransactionOutput[] = [];
+
+        transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
+        transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 10000));
+
+        Blockchain.mockTransactionOutput(transactionOutput);
+
+        const queue4 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+        const swapOp = new SwapOperation(queue4);
+        swapOp.execute();
+        queue4.save();
+
+        // Add liquidity
+        setBlockchainEnvironment(102, providerAddress3, providerAddress3);
+        const providerId3 = createProviderId(providerAddress3, tokenAddress1);
+        const queue34 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const reserveOp4 = new ReserveLiquidityOperation(
+            queue34,
+            providerId3,
+            providerAddress3,
+            u256.fromU64(15600),
+            u256.Zero,
+            true,
+            0,
+        );
+
+        reserveOp4.execute();
+        queue34.save();
+
+        setBlockchainEnvironment(103, providerAddress3, providerAddress3);
+        const transactionOutput2: TransactionOutput[] = [];
+        const provider3 = getProvider(providerId3);
+        transactionOutput2.push(new TransactionOutput(0, 'fakeaddress', 0));
+        transactionOutput2.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
+        transactionOutput2.push(new TransactionOutput(2, provider3.btcReceiver, 15000));
+        transactionOutput2.push(new TransactionOutput(2, initialProvider.btcReceiver, 600));
+
+        Blockchain.mockTransactionOutput(transactionOutput2);
+        const queue44 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+        const addOp = new AddLiquidityOperation(queue44, providerId3, receiverAddress3);
+        addOp.execute();
+        queue44.save();
+
+        setBlockchainEnvironment(108, providerAddress2, providerAddress2);
+        const liquidity = initialProvider.liquidity;
+
+        const queue54 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const reserveOp54 = new ReserveLiquidityOperation(
+            queue54,
+            providerId2,
+            providerAddress2,
+            u256.fromU64(15600),
+            u256.Zero,
+            false,
+            0,
+        );
+
+        reserveOp54.execute();
+        queue54.save();
+
+        setBlockchainEnvironment(109, providerAddress2, providerAddress2);
+        const transactionOutput3: TransactionOutput[] = [];
+
+        transactionOutput3.push(new TransactionOutput(0, 'fakeaddress', 0));
+        transactionOutput3.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput3.push(new TransactionOutput(2, provider3.btcReceiver, 10000));
+
+        Blockchain.mockTransactionOutput(transactionOutput3);
+
+        const queue64 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+        const swapOp2 = new SwapOperation(queue64);
+        swapOp2.execute();
+        queue64.save();
+
+        const providerAddLiquidity = getProvider(providerId3);
+        expect(providerAddLiquidity.reserved).toStrictEqual(u128.Zero);
+
+        initialProvider = getProvider(initialProviderId);
+        expect(initialProvider.reserved).toStrictEqual(u128.Zero);
+        expect(initialProvider.liquidity).toStrictEqual(liquidity);
+    });
 });

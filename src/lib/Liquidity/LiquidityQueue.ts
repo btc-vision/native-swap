@@ -454,6 +454,12 @@ export class LiquidityQueue {
         const queueTypes: u8[] = reservation.getQueueTypes();
         const reservationForLP = reservation.reservedLP;
 
+        // Mark the reservation as used.
+        const reservationActiveList = this.getActiveReservationListForBlock(reservation.createdAt);
+
+        reservationActiveList.set(<u64>reservation.getPurgeIndex(), false);
+        reservationActiveList.save();
+
         // **Important**: we delete the reservation record now
         // (since we have all needed info in local variables)
         reservation.delete(false);
@@ -637,14 +643,16 @@ export class LiquidityQueue {
 
         if (reservation.getActivationDelay() === 0) {
             if (reservation.createdAt === Blockchain.block.number) {
-                throw new Revert('Too early');
+                throw new Revert('Cannot be consumed in the same block');
             }
         } else {
             if (
                 reservation.createdAt + reservation.getActivationDelay() >
                 Blockchain.block.number
             ) {
-                throw new Revert('Too early');
+                throw new Revert(
+                    `Too early: (${reservation.createdAt}, ${reservation.getActivationDelay()})`,
+                );
             }
         }
 
@@ -892,8 +900,6 @@ export class LiquidityQueue {
 
                 this.ensureReservationPurgeIndexMatch(reservation.getPurgeIndex(), i);
                 this.ensureReservationExpired(reservation);
-
-                reservation.timeout();
 
                 const reservedIndexes: u32[] = reservation.getReservedIndexes();
                 const reservedValues: u128[] = reservation.getReservedValues();
