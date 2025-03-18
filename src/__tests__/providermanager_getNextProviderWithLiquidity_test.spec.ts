@@ -223,32 +223,20 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
     });
 
     it('should return null when startingIndex() > getLength()', () => {
-        const manager: TestProviderManager = new TestProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
+        expect(() => {
+            const manager: TestProviderManager = new TestProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            );
 
-        const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
-        manager.addToRemovalQueue(provider.providerId);
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
+            manager.addToRemovalQueue(provider.providerId);
 
-        manager.getRemovalQueue.setStartingIndex(2);
+            manager.getRemovalQueue.setStartingIndex(2);
 
-        const provider2 = manager.getNextProviderWithLiquidity();
-        expect(provider2).toBeNull();
-    });
-
-    it('should return null when no provider found', () => {
-        /*
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const provider = manager.getNextProviderWithLiquidity();
-
-        expect(provider).toBeNull();*/
+            const provider2 = manager.getNextProviderWithLiquidity();
+        }).toThrow();
     });
 });
 
