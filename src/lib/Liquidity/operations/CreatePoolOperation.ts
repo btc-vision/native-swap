@@ -36,14 +36,12 @@ export class CreatePoolOperation extends BaseOperation {
     }
 
     public execute(): void {
-        this.ensureValidReceiverAddress(this.receiver);
-        this.ensureFloorPriceNotZero(this.floorPrice);
-        this.ensureInitialLiquidityNotZero(this.initialLiquidity);
-        this.ensureAntibotSettingsValid(
-            this.antiBotEnabledFor,
-            this.antiBotMaximumTokensPerReservation,
-        );
-        this.ensureBaseQuoteNotAlreadySet(this.liquidityQueue.p0);
+        this.ensureValidReceiverAddress();
+        this.ensureFloorPriceNotZero();
+        this.ensureInitialLiquidityNotZero();
+        this.ensureAntibotSettingsValid();
+        this.ensureInitialLiquidityProviderNotAlreadySet();
+        this.ensureValidMaxReservesIn5BlocksPercent();
 
         this.liquidityQueue.initializeInitialLiquidity(
             this.floorPrice,
@@ -73,35 +71,40 @@ export class CreatePoolOperation extends BaseOperation {
         }
     }
 
-    private ensureValidReceiverAddress(receiver: string): void {
-        if (Blockchain.validateBitcoinAddress(receiver) == false) {
+    private ensureValidMaxReservesIn5BlocksPercent(): void {
+        if (this.maxReservesIn5BlocksPercent > 100) {
+            throw new Revert(
+                'NATIVE_SWAP: Maximum reservations in 5 blocks percent must be smaller than 100',
+            );
+        }
+    }
+
+    private ensureValidReceiverAddress(): void {
+        if (Blockchain.validateBitcoinAddress(this.receiver) == false) {
             throw new Revert('NATIVE_SWAP: Invalid receiver address');
         }
     }
 
-    private ensureFloorPriceNotZero(floorPrice: u256): void {
-        if (floorPrice.isZero()) {
+    private ensureFloorPriceNotZero(): void {
+        if (this.floorPrice.isZero()) {
             throw new Revert('NATIVE_SWAP: Floor price cannot be zero');
         }
     }
 
-    private ensureInitialLiquidityNotZero(initialLiquidity: u128): void {
-        if (initialLiquidity.isZero()) {
+    private ensureInitialLiquidityNotZero(): void {
+        if (this.initialLiquidity.isZero()) {
             throw new Revert('NATIVE_SWAP: Initial liquidity cannot be zero');
         }
     }
 
-    private ensureAntibotSettingsValid(
-        antiBotEnabledFor: u16,
-        antiBotMaximumTokensPerReservation: u256,
-    ): void {
-        if (antiBotEnabledFor !== 0 && antiBotMaximumTokensPerReservation.isZero()) {
+    private ensureAntibotSettingsValid(): void {
+        if (this.antiBotEnabledFor !== 0 && this.antiBotMaximumTokensPerReservation.isZero()) {
             throw new Revert('NATIVE_SWAP: Anti-bot max tokens per reservation cannot be zero');
         }
     }
 
-    private ensureBaseQuoteNotAlreadySet(p0: u256): void {
-        if (!p0.isZero()) {
+    private ensureInitialLiquidityProviderNotAlreadySet(): void {
+        if (!this.liquidityQueue.initialLiquidityProvider.isZero()) {
             throw new Revert('Base quote already set');
         }
     }

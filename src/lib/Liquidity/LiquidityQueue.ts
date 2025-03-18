@@ -23,7 +23,6 @@ import {
     DELTA_TOKENS_SELL,
     LAST_VIRTUAL_BLOCK_UPDATE_POINTER,
     LIQUIDITY_LAST_UPDATE_BLOCK_POINTER,
-    LIQUIDITY_P0_POINTER,
     LIQUIDITY_QUOTE_HISTORY_POINTER,
     LIQUIDITY_RESERVED_POINTER,
     LIQUIDITY_VIRTUAL_BTC_POINTER,
@@ -65,7 +64,6 @@ export class LiquidityQueue {
     private readonly _virtualTokenReserve: StoredU256;
 
     // We'll keep p0 in a pointer
-    private readonly _p0: StoredU256;
     private readonly _quoteHistory: StoredU256Array;
     private readonly _totalReserves: StoredMapU256;
     private readonly _totalReserved: StoredMapU256;
@@ -110,7 +108,6 @@ export class LiquidityQueue {
         // virtual reserves
         this._virtualBTCReserve = new StoredU256(LIQUIDITY_VIRTUAL_BTC_POINTER, tokenIdUint8Array);
         this._virtualTokenReserve = new StoredU256(LIQUIDITY_VIRTUAL_T_POINTER, tokenIdUint8Array);
-        this._p0 = new StoredU256(LIQUIDITY_P0_POINTER, tokenIdUint8Array);
 
         // accumulators
         this._deltaTokensAdd = new StoredU256(DELTA_TOKENS_ADD, tokenIdUint8Array);
@@ -145,14 +142,6 @@ export class LiquidityQueue {
 
     public get volatility(): u256 {
         return this._dynamicFee.volatility;
-    }
-
-    public get p0(): u256 {
-        return this._p0.value;
-    }
-
-    public set p0(value: u256) {
-        this._p0.value = value;
     }
 
     public get initialLiquidityProvider(): u256 {
@@ -331,7 +320,6 @@ export class LiquidityQueue {
         initialLiquidity: u256,
         maxReserves5BlockPercent: u64,
     ): void {
-        this.p0 = floorPrice;
         this.initialLiquidityProvider = providerId;
 
         // The contract simulates BTC side:
@@ -462,6 +450,12 @@ export class LiquidityQueue {
         const reservedValues: u128[] = reservation.getReservedValues();
         const queueTypes: u8[] = reservation.getQueueTypes();
         const reservationForLP = reservation.reservedLP;
+
+        // Mark the reservation as used.
+        const reservationActiveList = this.getActiveReservationListForBlock(reservation.createdAt);
+
+        reservationActiveList.set(<u64>reservation.getPurgeIndex(), false);
+        reservationActiveList.save();
 
         // **Important**: we delete the reservation record now
         // (since we have all needed info in local variables)
@@ -646,14 +640,16 @@ export class LiquidityQueue {
 
         if (reservation.getActivationDelay() === 0) {
             if (reservation.createdAt === Blockchain.block.number) {
-                throw new Revert('Too early');
+                throw new Revert('Cannot be consumed in the same block');
             }
         } else {
             if (
                 reservation.createdAt + reservation.getActivationDelay() >
                 Blockchain.block.number
             ) {
-                throw new Revert('Too early');
+                throw new Revert(
+                    `Too early: (${reservation.createdAt}, ${reservation.getActivationDelay()})`,
+                );
             }
         }
 
@@ -901,8 +897,6 @@ export class LiquidityQueue {
 
                 this.ensureReservationPurgeIndexMatch(reservation.getPurgeIndex(), i);
                 this.ensureReservationExpired(reservation);
-
-                reservation.timeout();
 
                 const reservedIndexes: u32[] = reservation.getReservedIndexes();
                 const reservedValues: u128[] = reservation.getReservedValues();

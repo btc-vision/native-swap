@@ -6,7 +6,7 @@ import {
     encodePointer,
 } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
-import { eqUint } from '../../../btc-runtime/runtime/generic/MapUint8Array';
+import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 
 @final
 export class UserReservation {
@@ -190,10 +190,10 @@ export class UserReservation {
         this.reservedLP = false;
         this.purgeIndex = u32.MAX_VALUE;
         this.activationDelay = 0;
+        this.isTimeout = isTimeout;
 
         if (!isTimeout) {
             this.expirationBlock = 0;
-            this.isTimeout = false;
         }
 
         this.isChanged = true;
@@ -263,7 +263,7 @@ export class UserReservation {
      * @private
      * @method packValues
      * @description Packs the internal fields into a single u256 value for storage.
-     * @returns {u256} - The packed u256 value.
+     * @returns {Uint8Array} - The packed u256 value.
      */
     private packValues(): Uint8Array {
         const writer = new BytesWriter(32);

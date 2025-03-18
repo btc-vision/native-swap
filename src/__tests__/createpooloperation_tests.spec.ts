@@ -89,6 +89,29 @@ describe('CreatePoolOperation tests', () => {
         }).toThrow();
     });
 
+    it('should revert if maxReservesIn5BlocksPercent > 100', () => {
+        setBlockchainEnvironment(100);
+        Blockchain.mockValidateBitcoinAddressResult(true);
+
+        expect(() => {
+            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            const operation = new CreatePoolOperation(
+                queue,
+                u256.fromU64(100),
+                u256.fromU64(100),
+                u128.fromU64(100000),
+                'd9dhdh92hd923hd',
+                0,
+                u256.Zero,
+                115,
+                Address.dead(),
+            );
+
+            operation.execute();
+        }).toThrow();
+    });
+
     it('should revert if antiBotEnabledFor !=0 but antiBotMaximumTokensPerReservation=0', () => {
         setBlockchainEnvironment(100);
         Blockchain.mockValidateBitcoinAddressResult(true);
@@ -179,7 +202,6 @@ describe('CreatePoolOperation tests', () => {
         const queue2 = new TestLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const provider = getProvider(initialProviderId);
 
-        expect(queue2.p0).toStrictEqual(u256.fromU64(100));
         expect(queue2.initialLiquidityProvider).toStrictEqual(initialProviderId);
         expect(queue2.virtualBTCReserve).toStrictEqual(u256.fromU64(10000));
         expect(queue2.virtualTokenReserve).toStrictEqual(u256.fromU64(1000000));

@@ -335,7 +335,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private ensurePoolExistsForToken(queue: LiquidityQueue): void {
-        if (queue.p0.isZero()) {
+        if (queue.initialLiquidityProvider.isZero()) {
             throw new Revert('NATIVE_SWAP: No pool exists for token');
         }
     }

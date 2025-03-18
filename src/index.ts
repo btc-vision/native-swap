@@ -1,6 +1,6 @@
 import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 import { NativeSwap } from './contracts/NativeSwap';
-import { revertOnError } from '../../btc-runtime/runtime/abort/abort';
+import { revertOnError } from '@btc-vision/btc-runtime/runtime/abort/abort';
 
 // DO NOT TOUCH TO THIS.
 Blockchain.contract = () => {

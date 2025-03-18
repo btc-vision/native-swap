@@ -67,11 +67,9 @@ export class NativeSwap extends ReentrancyGuard {
 
     public override onDeployment(_calldata: Calldata): void {
         FeeManager.onDeploy();
-        Blockchain.log(`in onDeployment`);
     }
 
     public override onExecutionCompleted(): void {
-        Blockchain.log(`in onExecutionCompleted`);
         FeeManager.save();
         saveAllProviders();
 
@@ -80,8 +78,6 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        Blockchain.log(`in execute`);
-
         // Ensure that the reentrancy guard is not active
         this.checkReentrancy();
 
@@ -550,8 +546,8 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private ensurePoolExistsForToken(queue: LiquidityQueue): void {
-        if (queue.p0.isZero()) {
-            throw new Revert('NATIVE_SWAP: No pool exists for token.');
+        if(queue.initialLiquidityProvider.isZero()) {
+            throw new Revert('NATIVE_SWAP: Pool does not exist for token');
         }
     }
 
