@@ -137,7 +137,7 @@ export function createProvider(
     tokenAddress: Address,
     pendingRemoval: boolean = false,
     isLP: boolean = true,
-    canProvideLiquidity: boolean = true,
+    canProvideLiquidity: boolean = false,
     btcReceiver: string = 'e123e2d23d233',
     liquidityProvided: u256 = u256.fromU64(1000),
     liquidity: u128 = u128.fromU64(1000),
