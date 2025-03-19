@@ -453,7 +453,6 @@ export class LiquidityQueue {
 
         // Mark the reservation as used.
         const reservationActiveList = this.getActiveReservationListForBlock(reservation.createdAt);
-
         reservationActiveList.set(<u64>reservation.getPurgeIndex(), false);
         reservationActiveList.save();
 
@@ -933,6 +932,7 @@ export class LiquidityQueue {
                 activeIds.set(i, false);
             }
 
+            activeIds.save();
             reservationList.deleteAll();
             reservationList.save();
         }
