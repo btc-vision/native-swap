@@ -482,7 +482,6 @@ export class LiquidityQueue {
 
             // 4a) Retrieve the correct provider from the queue
             const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
-
             if (queueType === LIQUIDITY_REMOVAL_TYPE && !provider.pendingRemoval) {
                 throw new Revert(
                     'Impossible state: removal queue when provider is not flagged pendingRemoval.',

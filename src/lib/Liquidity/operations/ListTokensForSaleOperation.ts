@@ -55,6 +55,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.ensureAmountInNotZero();
         this.ensureNoLiquidityOverflow();
         this.ensureNoActivePositionInPriorityQueue();
+        this.ensureProviderNotAlreadyProvidingLiquidity();
 
         if (!this.initialLiquidity) {
             this.ensurePriceIsNotZero();
@@ -64,6 +65,14 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
         this.transferToken();
         this.emitLiquidityListedEvent();
+    }
+
+    private ensureProviderNotAlreadyProvidingLiquidity(): void {
+        if (this.provider.canProvideLiquidity()) {
+            throw new Revert(
+                'NATIVE_SWAP: You have an active position partially fulfilled. You must wait until it is fully fulfilled.',
+            );
+        }
     }
 
     private ensureNoLiquidityOverflow(): void {
