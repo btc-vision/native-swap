@@ -1704,12 +1704,16 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
 
         reservation.save();
 
+        const activereservationList1 = queue.getActiveReservationListForBlock(0);
+
+        expect(activereservationList1.get(purgeIndex)).toBeTruthy();
+
         queue.callPurgeReservationsAndRestoreProviders();
 
-        const reservationList = queue.getReservationListForBlock(100);
-        const activereservationList = queue.getActiveReservationListForBlock(100);
+        const reservationList = queue.getReservationListForBlock(0);
+        const activereservationList2 = queue.getActiveReservationListForBlock(0);
 
-        expect(activereservationList.get(purgeIndex)).toBeFalsy();
+        expect(activereservationList2.get(purgeIndex)).toBeFalsy();
         expect(reservationList.getLength()).toStrictEqual(0);
         expect(queue.getPreviousRemovalStartingIndex()).toStrictEqual(0);
         expect(queue.getPreviousReservationStandardStartingIndex()).toStrictEqual(0);
