@@ -78,8 +78,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 break;
             }
 
-            Blockchain.log(`Getting provider for reservation. i=${i}`);
-
             const provider = this.liquidityQueue.getNextProviderWithLiquidity(currentQuote);
             if (provider === null) {
                 break;
@@ -152,7 +150,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 );
 
                 assert(
-                    u256.lt(
+                    !u256.lt(
                         maxCostInSatoshis,
                         LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
                     ),

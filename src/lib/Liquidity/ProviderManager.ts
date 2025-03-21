@@ -510,11 +510,9 @@ export class ProviderManager {
         return null;
     }
 
+    // TODO: we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
     private returnProvider(provider: Provider, i: u64, currentQuote: u256): Provider | null {
         const availableLiquidity: u128 = SafeMath.sub128(provider.liquidity, provider.reserved);
-        Blockchain.log(
-            `Provider ${provider.providerId} has available liquidity: ${availableLiquidity}`,
-        );
 
         if (availableLiquidity.isZero()) {
             return null;
