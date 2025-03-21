@@ -78,7 +78,9 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 break;
             }
 
-            const provider = this.liquidityQueue.getNextProviderWithLiquidity();
+            Blockchain.log(`Getting provider for reservation. i=${i}`);
+
+            const provider = this.liquidityQueue.getNextProviderWithLiquidity(currentQuote);
             if (provider === null) {
                 break;
             }
@@ -149,17 +151,13 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     currentQuote,
                 );
 
-                if (
+                assert(
                     u256.lt(
                         maxCostInSatoshis,
                         LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-                    )
-                ) {
-                    if (provider.reserved.isZero()) {
-                        this.liquidityQueue.resetProvider(provider);
-                    }
-                    continue;
-                }
+                    ),
+                    'Impossible state: maxCostInSatoshis < MINIMUM_PROVIDER_RESERVATION_AMOUNT',
+                );
 
                 // Verify the reserveAmount is smaller than u120 maximum.
                 let reserveAmount = SafeMath.min(

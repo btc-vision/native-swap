@@ -30,6 +30,7 @@ import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReentrancyGuard } from '../lib/ReentrancyGuard';
 import { STAKING_CA_POINTER } from '../lib/StoredPointers';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
+import { QUOTE_SCALE } from '../utils/NativeSwapUtils';
 
 /**
  * OrderBook contract for the OP_NET order book system,
@@ -496,7 +497,7 @@ export class NativeSwap extends ReentrancyGuard {
         result.writeU256(tokensOut); // how many tokens
         result.writeU256(requiredSatoshis); // how many sat needed
         result.writeU256(price); // final *scaled* price
-        result.writeU64(LiquidityQueue.QUOTE_SCALE.toU64());
+        result.writeU64(QUOTE_SCALE.toU64());
         return result;
     }
 
