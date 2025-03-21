@@ -134,6 +134,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 );
 
                 this.emitLiquidityReservedEvent(
+                    provider.providerId,
                     provider.btcReceiver,
                     tokensRemainingInSatoshis.toU128(),
                 );
@@ -197,7 +198,11 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     provider.isPriority() ? PRIORITY_TYPE : NORMAL_TYPE,
                 );
 
-                this.emitLiquidityReservedEvent(provider.btcReceiver, costInSatoshis.toU128());
+                this.emitLiquidityReservedEvent(
+                    provider.providerId,
+                    provider.btcReceiver,
+                    costInSatoshis.toU128(),
+                );
             }
         }
 
@@ -232,8 +237,12 @@ export class ReserveLiquidityOperation extends BaseOperation {
         Blockchain.emit(new ReservationCreatedEvent(tokensReserved, satSpent));
     }
 
-    private emitLiquidityReservedEvent(btcReceiver: string, costInSatoshis: u128): void {
-        Blockchain.emit(new LiquidityReservedEvent(btcReceiver, costInSatoshis));
+    private emitLiquidityReservedEvent(
+        providerId: u256,
+        btcReceiver: string,
+        costInSatoshis: u128,
+    ): void {
+        Blockchain.emit(new LiquidityReservedEvent(btcReceiver, costInSatoshis, providerId));
     }
 
     private ensureReservationValid(reservation: Reservation): void {

@@ -23,6 +23,7 @@ import { getProvider, Provider } from '../Provider';
 import { StoredMapU256 } from '../../stored/StoredMapU256';
 import { tokensToSatoshis } from '../../utils/NativeSwapUtils';
 import { LiquidityQueue } from './LiquidityQueue';
+import { FulfilledProviderEvent } from '../../events/FulfilledProviderEvent';
 
 export class ProviderManager {
     protected readonly _queue: StoredU256Array;
@@ -219,6 +220,8 @@ export class ProviderManager {
                 this._queue.delete(provider.indexedAt);
             }
         }
+
+        Blockchain.emit(new FulfilledProviderEvent(provider.providerId));
 
         provider.reset();
     }

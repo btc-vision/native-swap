@@ -39,6 +39,7 @@ import { CompletedTrade } from '../CompletedTrade';
 import { DynamicFee } from '../DynamicFee';
 import { ProviderManager } from './ProviderManager';
 import { QUOTE_SCALE, satoshisToTokens, tokensToSatoshis } from '../../utils/NativeSwapUtils';
+import { ActivateProviderEvent } from '../../events/ActivateProviderEvent';
 
 const ENABLE_FEES: bool = true;
 
@@ -602,6 +603,10 @@ export class LiquidityQueue {
                     provider.enableLiquidityProvision();
                     // track that we effectively "added" them to the virtual pool
                     this.increaseDeltaTokensAdd(provider.liquidity.toU256());
+
+                    Blockchain.emit(
+                        new ActivateProviderEvent(provider.providerId, provider.liquidity),
+                    );
                 }
 
                 provider.decreaseLiquidity(tokensDesiredU128);
