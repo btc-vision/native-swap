@@ -1,6 +1,7 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Address,
+    Blockchain,
     Potential,
     Revert,
     SafeMath,
@@ -20,6 +21,8 @@ import {
 } from '../StoredPointers';
 import { getProvider, Provider } from '../Provider';
 import { StoredMapU256 } from '../../stored/StoredMapU256';
+import { tokensToSatoshis } from '../../utils/NativeSwapUtils';
+import { LiquidityQueue } from './LiquidityQueue';
 
 export class ProviderManager {
     protected readonly _queue: StoredU256Array;
@@ -170,7 +173,11 @@ export class ProviderManager {
         this.cleanUpRemovalQueue();
     }
 
-    public getNextProviderWithLiquidity(): Provider | null {
+    public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
+        if (currentQuote.isZero()) {
+            return this.getNextInitialProvider();
+        }
+
         // 1. Removal queue first
         const removalProvider = this.getNextRemovalQueueProvider();
         if (removalProvider !== null) {
@@ -178,13 +185,13 @@ export class ProviderManager {
         }
 
         // 2. Then priority queue
-        const priorityProvider = this.getNextPriorityListProvider();
+        const priorityProvider = this.getNextPriorityListProvider(currentQuote);
         if (priorityProvider !== null) {
             return priorityProvider;
         }
 
         // 3. Then normal queue
-        const provider = this.getNextStandardQueueProvider();
+        const provider = this.getNextStandardQueueProvider(currentQuote);
         if (provider !== null) {
             return provider;
         }
@@ -367,8 +374,6 @@ export class ProviderManager {
                 } else {
                     if (u256.lt(owedBTC, this.strictMinimumProviderReservationAmount)) {
                         // If they don't have owed BTC, they can be removed from queue
-                        //this.removePendingLiquidityProviderFromRemovalQueue(provider, i);
-                        //!!!!!! TODO: Anakun check
                         throw new Revert(
                             `Impossible state: Provider should have been removed from queue during swap operation.`,
                         );
@@ -389,7 +394,7 @@ export class ProviderManager {
         return null;
     }
 
-    private getNextPriorityListProvider(): Provider | null {
+    private getNextPriorityListProvider(currentQuote: u256): Provider | null {
         let provider: Potential<Provider> = null;
         let providerId: u256;
 
@@ -428,12 +433,11 @@ export class ProviderManager {
                 );
             }
 
-            const availableLiquidity: u128 = SafeMath.sub128(provider.liquidity, provider.reserved);
-            if (!availableLiquidity.isZero()) {
-                provider.indexedAt = i;
+            const providerToReturn = this.returnProvider(provider, i, currentQuote);
+            if (providerToReturn) {
                 this.currentIndexPriority++;
-                provider.fromRemovalQueue = false;
-                return provider;
+
+                return providerToReturn;
             }
 
             if (this.currentIndexPriority == u64.MAX_VALUE) {
@@ -446,7 +450,7 @@ export class ProviderManager {
         return null;
     }
 
-    private getNextStandardQueueProvider(): Provider | null {
+    private getNextStandardQueueProvider(currentQuote: u256): Provider | null {
         let provider: Potential<Provider> = null;
         let providerId: u256;
 
@@ -469,6 +473,7 @@ export class ProviderManager {
                 this.currentIndex++;
                 continue;
             }
+
             provider = getProvider(providerId);
 
             if (!provider.isActive()) {
@@ -488,21 +493,44 @@ export class ProviderManager {
                 );
             }
 
-            const availableLiquidity: u128 = SafeMath.sub128(provider.liquidity, provider.reserved);
-            if (!availableLiquidity.isZero()) {
-                provider.indexedAt = i;
+            const providerToReturn = this.returnProvider(provider, i, currentQuote);
+            if (providerToReturn) {
                 this.currentIndex++;
-                provider.fromRemovalQueue = false;
-                return provider;
+
+                return providerToReturn;
             }
 
             if (this.currentIndex == u64.MAX_VALUE) {
                 throw new Revert('Index increment overflow');
             }
+
             this.currentIndex++;
         }
 
         return null;
+    }
+
+    // TODO: we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
+    private returnProvider(provider: Provider, i: u64, currentQuote: u256): Provider | null {
+        const availableLiquidity: u128 = SafeMath.sub128(provider.liquidity, provider.reserved);
+
+        if (availableLiquidity.isZero()) {
+            return null;
+        }
+
+        provider.indexedAt = i;
+        provider.fromRemovalQueue = false;
+
+        const maxCostInSatoshis = tokensToSatoshis(availableLiquidity.toU256(), currentQuote);
+        if (u256.lt(maxCostInSatoshis, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
+            if (provider.reserved.isZero()) {
+                this.resetProvider(provider);
+            }
+
+            return null;
+        }
+
+        return provider;
     }
 
     private getNextInitialProvider(): Provider | null {
