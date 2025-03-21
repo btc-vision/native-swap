@@ -72,6 +72,30 @@ describe('ListTokenForSaleOperation tests', () => {
         }).toThrow();
     });
 
+    it('should revert if already providing liquidity', () => {
+        expect(() => {
+            setBlockchainEnvironment(100);
+            FeeManager.onDeploy();
+
+            const provider = createProvider(providerAddress1, tokenAddress1);
+            provider.enableLiquidityProvision();
+
+            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            const operation = new ListTokensForSaleOperation(
+                queue,
+                provider.providerId,
+                u128.fromU64(100),
+                receiverAddress1,
+                Address.dead(),
+                false,
+                false,
+            );
+
+            operation.execute();
+        }).toThrow();
+    });
+
     it("should revert if provider is priority but usePriorityQueue=false => 'You already have an active position...'", () => {
         expect(() => {
             setBlockchainEnvironment(100);

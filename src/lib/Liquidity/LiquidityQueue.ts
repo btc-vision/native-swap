@@ -38,12 +38,12 @@ import { LIQUIDITY_REMOVAL_TYPE, NORMAL_TYPE, PRIORITY_TYPE, Reservation } from 
 import { CompletedTrade } from '../CompletedTrade';
 import { DynamicFee } from '../DynamicFee';
 import { ProviderManager } from './ProviderManager';
+import { QUOTE_SCALE, satoshisToTokens, tokensToSatoshis } from '../../utils/NativeSwapUtils';
+import { ActivateProviderEvent } from '../../events/ActivateProviderEvent';
 
 const ENABLE_FEES: bool = true;
 
 export class LiquidityQueue {
-    public static QUOTE_SCALE: u256 = u256.fromU64(100_000_000); // 1e8
-
     // Reservation settings
     public static RESERVATION_EXPIRE_AFTER: u64 = 5;
     public static VOLATILITY_WINDOW_BLOCKS: u32 = 5;
@@ -270,13 +270,9 @@ export class LiquidityQueue {
         return this._dynamicFee.computeFeeAmount(totalTokensPurchased, feeBP);
     }
 
-    public getNextProviderWithLiquidity(): Provider | null {
-        return this._providerManager.getNextProviderWithLiquidity();
+    public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
+        return this._providerManager.getNextProviderWithLiquidity(currentQuote);
     }
-
-    /*public removePendingLiquidityProviderFromRemovalQueue(provider: Provider, i: u64): void {
-        this._providerManager.removePendingLiquidityProviderFromRemovalQueue(provider, i);
-    }*/
 
     public getTokensAfterTax(amountIn: u128): u128 {
         const tokensForPriorityQueue: u128 = SafeMath.div128(
@@ -298,7 +294,7 @@ export class LiquidityQueue {
         }
 
         // scaledQuote = T * QUOTE_SCALE / B
-        const scaled = SafeMath.mul(T, LiquidityQueue.QUOTE_SCALE);
+        const scaled = SafeMath.mul(T, QUOTE_SCALE);
         return SafeMath.div(scaled, this.virtualBTCReserve);
     }
 
@@ -453,7 +449,6 @@ export class LiquidityQueue {
 
         // Mark the reservation as used.
         const reservationActiveList = this.getActiveReservationListForBlock(reservation.createdAt);
-
         reservationActiveList.set(<u64>reservation.getPurgeIndex(), false);
         reservationActiveList.save();
 
@@ -482,7 +477,6 @@ export class LiquidityQueue {
 
             // 4a) Retrieve the correct provider from the queue
             const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
-
             if (queueType === LIQUIDITY_REMOVAL_TYPE && !provider.pendingRemoval) {
                 throw new Revert(
                     'Impossible state: removal queue when provider is not flagged pendingRemoval.',
@@ -609,6 +603,10 @@ export class LiquidityQueue {
                     provider.enableLiquidityProvision();
                     // track that we effectively "added" them to the virtual pool
                     this.increaseDeltaTokensAdd(provider.liquidity.toU256());
+
+                    Blockchain.emit(
+                        new ActivateProviderEvent(provider.providerId, provider.liquidity),
+                    );
                 }
 
                 provider.decreaseLiquidity(tokensDesiredU128);
@@ -684,14 +682,14 @@ export class LiquidityQueue {
 
         // Compute reserved ratio in scaled form:
         // ratioScaled = (reserved * QUOTE_SCALE) / totalLiquidity
-        let ratioScaled: u256 = SafeMath.mul(reservedAmount, LiquidityQueue.QUOTE_SCALE);
+        let ratioScaled: u256 = SafeMath.mul(reservedAmount, QUOTE_SCALE);
         ratioScaled = SafeMath.div(ratioScaled, totalLiquidity);
 
         // Convert your maxReserves5BlockPercent (like 5 => 5%)
         //    into the same QUOTE_SCALE domain:
         //    maxPercentScaled = (maxPercentage * QUOTE_SCALE) / 100
         const hundred = u256.fromU64(100);
-        let maxPercentScaled = SafeMath.mul(maxPercentage, LiquidityQueue.QUOTE_SCALE);
+        let maxPercentScaled = SafeMath.mul(maxPercentage, QUOTE_SCALE);
         maxPercentScaled = SafeMath.div(maxPercentScaled, hundred);
 
         // leftoverRatioScaled = maxPercentScaled - ratioScaled
@@ -704,10 +702,7 @@ export class LiquidityQueue {
         }
 
         // leftoverTokens = (totalLiquidity * leftoverRatioScaled) / QUOTE_SCALE
-        return SafeMath.div(
-            SafeMath.mul(totalLiquidity, leftoverRatioScaled),
-            LiquidityQueue.QUOTE_SCALE,
-        );
+        return SafeMath.div(SafeMath.mul(totalLiquidity, leftoverRatioScaled), QUOTE_SCALE);
     }
 
     /**
@@ -716,14 +711,7 @@ export class LiquidityQueue {
      * because scaledPrice = (T * QUOTE_SCALE) / B
      */
     public tokensToSatoshis(tokenAmount: u256, scaledPrice: u256): u256 {
-        // (tokenAmount / (T/B)) but we have scaledPrice = T*QUOTE_SCALE/B
-        // => tokensToSats = tokenAmount * QUOTE_SCALE / scaledPrice
-
-        // ROUND DOWN
-        return SafeMath.div(
-            SafeMath.mul(SafeMath.add(tokenAmount, u256.One), LiquidityQueue.QUOTE_SCALE), // We have to do plus one here due to the round down
-            scaledPrice,
-        );
+        return tokensToSatoshis(tokenAmount, scaledPrice);
     }
 
     /**
@@ -732,12 +720,7 @@ export class LiquidityQueue {
      * because scaledPrice = (T * QUOTE_SCALE) / B
      */
     public satoshisToTokens(satoshis: u256, scaledPrice: u256): u256 {
-        // tokens = satoshis * (T/B)
-        // but scaledPrice = T*QUOTE_SCALE / B
-        // => tokens = (satoshis * scaledPrice) / QUOTE_SCALE
-
-        // ROUND DOWN
-        return SafeMath.div(SafeMath.mul(satoshis, scaledPrice), LiquidityQueue.QUOTE_SCALE);
+        return satoshisToTokens(satoshis, scaledPrice);
     }
 
     public addActiveReservationToList(blockNumber: u64, reservationId: u128): u32 {
@@ -934,6 +917,7 @@ export class LiquidityQueue {
                 activeIds.set(i, false);
             }
 
+            activeIds.save();
             reservationList.deleteAll();
             reservationList.save();
         }
