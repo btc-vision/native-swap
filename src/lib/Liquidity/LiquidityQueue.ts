@@ -706,6 +706,7 @@ export class LiquidityQueue {
      * because scaledPrice = (T * QUOTE_SCALE) / B
      */
     public tokensToSatoshis(tokenAmount: u256, scaledPrice: u256): u256 {
+        return tokensToSatoshis(tokenAmount, scaledPrice);
     }
 
     /**
