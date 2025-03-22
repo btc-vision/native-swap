@@ -260,8 +260,12 @@ export class LiquidityQueue {
         this._providerManager.cleanUpQueues();
     }
 
-    public resetProvider(provider: Provider, burnRemainingFunds: boolean = true): void {
-        this._providerManager.resetProvider(provider, burnRemainingFunds);
+    public resetProvider(
+        provider: Provider,
+        burnRemainingFunds: boolean = true,
+        canceled: boolean = false,
+    ): void {
+        this._providerManager.resetProvider(provider, burnRemainingFunds, canceled);
     }
 
     public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u256): u256 {
