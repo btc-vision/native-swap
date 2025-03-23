@@ -31,7 +31,6 @@ export const INITIAL_LIQUIDITY: u16 = Blockchain.nextPointer;
 export const DELTA_BTC_BUY: u16 = Blockchain.nextPointer;
 export const DELTA_TOKENS_ADD: u16 = Blockchain.nextPointer;
 export const DELTA_TOKENS_BUY: u16 = Blockchain.nextPointer;
-export const DELTA_TOKENS_SELL: u16 = Blockchain.nextPointer;
 
 export const LP_BTC_OWED_POINTER: u16 = Blockchain.nextPointer;
 export const LP_BTC_OWED_RESERVED_POINTER: u16 = Blockchain.nextPointer;

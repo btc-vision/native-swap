@@ -208,20 +208,26 @@ export class ProviderManager {
         provider.isLp = false;
     }
 
-    public resetProvider(provider: Provider, burnRemainingFunds: boolean = true): void {
+    public resetProvider(
+        provider: Provider,
+        burnRemainingFunds: boolean = true,
+        canceled: boolean = false,
+    ): void {
         if (burnRemainingFunds && !provider.liquidity.isZero()) {
             TransferHelper.safeTransfer(this.token, Address.dead(), provider.liquidity.toU256());
         }
 
-        if (!u256.eq(provider.providerId, this._initialLiquidityProvider.value)) {
-            if (provider.isPriority()) {
-                this._priorityQueue.delete(provider.indexedAt);
-            } else {
-                this._queue.delete(provider.indexedAt);
-            }
+        if (u256.eq(provider.providerId, this._initialLiquidityProvider.value)) {
+            throw new Revert('Impossible state: Initial liquidity provider cannot be reset.');
         }
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.providerId));
+        if (provider.isPriority()) {
+            this._priorityQueue.delete(provider.indexedAt);
+        } else {
+            this._queue.delete(provider.indexedAt);
+        }
+
+        Blockchain.emit(new FulfilledProviderEvent(provider.providerId, canceled));
 
         provider.reset();
     }

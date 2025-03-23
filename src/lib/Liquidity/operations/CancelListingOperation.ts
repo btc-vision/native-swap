@@ -26,17 +26,13 @@ export class CancelListingOperation extends BaseOperation {
         this.ensureProviderCannotProvideLiquidity();
         this.ensureNotInitialProvider();
 
-        // Update provider's liquidity
-        this.provider.liquidity = u128.Zero;
-
-        this.liquidityQueue.resetProvider(this.provider, false);
+        // Reset the provider
+        this.liquidityQueue.resetProvider(this.provider, false, true);
 
         // Transfer tokens back to the provider
         TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
 
         // Decrease the total reserves
-        this.liquidityQueue.decreaseTotalReserve(amount);
-        this.liquidityQueue.increaseDeltaTokensSell(amount);
         this.liquidityQueue.cleanUpQueues();
 
         this.emitListingCanceledEvent(amount.toU128());

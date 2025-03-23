@@ -20,7 +20,6 @@ import {
     DELTA_BTC_BUY,
     DELTA_TOKENS_ADD,
     DELTA_TOKENS_BUY,
-    DELTA_TOKENS_SELL,
     LAST_VIRTUAL_BLOCK_UPDATE_POINTER,
     LIQUIDITY_LAST_UPDATE_BLOCK_POINTER,
     LIQUIDITY_QUOTE_HISTORY_POINTER,
@@ -78,7 +77,6 @@ export class LiquidityQueue {
     private readonly _deltaTokensAdd: StoredU256;
     private readonly _deltaBTCBuy: StoredU256;
     private readonly _deltaTokensBuy: StoredU256;
-    private readonly _deltaTokensSell: StoredU256;
 
     private consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
 
@@ -113,7 +111,6 @@ export class LiquidityQueue {
         this._deltaTokensAdd = new StoredU256(DELTA_TOKENS_ADD, tokenIdUint8Array);
         this._deltaBTCBuy = new StoredU256(DELTA_BTC_BUY, tokenIdUint8Array);
         this._deltaTokensBuy = new StoredU256(DELTA_TOKENS_BUY, tokenIdUint8Array);
-        this._deltaTokensSell = new StoredU256(DELTA_TOKENS_SELL, tokenIdUint8Array);
 
         // last block
         this._lastVirtualUpdateBlock = new StoredU64(
@@ -192,14 +189,6 @@ export class LiquidityQueue {
         this._deltaTokensBuy.value = val;
     }
 
-    public get deltaTokensSell(): u256 {
-        return this._deltaTokensSell.value;
-    }
-
-    public set deltaTokensSell(val: u256) {
-        this._deltaTokensSell.value = val;
-    }
-
     public get lastVirtualUpdateBlock(): u64 {
         return this._lastVirtualUpdateBlock.get(0);
     }
@@ -260,8 +249,12 @@ export class LiquidityQueue {
         this._providerManager.cleanUpQueues();
     }
 
-    public resetProvider(provider: Provider, burnRemainingFunds: boolean = true): void {
-        this._providerManager.resetProvider(provider, burnRemainingFunds);
+    public resetProvider(
+        provider: Provider,
+        burnRemainingFunds: boolean = true,
+        canceled: boolean = false,
+    ): void {
+        this._providerManager.resetProvider(provider, burnRemainingFunds, canceled);
     }
 
     public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u256): u256 {
@@ -387,16 +380,6 @@ export class LiquidityQueue {
             T = Tprime;
         }
 
-        // apply net "sells"
-        const dT_sell = this.deltaTokensSell;
-        if (!dT_sell.isZero()) {
-            const T2 = SafeMath.add(T, dT_sell);
-            const numerator = SafeMath.mul(B, T);
-
-            B = SafeMath.div(numerator, T2);
-            T = T2;
-        }
-
         if (T.isZero()) {
             T = u256.One;
         }
@@ -448,8 +431,13 @@ export class LiquidityQueue {
         const reservationForLP = reservation.reservedLP;
 
         // Mark the reservation as used.
+        const purgeIndex = <u64>reservation.getPurgeIndex();
+        if (purgeIndex === <u64>u32.MAX_VALUE) {
+            throw new Revert('Impossible state: purgeIndex is MAX_VALUE');
+        }
+
         const reservationActiveList = this.getActiveReservationListForBlock(reservation.createdAt);
-        reservationActiveList.set(<u64>reservation.getPurgeIndex(), false);
+        reservationActiveList.set(purgeIndex, false);
         reservationActiveList.save();
 
         // **Important**: we delete the reservation record now
@@ -601,6 +589,7 @@ export class LiquidityQueue {
                     provider.indexedAt !== u32.MAX_VALUE
                 ) {
                     provider.enableLiquidityProvision();
+
                     // track that we effectively "added" them to the virtual pool
                     this.increaseDeltaTokensAdd(provider.liquidity.toU256());
 
@@ -821,10 +810,6 @@ export class LiquidityQueue {
         this.deltaBTCBuy = SafeMath.add(this.deltaBTCBuy, amount);
     }
 
-    public increaseDeltaTokensSell(amount: u256): void {
-        this.deltaTokensSell = SafeMath.add(this.deltaTokensSell, amount);
-    }
-
     public distributeFee(totalFee: u256, stakingAddress: Address): void {
         const feeLP = SafeMath.div(SafeMath.mul(totalFee, u256.fromU64(50)), u256.fromU64(100));
         const feeMoto = SafeMath.sub(totalFee, feeLP);
@@ -875,10 +860,19 @@ export class LiquidityQueue {
                     continue;
                 }
 
+                activeIds.set(i, false);
+
                 const reservationId = reservationList.get(i);
                 const reservation = Reservation.load(reservationId);
+                const purgeIndex = reservation.getPurgeIndex();
 
-                this.ensureReservationPurgeIndexMatch(reservation.getPurgeIndex(), i);
+                if (purgeIndex === <u64>u32.MAX_VALUE) {
+                    throw new Revert(
+                        'Impossible state: reservation got deleted and is still active',
+                    );
+                }
+
+                this.ensureReservationPurgeIndexMatch(purgeIndex, i);
                 this.ensureReservationExpired(reservation);
 
                 const reservedIndexes: u32[] = reservation.getReservedIndexes();
@@ -913,13 +907,12 @@ export class LiquidityQueue {
                         u256.Zero,
                     ),
                 );
+
                 reservation.delete(true);
-                activeIds.set(i, false);
             }
 
-            activeIds.save();
-            reservationList.deleteAll();
-            reservationList.save();
+            activeIds.reset();
+            reservationList.reset();
         }
 
         if (updatedOne) {
@@ -944,7 +937,6 @@ export class LiquidityQueue {
         this.deltaTokensAdd = u256.Zero;
         this.deltaBTCBuy = u256.Zero;
         this.deltaTokensBuy = u256.Zero;
-        this.deltaTokensSell = u256.Zero;
     }
 
     private computeVolatility(
@@ -1025,7 +1017,7 @@ export class LiquidityQueue {
             : 0;
 
         if (amount < consumed) {
-            throw new Revert('Double spend detected');
+            throw new Revert('Impossible state: Double spend detected');
         }
 
         return u256.fromU64(amount - consumed);
