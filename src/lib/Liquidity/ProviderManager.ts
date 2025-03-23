@@ -217,14 +217,12 @@ export class ProviderManager {
             TransferHelper.safeTransfer(this.token, Address.dead(), provider.liquidity.toU256());
         }
 
-        if (u256.eq(provider.providerId, this._initialLiquidityProvider.value)) {
-            throw new Revert('Impossible state: Initial liquidity provider cannot be reset.');
-        }
-
-        if (provider.isPriority()) {
-            this._priorityQueue.delete(provider.indexedAt);
-        } else {
-            this._queue.delete(provider.indexedAt);
+        if (!u256.eq(provider.providerId, this._initialLiquidityProvider.value)) {
+            if (provider.isPriority()) {
+                this._priorityQueue.delete(provider.indexedAt);
+            } else {
+                this._queue.delete(provider.indexedAt);
+            }
         }
 
         Blockchain.emit(new FulfilledProviderEvent(provider.providerId, canceled));
@@ -529,6 +527,11 @@ export class ProviderManager {
 
         provider.indexedAt = i;
         provider.fromRemovalQueue = false;
+
+        assert(
+            provider.providerId !== this._initialLiquidityProvider.value,
+            'Impossible state: Initial liquidity provider cannot be returned here.',
+        );
 
         const maxCostInSatoshis = tokensToSatoshis(availableLiquidity.toU256(), currentQuote);
         if (u256.lt(maxCostInSatoshis, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
