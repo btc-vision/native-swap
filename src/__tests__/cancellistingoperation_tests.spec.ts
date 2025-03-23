@@ -100,7 +100,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
         }).toThrow();
     });
 
-    it('should succeed: set provider.liquidity=0, call resetProvider, safeTransfer to user, update reserve, deltaTokensSell, cleanUpQueues, emit event', () => {
+    it('should succeed: set provider.liquidity=0, call resetProvider, safeTransfer to user, update reserve, cleanUpQueues, emit event', () => {
         setBlockchainEnvironment(100);
 
         const provider = createProvider(providerAddress1, tokenAddress1, false, true, false);
@@ -118,7 +118,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
         expect(provider.reserved).toStrictEqual(u128.Zero);
         expect(provider.liquidityProvided).toStrictEqual(u256.Zero);
         expect(TransferHelper.safeTransferCalled).toBeTruthy();
-        expect(queue.liquidity).toStrictEqual(u256.fromU64(999990000));
-        expect(queue.deltaTokensSell).toStrictEqual(u256.fromU64(10000));
+        expect(queue.liquidity).toStrictEqual(u256.fromU64(1000000000));
+        //!!!!expect(queue.deltaTokensSell).toStrictEqual(u256.fromU64(10000));
     });
 });

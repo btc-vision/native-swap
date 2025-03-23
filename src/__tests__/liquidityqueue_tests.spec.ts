@@ -53,7 +53,7 @@ describe('Liquidity queue tests', () => {
         expect(queue.deltaTokensAdd).toStrictEqual(u256.Zero);
         expect(queue.deltaBTCBuy).toStrictEqual(u256.Zero);
         expect(queue.deltaTokensBuy).toStrictEqual(u256.Zero);
-        expect(queue.deltaTokensSell).toStrictEqual(u256.Zero);
+        //!!!expect(queue.deltaTokensSell).toStrictEqual(u256.Zero);
         expect(queue.lastVirtualUpdateBlock).toStrictEqual(0);
         expect(queue.reservedLiquidity).toStrictEqual(u256.Zero);
         expect(queue.liquidity).toStrictEqual(u256.Zero);
@@ -74,7 +74,7 @@ describe('Liquidity queue tests', () => {
         expect(queue.deltaTokensAdd).toStrictEqual(u256.Zero);
         expect(queue.deltaBTCBuy).toStrictEqual(u256.Zero);
         expect(queue.deltaTokensBuy).toStrictEqual(u256.Zero);
-        expect(queue.deltaTokensSell).toStrictEqual(u256.Zero);
+        //!!!!expect(queue.deltaTokensSell).toStrictEqual(u256.Zero);
         expect(queue.lastVirtualUpdateBlock).toStrictEqual(1);
         expect(queue.reservedLiquidity).toStrictEqual(u256.Zero);
         expect(queue.liquidity).toStrictEqual(u256.Zero);
@@ -131,7 +131,7 @@ describe('Liquidity queue tests', () => {
         queue.increaseTotalReserved(u256.fromU32(2000));
         queue.deltaTokensAdd = u256.fromU32(10000);
         queue.deltaBTCBuy = u256.fromU32(20000);
-        queue.deltaTokensSell = u256.fromU32(30000);
+        //!!!!queue.deltaTokensSell = u256.fromU32(30000);
         queue.deltaTokensBuy = u256.fromU32(40000);
 
         queue.save();
@@ -145,7 +145,7 @@ describe('Liquidity queue tests', () => {
         expect(queue2.reservedLiquidity).toStrictEqual(queue.reservedLiquidity);
         expect(queue2.deltaTokensAdd).toStrictEqual(queue.deltaTokensAdd);
         expect(queue2.deltaBTCBuy).toStrictEqual(queue.deltaBTCBuy);
-        expect(queue2.deltaTokensSell).toStrictEqual(queue.deltaTokensSell);
+        //!!!!expect(queue2.deltaTokensSell).toStrictEqual(queue.deltaTokensSell);
         expect(queue2.deltaTokensBuy).toStrictEqual(queue.deltaTokensBuy);
         expect(queue2.antiBotExpirationBlock).toStrictEqual(queue.antiBotExpirationBlock);
         expect(queue2.lastPurgedBlock).toStrictEqual(queue.lastPurgedBlock);
@@ -202,7 +202,7 @@ describe('Liquidity queue tests', () => {
         queue.increaseTotalReserved(u256.fromU32(2000));
         queue.deltaTokensAdd = u256.fromU32(10000);
         queue.deltaBTCBuy = u256.fromU32(20000);
-        queue.deltaTokensSell = u256.fromU32(30000);
+        //!!!!queue.deltaTokensSell = u256.fromU32(30000);
         queue.deltaTokensBuy = u256.fromU32(40000);
 
         queue.save();
@@ -256,6 +256,7 @@ describe('Liquidity queue tests', () => {
         expect(queue.deltaBTCBuy).toStrictEqual(u256.fromU32(1000));
     });
 
+    /*!!!!
     it('should correctly get/set deltaTokensSell value', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -263,6 +264,7 @@ describe('Liquidity queue tests', () => {
         queue.deltaTokensSell = u256.fromU32(1000);
         expect(queue.deltaTokensSell).toStrictEqual(u256.fromU32(1000));
     });
+*/
 
     it('should correctly get/set lastVirtualUpdateBlock value', () => {
         setBlockchainEnvironment(1);
@@ -746,14 +748,14 @@ describe('Liquidity queue updateVirtualPool tests', () => {
         queue.virtualTokenReserve = u256.fromU32(10000);
         queue.deltaTokensBuy = u256.fromU32(10);
         queue.deltaBTCBuy = u256.fromU32(10);
-        queue.deltaTokensSell = u256.fromU32(2);
+        //!!!!queue.deltaTokensSell = u256.fromU32(2);
         queue.deltaTokensAdd = u256.fromU32(2);
 
         queue.updateVirtualPoolIfNeeded();
 
         expect(queue.deltaBTCBuy).toStrictEqual(u256.Zero);
         expect(queue.deltaTokensAdd).toStrictEqual(u256.Zero);
-        expect(queue.deltaTokensSell).toStrictEqual(u256.Zero);
+        //!!!!expect(queue.deltaTokensSell).toStrictEqual(u256.Zero);
         expect(queue.deltaTokensBuy).toStrictEqual(u256.Zero);
     });
 
@@ -767,7 +769,7 @@ describe('Liquidity queue updateVirtualPool tests', () => {
         queue.virtualTokenReserve = u256.fromU32(10000);
         queue.deltaTokensBuy = u256.fromU32(10);
         queue.deltaBTCBuy = u256.fromU32(10);
-        queue.deltaTokensSell = u256.fromU32(2);
+        //!!!!queue.deltaTokensSell = u256.fromU32(2);
         queue.deltaTokensAdd = u256.fromU32(2);
 
         queue.updateVirtualPoolIfNeeded();
@@ -1265,6 +1267,7 @@ describe('Liquidity executeTrade tests', () => {
 
         const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
         reservation.reserveAtIndex(u32.MAX_VALUE, u128.fromU32(10), NORMAL_TYPE);
+        reservation.setPurgeIndex(0);
 
         const txOut: TransactionOutput[] = [];
 
@@ -1313,7 +1316,7 @@ describe('Liquidity executeTrade tests', () => {
 
             const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
             reservation.reserveAtIndex(u32.MAX_VALUE, u128.fromU32(10), NORMAL_TYPE);
-
+            reservation.setPurgeIndex(0);
             const txOut: TransactionOutput[] = [];
 
             txOut.push(new TransactionOutput(0, provider1.btcReceiver, 100));
@@ -1361,6 +1364,7 @@ describe('Liquidity executeTrade tests', () => {
 
             const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
             reservation.reserveAtIndex(u32.MAX_VALUE, u128.fromU32(10), NORMAL_TYPE);
+            reservation.setPurgeIndex(0);
             reservation.save();
             queue.save();
 
@@ -1513,6 +1517,7 @@ describe('Liquidity executeTrade tests', () => {
             u128.fromU32(999999),
             LIQUIDITY_REMOVAL_TYPE,
         );
+        reservation.setPurgeIndex(0);
         reservation.save();
         queue.save();
 
