@@ -393,7 +393,6 @@ describe('ProviderManager tests', () => {
             manager.addToStandardQueue(providers[i].providerId);
         }
 
-        //!!!
         const currentQuote = u256.fromU32(1000);
         // Should set currentIndex to 2
         const p1 = manager.getNextProviderWithLiquidity(currentQuote);
@@ -425,7 +424,6 @@ describe('ProviderManager tests', () => {
             manager.addToPriorityQueue(providers[i].providerId);
         }
 
-        //!!!
         const currentQuote = u256.fromU32(1000);
         // Should set currentIndex to 2
         const p1 = manager.getNextProviderWithLiquidity(currentQuote);
@@ -457,7 +455,6 @@ describe('ProviderManager tests', () => {
             manager.addToRemovalQueue(providers[i].providerId);
         }
 
-        //!!!
         const currentQuote = u256.fromU32(1000);
         // Should set currentIndex to 2
         const p1 = manager.getNextProviderWithLiquidity(currentQuote);
@@ -481,7 +478,6 @@ describe('ProviderManager tests', () => {
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
-        //!!!
         const currentQuote = u256.fromU32(1000);
 
         const provider = manager.getNextProviderWithLiquidity(currentQuote);
@@ -556,7 +552,6 @@ describe('ProviderManager tests', () => {
         provider.setActive(true, true);
         manager.addToPriorityQueue(provider.providerId);
 
-        //!!!
         const currentQuote = u256.fromU32(1000);
         const provider2 = manager.getNextProviderWithLiquidity(currentQuote);
 
@@ -580,7 +575,6 @@ describe('ProviderManager tests', () => {
         provider.setActive(true, false);
         manager.addToStandardQueue(provider.providerId);
 
-        //!!!
         const currentQuote = u256.fromU32(1000);
         const provider2 = manager.getNextProviderWithLiquidity(currentQuote);
 
