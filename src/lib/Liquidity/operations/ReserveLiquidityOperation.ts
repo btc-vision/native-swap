@@ -311,6 +311,12 @@ export class ReserveLiquidityOperation extends BaseOperation {
         );
 
         if (u256.lt(satCostTokenRemaining, LiquidityQueue.MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
+            if (tokensRemaining === maxTokensLeftBeforeCap) {
+                throw new Revert(
+                    `NATIVE_SWAP: Maximum reservation limit reached. Try again later.`,
+                );
+            }
+            
             throw new Revert(
                 `NATIVE_SWAP: Minimum liquidity not met (${satCostTokenRemaining} sat)`,
             );
