@@ -393,16 +393,17 @@ describe('ProviderManager tests', () => {
             manager.addToStandardQueue(providers[i].providerId);
         }
 
+        //!!!
+        const currentQuote = u256.fromU32(1000);
         // Should set currentIndex to 2
-        const p1 = manager.getNextProviderWithLiquidity();
-        const p2 = manager.getNextProviderWithLiquidity();
+        const p1 = manager.getNextProviderWithLiquidity(currentQuote);
+        const p2 = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(p1).toBe(providers[0]);
         expect(p2).toBe(providers[1]);
 
         manager.save();
 
-        //previousReservationStandardStartingIndex = currentIndex - 1
         expect(manager.previousReservationStandardStartingIndex).toStrictEqual(1);
     });
 
@@ -424,10 +425,12 @@ describe('ProviderManager tests', () => {
             manager.addToPriorityQueue(providers[i].providerId);
         }
 
+        //!!!
+        const currentQuote = u256.fromU32(1000);
         // Should set currentIndex to 2
-        const p1 = manager.getNextProviderWithLiquidity();
-        const p2 = manager.getNextProviderWithLiquidity();
-        const p3 = manager.getNextProviderWithLiquidity();
+        const p1 = manager.getNextProviderWithLiquidity(currentQuote);
+        const p2 = manager.getNextProviderWithLiquidity(currentQuote);
+        const p3 = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(p1).toBe(providers[0]);
         expect(p2).toBe(providers[1]);
@@ -454,10 +457,12 @@ describe('ProviderManager tests', () => {
             manager.addToRemovalQueue(providers[i].providerId);
         }
 
+        //!!!
+        const currentQuote = u256.fromU32(1000);
         // Should set currentIndex to 2
-        const p1 = manager.getNextProviderWithLiquidity();
-        const p2 = manager.getNextProviderWithLiquidity();
-        const p3 = manager.getNextProviderWithLiquidity();
+        const p1 = manager.getNextProviderWithLiquidity(currentQuote);
+        const p2 = manager.getNextProviderWithLiquidity(currentQuote);
+        const p3 = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(p1).toBe(providers[0]);
         expect(p2).toBe(providers[1]);
@@ -476,7 +481,10 @@ describe('ProviderManager tests', () => {
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
-        const provider = manager.getNextProviderWithLiquidity();
+        //!!!
+        const currentQuote = u256.fromU32(1000);
+
+        const provider = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(provider).toBeNull();
     });
@@ -548,7 +556,9 @@ describe('ProviderManager tests', () => {
         provider.setActive(true, true);
         manager.addToPriorityQueue(provider.providerId);
 
-        const provider2 = manager.getNextProviderWithLiquidity();
+        //!!!
+        const currentQuote = u256.fromU32(1000);
+        const provider2 = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(provider2).not.toBeNull();
         if (provider2 !== null) {
@@ -570,7 +580,9 @@ describe('ProviderManager tests', () => {
         provider.setActive(true, false);
         manager.addToStandardQueue(provider.providerId);
 
-        const provider2 = manager.getNextProviderWithLiquidity();
+        //!!!
+        const currentQuote = u256.fromU32(1000);
+        const provider2 = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(provider2).not.toBeNull();
         if (provider2 !== null) {

@@ -55,7 +55,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
 
         expect(manager.removalQueueStartingIndex).toStrictEqual(3);
 
-        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(nextProvider).not.toBeNull();
         expect(nextProvider).toBe(provider);
@@ -89,7 +90,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
 
         expect(manager.removalQueueStartingIndex).toStrictEqual(4);
 
-        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(nextProvider).not.toBeNull();
         expect(nextProvider).toBe(providersPendingRemoval[1]);
@@ -111,7 +113,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
 
         manager.removePendingLiquidityProviderFromRemovalQueue(providersPendingRemoval[0], 0);
 
-        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(nextProvider).not.toBeNull();
         expect(nextProvider).toBe(providersPendingRemoval[1]);
@@ -133,7 +136,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
 
         providersPendingRemoval[0].pendingRemoval = false;
 
-        const provider = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const provider = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(provider).not.toBeNull();
         expect(provider).toBe(providersPendingRemoval[1]);
@@ -157,7 +161,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         providersPendingRemoval[0].isLp = false;
         providersPendingRemoval[0].pendingRemoval = false;
 
-        const provider = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const provider = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(provider).not.toBeNull();
         expect(provider).toBe(providersPendingRemoval[1]);
@@ -180,7 +185,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
 
         providersPendingRemoval[0].isLp = false;
 
-        const provider = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const provider = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(provider).not.toBeNull();
         expect(provider).toBe(providersPendingRemoval[1]);
@@ -199,7 +205,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         manager.setBTCowedReserved(provider.providerId, u256.fromU32(10000));
         manager.setBTCowed(provider.providerId, u256.fromU32(1000000));
 
-        const provider1 = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(provider1).not.toBeNull();
         expect(provider1).toBe(provider);
@@ -218,7 +225,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
             manager.setBTCowedReserved(provider.providerId, u256.fromU32(450));
             manager.setBTCowed(provider.providerId, u256.fromU32(550));
 
-            manager.getNextProviderWithLiquidity();
+            const currentQuote = u256.fromU32(1000);
+            manager.getNextProviderWithLiquidity(currentQuote);
         }).toThrow();
     });
 
@@ -235,7 +243,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
 
             manager.getRemovalQueue.setStartingIndex(2);
 
-            const provider2 = manager.getNextProviderWithLiquidity();
+            const currentQuote = u256.fromU32(1000);
+            const provider2 = manager.getNextProviderWithLiquidity(currentQuote);
         }).toThrow();
     });
 });
@@ -295,7 +304,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
 
         expect(manager.priorityQueueStartingIndex).toStrictEqual(3);
 
-        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(nextProvider).not.toBeNull();
         expect(nextProvider).toBe(provider);
@@ -353,7 +363,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
 
         expect(manager.priorityQueueStartingIndex).toStrictEqual(4);
 
-        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(nextProvider).not.toBeNull();
         expect(nextProvider).toBe(providersPriority[1]);
@@ -387,7 +398,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
 
         manager.resetProvider(providersPriority[0], false);
 
-        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(nextProvider).not.toBeNull();
         expect(nextProvider).toBe(providersPriority[1]);
@@ -421,7 +433,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
 
         providersPriority[0].setActive(false, true);
 
-        const provider = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const provider = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(provider).not.toBeNull();
         expect(provider).toBe(providersPriority[1]);
@@ -456,7 +469,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
 
             providersPriority[0].setActive(true, false);
 
-            manager.getNextProviderWithLiquidity();
+            const currentQuote = u256.fromU32(1000);
+            manager.getNextProviderWithLiquidity(currentQuote);
         }).toThrow();
     });
 
@@ -484,25 +498,56 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
 
             manager.addToPriorityQueue(provider.providerId);
 
-            manager.getNextProviderWithLiquidity();
+            const currentQuote = u256.fromU32(1000);
+            manager.getNextProviderWithLiquidity(currentQuote);
         }).toThrow();
     });
 
-    it('should return null when startingIndex() > getLength()', () => {
-        /*const manager: TestProviderManager = new TestProviderManager(
+    it('should return null when liquidity = reserved', () => {
+        const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
-        const provider: Provider = createProvider(providerAddress1, tokenAddress1, false);
-        provider.setActive(true, true);
+        const provider = createProvider(
+            providerAddress1,
+            tokenAddress1,
+            false,
+            true,
+            true,
+            '232332d2d3',
+            u256.fromU32(10000),
+            u128.fromU32(1000),
+            u128.fromU32(1000),
+            true,
+            true,
+        );
+
         manager.addToPriorityQueue(provider.providerId);
 
-        manager.getPriorityQueue.setStartingIndex(2);
+        const currentQuote = u256.fromU32(1000);
+        const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
+        expect(provider1).toBeNull();
+    });
 
-        const provider2 = manager.getNextProviderWithLiquidity();
-        expect(provider2).toBeNull();*/
+    it('should revert when startingIndex() > getLength()', () => {
+        expect(() => {
+            const manager: TestProviderManager = new TestProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            );
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1, false);
+            provider.setActive(true, true);
+            manager.addToPriorityQueue(provider.providerId);
+
+            manager.getPriorityQueue.setStartingIndex(2);
+
+            const currentQuote = u256.fromU32(1000);
+            manager.getNextProviderWithLiquidity(currentQuote);
+        }).toThrow();
     });
 });
 
@@ -560,7 +605,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
 
         expect(manager.standardQueueStartingIndex).toStrictEqual(3);
 
-        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(nextProvider).not.toBeNull();
         expect(nextProvider).toBe(provider);
@@ -618,7 +664,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
 
         expect(manager.standardQueueStartingIndex).toStrictEqual(4);
 
-        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(nextProvider).not.toBeNull();
         expect(nextProvider).toBe(providers[1]);
@@ -652,7 +699,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
 
         manager.resetProvider(providers[0], false);
 
-        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(nextProvider).not.toBeNull();
         expect(nextProvider).toBe(providers[1]);
@@ -686,7 +734,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
 
         providers[0].setActive(false, false);
 
-        const provider = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const provider = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(provider).not.toBeNull();
         expect(provider).toBe(providers[1]);
@@ -721,7 +770,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
 
             providers[0].setActive(true, true);
 
-            manager.getNextProviderWithLiquidity();
+            const currentQuote = u256.fromU32(1000);
+            manager.getNextProviderWithLiquidity(currentQuote);
         }).toThrow();
     });
 
@@ -749,25 +799,56 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
 
             manager.addToStandardQueue(provider.providerId);
 
-            manager.getNextProviderWithLiquidity();
+            const currentQuote = u256.fromU32(1000);
+            manager.getNextProviderWithLiquidity(currentQuote);
         }).toThrow();
     });
 
-    it('should return null when startingIndex() > getLength()', () => {
-        /*const manager: TestProviderManager = new TestProviderManager(
+    it('should return null when liquidity = reserved', () => {
+        const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
         );
 
-        const provider: Provider = createProvider(providerAddress1, tokenAddress1, false);
-        provider.setActive(true, false);
+        const provider = createProvider(
+            providerAddress1,
+            tokenAddress1,
+            false,
+            true,
+            true,
+            '232332d2d3',
+            u256.fromU32(10000),
+            u128.fromU32(1000),
+            u128.fromU32(1000),
+            true,
+            false,
+        );
+
         manager.addToStandardQueue(provider.providerId);
 
-        manager.getStandardQueue.setStartingIndex(2);
+        const currentQuote = u256.fromU32(1000);
+        const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
+        expect(provider1).toBeNull();
+    });
 
-        const provider2 = manager.getNextProviderWithLiquidity();
-        expect(provider2).toBeNull();*/
+    it('should revert when startingIndex() > getLength()', () => {
+        expect(() => {
+            const manager: TestProviderManager = new TestProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            );
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1, false);
+            provider.setActive(true, false);
+            manager.addToStandardQueue(provider.providerId);
+
+            manager.getStandardQueue.setStartingIndex(2);
+
+            const currentQuote = u256.fromU32(1000);
+            manager.getNextProviderWithLiquidity(currentQuote);
+        }).toThrow();
     });
 });
 
@@ -777,6 +858,33 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
         Blockchain.clearStorage();
         Blockchain.clearMockedResults();
         TransferHelper.clearMockedResults();
+    });
+
+    it('should return initialprovider when current quote is 0', () => {
+        const manager: ProviderManager = new ProviderManager(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+        );
+
+        const provider = createProvider(
+            providerAddress1,
+            tokenAddress1,
+            false,
+            true,
+            true,
+            '232332d2d3',
+            u256.fromU32(10000),
+            u128.fromU32(1000),
+            u128.fromU32(0),
+            true,
+            false,
+        );
+
+        manager.initialLiquidityProvider = provider.providerId;
+
+        const provider1 = manager.getNextProviderWithLiquidity(u256.Zero);
+        expect(provider1).toBe(provider);
     });
 
     it('should return null when no initial liquidity provider', () => {
@@ -802,7 +910,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
 
         manager.initialLiquidityProvider = u256.Zero;
 
-        const provider1 = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
         expect(provider1).toBeNull();
     });
 
@@ -830,7 +939,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
 
             manager.initialLiquidityProvider = provider.providerId;
 
-            manager.getNextProviderWithLiquidity();
+            const currentQuote = u256.fromU32(1000);
+            manager.getNextProviderWithLiquidity(currentQuote);
         }).toThrow();
     });
 
@@ -857,7 +967,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
 
         manager.initialLiquidityProvider = provider.providerId;
 
-        const provider1 = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
         expect(provider1).not.toBeNull();
         expect(provider1).toBe(provider);
 
@@ -889,7 +1000,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
 
         manager.initialLiquidityProvider = provider.providerId;
 
-        const provider1 = manager.getNextProviderWithLiquidity();
+        const currentQuote = u256.fromU32(1000);
+        const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
         expect(provider1).toBeNull();
     });
 });
