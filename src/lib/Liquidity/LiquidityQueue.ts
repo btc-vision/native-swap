@@ -437,16 +437,12 @@ export class LiquidityQueue {
         }
 
         const reservationActiveList = this.getActiveReservationListForBlock(reservation.createdAt);
-        reservationActiveList.set(purgeIndex, false);
+        reservationActiveList.delete(purgeIndex);
         reservationActiveList.save();
 
         // **Important**: we delete the reservation record now
         // (since we have all needed info in local variables)
         reservation.delete(false);
-
-        if (reservation.valid() === true) {
-            throw new Revert('Impossible state: Reservation is still valid');
-        }
 
         // Track totals
         let totalTokensPurchased = u256.Zero;
@@ -714,17 +710,22 @@ export class LiquidityQueue {
 
     public addActiveReservationToList(blockNumber: u64, reservationId: u128): u32 {
         const reservationList = this.getReservationListForBlock(blockNumber);
-        const reservationActiveList = this.getActiveReservationListForBlock(blockNumber);
-
         reservationList.push(reservationId);
-
-        const index: u32 = <u32>(reservationList.getLength() - 1);
         reservationList.save();
 
-        reservationActiveList.set(index, true);
+        const reservationActiveList = this.getActiveReservationListForBlock(blockNumber);
+        reservationActiveList.push(true);
         reservationActiveList.save();
 
-        return index;
+        const reservationIndex: u32 = <u32>(reservationList.getLength() - 1);
+        const reservationActiveIndex: u32 = <u32>(reservationActiveList.getLength() - 1);
+
+        assert(
+            reservationIndex === reservationActiveIndex,
+            'Impossible state: Reservation index mismatch',
+        );
+
+        return reservationIndex;
     }
 
     public getReservationListForBlock(blockNumber: u64): StoredU128Array {
@@ -856,13 +857,11 @@ export class LiquidityQueue {
 
             for (let i: u32 = 0; i < length; i++) {
                 const isActive = activeIds.get(i);
+                const reservationId = reservationList.get(i);
                 if (!isActive) {
                     continue;
                 }
 
-                activeIds.set(i, false);
-
-                const reservationId = reservationList.get(i);
                 const reservation = Reservation.load(reservationId);
                 const purgeIndex = reservation.getPurgeIndex();
 
