@@ -800,12 +800,8 @@ export class LiquidityQueue {
 
     public decreaseTotalReserved(amount: u256): void {
         const currentReserved = this._totalReserved.get(this.tokenId);
-
-        if (u256.lt(currentReserved, amount)) {
-            Blockchain.log(`currentReserved:${currentReserved}, amount: ${amount}`);
-        }
-
         const newReserved = SafeMath.sub(currentReserved, amount);
+        
         this._totalReserved.set(this.tokenId, newReserved);
     }
 
@@ -864,10 +860,6 @@ export class LiquidityQueue {
             const length: u32 = reservationList.getLength() as u32;
             const activeIds: StoredBooleanArray =
                 this.getActiveReservationListForBlock(blockNumber);
-
-            for (let i: u32 = 0; i < length; i++) {
-                Blockchain.log(`Index ${i} ReservationId ${reservationList.get(i)}`);
-            }
 
             for (let i: u32 = 0; i < length; i++) {
                 const isActive = activeIds.get(i);
