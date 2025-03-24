@@ -720,6 +720,11 @@ export class LiquidityQueue {
         const reservationIndex: u32 = <u32>(reservationList.getLength() - 1);
         const reservationActiveIndex: u32 = <u32>(reservationActiveList.getLength() - 1);
 
+        const reservationList2 = this.getReservationListForBlock(blockNumber);
+        if (reservationList2.get(reservationIndex) !== reservationId) {
+            throw new Revert('Reservation mismatch');
+        }
+
         assert(
             reservationIndex === reservationActiveIndex,
             'Impossible state: Reservation index mismatch',
@@ -795,6 +800,11 @@ export class LiquidityQueue {
 
     public decreaseTotalReserved(amount: u256): void {
         const currentReserved = this._totalReserved.get(this.tokenId);
+
+        if (u256.lt(currentReserved, amount)) {
+            Blockchain.log(`currentReserved:${currentReserved}, amount: ${amount}`);
+        }
+
         const newReserved = SafeMath.sub(currentReserved, amount);
         this._totalReserved.set(this.tokenId, newReserved);
     }
@@ -856,6 +866,10 @@ export class LiquidityQueue {
                 this.getActiveReservationListForBlock(blockNumber);
 
             for (let i: u32 = 0; i < length; i++) {
+                Blockchain.log(`Index ${i} ReservationId ${reservationList.get(i)}`);
+            }
+
+            for (let i: u32 = 0; i < length; i++) {
                 const isActive = activeIds.get(i);
                 const reservationId = reservationList.get(i);
                 if (!isActive) {
@@ -871,7 +885,7 @@ export class LiquidityQueue {
                     );
                 }
 
-                this.ensureReservationPurgeIndexMatch(purgeIndex, i);
+                this.ensureReservationPurgeIndexMatch(reservation.reservationId, purgeIndex, i);
                 this.ensureReservationExpired(reservation);
 
                 const reservedIndexes: u32[] = reservation.getReservedIndexes();
@@ -1098,10 +1112,14 @@ export class LiquidityQueue {
         }
     }
 
-    private ensureReservationPurgeIndexMatch(reservationPurgeIndex: u32, currentIndex: u32): void {
+    private ensureReservationPurgeIndexMatch(
+        reservationId: u128,
+        reservationPurgeIndex: u32,
+        currentIndex: u32,
+    ): void {
         if (reservationPurgeIndex !== currentIndex) {
             throw new Revert(
-                `Impossible state: reservation purge index mismatch (expected: ${currentIndex}, actual: ${reservationPurgeIndex})`,
+                `Impossible state: reservation ${reservationId} purge index mismatch (expected: ${currentIndex}, actual: ${reservationPurgeIndex})`,
             );
         }
     }
