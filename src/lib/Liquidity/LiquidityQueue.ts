@@ -836,15 +836,6 @@ export class LiquidityQueue {
         }
     }
 
-    /*public logQueue(tag: string): void {
-        Blockchain.log(tag);
-
-        const q = this._providerManager.getStandardQueue();
-        for (let i: u64 = 0; i < q.getLength(); i++) {
-            Blockchain.log(q.get(i).toString());
-        }
-    }*/
-
     protected purgeReservationsAndRestoreProviders(): void {
         const lastPurgedBlock: u64 = this.lastPurgedBlock;
         const currentBlockNumber: u64 = Blockchain.block.number;

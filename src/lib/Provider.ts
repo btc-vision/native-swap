@@ -1,11 +1,5 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import {
-    Blockchain,
-    Potential,
-    SafeMath,
-    StoredU64,
-    u256To30Bytes,
-} from '@btc-vision/btc-runtime/runtime';
+import { Potential, SafeMath, StoredU64, u256To30Bytes } from '@btc-vision/btc-runtime/runtime';
 import { AdvancedStoredString } from '../stored/AdvancedStoredString';
 import { UserLiquidity } from '../data-types/UserLiquidity';
 import {
@@ -110,10 +104,6 @@ export class Provider {
     public loadIndexedAt(): void {
         const store = new StoredU64(INDEXED_PROVIDER_POINTER, this.providerBuffer);
         this._indexedAt = store.get(0);
-
-        Blockchain.log(
-            `Provider ${this.providerId.toString()} loaded indexed at ${this._indexedAt.toString()}`,
-        );
     }
 
     public increaseLiquidityProvided(amount: u256): void {
