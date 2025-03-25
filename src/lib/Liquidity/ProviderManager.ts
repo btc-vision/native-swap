@@ -152,6 +152,10 @@ export class ProviderManager {
         return this._queue.get(providerIndex);
     }
 
+    public getStandardQueue(): StoredU256Array {
+        return this._queue;
+    }
+
     public getBTCowed(providerId: u256): u256 {
         return this._lpBTCowed.get(providerId);
     }
@@ -221,6 +225,9 @@ export class ProviderManager {
             if (provider.isPriority()) {
                 this._priorityQueue.delete(provider.indexedAt);
             } else {
+                Blockchain.log(
+                    `Delete provider ${provider.providerId}, ${provider.btcReceiver} at ${provider.indexedAt}`,
+                );
                 this._queue.delete(provider.indexedAt);
             }
         }

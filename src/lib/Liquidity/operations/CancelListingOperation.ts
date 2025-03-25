@@ -26,8 +26,10 @@ export class CancelListingOperation extends BaseOperation {
         this.ensureProviderCannotProvideLiquidity();
         this.ensureNotInitialProvider();
 
+        this.liquidityQueue.logQueue('before');
         // Reset the provider
         this.liquidityQueue.resetProvider(this.provider, false, true);
+        this.liquidityQueue.logQueue('after');
 
         // Transfer tokens back to the provider
         TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);

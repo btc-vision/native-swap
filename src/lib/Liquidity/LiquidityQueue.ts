@@ -451,15 +451,11 @@ export class LiquidityQueue {
         let totalTokensRefunded = u256.Zero;
         let tokensReserved = u256.Zero;
 
-        // 4) Iterate over each "provider" we had reserved
         for (let i = 0; i < reservedIndexes.length; i++) {
             const providerIndex: u64 = reservedIndexes[i];
             const reservedAmount: u128 = reservedValues[i];
             const queueType: u8 = queueTypes[i];
 
-            tokensReserved = SafeMath.add(tokensReserved, reservedAmount.toU256());
-
-            // 4a) Retrieve the correct provider from the queue
             const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
             if (queueType === LIQUIDITY_REMOVAL_TYPE && !provider.pendingRemoval) {
                 throw new Revert(
@@ -467,22 +463,21 @@ export class LiquidityQueue {
                 );
             }
 
-            // 4b) How many satoshis did the buyer actually send to this provider?
             let satoshisSent = this.findAmountForAddressInOutputUTXOs(
                 outputs,
                 provider.btcReceiver,
             );
 
-            // If no BTC was sent at all, revert the chunk from the reservation
             if (satoshisSent.isZero()) {
                 this.noStatsSendToProvider(queueType, reservedAmount, quoteAtReservation, provider);
                 continue;
             }
 
+            tokensReserved = SafeMath.add(tokensReserved, reservedAmount.toU256());
+
             // Convert satoshis -> tokens
             let tokensDesired = this.satoshisToTokens(satoshisSent, quoteAtReservation);
 
-            // 5) Distinguish removal queue from normal/priority
             if (queueType === LIQUIDITY_REMOVAL_TYPE) {
                 // (These tokens are not in provider.liquidity.)
                 // We clamp satoshisSent by how much is actually in _lpBTCowedReserved
@@ -555,11 +550,10 @@ export class LiquidityQueue {
                 if (tokensDesired.isZero()) {
                     // if zero => ignore entire chunk
                     this.restoreReservedLiquidityForProvider(provider, reservedAmount);
+                    tokensReserved = SafeMath.sub(tokensReserved, reservedAmount.toU256());
                     continue;
                 }
 
-                // Subtract the entire chunk from provider.reserved in one step
-                //     This ensures we never double-sub leftover + tokensDesired.
                 if (u128.lt(provider.reserved, reservedAmount)) {
                     throw new Revert(
                         `Impossible state: provider.reserved < reservedAmount (${provider.reserved} < ${reservedAmount})`,
@@ -801,7 +795,7 @@ export class LiquidityQueue {
     public decreaseTotalReserved(amount: u256): void {
         const currentReserved = this._totalReserved.get(this.tokenId);
         const newReserved = SafeMath.sub(currentReserved, amount);
-        
+
         this._totalReserved.set(this.tokenId, newReserved);
     }
 
@@ -997,8 +991,13 @@ export class LiquidityQueue {
             : this.getProviderIfFromQueue(providerIndex, type);
 
         if (providerId.isZero()) {
+            const q = this._providerManager.getStandardQueue();
+            for (let i: u64 = 0; i < q.getLength(); i++) {
+                Blockchain.log(q.get(i).toString());
+            }
+
             throw new Revert(
-                `Impossible state: Critical problem in provider state updates. Pool corrupted.`,
+                `Impossible state: Cannot load provider. Index: ${providerIndex} Type: ${type}. Pool corrupted.`,
             );
         }
 
@@ -1125,6 +1124,14 @@ export class LiquidityQueue {
     private ensureValidReservedAmount(provider: Provider, reservedAmount: u128): void {
         if (u128.lt(provider.reserved, reservedAmount)) {
             throw new Revert('Impossible state: reserved amount bigger than provider reserve');
+        }
+    }
+
+    public logQueue(tag: string): void {
+        Blockchain.log(tag);
+        const q = this._providerManager.getStandardQueue();
+        for (let i: u64 = 0; i < q.getLength(); i++) {
+            Blockchain.log(q.get(i).toString());
         }
     }
 }
