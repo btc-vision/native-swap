@@ -1,8 +1,15 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Potential, SafeMath, u256To30Bytes } from '@btc-vision/btc-runtime/runtime';
+import {
+    Blockchain,
+    Potential,
+    SafeMath,
+    StoredU64,
+    u256To30Bytes,
+} from '@btc-vision/btc-runtime/runtime';
 import { AdvancedStoredString } from '../stored/AdvancedStoredString';
 import { UserLiquidity } from '../data-types/UserLiquidity';
 import {
+    INDEXED_PROVIDER_POINTER,
     LIQUIDITY_PROVIDER_POINTER,
     PROVIDER_ADDRESS_POINTER,
     PROVIDER_LIQUIDITY_POINTER,
@@ -10,7 +17,6 @@ import {
 
 export class Provider {
     public providerId: u256;
-    public indexedAt: u64 = 0;
     public fromRemovalQueue: bool = false;
 
     private readonly userLiquidity: UserLiquidity;
@@ -28,6 +34,16 @@ export class Provider {
             LIQUIDITY_PROVIDER_POINTER,
             providerBuffer,
         );
+    }
+
+    public _indexedAt: u64 = 0;
+
+    public get indexedAt(): u64 {
+        return this._indexedAt;
+    }
+
+    public set indexedAt(value: u64) {
+        this._indexedAt = value;
     }
 
     public get pendingRemoval(): boolean {
@@ -91,13 +107,18 @@ export class Provider {
         return this._btcReceiver as AdvancedStoredString;
     }
 
+    public loadIndexedAt(): void {
+        const store = new StoredU64(INDEXED_PROVIDER_POINTER, this.providerBuffer);
+        this._indexedAt = store.get(0);
+
+        Blockchain.log(
+            `Provider ${this.providerId.toString()} loaded indexed at ${this._indexedAt.toString()}`,
+        );
+    }
+
     public increaseLiquidityProvided(amount: u256): void {
         this.liquidityProvided = SafeMath.add(this.liquidityProvided, amount);
     }
-
-    /*public increaseLiquidity(amount: u128): void {
-        this.liquidity = SafeMath.add128(this.liquidity, amount);
-    }*/
 
     public decreaseLiquidity(amount: u128): void {
         this.liquidity = SafeMath.sub128(this.liquidity, amount);

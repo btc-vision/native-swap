@@ -128,16 +128,20 @@ export class ProviderManager {
         return this.currentIndexRemoval;
     }
 
-    public addToPriorityQueue(providerId: u256): void {
+    public addToPriorityQueue(providerId: u256): u64 {
         this._priorityQueue.push(providerId);
+
+        return this._priorityQueue.getLength() - 1;
     }
 
     public addToRemovalQueue(providerId: u256): void {
         this._removalQueue.push(providerId);
     }
 
-    public addToStandardQueue(providerId: u256): void {
+    public addToStandardQueue(providerId: u256): u64 {
         this._queue.push(providerId);
+
+        return this._queue.getLength() - 1;
     }
 
     public getFromPriorityQueue(providerIndex: u64): u256 {
@@ -225,9 +229,6 @@ export class ProviderManager {
             if (provider.isPriority()) {
                 this._priorityQueue.delete(provider.indexedAt);
             } else {
-                Blockchain.log(
-                    `Delete provider ${provider.providerId}, ${provider.btcReceiver} at ${provider.indexedAt}`,
-                );
                 this._queue.delete(provider.indexedAt);
             }
         }

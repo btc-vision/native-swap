@@ -17,6 +17,7 @@ export const LIQUIDITY_VIRTUAL_T_POINTER: u16 = Blockchain.nextPointer;
 export const LAST_VIRTUAL_BLOCK_UPDATE_POINTER: u16 = Blockchain.nextPointer;
 export const LIQUIDITY_LAST_UPDATE_BLOCK_POINTER: u16 = Blockchain.nextPointer;
 export const RESERVATION_SETTINGS_POINTER: u16 = Blockchain.nextPointer;
+export const INDEXED_PROVIDER_POINTER: u16 = Blockchain.nextPointer;
 
 export const RESERVATION_INDEXES: u16 = Blockchain.nextPointer;
 export const RESERVATION_AMOUNTS: u16 = Blockchain.nextPointer;

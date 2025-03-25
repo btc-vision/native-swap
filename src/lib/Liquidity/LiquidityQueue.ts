@@ -11,6 +11,7 @@ import {
     StoredU64,
     TransactionOutput,
     TransferHelper,
+    u256To30Bytes,
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
@@ -20,6 +21,7 @@ import {
     DELTA_BTC_BUY,
     DELTA_TOKENS_ADD,
     DELTA_TOKENS_BUY,
+    INDEXED_PROVIDER_POINTER,
     LAST_VIRTUAL_BLOCK_UPDATE_POINTER,
     LIQUIDITY_LAST_UPDATE_BLOCK_POINTER,
     LIQUIDITY_QUOTE_HISTORY_POINTER,
@@ -291,12 +293,20 @@ export class LiquidityQueue {
         return SafeMath.div(scaled, this.virtualBTCReserve);
     }
 
+    public saveIndexForProvider(providerId: u256, index: u64): void {
+        const store = new StoredU64(INDEXED_PROVIDER_POINTER, u256To30Bytes(providerId));
+        store.set(0, index);
+        store.save();
+    }
+
     public addToPriorityQueue(providerId: u256): void {
-        this._providerManager.addToPriorityQueue(providerId);
+        const index = this._providerManager.addToPriorityQueue(providerId);
+        this.saveIndexForProvider(providerId, index);
     }
 
     public addToStandardQueue(providerId: u256): void {
-        this._providerManager.addToStandardQueue(providerId);
+        const index = this._providerManager.addToStandardQueue(providerId);
+        this.saveIndexForProvider(providerId, index);
     }
 
     public addToRemovalQueue(providerId: u256): void {
@@ -826,6 +836,15 @@ export class LiquidityQueue {
         }
     }
 
+    /*public logQueue(tag: string): void {
+        Blockchain.log(tag);
+
+        const q = this._providerManager.getStandardQueue();
+        for (let i: u64 = 0; i < q.getLength(); i++) {
+            Blockchain.log(q.get(i).toString());
+        }
+    }*/
+
     protected purgeReservationsAndRestoreProviders(): void {
         const lastPurgedBlock: u64 = this.lastPurgedBlock;
         const currentBlockNumber: u64 = Blockchain.block.number;
@@ -991,11 +1010,6 @@ export class LiquidityQueue {
             : this.getProviderIfFromQueue(providerIndex, type);
 
         if (providerId.isZero()) {
-            const q = this._providerManager.getStandardQueue();
-            for (let i: u64 = 0; i < q.getLength(); i++) {
-                Blockchain.log(q.get(i).toString());
-            }
-
             throw new Revert(
                 `Impossible state: Cannot load provider. Index: ${providerIndex} Type: ${type}. Pool corrupted.`,
             );
@@ -1124,14 +1138,6 @@ export class LiquidityQueue {
     private ensureValidReservedAmount(provider: Provider, reservedAmount: u128): void {
         if (u128.lt(provider.reserved, reservedAmount)) {
             throw new Revert('Impossible state: reserved amount bigger than provider reserve');
-        }
-    }
-
-    public logQueue(tag: string): void {
-        Blockchain.log(tag);
-        const q = this._providerManager.getStandardQueue();
-        for (let i: u64 = 0; i < q.getLength(); i++) {
-            Blockchain.log(q.get(i).toString());
         }
     }
 }

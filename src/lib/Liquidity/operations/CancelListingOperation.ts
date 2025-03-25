@@ -26,10 +26,15 @@ export class CancelListingOperation extends BaseOperation {
         this.ensureProviderCannotProvideLiquidity();
         this.ensureNotInitialProvider();
 
-        this.liquidityQueue.logQueue('before');
+        if (this.provider.pendingRemoval) {
+            throw new Revert('NATIVE_SWAP: Provider is in pending removal.');
+        }
+
+        // Load the index of the provider
+        this.provider.loadIndexedAt();
+
         // Reset the provider
         this.liquidityQueue.resetProvider(this.provider, false, true);
-        this.liquidityQueue.logQueue('after');
 
         // Transfer tokens back to the provider
         TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
