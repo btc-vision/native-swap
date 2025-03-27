@@ -925,6 +925,9 @@ export class LiquidityQueue {
             const reservationId = reservationList.get(i);
             const reservation = Reservation.load(reservationId);
 
+            const purgeIndex = reservation.getPurgeIndex();
+            this.ensureReservationPurgeIndexMatch(reservation.reservationId, purgeIndex, i);
+
             // Double-check it is indeed expired
             assert(
                 reservation.expired(),
@@ -955,6 +958,8 @@ export class LiquidityQueue {
             const reservedAmount: u128 = reservedValues[j];
             const queueType: u8 = queueTypes[j];
             const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
+
+            this.ensureValidReservedAmount(provider, reservedAmount);
 
             if (provider.pendingRemoval && queueType === LIQUIDITY_REMOVAL_TYPE) {
                 this.purgeAndRestoreProviderRemovalQueue(
@@ -1170,12 +1175,6 @@ export class LiquidityQueue {
             throw new Revert(
                 `Impossible state: reservation ${reservationId} purge index mismatch (expected: ${currentIndex}, actual: ${reservationPurgeIndex})`,
             );
-        }
-    }
-
-    private ensureReservationExpired(reservation: Reservation): void {
-        if (!reservation.expired()) {
-            throw new Revert(`Impossible state: reservation is not active, was in active list`);
         }
     }
 
