@@ -9,6 +9,7 @@ import {
     StoredU256,
     StoredU256Array,
     StoredU64,
+    StoredU64Array,
     TransactionOutput,
     TransferHelper,
     u256To30Bytes,
@@ -18,6 +19,7 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER,
     ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
+    BLOCKS_WITH_RESERVATIONS_POINTER,
     DELTA_BTC_BUY,
     DELTA_TOKENS_ADD,
     DELTA_TOKENS_BUY,
@@ -85,6 +87,8 @@ export class LiquidityQueue {
     private readonly _dynamicFee: DynamicFee;
     private readonly _timeoutEnabled: boolean;
 
+    private _blocksWithReservations: StoredU64Array;
+
     constructor(
         public readonly token: Address,
         public readonly tokenIdUint8Array: Uint8Array,
@@ -131,6 +135,11 @@ export class LiquidityQueue {
         this._settingPurge = new StoredU64(LIQUIDITY_LAST_UPDATE_BLOCK_POINTER, tokenIdUint8Array);
         this._settings = new StoredU64(RESERVATION_SETTINGS_POINTER, tokenIdUint8Array);
         this._timeoutEnabled = timeoutEnabled;
+
+        this._blocksWithReservations = new StoredU64Array(
+            BLOCKS_WITH_RESERVATIONS_POINTER,
+            tokenIdUint8Array,
+        );
 
         if (purgeOldReservations) {
             this.purgeReservationsAndRestoreProviders();
@@ -734,6 +743,8 @@ export class LiquidityQueue {
             'Impossible state: Reservation index mismatch',
         );
 
+        this.pushBlockIfNotExists(blockNumber);
+
         return reservationIndex;
     }
 
@@ -837,101 +848,148 @@ export class LiquidityQueue {
     }
 
     protected purgeReservationsAndRestoreProviders(): void {
-        const lastPurgedBlock: u64 = this.lastPurgedBlock;
         const currentBlockNumber: u64 = Blockchain.block.number;
-        let maxBlockToPurge: u64 = lastPurgedBlock + LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+        if (LiquidityQueue.RESERVATION_EXPIRE_AFTER > currentBlockNumber) {
+            return;
+        }
 
-        if (currentBlockNumber <= LiquidityQueue.RESERVATION_EXPIRE_AFTER) {
+        // The "latest" block we should purge
+        const maxBlockToPurge: u64 = currentBlockNumber - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+
+        // If we can't purge anything yet, skip
+        if (maxBlockToPurge <= this.lastPurgedBlock) {
             this._providerManager.restoreCurrentIndex();
             return;
         }
 
-        const maxPossibleBlock = currentBlockNumber - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
-        if (maxBlockToPurge > maxPossibleBlock) {
-            maxBlockToPurge = maxPossibleBlock;
-        }
-
-        if (lastPurgedBlock >= maxBlockToPurge) {
-            this._providerManager.restoreCurrentIndex();
-            return;
-        }
-
-        let totalReservedAmount: u256 = u256.Zero;
+        let totalFreed: u256 = u256.Zero;
         let updatedOne = false;
 
-        for (let blockNumber = lastPurgedBlock; blockNumber < maxBlockToPurge; blockNumber++) {
-            const reservationList = this.getReservationListForBlock(blockNumber);
-            const length: u32 = reservationList.getLength() as u32;
-            const activeIds: StoredBooleanArray =
-                this.getActiveReservationListForBlock(blockNumber);
+        // We'll remove from _blocksWithReservations all blocks < maxBlockToPurge
+        const length = this._blocksWithReservations.getLength();
 
-            for (let i: u32 = 0; i < length; i++) {
-                const isActive = activeIds.get(i);
-                const reservationId = reservationList.get(i);
-                if (!isActive) {
-                    continue;
-                }
+        let i: u64 = 0;
+        while (i < length) {
+            const blockNumber = this._blocksWithReservations.get(i);
 
-                const reservation = Reservation.load(reservationId);
-                const purgeIndex = reservation.getPurgeIndex();
-
-                if (purgeIndex === <u64>u32.MAX_VALUE) {
-                    throw new Revert(
-                        'Impossible state: reservation got deleted and is still active',
-                    );
-                }
-
-                this.ensureReservationPurgeIndexMatch(reservation.reservationId, purgeIndex, i);
-                this.ensureReservationExpired(reservation);
-
-                const reservedIndexes: u32[] = reservation.getReservedIndexes();
-                const reservedValues: u128[] = reservation.getReservedValues();
-                const queueTypes: u8[] = reservation.getQueueTypes();
-
-                for (let j = 0; j < reservedIndexes.length; j++) {
-                    const providerIndex: u64 = reservedIndexes[j];
-                    const reservedAmount: u128 = reservedValues[j];
-                    const queueType: u8 = queueTypes[j];
-                    const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
-
-                    this.ensureValidReservedAmount(provider, reservedAmount);
-
-                    if (provider.pendingRemoval && queueType === LIQUIDITY_REMOVAL_TYPE) {
-                        this.purgeAndRestoreProviderRemovalQueue(
-                            provider.providerId,
-                            reservedAmount,
-                            reservation.createdAt,
-                        );
-                    } else {
-                        this.purgeAndRestoreProvider(provider, reservedAmount);
-                    }
-
-                    updatedOne = true;
-                }
-
-                totalReservedAmount = SafeMath.add(
-                    totalReservedAmount,
-                    reservedValues.reduce<u256>(
-                        (acc, val) => SafeMath.add(acc, val.toU256()),
-                        u256.Zero,
-                    ),
-                );
-
-                reservation.delete(true);
+            // If the blockNumber is >= maxBlockToPurge, stop
+            if (blockNumber >= maxBlockToPurge) {
+                break;
             }
 
-            activeIds.reset();
-            reservationList.reset();
+            // Purge that block
+            const freed = this.purgeBlock(blockNumber);
+            if (!freed.isZero()) {
+                updatedOne = true;
+                totalFreed = SafeMath.add(totalFreed, freed);
+            }
+
+            i++;
         }
 
+        // We can remove the blocks we processed from the front (0..i-1)
+        let toRemove = i;
+        while (toRemove > 0 && this._blocksWithReservations.getLength() > 0) {
+            this._blocksWithReservations.shift();
+            toRemove--;
+        }
+
+        // Save the updated array
+        this._blocksWithReservations.save();
+
+        Blockchain.log(`Purged ${totalFreed} from reservations`);
+
+        // If we freed anything, decrease totalReserved
         if (updatedOne) {
-            this.decreaseTotalReserved(totalReservedAmount);
+            this.decreaseTotalReserved(totalFreed);
             this._providerManager.resetStartingIndex();
         } else {
             this._providerManager.restoreCurrentIndex();
         }
 
-        this.lastPurgedBlock = currentBlockNumber;
+        // Mark that we've processed up to (but not including) maxBlockToPurge
+        this.lastPurgedBlock = maxBlockToPurge;
+    }
+
+    private purgeBlock(blockNumber: u64): u256 {
+        const reservationList = this.getReservationListForBlock(blockNumber);
+        const activeIds: StoredBooleanArray = this.getActiveReservationListForBlock(blockNumber);
+
+        const length = reservationList.getLength();
+        let totalFreed = u256.Zero;
+
+        for (let i: u32 = 0; i < length; i++) {
+            if (!activeIds.get(i)) {
+                continue;
+            }
+
+            const reservationId = reservationList.get(i);
+            const reservation = Reservation.load(reservationId);
+
+            Blockchain.log(`Purging reservation #${i} from block ${blockNumber}`);
+
+            // Double-check it is indeed expired
+            assert(
+                reservation.expired(),
+                `Impossible state: Reservation still active during purge.`,
+            );
+
+            // Same logic you had: restore providers, remove reservation, etc.
+            const freedAmount = this.restoreReservation(reservation);
+            totalFreed = SafeMath.add(totalFreed, freedAmount);
+        }
+
+        // Reset these arrays so the block becomes effectively empty
+        reservationList.reset();
+        activeIds.reset();
+
+        return totalFreed;
+    }
+
+    private restoreReservation(reservation: Reservation): u256 {
+        const reservedIndexes: u32[] = reservation.getReservedIndexes();
+        const reservedValues: u128[] = reservation.getReservedValues();
+        const queueTypes: u8[] = reservation.getQueueTypes();
+
+        let restoredLiquidity: u256 = u256.Zero;
+
+        for (let j = 0; j < reservedIndexes.length; j++) {
+            const providerIndex: u64 = reservedIndexes[j];
+            const reservedAmount: u128 = reservedValues[j];
+            const queueType: u8 = queueTypes[j];
+            const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
+
+            Blockchain.log(`Restoring ${reservedAmount} to ${provider.providerId}`);
+
+            if (provider.pendingRemoval && queueType === LIQUIDITY_REMOVAL_TYPE) {
+                this.purgeAndRestoreProviderRemovalQueue(
+                    provider.providerId,
+                    reservedAmount,
+                    reservation.createdAt,
+                );
+            } else {
+                this.purgeAndRestoreProvider(provider, reservedAmount);
+            }
+
+            restoredLiquidity = SafeMath.add(restoredLiquidity, reservedAmount.toU256());
+        }
+
+        reservation.delete(true);
+
+        return restoredLiquidity;
+    }
+
+    private pushBlockIfNotExists(blockNumber: u64): void {
+        const len = this._blocksWithReservations.getLength();
+        if (len > 0) {
+            const lastBlock = this._blocksWithReservations.get(len - 1);
+            if (lastBlock === blockNumber) {
+                return;
+            }
+        }
+
+        this._blocksWithReservations.push(blockNumber);
+        this._blocksWithReservations.save();
     }
 
     private resetProviderOnDust(provider: Provider, quoteAtReservation: u256): void {
