@@ -136,7 +136,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private getAntibotSettings(calldata: Calldata): BytesWriter {
         const token = calldata.readAddress();
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
 
         const writer = new BytesWriter(U64_BYTE_LENGTH + U256_BYTE_LENGTH);
         writer.writeU64(queue.antiBotExpirationBlock);
@@ -432,7 +432,6 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureValidTokenAddress(token);
 
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
-
         this.ensurePoolExistsForToken(queue);
 
         const result = new BytesWriter(4 * U256_BYTE_LENGTH);
@@ -468,7 +467,7 @@ export class NativeSwap extends ReentrancyGuard {
         const queue: LiquidityQueue = this.getLiquidityQueue(
             token,
             this.addressToPointer(token),
-            true,
+            false,
         );
 
         this.ensurePoolExistsForToken(queue);
@@ -547,7 +546,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private ensurePoolExistsForToken(queue: LiquidityQueue): void {
-        if(queue.initialLiquidityProvider.isZero()) {
+        if (queue.initialLiquidityProvider.isZero()) {
             throw new Revert('NATIVE_SWAP: Pool does not exist for token');
         }
     }

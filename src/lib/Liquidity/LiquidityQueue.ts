@@ -891,13 +891,12 @@ export class LiquidityQueue {
         let toRemove = i;
         while (toRemove > 0 && this._blocksWithReservations.getLength() > 0) {
             this._blocksWithReservations.shift();
+
             toRemove--;
         }
 
         // Save the updated array
         this._blocksWithReservations.save();
-
-        Blockchain.log(`Purged ${totalFreed} from reservations`);
 
         // If we freed anything, decrease totalReserved
         if (updatedOne) {
@@ -925,8 +924,6 @@ export class LiquidityQueue {
 
             const reservationId = reservationList.get(i);
             const reservation = Reservation.load(reservationId);
-
-            Blockchain.log(`Purging reservation #${i} from block ${blockNumber}`);
 
             // Double-check it is indeed expired
             assert(
@@ -958,8 +955,6 @@ export class LiquidityQueue {
             const reservedAmount: u128 = reservedValues[j];
             const queueType: u8 = queueTypes[j];
             const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
-
-            Blockchain.log(`Restoring ${reservedAmount} to ${provider.providerId}`);
 
             if (provider.pendingRemoval && queueType === LIQUIDITY_REMOVAL_TYPE) {
                 this.purgeAndRestoreProviderRemovalQueue(
