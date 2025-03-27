@@ -145,15 +145,15 @@ export class ProviderManager {
     }
 
     public getFromPriorityQueue(providerIndex: u64): u256 {
-        return this._priorityQueue.get(providerIndex);
+        return this._priorityQueue.get_physical(providerIndex);
     }
 
     public getFromRemovalQueue(providerIndex: u64): u256 {
-        return this._removalQueue.get(providerIndex);
+        return this._removalQueue.get_physical(providerIndex);
     }
 
     public getFromStandardQueue(providerIndex: u64): u256 {
-        return this._queue.get(providerIndex);
+        return this._queue.get_physical(providerIndex);
     }
 
     public getStandardQueue(): StoredU256Array {
@@ -210,7 +210,7 @@ export class ProviderManager {
     }
 
     public removePendingLiquidityProviderFromRemovalQueue(provider: Provider, i: u64): void {
-        this._removalQueue.delete(i);
+        this._removalQueue.delete_physical(i);
 
         provider.pendingRemoval = false;
         provider.isLp = false;
@@ -227,9 +227,9 @@ export class ProviderManager {
 
         if (!u256.eq(provider.providerId, this._initialLiquidityProvider.value)) {
             if (provider.isPriority()) {
-                this._priorityQueue.delete(provider.indexedAt);
+                this._priorityQueue.delete_physical(provider.indexedAt);
             } else {
-                this._queue.delete(provider.indexedAt);
+                this._queue.delete_physical(provider.indexedAt);
             }
         }
 
@@ -275,7 +275,7 @@ export class ProviderManager {
         let removalIndex: u64 = this.previousRemovalStartingIndex;
 
         while (removalIndex < removalLength) {
-            const providerId = this._removalQueue.get(removalIndex);
+            const providerId = this._removalQueue.get_physical(removalIndex);
             if (providerId === u256.Zero) {
                 removalIndex++;
                 continue;
@@ -286,7 +286,7 @@ export class ProviderManager {
                 this._removalQueue.setStartingIndex(removalIndex);
                 break;
             } else {
-                this._removalQueue.delete(removalIndex);
+                this._removalQueue.delete_physical(removalIndex);
             }
             removalIndex++;
         }
@@ -298,7 +298,7 @@ export class ProviderManager {
         let priorityIndex: u64 = this.previousReservationStartingIndex;
 
         while (priorityIndex < priorityLength) {
-            const providerId = this._priorityQueue.get(priorityIndex);
+            const providerId = this._priorityQueue.get_physical(priorityIndex);
             if (providerId === u256.Zero) {
                 priorityIndex++;
                 continue;
@@ -309,7 +309,7 @@ export class ProviderManager {
                 this._priorityQueue.setStartingIndex(priorityIndex);
                 break;
             } else {
-                this._priorityQueue.delete(priorityIndex);
+                this._priorityQueue.delete_physical(priorityIndex);
             }
             priorityIndex++;
         }
@@ -322,7 +322,7 @@ export class ProviderManager {
         let index: u64 = this.previousReservationStandardStartingIndex;
 
         while (index < length) {
-            const providerId = this._queue.get(index);
+            const providerId = this._queue.get_physical(index);
             if (providerId === u256.Zero) {
                 index++;
                 continue;
@@ -332,7 +332,7 @@ export class ProviderManager {
                 this._queue.setStartingIndex(index);
                 break;
             } else {
-                this._queue.delete(index);
+                this._queue.delete_physical(index);
             }
             index++;
         }
@@ -355,7 +355,7 @@ export class ProviderManager {
         // Scan forward until we find a valid LP in 'pendingRemoval'
         while (this.currentIndexRemoval < length) {
             const i: u64 = this.currentIndexRemoval;
-            const providerId = this._removalQueue.get(i);
+            const providerId = this._removalQueue.get_physical(i);
 
             if (providerId.isZero()) {
                 // empty slot
@@ -426,7 +426,7 @@ export class ProviderManager {
 
         while (this.currentIndexPriority < length) {
             const i: u64 = this.currentIndexPriority;
-            providerId = this._priorityQueue.get(i);
+            providerId = this._priorityQueue.get_physical(i);
             if (providerId === u256.Zero) {
                 this.currentIndexPriority++;
                 continue;
@@ -482,7 +482,7 @@ export class ProviderManager {
 
         while (this.currentIndex < length) {
             const i: u64 = this.currentIndex;
-            providerId = this._queue.get(i);
+            providerId = this._queue.get_physical(i);
 
             if (providerId === u256.Zero) {
                 this.currentIndex++;
