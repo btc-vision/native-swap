@@ -198,6 +198,9 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     provider.isPriority() ? PRIORITY_TYPE : NORMAL_TYPE,
                 );
 
+                Blockchain.log(
+                    `reserveAtIndex providerId ${provider.providerId} at index :${provider.indexedAt}`,
+                );
                 this.emitLiquidityReservedEvent(
                     provider.providerId,
                     provider.btcReceiver,
@@ -316,7 +319,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     `NATIVE_SWAP: Maximum reservation limit reached. Try again later.`,
                 );
             }
-            
+
             throw new Revert(
                 `NATIVE_SWAP: Minimum liquidity not met (${satCostTokenRemaining} sat)`,
             );

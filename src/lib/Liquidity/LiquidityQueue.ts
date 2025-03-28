@@ -909,6 +909,7 @@ export class LiquidityQueue {
     }
 
     private purgeBlock(blockNumber: u64): u256 {
+        Blockchain.log(`Purging blocK:${blockNumber}`);
         const reservationList = this.getReservationListForBlock(blockNumber);
         const activeIds: StoredBooleanArray = this.getActiveReservationListForBlock(blockNumber);
 

@@ -141,6 +141,7 @@ export class ProviderManager {
     public addToStandardQueue(providerId: u256): u64 {
         this._queue.push(providerId);
 
+        Blockchain.log(`Adding ${providerId} at ${this._queue.getLength() - 1}`);
         return this._queue.getLength() - 1;
     }
 
@@ -229,6 +230,9 @@ export class ProviderManager {
             if (provider.isPriority()) {
                 this._priorityQueue.delete_physical(provider.indexedAt);
             } else {
+                Blockchain.log(
+                    `delete providerid ${provider.providerId} at index :${provider.indexedAt}`,
+                );
                 this._queue.delete_physical(provider.indexedAt);
             }
         }
@@ -483,6 +487,8 @@ export class ProviderManager {
         while (this.currentIndex < length) {
             const i: u64 = this.currentIndex;
             providerId = this._queue.get_physical(i);
+
+            Blockchain.log(`index: ${i} providerId: ${providerId}`);
 
             if (providerId === u256.Zero) {
                 this.currentIndex++;
