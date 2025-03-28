@@ -24,8 +24,6 @@ import {
     DELTA_TOKENS_ADD,
     DELTA_TOKENS_BUY,
     INDEXED_PROVIDER_POINTER,
-    LAST_VIRTUAL_BLOCK_UPDATE_POINTER,
-    LIQUIDITY_LAST_UPDATE_BLOCK_POINTER,
     LIQUIDITY_QUOTE_HISTORY_POINTER,
     LIQUIDITY_RESERVED_POINTER,
     LIQUIDITY_VIRTUAL_BTC_POINTER,
@@ -72,8 +70,6 @@ export class LiquidityQueue {
     private readonly _totalReserved: StoredMapU256;
 
     // We'll store the last block updated
-    private readonly _lastVirtualUpdateBlock: StoredU64;
-    private readonly _settingPurge: StoredU64;
     private readonly _settings: StoredU64;
     private readonly _maxTokenPerSwap: StoredU256;
 
@@ -118,12 +114,6 @@ export class LiquidityQueue {
         this._deltaBTCBuy = new StoredU256(DELTA_BTC_BUY, tokenIdUint8Array);
         this._deltaTokensBuy = new StoredU256(DELTA_TOKENS_BUY, tokenIdUint8Array);
 
-        // last block
-        this._lastVirtualUpdateBlock = new StoredU64(
-            LAST_VIRTUAL_BLOCK_UPDATE_POINTER,
-            tokenIdUint8Array,
-        );
-
         this._maxTokenPerSwap = new StoredU256(
             ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
             tokenIdUint8Array,
@@ -132,7 +122,6 @@ export class LiquidityQueue {
         this._totalReserves = new StoredMapU256(TOTAL_RESERVES_POINTER);
         this._totalReserved = new StoredMapU256(LIQUIDITY_RESERVED_POINTER);
 
-        this._settingPurge = new StoredU64(LIQUIDITY_LAST_UPDATE_BLOCK_POINTER, tokenIdUint8Array);
         this._settings = new StoredU64(RESERVATION_SETTINGS_POINTER, tokenIdUint8Array);
         this._timeoutEnabled = timeoutEnabled;
 
@@ -200,14 +189,6 @@ export class LiquidityQueue {
         this._deltaTokensBuy.value = val;
     }
 
-    public get lastVirtualUpdateBlock(): u64 {
-        return this._lastVirtualUpdateBlock.get(0);
-    }
-
-    public set lastVirtualUpdateBlock(value: u64) {
-        this._lastVirtualUpdateBlock.set(0, value);
-    }
-
     public get reservedLiquidity(): u256 {
         return this._totalReserved.get(this.tokenId) || u256.Zero;
     }
@@ -233,19 +214,27 @@ export class LiquidityQueue {
     }
 
     public get lastPurgedBlock(): u64 {
-        return this._settingPurge.get(0);
+        return this._settings.get(1);
     }
 
     public set lastPurgedBlock(value: u64) {
-        this._settingPurge.set(0, value);
+        this._settings.set(1, value);
     }
 
     public get antiBotExpirationBlock(): u64 {
-        return this._settingPurge.get(1);
+        return this._settings.get(2);
     }
 
     public set antiBotExpirationBlock(value: u64) {
-        this._settingPurge.set(1, value);
+        this._settings.set(2, value);
+    }
+
+    public get lastVirtualUpdateBlock(): u64 {
+        return this._settings.get(3);
+    }
+
+    public set lastVirtualUpdateBlock(value: u64) {
+        this._settings.set(3, value);
     }
 
     public get feesEnabled(): bool {
@@ -339,8 +328,6 @@ export class LiquidityQueue {
     }
 
     public save(): void {
-        this._lastVirtualUpdateBlock.save();
-        this._settingPurge.save();
         this._settings.save();
         this._providerManager.save();
         this._quoteHistory.save();
@@ -909,7 +896,6 @@ export class LiquidityQueue {
     }
 
     private purgeBlock(blockNumber: u64): u256 {
-        Blockchain.log(`Purging blocK:${blockNumber}`);
         const reservationList = this.getReservationListForBlock(blockNumber);
         const activeIds: StoredBooleanArray = this.getActiveReservationListForBlock(blockNumber);
 
@@ -923,8 +909,8 @@ export class LiquidityQueue {
 
             const reservationId = reservationList.get(i);
             const reservation = Reservation.load(reservationId);
-
             const purgeIndex = reservation.getPurgeIndex();
+            
             this.ensureReservationPurgeIndexMatch(reservation.reservationId, purgeIndex, i);
 
             // Double-check it is indeed expired

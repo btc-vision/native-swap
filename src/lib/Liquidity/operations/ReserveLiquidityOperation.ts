@@ -198,9 +198,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     provider.isPriority() ? PRIORITY_TYPE : NORMAL_TYPE,
                 );
 
-                Blockchain.log(
-                    `reserveAtIndex providerId ${provider.providerId} at index :${provider.indexedAt}`,
-                );
                 this.emitLiquidityReservedEvent(
                     provider.providerId,
                     provider.btcReceiver,

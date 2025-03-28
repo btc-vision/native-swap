@@ -137,7 +137,7 @@ export class NativeSwap extends ReentrancyGuard {
     private getAntibotSettings(calldata: Calldata): BytesWriter {
         const token = calldata.readAddress();
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
-        
+
         const writer = new BytesWriter(U64_BYTE_LENGTH + U256_BYTE_LENGTH);
         writer.writeU64(queue.antiBotExpirationBlock);
         writer.writeU256(queue.maxTokensPerReservation);
@@ -372,6 +372,8 @@ export class NativeSwap extends ReentrancyGuard {
         );
 
         operation.execute();
+
+        //queue.cleanUpQueues();
         queue.save();
     }
 
@@ -431,7 +433,7 @@ export class NativeSwap extends ReentrancyGuard {
     private _getReserve(token: Address): BytesWriter {
         this.ensureValidTokenAddress(token);
 
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
 
         this.ensurePoolExistsForToken(queue);
 
