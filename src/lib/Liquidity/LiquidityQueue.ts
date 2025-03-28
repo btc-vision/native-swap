@@ -343,9 +343,7 @@ export class LiquidityQueue {
         this._settingPurge.save();
         this._settings.save();
         this._providerManager.save();
-        this._settingPurge.save();
         this._quoteHistory.save();
-        this._settings.save();
     }
 
     public buyTokens(tokensOut: u256, satoshisIn: u256): void {
