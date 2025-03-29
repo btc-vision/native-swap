@@ -150,14 +150,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     currentQuote,
                 );
 
-                assert(
-                    !u256.lt(
-                        maxCostInSatoshis,
-                        LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-                    ),
-                    'Impossible state: maxCostInSatoshis < MINIMUM_PROVIDER_RESERVATION_AMOUNT',
-                );
-
                 // Verify the reserveAmount is smaller than u120 maximum.
                 let reserveAmount = SafeMath.min(
                     SafeMath.min(providerLiquidity, tokensRemaining),

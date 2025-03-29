@@ -185,7 +185,7 @@ export class ProviderManager {
 
     public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
         if (currentQuote.isZero()) {
-            return this.getNextInitialProvider();
+            return this.getInitialProvider(currentQuote);
         }
 
         // 1. Removal queue first
@@ -207,7 +207,7 @@ export class ProviderManager {
         }
 
         // 4. Fallback to initial liquidity provider
-        return this.getNextInitialProvider();
+        return this.getInitialProvider(currentQuote);
     }
 
     public removePendingLiquidityProviderFromRemovalQueue(provider: Provider, i: u64): void {
@@ -512,6 +512,7 @@ export class ProviderManager {
             }
 
             const providerToReturn = this.returnProvider(provider, i, currentQuote);
+
             if (providerToReturn) {
                 this.currentIndex++;
 
@@ -544,49 +545,78 @@ export class ProviderManager {
                     `Impossible state: provider.indexedAt (${provider.indexedAt}) does not match index (${i}).`,
                 );
             }
+
+            assert(
+                provider.providerId !== this._initialLiquidityProvider.value,
+                'Impossible state: Initial liquidity provider cannot be returned here.',
+            );
         }
 
         provider.indexedAt = i;
         provider.fromRemovalQueue = false;
 
-        assert(
-            provider.providerId !== this._initialLiquidityProvider.value,
-            'Impossible state: Initial liquidity provider cannot be returned here.',
+        const hasEnoughLiquidity: bool = this.verifyProviderRemainingLiquidity(
+            provider,
+            availableLiquidity.toU256(),
+            currentQuote,
         );
 
-        const maxCostInSatoshis = tokensToSatoshis(availableLiquidity.toU256(), currentQuote);
+        return hasEnoughLiquidity ? provider : null;
+    }
+
+    private verifyProviderRemainingLiquidity(
+        provider: Provider,
+        availableLiquidity: u256,
+        currentQuote: u256,
+    ): bool {
+        const maxCostInSatoshis = tokensToSatoshis(availableLiquidity, currentQuote);
         if (u256.lt(maxCostInSatoshis, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
             if (provider.reserved.isZero()) {
                 this.resetProvider(provider);
             }
 
+            return false;
+        }
+
+        return true;
+    }
+
+    private getInitialProvider(currentQuote: u256): Provider | null {
+        if (this._initialLiquidityProvider.value.isZero()) {
             return null;
         }
 
-        return provider;
-    }
+        const initProvider = getProvider(this._initialLiquidityProvider.value);
+        if (!initProvider.isActive()) {
+            return null;
+        }
 
-    private getNextInitialProvider(): Provider | null {
-        if (!this._initialLiquidityProvider.value.isZero()) {
-            const initProvider = getProvider(this._initialLiquidityProvider.value);
+        if (initProvider.reserved > initProvider.liquidity) {
+            throw new Revert(`Impossible state: reserved cannot be > liquidity.`);
+        }
 
-            if (initProvider.isActive()) {
-                if (initProvider.reserved > initProvider.liquidity) {
-                    throw new Revert(`Impossible state: reserved cannot be > liquidity.`);
-                }
+        const availableLiquidity: u128 = SafeMath.sub128(
+            initProvider.liquidity,
+            initProvider.reserved,
+        );
 
-                const availableLiquidity: u128 = SafeMath.sub128(
-                    initProvider.liquidity,
-                    initProvider.reserved,
-                );
+        if (availableLiquidity.isZero()) {
+            return null;
+        }
 
-                if (!availableLiquidity.isZero()) {
-                    initProvider.indexedAt = u32.MAX_VALUE;
-                    return initProvider;
-                }
+        if (!currentQuote.isZero()) {
+            const hasEnoughLiquidity = this.verifyProviderRemainingLiquidity(
+                initProvider,
+                availableLiquidity.toU256(),
+                currentQuote,
+            );
+
+            if (!hasEnoughLiquidity) {
+                return null;
             }
         }
 
-        return null;
+        initProvider.indexedAt = u32.MAX_VALUE;
+        return initProvider;
     }
 }
