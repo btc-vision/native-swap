@@ -188,9 +188,12 @@ export class NativeSwap extends ReentrancyGuard {
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const provider = getProvider(providerId);
 
-        const writer = new BytesWriter(U128_BYTE_LENGTH * 2 + 2 + provider.btcReceiver.length);
+        const writer = new BytesWriter(
+            U128_BYTE_LENGTH * 2 + (2 + provider.btcReceiver.length) + 32,
+        );
         writer.writeU128(provider.liquidity);
         writer.writeU128(provider.reserved);
+        writer.writeU256(provider.liquidityProvided);
         writer.writeStringWithLength(provider.btcReceiver);
 
         return writer;
