@@ -32,7 +32,6 @@ export class SwapOperation extends BaseOperation {
         );
 
         const totalSatoshisSpent = SafeMath.add(trade.totalSatoshisSpent, trade.totalRefundedBTC);
-
         if (!totalTokensPurchased.isZero()) {
             if (this.liquidityQueue.feesEnabled) {
                 const totalFeeTokens = this.liquidityQueue.computeFees(
