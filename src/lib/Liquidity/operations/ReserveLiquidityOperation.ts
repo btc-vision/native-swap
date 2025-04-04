@@ -150,14 +150,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     currentQuote,
                 );
 
-                assert(
-                    !u256.lt(
-                        maxCostInSatoshis,
-                        LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-                    ),
-                    'Impossible state: maxCostInSatoshis < MINIMUM_PROVIDER_RESERVATION_AMOUNT',
-                );
-
                 // Verify the reserveAmount is smaller than u120 maximum.
                 let reserveAmount = SafeMath.min(
                     SafeMath.min(providerLiquidity, tokensRemaining),
@@ -311,6 +303,12 @@ export class ReserveLiquidityOperation extends BaseOperation {
         );
 
         if (u256.lt(satCostTokenRemaining, LiquidityQueue.MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
+            if (tokensRemaining === maxTokensLeftBeforeCap) {
+                throw new Revert(
+                    `NATIVE_SWAP: Maximum reservation limit reached. Try again later.`,
+                );
+            }
+
             throw new Revert(
                 `NATIVE_SWAP: Minimum liquidity not met (${satCostTokenRemaining} sat)`,
             );

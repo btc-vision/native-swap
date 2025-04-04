@@ -35,7 +35,6 @@ export class AddLiquidityOperation extends BaseOperation {
         ); // T
 
         const btcSpent = SafeMath.add(trade.totalSatoshisSpent, trade.totalRefundedBTC); // B
-
         this.ensurePurchaseMade(tokensBoughtFromQueue, btcSpent);
 
         // 3. Enforce 50/50 => The user must deposit exactly `tokensBoughtFromQueue` more tokens
@@ -51,7 +50,7 @@ export class AddLiquidityOperation extends BaseOperation {
 
         // 4. Because the purchase from the queue effectively "used BTC to buy tokens,"
         //    update our totalReserved to un-reserve those tokens.
-        this.liquidityQueue.decreaseTotalReserved(tokensBoughtFromQueue);
+        this.liquidityQueue.decreaseTotalReserved(trade.tokensReserved);
 
         // 5. Combine the user’s newly deposited tokens (the "other 50%" side)
         //    into the pool’s total reserves.

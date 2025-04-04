@@ -25,18 +25,19 @@ import { tokensToSatoshis } from '../../utils/NativeSwapUtils';
 import { LiquidityQueue } from './LiquidityQueue';
 import { FulfilledProviderEvent } from '../../events/FulfilledProviderEvent';
 
+const ENABLE_INDEX_VERIFICATION: bool = true;
+
 export class ProviderManager {
     protected readonly _queue: StoredU256Array;
     protected readonly _priorityQueue: StoredU256Array;
     protected readonly _removalQueue: StoredU256Array;
-
-    private currentIndex: u64 = 0;
 
     private readonly _startingIndex: StoredU64;
     private readonly _initialLiquidityProvider: StoredU256;
     private readonly _lpBTCowed: StoredMapU256;
     private readonly _lpBTCowedReserved: StoredMapU256;
 
+    private currentIndex: u64 = 0;
     private currentIndexPriority: u64 = 0;
     private currentIndexRemoval: u64 = 0;
 
@@ -60,14 +61,6 @@ export class ProviderManager {
         this._startingIndex = new StoredU64(STARTING_INDEX_POINTER, tokenIdUint8Array);
     }
 
-    public get previousReservationStandardStartingIndex(): u64 {
-        return this._startingIndex.get(0);
-    }
-
-    public set previousReservationStandardStartingIndex(value: u64) {
-        this._startingIndex.set(0, value);
-    }
-
     public get removalQueueLength(): u64 {
         return this._removalQueue.getLength();
     }
@@ -84,6 +77,14 @@ export class ProviderManager {
         return this._queue.startingIndex();
     }
 
+    public get previousReservationStandardStartingIndex(): u64 {
+        return this._startingIndex.get(0);
+    }
+
+    public set previousReservationStandardStartingIndex(value: u64) {
+        this._startingIndex.set(0, value);
+    }
+
     public get previousReservationStartingIndex(): u64 {
         return this._startingIndex.get(1);
     }
@@ -93,11 +94,11 @@ export class ProviderManager {
     }
 
     public get previousRemovalStartingIndex(): u64 {
-        return this._startingIndex.get(3);
+        return this._startingIndex.get(2);
     }
 
     public set previousRemovalStartingIndex(value: u64) {
-        this._startingIndex.set(3, value);
+        this._startingIndex.set(2, value);
     }
 
     public get initialLiquidityProvider(): u256 {
@@ -128,28 +129,36 @@ export class ProviderManager {
         return this.currentIndexRemoval;
     }
 
-    public addToPriorityQueue(providerId: u256): void {
-        this._priorityQueue.push(providerId);
+    public addToPriorityQueue(providerId: u256): u64 {
+        this._priorityQueue.push(providerId, true);
+
+        return this._priorityQueue.getLength() - 1;
     }
 
     public addToRemovalQueue(providerId: u256): void {
-        this._removalQueue.push(providerId);
+        this._removalQueue.push(providerId, true);
     }
 
-    public addToStandardQueue(providerId: u256): void {
-        this._queue.push(providerId);
+    public addToStandardQueue(providerId: u256): u64 {
+        this._queue.push(providerId, true);
+
+        return this._queue.getLength() - 1;
     }
 
     public getFromPriorityQueue(providerIndex: u64): u256 {
-        return this._priorityQueue.get(providerIndex);
+        return this._priorityQueue.get_physical(providerIndex);
     }
 
     public getFromRemovalQueue(providerIndex: u64): u256 {
-        return this._removalQueue.get(providerIndex);
+        return this._removalQueue.get_physical(providerIndex);
     }
 
     public getFromStandardQueue(providerIndex: u64): u256 {
-        return this._queue.get(providerIndex);
+        return this._queue.get_physical(providerIndex);
+    }
+
+    public getStandardQueue(): StoredU256Array {
+        return this._queue;
     }
 
     public getBTCowed(providerId: u256): u256 {
@@ -176,7 +185,7 @@ export class ProviderManager {
 
     public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
         if (currentQuote.isZero()) {
-            return this.getNextInitialProvider();
+            return this.getInitialProvider(currentQuote);
         }
 
         // 1. Removal queue first
@@ -198,30 +207,34 @@ export class ProviderManager {
         }
 
         // 4. Fallback to initial liquidity provider
-        return this.getNextInitialProvider();
+        return this.getInitialProvider(currentQuote);
     }
 
     public removePendingLiquidityProviderFromRemovalQueue(provider: Provider, i: u64): void {
-        this._removalQueue.delete(i);
+        this._removalQueue.delete_physical(i);
 
         provider.pendingRemoval = false;
         provider.isLp = false;
     }
 
-    public resetProvider(provider: Provider, burnRemainingFunds: boolean = true): void {
+    public resetProvider(
+        provider: Provider,
+        burnRemainingFunds: boolean = true,
+        canceled: boolean = false,
+    ): void {
         if (burnRemainingFunds && !provider.liquidity.isZero()) {
             TransferHelper.safeTransfer(this.token, Address.dead(), provider.liquidity.toU256());
         }
 
         if (!u256.eq(provider.providerId, this._initialLiquidityProvider.value)) {
             if (provider.isPriority()) {
-                this._priorityQueue.delete(provider.indexedAt);
+                this._priorityQueue.delete_physical(provider.indexedAt);
             } else {
-                this._queue.delete(provider.indexedAt);
+                this._queue.delete_physical(provider.indexedAt);
             }
         }
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.providerId));
+        Blockchain.emit(new FulfilledProviderEvent(provider.providerId, canceled));
 
         provider.reset();
     }
@@ -263,7 +276,7 @@ export class ProviderManager {
         let removalIndex: u64 = this.previousRemovalStartingIndex;
 
         while (removalIndex < removalLength) {
-            const providerId = this._removalQueue.get(removalIndex);
+            const providerId = this._removalQueue.get_physical(removalIndex);
             if (providerId === u256.Zero) {
                 removalIndex++;
                 continue;
@@ -274,7 +287,7 @@ export class ProviderManager {
                 this._removalQueue.setStartingIndex(removalIndex);
                 break;
             } else {
-                this._removalQueue.delete(removalIndex);
+                this._removalQueue.delete_physical(removalIndex);
             }
             removalIndex++;
         }
@@ -286,7 +299,7 @@ export class ProviderManager {
         let priorityIndex: u64 = this.previousReservationStartingIndex;
 
         while (priorityIndex < priorityLength) {
-            const providerId = this._priorityQueue.get(priorityIndex);
+            const providerId = this._priorityQueue.get_physical(priorityIndex);
             if (providerId === u256.Zero) {
                 priorityIndex++;
                 continue;
@@ -297,7 +310,7 @@ export class ProviderManager {
                 this._priorityQueue.setStartingIndex(priorityIndex);
                 break;
             } else {
-                this._priorityQueue.delete(priorityIndex);
+                this._priorityQueue.delete_physical(priorityIndex);
             }
             priorityIndex++;
         }
@@ -310,20 +323,22 @@ export class ProviderManager {
         let index: u64 = this.previousReservationStandardStartingIndex;
 
         while (index < length) {
-            const providerId = this._queue.get(index);
+            const providerId = this._queue.get_physical(index);
             if (providerId === u256.Zero) {
                 index++;
                 continue;
             }
+
             const provider = getProvider(providerId);
             if (provider.isActive()) {
                 this._queue.setStartingIndex(index);
                 break;
             } else {
-                this._queue.delete(index);
+                this._queue.delete_physical(index);
             }
             index++;
         }
+
         this.previousReservationStandardStartingIndex = index;
     }
 
@@ -343,7 +358,7 @@ export class ProviderManager {
         // Scan forward until we find a valid LP in 'pendingRemoval'
         while (this.currentIndexRemoval < length) {
             const i: u64 = this.currentIndexRemoval;
-            const providerId = this._removalQueue.get(i);
+            const providerId = this._removalQueue.get_physical(i);
 
             if (providerId.isZero()) {
                 // empty slot
@@ -414,7 +429,7 @@ export class ProviderManager {
 
         while (this.currentIndexPriority < length) {
             const i: u64 = this.currentIndexPriority;
-            providerId = this._priorityQueue.get(i);
+            providerId = this._priorityQueue.get_physical(i);
             if (providerId === u256.Zero) {
                 this.currentIndexPriority++;
                 continue;
@@ -470,7 +485,7 @@ export class ProviderManager {
 
         while (this.currentIndex < length) {
             const i: u64 = this.currentIndex;
-            providerId = this._queue.get(i);
+            providerId = this._queue.get_physical(i);
 
             if (providerId === u256.Zero) {
                 this.currentIndex++;
@@ -497,6 +512,7 @@ export class ProviderManager {
             }
 
             const providerToReturn = this.returnProvider(provider, i, currentQuote);
+
             if (providerToReturn) {
                 this.currentIndex++;
 
@@ -516,47 +532,91 @@ export class ProviderManager {
     // TODO: we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
     private returnProvider(provider: Provider, i: u64, currentQuote: u256): Provider | null {
         const availableLiquidity: u128 = SafeMath.sub128(provider.liquidity, provider.reserved);
-
         if (availableLiquidity.isZero()) {
             return null;
+        }
+
+        if (ENABLE_INDEX_VERIFICATION) {
+            // ASSERT ONLY
+            provider.loadIndexedAt();
+
+            if (provider.indexedAt !== i) {
+                throw new Revert(
+                    `Impossible state: provider.indexedAt (${provider.indexedAt}) does not match index (${i}).`,
+                );
+            }
+
+            assert(
+                provider.providerId !== this._initialLiquidityProvider.value,
+                'Impossible state: Initial liquidity provider cannot be returned here.',
+            );
         }
 
         provider.indexedAt = i;
         provider.fromRemovalQueue = false;
 
-        const maxCostInSatoshis = tokensToSatoshis(availableLiquidity.toU256(), currentQuote);
+        const hasEnoughLiquidity: bool = this.verifyProviderRemainingLiquidity(
+            provider,
+            availableLiquidity.toU256(),
+            currentQuote,
+        );
+
+        return hasEnoughLiquidity ? provider : null;
+    }
+
+    private verifyProviderRemainingLiquidity(
+        provider: Provider,
+        availableLiquidity: u256,
+        currentQuote: u256,
+    ): bool {
+        const maxCostInSatoshis = tokensToSatoshis(availableLiquidity, currentQuote);
         if (u256.lt(maxCostInSatoshis, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
             if (provider.reserved.isZero()) {
                 this.resetProvider(provider);
             }
 
+            return false;
+        }
+
+        return true;
+    }
+
+    private getInitialProvider(currentQuote: u256): Provider | null {
+        if (this._initialLiquidityProvider.value.isZero()) {
             return null;
         }
 
-        return provider;
-    }
+        const initProvider = getProvider(this._initialLiquidityProvider.value);
+        if (!initProvider.isActive()) {
+            return null;
+        }
 
-    private getNextInitialProvider(): Provider | null {
-        if (!this._initialLiquidityProvider.value.isZero()) {
-            const initProvider = getProvider(this._initialLiquidityProvider.value);
+        if (initProvider.reserved > initProvider.liquidity) {
+            throw new Revert(`Impossible state: reserved cannot be > liquidity.`);
+        }
 
-            if (initProvider.isActive()) {
-                if (initProvider.reserved > initProvider.liquidity) {
-                    throw new Revert(`Impossible state: reserved cannot be > liquidity.`);
-                }
+        const availableLiquidity: u128 = SafeMath.sub128(
+            initProvider.liquidity,
+            initProvider.reserved,
+        );
 
-                const availableLiquidity: u128 = SafeMath.sub128(
-                    initProvider.liquidity,
-                    initProvider.reserved,
-                );
+        if (availableLiquidity.isZero()) {
+            return null;
+        }
 
-                if (!availableLiquidity.isZero()) {
-                    initProvider.indexedAt = u32.MAX_VALUE;
-                    return initProvider;
-                }
+        if (!currentQuote.isZero()) {
+            const hasEnoughLiquidity = this.verifyProviderRemainingLiquidity(
+                initProvider,
+                availableLiquidity.toU256(),
+                currentQuote,
+            );
+
+            if (!hasEnoughLiquidity) {
+                return null;
             }
         }
 
-        return null;
+        initProvider.indexedAt = u32.MAX_VALUE;
+        return initProvider;
     }
 }

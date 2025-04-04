@@ -26,17 +26,20 @@ export class CancelListingOperation extends BaseOperation {
         this.ensureProviderCannotProvideLiquidity();
         this.ensureNotInitialProvider();
 
-        // Update provider's liquidity
-        this.provider.liquidity = u128.Zero;
+        if (this.provider.pendingRemoval) {
+            throw new Revert('NATIVE_SWAP: Provider is in pending removal.');
+        }
 
-        this.liquidityQueue.resetProvider(this.provider, false);
+        // Load the index of the provider
+        this.provider.loadIndexedAt();
+
+        // Reset the provider
+        this.liquidityQueue.resetProvider(this.provider, false, true);
 
         // Transfer tokens back to the provider
         TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
 
         // Decrease the total reserves
-        this.liquidityQueue.decreaseTotalReserve(amount);
-        this.liquidityQueue.increaseDeltaTokensSell(amount);
         this.liquidityQueue.cleanUpQueues();
 
         this.emitListingCanceledEvent(amount.toU128());
@@ -50,7 +53,9 @@ export class CancelListingOperation extends BaseOperation {
 
     private ensureNoActiveReservation(): void {
         if (!this.provider.reserved.isZero()) {
-            throw new Revert('NATIVE_SWAP: Someone have active reservations on your liquidity.');
+            throw new Revert(
+                `NATIVE_SWAP: Someone have active reservations on your liquidity. ${this.provider.reserved}`,
+            );
         }
     }
 

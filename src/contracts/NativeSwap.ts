@@ -136,7 +136,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private getAntibotSettings(calldata: Calldata): BytesWriter {
         const token = calldata.readAddress();
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
 
         const writer = new BytesWriter(U64_BYTE_LENGTH + U256_BYTE_LENGTH);
         writer.writeU64(queue.antiBotExpirationBlock);
@@ -188,9 +188,12 @@ export class NativeSwap extends ReentrancyGuard {
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const provider = getProvider(providerId);
 
-        const writer = new BytesWriter(U128_BYTE_LENGTH * 2 + 2 + provider.btcReceiver.length);
+        const writer = new BytesWriter(
+            U128_BYTE_LENGTH * 2 + (2 + provider.btcReceiver.length) + 32,
+        );
         writer.writeU128(provider.liquidity);
         writer.writeU128(provider.reserved);
+        writer.writeU256(provider.liquidityProvided);
         writer.writeStringWithLength(provider.btcReceiver);
 
         return writer;
@@ -372,6 +375,8 @@ export class NativeSwap extends ReentrancyGuard {
         );
 
         operation.execute();
+
+        //queue.cleanUpQueues();
         queue.save();
     }
 
@@ -468,9 +473,8 @@ export class NativeSwap extends ReentrancyGuard {
         const queue: LiquidityQueue = this.getLiquidityQueue(
             token,
             this.addressToPointer(token),
-            true,
+            false,
         );
-
         this.ensurePoolExistsForToken(queue);
 
         const price: u256 = queue.quote();
@@ -547,7 +551,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private ensurePoolExistsForToken(queue: LiquidityQueue): void {
-        if(queue.initialLiquidityProvider.isZero()) {
+        if (queue.initialLiquidityProvider.isZero()) {
             throw new Revert('NATIVE_SWAP: Pool does not exist for token');
         }
     }
