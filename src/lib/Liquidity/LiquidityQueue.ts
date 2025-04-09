@@ -588,7 +588,11 @@ export class LiquidityQueue {
                     this.increaseDeltaTokensAdd(provider.liquidity.toU256());
 
                     Blockchain.emit(
-                        new ActivateProviderEvent(provider.providerId, provider.liquidity),
+                        new ActivateProviderEvent(
+                            provider.providerId,
+                            provider.liquidity,
+                            u128.Zero,
+                        ),
                     );
                 }
 
@@ -910,7 +914,8 @@ export class LiquidityQueue {
             const reservationId = reservationList.get(i);
             const reservation = Reservation.load(reservationId);
             const purgeIndex = reservation.getPurgeIndex();
-            
+            Blockchain.log(`Purging reservation id: ${reservationId}`);
+            Blockchain.log(`Reservation createdAt: ${reservation.createdAt}`);
             this.ensureReservationPurgeIndexMatch(reservation.reservationId, purgeIndex, i);
 
             // Double-check it is indeed expired
@@ -942,9 +947,10 @@ export class LiquidityQueue {
             const providerIndex: u64 = reservedIndexes[j];
             const reservedAmount: u128 = reservedValues[j];
             const queueType: u8 = queueTypes[j];
-            const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
+            Blockchain.log(`ProviderIndex: ${providerIndex}`);
+            Blockchain.log(`Queue Type: ${queueType}`);
 
-            this.ensureValidReservedAmount(provider, reservedAmount);
+            const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
 
             if (provider.pendingRemoval && queueType === LIQUIDITY_REMOVAL_TYPE) {
                 this.purgeAndRestoreProviderRemovalQueue(
@@ -953,6 +959,7 @@ export class LiquidityQueue {
                     reservation.createdAt,
                 );
             } else {
+                this.ensureValidReservedAmount(provider, reservedAmount);
                 this.purgeAndRestoreProvider(provider, reservedAmount);
             }
 
@@ -1117,6 +1124,9 @@ export class LiquidityQueue {
         reservedAmount: u128,
         createdAt: u64,
     ): void {
+        Blockchain.log('Purge removal queue');
+        Blockchain.log(`providerId: ${providerId}`);
+
         const blockNumber: u64 = createdAt % <u64>(u32.MAX_VALUE - 1);
         const currentQuoteAtThatTime = this.getBlockQuote(blockNumber);
 
@@ -1126,18 +1136,28 @@ export class LiquidityQueue {
 
         // figure out how many sat was associated with 'reservedAmount'
         const costInSats = this.tokensToSatoshis(reservedAmount.toU256(), currentQuoteAtThatTime);
+        Blockchain.log(`costInSats: ${costInSats}`);
 
         // clamp by actual `_lpBTCowedReserved`
         const wasReservedSats = this.getBTCowedReserved(providerId);
         const revertSats = SafeMath.min(costInSats, wasReservedSats);
 
+        Blockchain.log(`wasReservedSats: ${wasReservedSats}`);
+        Blockchain.log(`revertSats: ${revertSats}`);
+
         // remove from owedReserved
         const newOwedReserved = SafeMath.sub(wasReservedSats, revertSats);
+        Blockchain.log(`newOwedReserved: ${newOwedReserved}`);
         this.setBTCowedReserved(providerId, newOwedReserved);
     }
 
     private purgeAndRestoreProvider(provider: Provider, reservedAmount: u128): void {
+        Blockchain.log('Purge normal queue');
+        Blockchain.log(`providerId: ${provider.providerId}`);
+        Blockchain.log(`reservedAmount: ${reservedAmount}`);
+        Blockchain.log(`provider.reserved1: ${provider.reserved}`);
         provider.decreaseReserved(reservedAmount);
+        Blockchain.log(`provider.reserved2: ${provider.reserved}`);
 
         const availableLiquidity = SafeMath.sub128(provider.liquidity, provider.reserved);
 

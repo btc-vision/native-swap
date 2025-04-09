@@ -215,6 +215,8 @@ export class ProviderManager {
 
         provider.pendingRemoval = false;
         provider.isLp = false;
+
+        Blockchain.emit(new FulfilledProviderEvent(provider.providerId, false, true));
     }
 
     public resetProvider(
@@ -234,7 +236,7 @@ export class ProviderManager {
             }
         }
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.providerId, canceled));
+        Blockchain.emit(new FulfilledProviderEvent(provider.providerId, canceled, false));
 
         provider.reset();
     }
@@ -374,11 +376,16 @@ export class ProviderManager {
                 const owedBTC = this.getBTCowed(providerId);
                 const reservedBTC = this.getBTCowedReserved(providerId);
 
+                Blockchain.log(`owedBTC: ${owedBTC}`);
+                Blockchain.log(`reservedBTC: ${reservedBTC}`);
+
                 if (u256.gt(reservedBTC, owedBTC)) {
                     throw new Revert(`Impossible state: reservedBTC cannot be > owedBTC`);
                 }
 
                 const left = SafeMath.sub(owedBTC, reservedBTC);
+                Blockchain.log(`left: ${left}`);
+
                 if (!left.isZero() && u256.ge(left, this.strictMinimumProviderReservationAmount)) {
                     // This is the next valid removal provider. We do NOT
                     // check provider.liquidity here, because they've already
@@ -390,6 +397,7 @@ export class ProviderManager {
                     this.currentIndexRemoval++;
                     return provider;
                 } else {
+                    Blockchain.log(`heu!!!!`);
                     if (u256.lt(owedBTC, this.strictMinimumProviderReservationAmount)) {
                         // If they don't have owed BTC, they can be removed from queue
                         throw new Revert(
