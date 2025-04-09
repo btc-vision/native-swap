@@ -84,8 +84,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 break;
             }
 
-            Blockchain.log(`provider: ${provider.providerId}`);
-            Blockchain.log(`indexat: ${provider.indexedAt}`);
             // If we see repeated MAX_VALUE => break
             if (provider.indexedAt === u32.MAX_VALUE && lastIndex === u32.MAX_VALUE) {
                 break;

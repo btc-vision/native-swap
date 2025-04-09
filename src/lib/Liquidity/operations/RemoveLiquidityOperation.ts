@@ -1,11 +1,10 @@
 import { BaseOperation } from './BaseOperation';
 import { LiquidityQueue } from '../LiquidityQueue';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../../Provider';
 import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityRemovedEvent } from '../../../events/LiquidityRemovedEvent';
 import { ActivateProviderEvent } from '../../../events/ActivateProviderEvent';
-import { u128 } from '@btc-vision/as-bignum';
 
 export class RemoveLiquidityOperation extends BaseOperation {
     private readonly providerId: u256;
