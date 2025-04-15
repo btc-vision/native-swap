@@ -6,6 +6,7 @@ import {
     createProvider,
     createProviders,
     providerAddress1,
+    saveIndexForProvider,
     STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
     tokenAddress1,
     tokenIdUint8Array1,
@@ -390,19 +391,19 @@ describe('ProviderManager tests', () => {
             providers[i].reserved = u128.fromU32(999);
             manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(777777));
             manager.setBTCowed(providers[i].providerId, u256.fromU32(666666));
-            manager.addToStandardQueue(providers[i].providerId);
+            const at = manager.addToStandardQueue(providers[i].providerId);
+            providers[i].indexedAt = at;
+            saveIndexForProvider(providers[i].providerId, at);
         }
 
         const currentQuote = u256.fromU32(1000);
         // Should set currentIndex to 2
         const p1 = manager.getNextProviderWithLiquidity(currentQuote);
         const p2 = manager.getNextProviderWithLiquidity(currentQuote);
-
         expect(p1).toBe(providers[0]);
         expect(p2).toBe(providers[1]);
 
         manager.save();
-
         expect(manager.previousReservationStandardStartingIndex).toStrictEqual(1);
     });
 
@@ -421,7 +422,9 @@ describe('ProviderManager tests', () => {
             providers[i].reserved = u128.fromU32(999);
             manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(777777));
             manager.setBTCowed(providers[i].providerId, u256.fromU32(666666));
-            manager.addToPriorityQueue(providers[i].providerId);
+            const at = manager.addToPriorityQueue(providers[i].providerId);
+            providers[i].indexedAt = at;
+            saveIndexForProvider(providers[i].providerId, at);
         }
 
         const currentQuote = u256.fromU32(1000);

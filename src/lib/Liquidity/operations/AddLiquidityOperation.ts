@@ -74,20 +74,20 @@ export class AddLiquidityOperation extends BaseOperation {
     private ensureNotInRemovalQueue(): void {
         if (this.provider.pendingRemoval) {
             throw new Revert(
-                'You are in the removal queue. Wait for removal of your liquidity first.',
+                'NATIVE_SWAP: You are in the removal queue. Wait for removal of your liquidity first.',
             );
         }
     }
 
     private ensureReservedLiquidityFirst(reservation: Reservation): void {
         if (!reservation.reservedLP) {
-            throw new Revert('You must reserve liquidity for LP first.');
+            throw new Revert('NATIVE_SWAP: You must reserve liquidity for LP first.');
         }
     }
 
     private ensurePurchaseMade(tokensBoughtFromQueue: u256, btcSpent: u256): void {
         if (tokensBoughtFromQueue.isZero() || btcSpent.isZero()) {
-            throw new Revert('No effective purchase made. Check your BTC outputs.');
+            throw new Revert('NATIVE_SWAP: No effective purchase made. Check your BTC outputs.');
         }
     }
 

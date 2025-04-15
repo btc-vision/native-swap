@@ -204,7 +204,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         // If we didn't reserve enough
         if (u256.lt(tokensReserved, this.minimumAmountOut)) {
             throw new Revert(
-                `Not enough liquidity reserved; wanted ${this.minimumAmountOut}, got ${tokensReserved}, spent ${satSpent}, leftover tokens: ${tokensRemaining}, quote: ${currentQuote}`,
+                `NATIVE_SWAP: Not enough liquidity reserved; wanted ${this.minimumAmountOut}, got ${tokensReserved}, spent ${satSpent}, leftover tokens: ${tokensRemaining}, quote: ${currentQuote}`,
             );
         }
 

@@ -1269,6 +1269,10 @@ describe('Liquidity executeTrade tests', () => {
         reservation.reserveAtIndex(u32.MAX_VALUE, u128.fromU32(10), NORMAL_TYPE);
         reservation.setPurgeIndex(0);
 
+        const reservationActiveList = queue.getActiveReservationListForBlock(0);
+        reservationActiveList.push(true);
+        reservationActiveList.save();
+
         const txOut: TransactionOutput[] = [];
 
         txOut.push(new TransactionOutput(0, provider1.btcReceiver, 100));
@@ -1317,6 +1321,10 @@ describe('Liquidity executeTrade tests', () => {
             const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
             reservation.reserveAtIndex(u32.MAX_VALUE, u128.fromU32(10), NORMAL_TYPE);
             reservation.setPurgeIndex(0);
+            const reservationActiveList = queue.getActiveReservationListForBlock(0);
+            reservationActiveList.push(true);
+            reservationActiveList.save();
+
             const txOut: TransactionOutput[] = [];
 
             txOut.push(new TransactionOutput(0, provider1.btcReceiver, 100));
@@ -1366,6 +1374,9 @@ describe('Liquidity executeTrade tests', () => {
             reservation.reserveAtIndex(u32.MAX_VALUE, u128.fromU32(10), NORMAL_TYPE);
             reservation.setPurgeIndex(0);
             reservation.save();
+            const reservationActiveList = queue.getActiveReservationListForBlock(1000);
+            reservationActiveList.push(true);
+            reservationActiveList.save();
             queue.save();
 
             setBlockchainEnvironment(1003);
@@ -1519,6 +1530,11 @@ describe('Liquidity executeTrade tests', () => {
         );
         reservation.setPurgeIndex(0);
         reservation.save();
+
+        const reservationActiveList = queue.getActiveReservationListForBlock(1000);
+        reservationActiveList.push(true);
+        reservationActiveList.save();
+
         queue.save();
 
         setBlockchainEnvironment(1003);
@@ -1544,7 +1560,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
     });
 
     it('should do nothing if currentBlockNumber <= expireAfter => calls restoreCurrentIndex', () => {
-        setBlockchainEnvironment(3);
+        setBlockchainEnvironment(10);
 
         const queue: TestLiquidityQueue = new TestLiquidityQueue(
             tokenAddress1,
@@ -1556,6 +1572,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         expect(queue.getCurrentIndex()).toStrictEqual(0);
         expect(queue.getCurrentIndexRemoval()).toStrictEqual(0);
 
+        queue.lastPurgedBlock = 8;
         queue.setPreviousReservationStartingIndex(100);
         queue.setPreviousReservationStandardStartingIndex(101);
         queue.setPreviousRemovalStartingIndex(102);
@@ -1706,25 +1723,26 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         reservation.setExpirationBlock(90);
         reservation.setPurgeIndex(purgeIndex);
         reservation.reserveAtIndex(<u32>provider2.indexedAt, u128.fromU32(1000000), NORMAL_TYPE);
-
         reservation.save();
 
+        const reservationActiveList = queue.getActiveReservationListForBlock(0);
+        reservationActiveList.push(true);
+        reservationActiveList.save();
+
         const activereservationList1 = queue.getActiveReservationListForBlock(0);
-
         expect(activereservationList1.get(purgeIndex)).toBeTruthy();
-
         queue.callPurgeReservationsAndRestoreProviders();
 
         const reservationList = queue.getReservationListForBlock(0);
         const activereservationList2 = queue.getActiveReservationListForBlock(0);
 
-        expect(activereservationList2.get(purgeIndex)).toBeFalsy();
+        expect(activereservationList2.getLength()).toStrictEqual(0);
         expect(reservationList.getLength()).toStrictEqual(0);
         expect(queue.getPreviousRemovalStartingIndex()).toStrictEqual(0);
         expect(queue.getPreviousReservationStandardStartingIndex()).toStrictEqual(0);
         expect(queue.getPreviousReservationStartingIndex()).toStrictEqual(0);
         expect(queue.reservedLiquidity).toStrictEqual(u256.fromU32(1000000));
-        expect(queue.lastPurgedBlock).toStrictEqual(100);
+        expect(queue.lastPurgedBlock).toStrictEqual(95);
     });
 
     it('should revert if reservation purge index mismatch', () => {

@@ -4,6 +4,9 @@ import {
     Blockchain,
     BytesWriter,
     StoredU256Array,
+    StoredU64,
+    u256To30Bytes,
+    U64_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../lib/Provider';
@@ -11,6 +14,7 @@ import { Reservation } from '../lib/Reservation';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { ProviderManager } from '../lib/Liquidity/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
+import { INDEXED_PROVIDER_POINTER } from '../lib/StoredPointers';
 
 export const testStackingContractAddress: Address = new Address([
     99, 103, 209, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
@@ -69,6 +73,12 @@ export const contractAddress1: Address = new Address([
 
 export const txId1: Uint8Array = new Uint8Array(32);
 txId1.set([
+    233, 46, 113, 133, 187, 115, 218, 211, 63, 34, 178, 231, 36, 25, 22, 110, 165, 124, 122, 201,
+    247, 233, 124, 41, 254, 64, 210, 16, 98, 89, 139, 181,
+]);
+
+export const txHash1: Uint8Array = new Uint8Array(32);
+txHash1.set([
     233, 46, 113, 133, 187, 115, 218, 211, 63, 34, 178, 231, 36, 25, 22, 110, 165, 124, 122, 201,
     247, 233, 124, 41, 254, 64, 210, 16, 98, 89, 139, 181,
 ]);
@@ -246,13 +256,16 @@ export function setBlockchainEnvironment(
     origin: Address = msgSender1,
 ): void {
     const medianTimestamp: u64 = 87129871;
-    const writer: BytesWriter = new BytesWriter(208);
+    const writer: BytesWriter = new BytesWriter(
+        32 + 2 * U64_BYTE_LENGTH + 4 * ADDRESS_BYTE_LENGTH + txId1.length + txHash1.length,
+    );
 
     writer.writeBytes(new Uint8Array(32));
     writer.writeU64(currentBlock);
     writer.writeU64(medianTimestamp);
 
     writer.writeBytes(txId1);
+    writer.writeBytes(txHash1);
 
     writer.writeAddress(contractAddress1);
     writer.writeAddress(contractDeployer1);
@@ -292,6 +305,12 @@ export function createReservation(
 }
 
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(600);
+
+export function saveIndexForProvider(providerId: u256, index: u64): void {
+    const store = new StoredU64(INDEXED_PROVIDER_POINTER, u256To30Bytes(providerId));
+    store.set(0, index);
+    store.save();
+}
 
 export class TestLiquidityQueue extends LiquidityQueue {
     public setPreviousReservationStartingIndex(value: u64): void {
@@ -344,10 +363,6 @@ export class TestLiquidityQueue extends LiquidityQueue {
 }
 
 export class TestProviderManager extends ProviderManager {
-    public get getStandardQueue(): StoredU256Array {
-        return this._queue;
-    }
-
     public get getRemovalQueue(): StoredU256Array {
         return this._removalQueue;
     }

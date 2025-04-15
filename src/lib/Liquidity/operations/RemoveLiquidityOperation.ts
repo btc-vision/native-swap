@@ -57,37 +57,41 @@ export class RemoveLiquidityOperation extends BaseOperation {
 
     private ensureLiquidityProvider(): void {
         if (!this.provider.isLp) {
-            throw new Revert('Not a liquidity provider');
+            throw new Revert('NATIVE_SWAP: Not a liquidity provider');
         }
     }
 
     private ensureNotInitialProvider(): void {
         if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProvider)) {
-            throw new Revert('Initial provider cannot remove liquidity');
+            throw new Revert('NATIVE_SWAP: Initial provider cannot remove liquidity');
         }
     }
 
     private ensureBTCOwed(btcOwed: u256): void {
         if (btcOwed.isZero()) {
-            throw new Revert('You have no BTC owed. Did you already remove everything?');
+            throw new Revert(
+                'NATIVE_SWAP: You have no BTC owed. Did you already remove everything?',
+            );
         }
     }
 
     private ensureNotInPendingRemoval(): void {
         if (this.provider.pendingRemoval) {
-            throw new Revert('You are already in the removal queue.');
+            throw new Revert('NATIVE_SWAP: You are already in the removal queue.');
         }
     }
 
     private ensureTokenAmountNotZero(tokenAmount: u256): void {
         if (tokenAmount.isZero()) {
-            throw new Revert('You have no tokens to remove.');
+            throw new Revert('NATIVE_SWAP: You have no tokens to remove.');
         }
     }
 
     private ensureProviderHasNoListedTokens(): void {
         if (this.provider.haveLiquidity()) {
-            throw new Revert('You cannot remove your liquidity because you have active listing.');
+            throw new Revert(
+                'NATIVE_SWAP: You cannot remove your liquidity because you have active listing.',
+            );
         }
     }
 

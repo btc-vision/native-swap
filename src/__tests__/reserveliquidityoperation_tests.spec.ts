@@ -1203,4 +1203,26 @@ describe('ReserveLiquidityOperation tests', () => {
         const reservationList = queue3.getReservationListForBlock(103);
         expect(reservationList.getLength()).toStrictEqual(2);
     });
+
+    it("should revert if no initial provider'", () => {
+        expect(() => {
+            setBlockchainEnvironment(100);
+
+            const provider = createProvider(providerAddress1, tokenAddress1, true, true, false);
+            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.initialLiquidityProvider = u256.Zero;
+
+            const operation = new ReserveLiquidityOperation(
+                queue,
+                provider.providerId,
+                msgSender1,
+                u256.fromU32(10000),
+                u256.Zero,
+                false,
+                0,
+            );
+
+            operation.execute();
+        }).toThrow();
+    });
 });

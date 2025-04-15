@@ -71,7 +71,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private ensureNotInRemovalQueue(): void {
         if (this.provider.pendingRemoval) {
             throw new Revert(
-                'You are in the removal queue. Wait for removal of your liquidity first.',
+                'NATIVE_SWAP: You are in the removal queue. Wait for removal of your liquidity first.',
             );
         }
     }
