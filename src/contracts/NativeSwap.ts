@@ -375,8 +375,6 @@ export class NativeSwap extends ReentrancyGuard {
         );
 
         operation.execute();
-
-        //queue.cleanUpQueues();
         queue.save();
     }
 

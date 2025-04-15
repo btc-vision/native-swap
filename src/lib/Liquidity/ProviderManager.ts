@@ -215,6 +215,8 @@ export class ProviderManager {
 
         provider.pendingRemoval = false;
         provider.isLp = false;
+
+        Blockchain.emit(new FulfilledProviderEvent(provider.providerId, false, true));
     }
 
     public resetProvider(
@@ -222,7 +224,7 @@ export class ProviderManager {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
-        if (burnRemainingFunds && !provider.liquidity.isZero()) {
+        if (burnRemainingFunds && provider.haveLiquidity()) {
             TransferHelper.safeTransfer(this.token, Address.dead(), provider.liquidity.toU256());
         }
 
@@ -234,7 +236,7 @@ export class ProviderManager {
             }
         }
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.providerId, canceled));
+        Blockchain.emit(new FulfilledProviderEvent(provider.providerId, canceled, false));
 
         provider.reset();
     }
@@ -379,6 +381,7 @@ export class ProviderManager {
                 }
 
                 const left = SafeMath.sub(owedBTC, reservedBTC);
+
                 if (!left.isZero() && u256.ge(left, this.strictMinimumProviderReservationAmount)) {
                     // This is the next valid removal provider. We do NOT
                     // check provider.liquidity here, because they've already
@@ -571,7 +574,7 @@ export class ProviderManager {
     ): bool {
         const maxCostInSatoshis = tokensToSatoshis(availableLiquidity, currentQuote);
         if (u256.lt(maxCostInSatoshis, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
-            if (provider.reserved.isZero()) {
+            if (!provider.haveReserved()) {
                 this.resetProvider(provider);
             }
 

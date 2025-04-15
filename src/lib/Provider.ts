@@ -130,6 +130,14 @@ export class Provider {
         return this.userLiquidity.canProvideLiquidity();
     }
 
+    public haveLiquidity(): boolean {
+        return !this.liquidity.isZero();
+    }
+
+    public haveReserved(): boolean {
+        return !this.reserved.isZero();
+    }
+
     public isActive(): bool {
         return this.userLiquidity.getActiveFlag() === 1;
     }

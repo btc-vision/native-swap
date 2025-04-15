@@ -1,9 +1,10 @@
 import { BaseOperation } from './BaseOperation';
 import { LiquidityQueue } from '../LiquidityQueue';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../../Provider';
 import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityRemovedEvent } from '../../../events/LiquidityRemovedEvent';
+import { ActivateProviderEvent } from '../../../events/ActivateProviderEvent';
 
 export class RemoveLiquidityOperation extends BaseOperation {
     private readonly providerId: u256;
@@ -23,7 +24,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.ensureProviderHasNoListedTokens();
 
         // Figure out how much BTC they are "owed" (the virtual side),
-        //    and how many tokens they currently have "locked in" the pool.
+        // and how many tokens they currently have "locked in" the pool.
         const btcOwed = this.liquidityQueue.getBTCowed(this.providerId);
 
         this.ensureBTCOwed(btcOwed);
@@ -39,7 +40,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.provider.liquidityProvided = u256.Zero;
 
         // Also reduce the virtual reserves so the ratio is consistent
-        //    but do NOT update deltaTokensSell or deltaTokensBuy.
+        // but do NOT update deltaTokensSell or deltaTokensBuy.
         this.liquidityQueue.decreaseVirtualTokenReserve(tokenAmount);
         this.liquidityQueue.decreaseVirtualBTCReserve(btcOwed);
 
@@ -47,42 +48,50 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.provider.pendingRemoval = true;
         this.liquidityQueue.addToRemovalQueue(this.providerId);
 
+        Blockchain.emit(
+            new ActivateProviderEvent(this.provider.providerId, u128.Zero, btcOwed.toU128()),
+        );
+
         this.emitLiquidityRemovedEvent(btcOwed, tokenAmount);
     }
 
     private ensureLiquidityProvider(): void {
         if (!this.provider.isLp) {
-            throw new Revert('Not a liquidity provider');
+            throw new Revert('NATIVE_SWAP: Not a liquidity provider');
         }
     }
 
     private ensureNotInitialProvider(): void {
         if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProvider)) {
-            throw new Revert('Initial provider cannot remove liquidity');
+            throw new Revert('NATIVE_SWAP: Initial provider cannot remove liquidity');
         }
     }
 
     private ensureBTCOwed(btcOwed: u256): void {
         if (btcOwed.isZero()) {
-            throw new Revert('You have no BTC owed. Did you already remove everything?');
+            throw new Revert(
+                'NATIVE_SWAP: You have no BTC owed. Did you already remove everything?',
+            );
         }
     }
 
     private ensureNotInPendingRemoval(): void {
         if (this.provider.pendingRemoval) {
-            throw new Revert('You are already in the removal queue.');
+            throw new Revert('NATIVE_SWAP: You are already in the removal queue.');
         }
     }
 
     private ensureTokenAmountNotZero(tokenAmount: u256): void {
         if (tokenAmount.isZero()) {
-            throw new Revert('You have no tokens to remove.');
+            throw new Revert('NATIVE_SWAP: You have no tokens to remove.');
         }
     }
 
     private ensureProviderHasNoListedTokens(): void {
-        if (!this.provider.liquidity.isZero()) {
-            throw new Revert('You cannot remove your liquidity because you have active listing.');
+        if (this.provider.haveLiquidity()) {
+            throw new Revert(
+                'NATIVE_SWAP: You cannot remove your liquidity because you have active listing.',
+            );
         }
     }
 

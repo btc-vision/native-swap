@@ -48,6 +48,30 @@ describe('ListTokenForSaleOperation tests', () => {
         }).toThrow();
     });
 
+    it('should revert if provider is in the removal queue.', () => {
+        expect(() => {
+            setBlockchainEnvironment(100);
+            FeeManager.onDeploy();
+
+            const provider = createProvider(providerAddress1, tokenAddress1);
+            provider.pendingRemoval = true;
+
+            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            const operation = new ListTokensForSaleOperation(
+                queue,
+                provider.providerId,
+                u128.fromU64(100),
+                receiverAddress1,
+                Address.dead(),
+                false,
+                false,
+            );
+
+            operation.execute();
+        }).toThrow();
+    });
+
     it('should revert on overflow if oldLiquidity + amountIn > u128.Max', () => {
         expect(() => {
             setBlockchainEnvironment(100);

@@ -121,4 +121,21 @@ describe('CancelListTokenForSaleOperation tests', () => {
         expect(queue.liquidity).toStrictEqual(u256.fromU64(1000000000));
         //!!!!expect(queue.deltaTokensSell).toStrictEqual(u256.fromU64(10000));
     });
+
+    it("should revert if provider.pendingRemoval => 'cannot cancel listing'", () => {
+        expect(() => {
+            setBlockchainEnvironment(100);
+
+            const provider = createProvider(providerAddress1, tokenAddress1);
+            provider.setActive(true, false);
+            provider.liquidity = u128.fromU64(10000);
+            provider.pendingRemoval = true;
+
+            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            const operation = new CancelListingOperation(queue, provider.providerId);
+
+            operation.execute();
+        }).toThrow();
+    });
 });

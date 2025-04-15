@@ -6,6 +6,7 @@ import {
     createProvider,
     createProviders,
     providerAddress1,
+    saveIndexForProvider,
     STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
     TestProviderManager,
     tokenAddress1,
@@ -279,7 +280,9 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
         );
         for (let i: u8 = 0; i < 3; i++) {
-            manager.addToPriorityQueue(providersToDelete[i].providerId);
+            const at = manager.addToPriorityQueue(providersToDelete[i].providerId);
+            providersToDelete[i].indexedAt = at;
+            saveIndexForProvider(providersToDelete[i].providerId, at);
         }
 
         const provider: Provider = createProvider(
@@ -296,7 +299,10 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
         );
 
-        manager.addToPriorityQueue(provider.providerId);
+        const at2 = manager.addToPriorityQueue(provider.providerId);
+        provider.indexedAt = at2;
+        saveIndexForProvider(provider.providerId, at2);
+
         manager.setBTCowed(provider.providerId, u256.fromU32(100000));
         manager.setBTCowedReserved(provider.providerId, u256.fromU32(10000));
 
@@ -333,7 +339,9 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
         );
         for (let i: u8 = 0; i < 3; i++) {
-            manager.addToPriorityQueue(providersToDelete[i].providerId);
+            const at = manager.addToPriorityQueue(providersToDelete[i].providerId);
+            providersToDelete[i].indexedAt = at;
+            saveIndexForProvider(providersToDelete[i].providerId, at);
         }
 
         // Add 2 more providers that are priority.
@@ -351,7 +359,10 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
         );
         for (let i: u8 = 0; i < 2; i++) {
-            manager.addToPriorityQueue(providersPriority[i].providerId);
+            const at = manager.addToPriorityQueue(providersPriority[i].providerId);
+            providersPriority[i].indexedAt = at;
+            saveIndexForProvider(providersPriority[i].providerId, at);
+
             manager.setBTCowed(providersPriority[i].providerId, u256.fromU32(100000));
             manager.setBTCowedReserved(providersPriority[i].providerId, u256.fromU32(10000));
         }
@@ -391,7 +402,10 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
         );
         for (let i: u8 = 0; i < 4; i++) {
-            manager.addToPriorityQueue(providersPriority[i].providerId);
+            const at = manager.addToPriorityQueue(providersPriority[i].providerId);
+            providersPriority[i].indexedAt = at;
+            saveIndexForProvider(providersPriority[i].providerId, at);
+
             manager.setBTCowed(providersPriority[i].providerId, u256.fromU32(100000));
             manager.setBTCowedReserved(providersPriority[i].providerId, u256.fromU32(10000));
         }
@@ -426,7 +440,10 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
         );
         for (let i: u8 = 0; i < 4; i++) {
-            manager.addToPriorityQueue(providersPriority[i].providerId);
+            const at = manager.addToPriorityQueue(providersPriority[i].providerId);
+            providersPriority[i].indexedAt = at;
+            saveIndexForProvider(providersPriority[i].providerId, at);
+
             manager.setBTCowed(providersPriority[i].providerId, u256.fromU32(100000));
             manager.setBTCowedReserved(providersPriority[i].providerId, u256.fromU32(10000));
         }
@@ -462,7 +479,10 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
                 true,
             );
             for (let i: u8 = 0; i < 4; i++) {
-                manager.addToPriorityQueue(providersPriority[i].providerId);
+                const at = manager.addToPriorityQueue(providersPriority[i].providerId);
+                providersPriority[i].indexedAt = at;
+                saveIndexForProvider(providersPriority[i].providerId, at);
+
                 manager.setBTCowed(providersPriority[i].providerId, u256.fromU32(100000));
                 manager.setBTCowedReserved(providersPriority[i].providerId, u256.fromU32(10000));
             }
@@ -496,7 +516,9 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
                 true,
             );
 
-            manager.addToPriorityQueue(provider.providerId);
+            const at = manager.addToPriorityQueue(provider.providerId);
+            provider.indexedAt = at;
+            saveIndexForProvider(provider.providerId, at);
 
             const currentQuote = u256.fromU32(1000);
             manager.getNextProviderWithLiquidity(currentQuote);
@@ -524,7 +546,9 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
         );
 
-        manager.addToPriorityQueue(provider.providerId);
+        const at = manager.addToPriorityQueue(provider.providerId);
+        provider.indexedAt = at;
+        saveIndexForProvider(provider.providerId, at);
 
         const currentQuote = u256.fromU32(1000);
         const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
@@ -541,7 +565,9 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, false);
             provider.setActive(true, true);
-            manager.addToPriorityQueue(provider.providerId);
+            const at = manager.addToPriorityQueue(provider.providerId);
+            provider.indexedAt = at;
+            saveIndexForProvider(provider.providerId, at);
 
             manager.getPriorityQueue.setStartingIndex(2);
 
@@ -580,7 +606,9 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             false,
         );
         for (let i: u8 = 0; i < 3; i++) {
-            manager.addToStandardQueue(providersToDelete[i].providerId);
+            const at = manager.addToStandardQueue(providersToDelete[i].providerId);
+            providersToDelete[i].indexedAt = at;
+            saveIndexForProvider(providersToDelete[i].providerId, at);
         }
 
         const provider: Provider = createProvider(
@@ -597,7 +625,10 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             false,
         );
 
-        manager.addToStandardQueue(provider.providerId);
+        const at2 = manager.addToStandardQueue(provider.providerId);
+        provider.indexedAt = at2;
+        saveIndexForProvider(provider.providerId, at2);
+
         manager.setBTCowed(provider.providerId, u256.fromU32(100000));
         manager.setBTCowedReserved(provider.providerId, u256.fromU32(10000));
 
@@ -634,7 +665,9 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             false,
         );
         for (let i: u8 = 0; i < 3; i++) {
-            manager.addToStandardQueue(providersToDelete[i].providerId);
+            const at = manager.addToStandardQueue(providersToDelete[i].providerId);
+            providersToDelete[i].indexedAt = at;
+            saveIndexForProvider(providersToDelete[i].providerId, at);
         }
 
         // Add 2 more providers that are priority.
@@ -652,7 +685,10 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             false,
         );
         for (let i: u8 = 0; i < 2; i++) {
-            manager.addToStandardQueue(providers[i].providerId);
+            const at = manager.addToStandardQueue(providers[i].providerId);
+            providers[i].indexedAt = at;
+            saveIndexForProvider(providers[i].providerId, at);
+
             manager.setBTCowed(providers[i].providerId, u256.fromU32(100000));
             manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(10000));
         }
@@ -692,7 +728,10 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             false,
         );
         for (let i: u8 = 0; i < 4; i++) {
-            manager.addToStandardQueue(providers[i].providerId);
+            const at = manager.addToStandardQueue(providers[i].providerId);
+            providers[i].indexedAt = at;
+            saveIndexForProvider(providers[i].providerId, at);
+
             manager.setBTCowed(providers[i].providerId, u256.fromU32(100000));
             manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(10000));
         }
@@ -727,7 +766,10 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             false,
         );
         for (let i: u8 = 0; i < 4; i++) {
-            manager.addToStandardQueue(providers[i].providerId);
+            const at = manager.addToStandardQueue(providers[i].providerId);
+            providers[i].indexedAt = at;
+            saveIndexForProvider(providers[i].providerId, at);
+
             manager.setBTCowed(providers[i].providerId, u256.fromU32(100000));
             manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(10000));
         }
@@ -763,7 +805,10 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
                 false,
             );
             for (let i: u8 = 0; i < 4; i++) {
-                manager.addToStandardQueue(providers[i].providerId);
+                const at = manager.addToStandardQueue(providers[i].providerId);
+                providers[i].indexedAt = at;
+                saveIndexForProvider(providers[i].providerId, at);
+
                 manager.setBTCowed(providers[i].providerId, u256.fromU32(100000));
                 manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(10000));
             }
@@ -797,7 +842,9 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
                 false,
             );
 
-            manager.addToStandardQueue(provider.providerId);
+            const at = manager.addToStandardQueue(provider.providerId);
+            provider.indexedAt = at;
+            saveIndexForProvider(provider.providerId, at);
 
             const currentQuote = u256.fromU32(1000);
             manager.getNextProviderWithLiquidity(currentQuote);
@@ -825,7 +872,9 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             false,
         );
 
-        manager.addToStandardQueue(provider.providerId);
+        const at = manager.addToStandardQueue(provider.providerId);
+        provider.indexedAt = at;
+        saveIndexForProvider(provider.providerId, at);
 
         const currentQuote = u256.fromU32(1000);
         const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
@@ -842,9 +891,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, false);
             provider.setActive(true, false);
-            manager.addToStandardQueue(provider.providerId);
+            const at = manager.addToStandardQueue(provider.providerId);
+            provider.indexedAt = at;
+            saveIndexForProvider(provider.providerId, at);
 
-            manager.getStandardQueue.setStartingIndex(2);
+            manager.getStandardQueue().setStartingIndex(2);
 
             const currentQuote = u256.fromU32(1000);
             manager.getNextProviderWithLiquidity(currentQuote);

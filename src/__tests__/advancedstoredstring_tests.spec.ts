@@ -27,6 +27,30 @@ describe('AdvancedStoredString', () => {
         expect(val).toStrictEqual('HelloWorld');
     });
 
+    it('should set a short string (<28 bytes) and load it', () => {
+        const buffer = new Uint8Array(30);
+        buffer[0] = 20;
+
+        const store = new AdvancedStoredString(<u16>10, buffer);
+        store.value = 'HelloWorld';
+
+        const store2 = new AdvancedStoredString(<u16>10, buffer);
+        const val = store2.value;
+        expect(val).toStrictEqual('HelloWorld');
+    });
+
+    it('should set a new string and clear old one', () => {
+        const buffer = new Uint8Array(30);
+        buffer[0] = 20;
+
+        const store = new AdvancedStoredString(<u16>10, buffer);
+        store.value = 'HelloWorld322332232323232323232323';
+
+        const store2 = new AdvancedStoredString(<u16>10, buffer);
+        store2.value = 'ABC';
+        expect(store2.value).toStrictEqual('ABC');
+    });
+
     it('should handle empty string => no chunk, read => empty', () => {
         const store = new AdvancedStoredString(<u16>0, new Uint8Array(30));
         store.value = '';

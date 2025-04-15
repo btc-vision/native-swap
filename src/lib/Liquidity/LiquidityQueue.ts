@@ -390,7 +390,7 @@ export class LiquidityQueue {
 
         this.virtualBTCReserve = B;
         this.virtualTokenReserve = T;
-        this.ResetAccumulators();
+        this.resetAccumulators();
 
         this._dynamicFee.volatility = this.computeVolatility(
             currentBlock,
@@ -416,10 +416,10 @@ export class LiquidityQueue {
             throw new Revert('Impossible state: Reservation is invalid but went thru executeTrade');
         }
 
-        // 1) We gather the tx outputs to see how much BTC was actually sent to each provider's address.
+        // Gather the tx outputs to see how much BTC was actually sent to each provider's address.
         const outputs: TransactionOutput[] = Blockchain.tx.outputs;
 
-        // 2) The quoted price at the time of reservation
+        // The quoted price at the time of reservation
         const blockNumber: u64 = reservation.createdAt % <u64>(u32.MAX_VALUE - 1);
         const quoteAtReservation = this.getBlockQuote(blockNumber);
         if (quoteAtReservation.isZero()) {
@@ -428,7 +428,7 @@ export class LiquidityQueue {
             );
         }
 
-        // 3) Retrieve arrays (provider indexes, amounts, queue types)
+        // Retrieve arrays (provider indexes, amounts, queue types)
         const reservedIndexes: u32[] = reservation.getReservedIndexes();
         const reservedValues: u128[] = reservation.getReservedValues();
         const queueTypes: u8[] = reservation.getQueueTypes();
@@ -587,9 +587,7 @@ export class LiquidityQueue {
                     // track that we effectively "added" them to the virtual pool
                     this.increaseDeltaTokensAdd(provider.liquidity.toU256());
 
-                    Blockchain.emit(
-                        new ActivateProviderEvent(provider.providerId, provider.liquidity),
-                    );
+                    this.emitActivateProviderEvent(provider);
                 }
 
                 provider.decreaseLiquidity(tokensDesiredU128);
@@ -645,6 +643,12 @@ export class LiquidityQueue {
         this._providerManager.setBTCowed(providerId, amount);
     }
 
+    public increaseBTCowed(providerId: u256, amount: u256): void {
+        const owedBefore = this.getBTCowed(providerId);
+        const owedAfter = SafeMath.add(owedBefore, amount);
+        this.setBTCowed(providerId, owedAfter);
+    }
+
     public getBTCowedReserved(providerId: u256): u256 {
         return this._providerManager.getBTCowedReserved(providerId);
     }
@@ -668,7 +672,7 @@ export class LiquidityQueue {
         let ratioScaled: u256 = SafeMath.mul(reservedAmount, QUOTE_SCALE);
         ratioScaled = SafeMath.div(ratioScaled, totalLiquidity);
 
-        // Convert your maxReserves5BlockPercent (like 5 => 5%)
+        // Convert maxReserves5BlockPercent (like 5 => 5%)
         //    into the same QUOTE_SCALE domain:
         //    maxPercentScaled = (maxPercentage * QUOTE_SCALE) / 100
         const hundred = u256.fromU64(100);
@@ -895,6 +899,12 @@ export class LiquidityQueue {
         this.lastPurgedBlock = maxBlockToPurge;
     }
 
+    private emitActivateProviderEvent(provider: Provider): void {
+        Blockchain.emit(
+            new ActivateProviderEvent(provider.providerId, provider.liquidity, u128.Zero),
+        );
+    }
+
     private purgeBlock(blockNumber: u64): u256 {
         const reservationList = this.getReservationListForBlock(blockNumber);
         const activeIds: StoredBooleanArray = this.getActiveReservationListForBlock(blockNumber);
@@ -910,7 +920,7 @@ export class LiquidityQueue {
             const reservationId = reservationList.get(i);
             const reservation = Reservation.load(reservationId);
             const purgeIndex = reservation.getPurgeIndex();
-            
+
             this.ensureReservationPurgeIndexMatch(reservation.reservationId, purgeIndex, i);
 
             // Double-check it is indeed expired
@@ -942,9 +952,8 @@ export class LiquidityQueue {
             const providerIndex: u64 = reservedIndexes[j];
             const reservedAmount: u128 = reservedValues[j];
             const queueType: u8 = queueTypes[j];
-            const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
 
-            this.ensureValidReservedAmount(provider, reservedAmount);
+            const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
 
             if (provider.pendingRemoval && queueType === LIQUIDITY_REMOVAL_TYPE) {
                 this.purgeAndRestoreProviderRemovalQueue(
@@ -953,6 +962,7 @@ export class LiquidityQueue {
                     reservation.createdAt,
                 );
             } else {
+                this.ensureValidReservedAmount(provider, reservedAmount);
                 this.purgeAndRestoreProvider(provider, reservedAmount);
             }
 
@@ -985,7 +995,7 @@ export class LiquidityQueue {
         }
     }
 
-    private ResetAccumulators(): void {
+    private resetAccumulators(): void {
         this.deltaTokensAdd = u256.Zero;
         this.deltaBTCBuy = u256.Zero;
         this.deltaTokensBuy = u256.Zero;
