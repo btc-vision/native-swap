@@ -10,7 +10,6 @@ export class CancelListingOperation extends BaseOperation {
     private readonly provider: Provider;
 
     constructor(liquidityQueue: LiquidityQueue, providerId: u256) {
-        // Call the BaseOperation constructor
         super(liquidityQueue);
 
         this.providerId = providerId;
@@ -25,10 +24,7 @@ export class CancelListingOperation extends BaseOperation {
         this.ensureLiquidity(amount);
         this.ensureProviderCannotProvideLiquidity();
         this.ensureNotInitialProvider();
-
-        if (this.provider.pendingRemoval) {
-            throw new Revert('NATIVE_SWAP: Provider is in pending removal.');
-        }
+        this.ensureProviderNotPendingRemoval();
 
         // Load the index of the provider
         this.provider.loadIndexedAt();
@@ -52,7 +48,7 @@ export class CancelListingOperation extends BaseOperation {
     }
 
     private ensureNoActiveReservation(): void {
-        if (!this.provider.reserved.isZero()) {
+        if (this.provider.haveReserved()) {
             throw new Revert(
                 `NATIVE_SWAP: Someone have active reservations on your liquidity. ${this.provider.reserved}`,
             );
@@ -76,6 +72,12 @@ export class CancelListingOperation extends BaseOperation {
     private ensureNotInitialProvider(): void {
         if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProvider)) {
             throw new Revert('NATIVE_SWAP: Initial provider cannot cancel listing.');
+        }
+    }
+
+    private ensureProviderNotPendingRemoval(): void {
+        if (this.provider.pendingRemoval) {
+            throw new Revert('NATIVE_SWAP: Provider is in pending removal.');
         }
     }
 

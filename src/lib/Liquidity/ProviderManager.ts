@@ -224,7 +224,7 @@ export class ProviderManager {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
-        if (burnRemainingFunds && !provider.liquidity.isZero()) {
+        if (burnRemainingFunds && provider.haveLiquidity()) {
             TransferHelper.safeTransfer(this.token, Address.dead(), provider.liquidity.toU256());
         }
 
@@ -574,7 +574,7 @@ export class ProviderManager {
     ): bool {
         const maxCostInSatoshis = tokensToSatoshis(availableLiquidity, currentQuote);
         if (u256.lt(maxCostInSatoshis, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
-            if (provider.reserved.isZero()) {
+            if (!provider.haveReserved()) {
                 this.resetProvider(provider);
             }
 

@@ -10,6 +10,7 @@ import { FeeManager } from '../../FeeManager';
 import { getTotalFeeCollected } from '../../../utils/NativeSwapUtils';
 
 export class ReserveLiquidityOperation extends BaseOperation {
+    public static MaxActivationDelay: u8 = 3;
     private readonly buyer: Address;
     private readonly maximumAmountIn: u256;
     private readonly minimumAmountOut: u256;
@@ -62,7 +63,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         let lastIndex: u64 = <u64>u32.MAX_VALUE + <u64>1; // Impossible value
         let lastProviderId: u256 = u256.Zero;
 
-        // We'll loop over providers while tokensRemaining > 0
+        // Loop over providers while tokensRemaining > 0
         let i: u32 = 0;
         while (!tokensRemaining.isZero()) {
             let tokensRemainingInSatoshis = this.liquidityQueue.tokensToSatoshis(
@@ -334,8 +335,10 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private ensureValidActivationDelay(activationDelay: u8): void {
-        if (activationDelay > 3) {
-            throw new Revert('NATIVE_SWAP: Activation delay cannot be greater than 3');
+        if (activationDelay > ReserveLiquidityOperation.MaxActivationDelay) {
+            throw new Revert(
+                `NATIVE_SWAP: Activation delay cannot be greater than ${ReserveLiquidityOperation.MaxActivationDelay}`,
+            );
         }
     }
 

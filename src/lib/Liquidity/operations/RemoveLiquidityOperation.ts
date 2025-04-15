@@ -24,7 +24,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.ensureProviderHasNoListedTokens();
 
         // Figure out how much BTC they are "owed" (the virtual side),
-        //    and how many tokens they currently have "locked in" the pool.
+        // and how many tokens they currently have "locked in" the pool.
         const btcOwed = this.liquidityQueue.getBTCowed(this.providerId);
 
         this.ensureBTCOwed(btcOwed);
@@ -40,7 +40,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.provider.liquidityProvided = u256.Zero;
 
         // Also reduce the virtual reserves so the ratio is consistent
-        //    but do NOT update deltaTokensSell or deltaTokensBuy.
+        // but do NOT update deltaTokensSell or deltaTokensBuy.
         this.liquidityQueue.decreaseVirtualTokenReserve(tokenAmount);
         this.liquidityQueue.decreaseVirtualBTCReserve(btcOwed);
 
@@ -86,7 +86,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
     }
 
     private ensureProviderHasNoListedTokens(): void {
-        if (!this.provider.liquidity.isZero()) {
+        if (this.provider.haveLiquidity()) {
             throw new Revert('You cannot remove your liquidity because you have active listing.');
         }
     }

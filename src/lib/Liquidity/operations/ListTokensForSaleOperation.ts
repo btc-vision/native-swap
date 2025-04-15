@@ -56,6 +56,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.ensureNoLiquidityOverflow();
         this.ensureNoActivePositionInPriorityQueue();
         this.ensureProviderNotAlreadyProvidingLiquidity();
+        this.ensureNotInRemovalQueue();
 
         if (!this.initialLiquidity) {
             this.ensurePriceIsNotZero();
@@ -65,6 +66,14 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
         this.transferToken();
         this.emitLiquidityListedEvent();
+    }
+
+    private ensureNotInRemovalQueue(): void {
+        if (this.provider.pendingRemoval) {
+            throw new Revert(
+                'You are in the removal queue. Wait for removal of your liquidity first.',
+            );
+        }
     }
 
     private ensureProviderNotAlreadyProvidingLiquidity(): void {
@@ -217,9 +226,9 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private setProviderReceiver(provider: Provider): void {
-        if (!provider.reserved.isZero() && provider.btcReceiver !== this.receiver) {
+        if (provider.haveReserved() && provider.btcReceiver !== this.receiver) {
             throw new Revert('NATIVE_SWAP: Cannot change receiver address while reserved.');
-        } else if (provider.reserved.isZero()) {
+        } else if (!provider.haveReserved()) {
             provider.btcReceiver = this.receiver;
         }
     }
