@@ -1225,4 +1225,168 @@ describe('ReserveLiquidityOperation tests', () => {
             operation.execute();
         }).toThrow();
     });
+
+    it('should revert if pendingRemoval but not an LP', () => {
+        expect(() => {
+            setBlockchainEnvironment(100, msgSender1, msgSender1);
+            Blockchain.mockValidateBitcoinAddressResult(true);
+
+            const initialProviderId = createProviderId(msgSender1, tokenAddress1);
+            const queue = new TestLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            const floorPrice: u256 = SafeMath.div(
+                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
+                u256.fromU32(1500),
+            );
+            const initialLiquidity = SafeMath.mul128(
+                u128.fromU32(1000000),
+                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
+            );
+
+            const createPoolOp = new CreatePoolOperation(
+                queue,
+                floorPrice,
+                initialProviderId,
+                initialLiquidity,
+                receiverAddress1,
+                0,
+                u256.Zero,
+                5,
+                Address.dead(),
+            );
+
+            createPoolOp.execute();
+            queue.setBlockQuote();
+            queue.save();
+
+            setBlockchainEnvironment(103, providerAddress2, providerAddress2);
+            const provider = createProvider(providerAddress2, tokenAddress1, true, false);
+            const queue3 = new TestLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            queue3.mockgetNextProviderWithLiquidity(provider);
+
+            const reserveOp = new ReserveLiquidityOperation(
+                queue3,
+                provider.providerId,
+                providerAddress2,
+                u256.fromString(`10000`),
+                u256.Zero,
+                false,
+                2,
+            );
+
+            reserveOp.execute();
+            queue3.save();
+        }).toThrow();
+    });
+
+    it('should revert if pendingRemoval but not from removal queue', () => {
+        expect(() => {
+            setBlockchainEnvironment(100, msgSender1, msgSender1);
+            Blockchain.mockValidateBitcoinAddressResult(true);
+
+            const initialProviderId = createProviderId(msgSender1, tokenAddress1);
+            const queue = new TestLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            const floorPrice: u256 = SafeMath.div(
+                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
+                u256.fromU32(1500),
+            );
+            const initialLiquidity = SafeMath.mul128(
+                u128.fromU32(1000000),
+                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
+            );
+
+            const createPoolOp = new CreatePoolOperation(
+                queue,
+                floorPrice,
+                initialProviderId,
+                initialLiquidity,
+                receiverAddress1,
+                0,
+                u256.Zero,
+                5,
+                Address.dead(),
+            );
+
+            createPoolOp.execute();
+            queue.setBlockQuote();
+            queue.save();
+
+            setBlockchainEnvironment(103, providerAddress2, providerAddress2);
+            const provider = createProvider(providerAddress2, tokenAddress1, true, true);
+            provider.fromRemovalQueue = false;
+
+            const queue3 = new TestLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            queue3.mockgetNextProviderWithLiquidity(provider);
+
+            const reserveOp = new ReserveLiquidityOperation(
+                queue3,
+                provider.providerId,
+                providerAddress2,
+                u256.fromString(`10000`),
+                u256.Zero,
+                false,
+                2,
+            );
+
+            reserveOp.execute();
+            queue3.save();
+        }).toThrow();
+    });
+
+    it('should revert if provider.providerId === lastProviderId', () => {
+        expect(() => {
+            setBlockchainEnvironment(100, msgSender1, msgSender1);
+            Blockchain.mockValidateBitcoinAddressResult(true);
+
+            const initialProviderId = createProviderId(msgSender1, tokenAddress1);
+            const queue = new TestLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            const floorPrice: u256 = SafeMath.div(
+                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
+                u256.fromU32(1500),
+            );
+            const initialLiquidity = SafeMath.mul128(
+                u128.fromU32(1000000),
+                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
+            );
+
+            const createPoolOp = new CreatePoolOperation(
+                queue,
+                floorPrice,
+                initialProviderId,
+                initialLiquidity,
+                receiverAddress1,
+                0,
+                u256.Zero,
+                5,
+                Address.dead(),
+            );
+
+            createPoolOp.execute();
+            queue.setBlockQuote();
+            queue.save();
+
+            setBlockchainEnvironment(103, providerAddress2, providerAddress2);
+            const provider = createProvider(providerAddress2, tokenAddress1);
+            const queue3 = new TestLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            queue3.mockgetNextProviderWithLiquidity(provider);
+
+            const reserveOp = new ReserveLiquidityOperation(
+                queue3,
+                provider.providerId,
+                providerAddress2,
+                u256.fromString(`10000`),
+                u256.Zero,
+                false,
+                2,
+            );
+
+            reserveOp.execute();
+            queue3.save();
+        }).toThrow();
+    });
 });

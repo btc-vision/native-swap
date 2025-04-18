@@ -198,17 +198,24 @@ export class UserLiquidity {
         }
     }
 
-    /**
-     * @method reset
-     * @description Resets all fields to their default values and marks the state as changed.
-     */
     @inline
-    public reset(): void {
+    public resetAll(): void {
+        this.resetListingValues();
+        this.resetLPValues();
+    }
+
+    @inline
+    public resetListingValues(): void {
         this.activeFlag = 0;
         this.priorityFlag = 0;
         this.canProvide = 0;
         this.liquidityAmount = u128.Zero;
         this.reservedAmount = u128.Zero;
+        this.isChanged = true;
+    }
+
+    @inline
+    public resetLPValues(): void {
         this.liquidityProvided = u256.Zero;
         this.pendingRemoval = false;
         this.setIsLp(false);

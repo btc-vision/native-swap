@@ -151,8 +151,16 @@ export class Provider {
         return this.userLiquidity.getPriorityFlag();
     }
 
-    public reset(): void {
-        this.userLiquidity.reset();
+    public resetAll(): void {
+        this.userLiquidity.resetAll();
+    }
+
+    public resetLPValues(): void {
+        this.userLiquidity.resetLPValues();
+    }
+
+    public resetListingValues(): void {
+        this.userLiquidity.resetListingValues();
     }
 
     public save(): void {

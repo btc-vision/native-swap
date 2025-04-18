@@ -245,7 +245,7 @@ describe('UserLiquidity tests', () => {
         expect(userLiquidity2.isLp()).toStrictEqual(userLiquidity.isLp());
     });
 
-    it('should correctly reset', () => {
+    it('should correctly reset all values', () => {
         const userLiquidity: UserLiquidity = new UserLiquidity(
             PROVIDER_LIQUIDITY_POINTER,
             LIQUIDITY_PROVIDER_POINTER,
@@ -261,7 +261,7 @@ describe('UserLiquidity tests', () => {
         userLiquidity.setIsLp(true);
         userLiquidity.setLiquidityProvided(u256.fromU32(300));
 
-        userLiquidity.reset();
+        userLiquidity.resetAll();
 
         expect(userLiquidity.pendingRemoval).toBeFalsy();
         expect(userLiquidity.getActiveFlag()).toBeFalsy();
@@ -271,6 +271,62 @@ describe('UserLiquidity tests', () => {
         expect(userLiquidity.getLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(userLiquidity.getLiquidityProvided()).toStrictEqual(u256.Zero);
         expect(userLiquidity.isLp()).toBeFalsy();
+    });
+
+    it('should only reset LP values', () => {
+        const userLiquidity: UserLiquidity = new UserLiquidity(
+            PROVIDER_LIQUIDITY_POINTER,
+            LIQUIDITY_PROVIDER_POINTER,
+            providerId,
+        );
+
+        userLiquidity.pendingRemoval = true;
+        userLiquidity.setActiveFlag(1);
+        userLiquidity.setPriorityFlag(1);
+        userLiquidity.setCanProvideLiquidity(true);
+        userLiquidity.setReservedAmount(u128.fromU32(100));
+        userLiquidity.setLiquidityAmount(u128.fromU32(200));
+        userLiquidity.setIsLp(true);
+        userLiquidity.setLiquidityProvided(u256.fromU32(300));
+
+        userLiquidity.resetLPValues();
+
+        expect(userLiquidity.pendingRemoval).toBeFalsy();
+        expect(userLiquidity.getActiveFlag()).toBeTruthy();
+        expect(userLiquidity.getPriorityFlag()).toBeTruthy();
+        expect(userLiquidity.canProvideLiquidity()).toBeTruthy();
+        expect(userLiquidity.getReservedAmount()).toStrictEqual(u128.fromU32(100));
+        expect(userLiquidity.getLiquidityAmount()).toStrictEqual(u128.fromU32(200));
+        expect(userLiquidity.getLiquidityProvided()).toStrictEqual(u256.Zero);
+        expect(userLiquidity.isLp()).toBeFalsy();
+    });
+
+    it('should only reset listing values', () => {
+        const userLiquidity: UserLiquidity = new UserLiquidity(
+            PROVIDER_LIQUIDITY_POINTER,
+            LIQUIDITY_PROVIDER_POINTER,
+            providerId,
+        );
+
+        userLiquidity.pendingRemoval = true;
+        userLiquidity.setActiveFlag(1);
+        userLiquidity.setPriorityFlag(1);
+        userLiquidity.setCanProvideLiquidity(true);
+        userLiquidity.setReservedAmount(u128.fromU32(100));
+        userLiquidity.setLiquidityAmount(u128.fromU32(200));
+        userLiquidity.setIsLp(true);
+        userLiquidity.setLiquidityProvided(u256.fromU32(300));
+
+        userLiquidity.resetListingValues();
+
+        expect(userLiquidity.pendingRemoval).toBeTruthy();
+        expect(userLiquidity.getActiveFlag()).toBeFalsy();
+        expect(userLiquidity.getPriorityFlag()).toBeFalsy();
+        expect(userLiquidity.canProvideLiquidity()).toBeFalsy();
+        expect(userLiquidity.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(userLiquidity.getLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(userLiquidity.getLiquidityProvided()).toStrictEqual(u256.fromU32(300));
+        expect(userLiquidity.isLp()).toBeTruthy();
     });
 
     it('should correctly convert flags to byte[] when all true', () => {
