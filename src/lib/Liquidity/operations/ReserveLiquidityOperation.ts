@@ -100,6 +100,20 @@ export class ReserveLiquidityOperation extends BaseOperation {
             lastIndex = provider.indexedAt;
             i++;
 
+            if (provider.pendingRemoval) {
+                if (!provider.isLp) {
+                    throw new Revert(
+                        `Impossible state: provider ${provider.providerId} cannot be in pending removal state and not be a LP`,
+                    );
+                }
+
+                if (!provider.fromRemovalQueue) {
+                    throw new Revert(
+                        `Impossible state: provider ${provider.providerId} cannot be in pending removal state and not be marked as coming from removal queue`,
+                    );
+                }
+            }
+
             // CASE A: REMOVAL-QUEUE PROVIDER
             if (provider.pendingRemoval && provider.isLp && provider.fromRemovalQueue) {
                 const owed = this.liquidityQueue.getBTCowed(provider.providerId);

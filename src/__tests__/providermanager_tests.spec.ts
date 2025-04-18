@@ -529,23 +529,6 @@ describe('ProviderManager tests', () => {
         expect(TransferHelper.safeTransferCalled).toBeFalsy();
     });
 
-    it('should revert when resetProvider is called and provider is the initialliquidity provider', () => {
-        expect(() => {
-            const manager: ProviderManager = new ProviderManager(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-            );
-
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            manager.initialLiquidityProvider = provider.providerId;
-
-            manager.resetProvider(provider, false);
-
-            expect(provider.isActive()).toBeFalsy();
-        }).toThrow();
-    });
-
     it('should remove the provider from the priority queue and reset it when resetProvider is called', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,

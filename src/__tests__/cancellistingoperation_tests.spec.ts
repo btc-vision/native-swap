@@ -116,10 +116,9 @@ describe('CancelListTokenForSaleOperation tests', () => {
 
         expect(provider.liquidity).toStrictEqual(u128.Zero);
         expect(provider.reserved).toStrictEqual(u128.Zero);
-        expect(provider.liquidityProvided).toStrictEqual(u256.Zero);
+        expect(provider.liquidityProvided).toStrictEqual(u256.fromU32(1000));
         expect(TransferHelper.safeTransferCalled).toBeTruthy();
         expect(queue.liquidity).toStrictEqual(u256.fromU64(1000000000));
-        //!!!!expect(queue.deltaTokensSell).toStrictEqual(u256.fromU64(10000));
     });
 
     it("should revert if provider.pendingRemoval => 'cannot cancel listing'", () => {

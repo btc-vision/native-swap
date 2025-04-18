@@ -150,7 +150,7 @@ describe('Provider tests', () => {
         provider.reserved = reserved;
         provider.btcReceiver = btcReceiver;
         provider.enableLiquidityProvision();
-        provider.reset();
+        provider.resetAll();
 
         expect(provider.pendingRemoval).toStrictEqual(false);
         expect(provider.isLp).toStrictEqual(false);
@@ -161,6 +161,21 @@ describe('Provider tests', () => {
         expect(provider.canProvideLiquidity()).toStrictEqual(false);
         expect(provider.isActive()).toStrictEqual(false);
         expect(provider.isPriority()).toStrictEqual(false);
+    });
+
+    it('should reset a provider to default lp values', () => {
+        const providerId: u256 = addressToPointerU256(providerAddress1, tokenAddress1);
+        const provider: Provider = getProvider(providerId);
+        const liquidityProvided: u256 = u256.fromU64(129292);
+
+        provider.pendingRemoval = true;
+        provider.isLp = true;
+        provider.liquidityProvided = liquidityProvided;
+        provider.resetLPValues();
+
+        expect(provider.pendingRemoval).toStrictEqual(false);
+        expect(provider.isLp).toStrictEqual(false);
+        expect(provider.liquidityProvided).toStrictEqual(u256.Zero);
     });
 
     it('should get a cached provider when provider id exists', () => {

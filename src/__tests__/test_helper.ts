@@ -313,6 +313,20 @@ export function saveIndexForProvider(providerId: u256, index: u64): void {
 }
 
 export class TestLiquidityQueue extends LiquidityQueue {
+    private _mockedNextProvider: Provider | null = null;
+
+    public mockgetNextProviderWithLiquidity(mockedNextProvider: Provider | null): void {
+        this._mockedNextProvider = mockedNextProvider;
+    }
+
+    public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
+        if (this._mockedNextProvider !== null) {
+            return this._mockedNextProvider;
+        } else {
+            return super.getNextProviderWithLiquidity(currentQuote);
+        }
+    }
+
     public setPreviousReservationStartingIndex(value: u64): void {
         this._providerManager.previousReservationStartingIndex = value;
     }

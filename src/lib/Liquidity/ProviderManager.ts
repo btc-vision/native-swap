@@ -238,7 +238,7 @@ export class ProviderManager {
 
         Blockchain.emit(new FulfilledProviderEvent(provider.providerId, canceled, false));
 
-        provider.reset();
+        provider.resetListingValues();
     }
 
     public resetStartingIndex(): void {
