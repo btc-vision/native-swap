@@ -17,7 +17,6 @@ export class DynamicFee {
     private readonly _volatility: StoredU256;
 
     constructor(tokenId: Uint8Array) {
-        // defaults - you can adjust or read from storage
         this.baseFeeBP = 20; // 0.20%
         this.minFeeBP = 15; // 0.15%
         this.maxFeeBP = 150; // 1.50%
@@ -54,40 +53,26 @@ export class DynamicFee {
      * we must decode that carefully to keep it consistent with alpha.
      */
     public getDynamicFeeBP(tradeSize: u256, utilizationRatio: u256): u64 {
-        // 1) Start with base
         let feeBP = this.baseFeeBP;
 
-        // 2) ratio = tradeSize / REF_TRADE_SIZE
         let ratio = SafeMath.div(tradeSize, REF_TRADE_SIZE);
 
         if (ratio.isZero()) {
-            // if tradeSize < REF_TRADE_SIZE, ratio = 0 => ln(0) => negative
-            // we might just let feeBP = baseFee here, or do fallback
-            ratio = u256.One; // fallback => ln(1)=0 => no effect
+            ratio = u256.One;
         }
 
-        // 3) lnVal: we get a scaled ln => logScaled = lnVal * 1e6 (as from log256)
         const logScaled: u256 = SafeMath.approxLog(ratio);
 
-        // interpret logScaled in your alpha factor
-        // if alpha = 100, we do => alpha * (logScaled / 1e6)
-        // We'll keep everything in i64 or 64 for the final addition
         const alphaComponent: u64 = (this.alpha * logScaled.toU64()) / 1_000_000;
 
         feeBP += alphaComponent;
 
-        // 4) Add beta * volatility
-        // Suppose volatility is stored in e.g. 0..1e4 scale
-        // Then if volatility=500 => that's "0.05" => multiply by beta => 25 => 1250 => scale out
         const volBP: u64 = this.volatility.toU64();
         feeBP += (this.beta * volBP) / 10000;
 
-        // 5) Add gamma * utilization
-        // If utilization is 0..100 scale, then gamma * utilization => up to some hundreds of BPS
         const utilBP: u64 = utilizationRatio.toU64();
         feeBP += (this.gamma * utilBP) / 10;
 
-        // 6) clamp
         if (feeBP < this.minFeeBP) {
             feeBP = this.minFeeBP;
         }

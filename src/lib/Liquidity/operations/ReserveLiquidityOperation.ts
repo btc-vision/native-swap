@@ -7,7 +7,11 @@ import { MAX_RESERVATION_AMOUNT_PROVIDER } from '../../../data-types/UserLiquidi
 import { ReservationCreatedEvent } from '../../../events/ReservationCreatedEvent';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../../FeeManager';
-import { getTotalFeeCollected } from '../../../utils/NativeSwapUtils';
+import {
+    getTotalFeeCollected,
+    satoshisToTokens,
+    tokensToSatoshis,
+} from '../../../utils/NativeSwapUtils';
 
 export class ReserveLiquidityOperation extends BaseOperation {
     public static MaxActivationDelay: u8 = 3;
@@ -66,10 +70,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         // Loop over providers while tokensRemaining > 0
         let i: u32 = 0;
         while (!tokensRemaining.isZero()) {
-            let tokensRemainingInSatoshis = this.liquidityQueue.tokensToSatoshis(
-                tokensRemaining,
-                currentQuote,
-            );
+            let tokensRemainingInSatoshis = tokensToSatoshis(tokensRemaining, currentQuote);
 
             if (
                 u256.lt(
@@ -124,10 +125,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     SafeMath.sub(owed, currentReserved),
                 );
 
-                let reserveAmount = this.liquidityQueue.satoshisToTokens(
-                    tokensRemainingInSatoshis,
-                    currentQuote,
-                );
+                let reserveAmount = satoshisToTokens(tokensRemainingInSatoshis, currentQuote);
 
                 if (reserveAmount.isZero()) {
                     continue;
@@ -162,10 +160,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     provider.reserved,
                 ).toU256();
 
-                const maxCostInSatoshis = this.liquidityQueue.tokensToSatoshis(
-                    providerLiquidity,
-                    currentQuote,
-                );
+                const maxCostInSatoshis = tokensToSatoshis(providerLiquidity, currentQuote);
 
                 // Verify the reserveAmount is smaller than u120 maximum.
                 let reserveAmount = SafeMath.min(
@@ -173,17 +168,14 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     MAX_RESERVATION_AMOUNT_PROVIDER.toU256(),
                 );
 
-                let costInSatoshis = this.liquidityQueue.tokensToSatoshis(
-                    reserveAmount,
-                    currentQuote,
-                );
+                let costInSatoshis = tokensToSatoshis(reserveAmount, currentQuote);
 
                 const leftoverSats = SafeMath.sub(maxCostInSatoshis, costInSatoshis);
                 if (u256.lt(leftoverSats, LiquidityQueue.MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
                     costInSatoshis = maxCostInSatoshis;
                 }
 
-                reserveAmount = this.liquidityQueue.satoshisToTokens(costInSatoshis, currentQuote);
+                reserveAmount = satoshisToTokens(costInSatoshis, currentQuote);
                 if (reserveAmount.isZero()) {
                     continue;
                 }
@@ -293,10 +285,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private computeTokenRemaining(currentQuote: u256): u256 {
-        let tokensRemaining: u256 = this.liquidityQueue.satoshisToTokens(
-            this.maximumAmountIn,
-            currentQuote,
-        );
+        let tokensRemaining: u256 = satoshisToTokens(this.maximumAmountIn, currentQuote);
 
         const totalAvailableLiquidity = SafeMath.sub(
             this.liquidityQueue.liquidity,
@@ -314,10 +303,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
             throw new Revert('NATIVE_SWAP: Not enough liquidity available');
         }
 
-        const satCostTokenRemaining = this.liquidityQueue.tokensToSatoshis(
-            tokensRemaining,
-            currentQuote,
-        );
+        const satCostTokenRemaining = tokensToSatoshis(tokensRemaining, currentQuote);
 
         if (u256.lt(satCostTokenRemaining, LiquidityQueue.MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
             if (tokensRemaining === maxTokensLeftBeforeCap) {

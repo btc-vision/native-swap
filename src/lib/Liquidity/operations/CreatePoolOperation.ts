@@ -74,7 +74,7 @@ export class CreatePoolOperation extends BaseOperation {
     private ensureValidMaxReservesIn5BlocksPercent(): void {
         if (this.maxReservesIn5BlocksPercent > 100) {
             throw new Revert(
-                'NATIVE_SWAP: Maximum reservations in 5 blocks percent must be smaller than 100',
+                'NATIVE_SWAP: The maximum reservation percentage for 5 blocks must be less than or equal to 100',
             );
         }
     }

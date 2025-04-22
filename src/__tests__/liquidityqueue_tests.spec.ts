@@ -34,6 +34,7 @@ import {
     PRIORITY_TYPE,
     Reservation,
 } from '../lib/Reservation';
+import { satoshisToTokens, tokensToSatoshis } from '../utils/NativeSwapUtils';
 
 describe('Liquidity queue tests', () => {
     beforeEach(() => {
@@ -464,7 +465,7 @@ describe('Liquidity queue tests', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        expect(queue.tokensToSatoshis(u256.fromU32(10000), u256.fromU32(50000))).toStrictEqual(
+        expect(tokensToSatoshis(u256.fromU32(10000), u256.fromU32(50000))).toStrictEqual(
             u256.fromU64(20002000),
         );
     });
@@ -473,7 +474,7 @@ describe('Liquidity queue tests', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        expect(queue.satoshisToTokens(u256.fromU32(20000000), u256.fromU32(50000))).toStrictEqual(
+        expect(satoshisToTokens(u256.fromU32(20000000), u256.fromU32(50000))).toStrictEqual(
             u256.fromU64(10000),
         );
     });
@@ -1069,6 +1070,18 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         Blockchain.clearMockedResults();
     });
 
+    it('should return the correct number of tokens', () => {
+        setBlockchainEnvironment(0);
+
+        const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+        queue.maxReserves5BlockPercent = 50;
+        queue.increaseTotalReserve(u256.fromU64(1000000000));
+        queue.increaseTotalReserved(u256.fromU32(499999999));
+
+        const result = queue.getMaximumTokensLeftBeforeCap();
+        expect(result).toStrictEqual(u256.fromU32(1));
+    });
+
     it('should return 0 if totalLiquidity is 0', () => {
         setBlockchainEnvironment(0);
 
@@ -1081,7 +1094,7 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         expect(result).toStrictEqual(u256.Zero);
     });
 
-    it('should return 0 if ratioScaled > maxPercentScaled', () => {
+    it('should return 0 if reservedScaled >= capScaled', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -1093,20 +1106,7 @@ describe('Liquidity getMaximumTokensLeftBeforeCap tests', () => {
         expect(result).toStrictEqual(u256.Zero);
     });
 
-    it('should compute leftover tokens if ratioScaled < maxPercentScaled', () => {
-        setBlockchainEnvironment(0);
-
-        const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        queue.increaseTotalReserved(u256.fromU32(20));
-        queue.increaseTotalReserve(u256.fromU32(100));
-        queue.maxReserves5BlockPercent = 50;
-
-        const result = queue.getMaximumTokensLeftBeforeCap();
-
-        expect(result).toStrictEqual(u256.fromU64(30));
-    });
-
-    it('should handle the exact boundary ratioScaled == maxPercentScaled => leftover=0', () => {
+    it('should handle the exact boundary ratioScaled == maxPercentScaled => 0', () => {
         setBlockchainEnvironment(0);
 
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);

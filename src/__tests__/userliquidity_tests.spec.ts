@@ -1,6 +1,6 @@
 import { Blockchain, BytesReader } from '@btc-vision/btc-runtime/runtime';
 import { LIQUIDITY_PROVIDER_POINTER, PROVIDER_LIQUIDITY_POINTER } from '../lib/StoredPointers';
-import { UserLiquidity } from '../data-types/UserLiquidity';
+import { MAX_RESERVATION_AMOUNT_PROVIDER, UserLiquidity } from '../data-types/UserLiquidity';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 const providerId: Uint8Array = u256.fromU32(1).toUint8Array(true).slice(0, 30);
@@ -243,6 +243,58 @@ describe('UserLiquidity tests', () => {
             userLiquidity.getLiquidityProvided(),
         );
         expect(userLiquidity2.isLp()).toStrictEqual(userLiquidity.isLp());
+    });
+
+    it('should correctly save with max value', () => {
+        const userLiquidity: UserLiquidity = new UserLiquidity(
+            PROVIDER_LIQUIDITY_POINTER,
+            LIQUIDITY_PROVIDER_POINTER,
+            providerId,
+        );
+
+        userLiquidity.pendingRemoval = true;
+        userLiquidity.setActiveFlag(1);
+        userLiquidity.setPriorityFlag(1);
+        userLiquidity.setCanProvideLiquidity(true);
+        userLiquidity.setReservedAmount(MAX_RESERVATION_AMOUNT_PROVIDER);
+        userLiquidity.setLiquidityAmount(u128.Max);
+        userLiquidity.setIsLp(true);
+        userLiquidity.setLiquidityProvided(u256.Max);
+
+        userLiquidity.save();
+
+        const userLiquidity2: UserLiquidity = new UserLiquidity(
+            PROVIDER_LIQUIDITY_POINTER,
+            LIQUIDITY_PROVIDER_POINTER,
+            providerId,
+        );
+
+        expect(userLiquidity2.pendingRemoval).toStrictEqual(userLiquidity.pendingRemoval);
+        expect(userLiquidity2.getActiveFlag()).toStrictEqual(userLiquidity.getActiveFlag());
+        expect(userLiquidity2.getPriorityFlag()).toStrictEqual(userLiquidity.getPriorityFlag());
+        expect(userLiquidity2.canProvideLiquidity()).toStrictEqual(
+            userLiquidity.canProvideLiquidity(),
+        );
+        expect(userLiquidity2.getReservedAmount()).toStrictEqual(userLiquidity.getReservedAmount());
+        expect(userLiquidity2.getLiquidityAmount()).toStrictEqual(
+            userLiquidity.getLiquidityAmount(),
+        );
+        expect(userLiquidity2.getLiquidityProvided()).toStrictEqual(
+            userLiquidity.getLiquidityProvided(),
+        );
+        expect(userLiquidity2.isLp()).toStrictEqual(userLiquidity.isLp());
+    });
+
+    it('should throw when reservedAmount > MAX_RESERVATION_AMOUNT_PROVIDER', () => {
+        expect(() => {
+            const userLiquidity: UserLiquidity = new UserLiquidity(
+                PROVIDER_LIQUIDITY_POINTER,
+                LIQUIDITY_PROVIDER_POINTER,
+                providerId,
+            );
+
+            userLiquidity.setReservedAmount(u128.Max);
+        }).toThrow();
     });
 
     it('should correctly reset all values', () => {

@@ -213,7 +213,6 @@ export class UserReservation {
     private unpackFlags(flag: u8): void {
         this.reservedLP = !!(flag & 0b1);
         this.isTimeout = !!(flag & 0b10);
-        // (flag >> 1) & 0b1;
     }
 
     private packFlags(): u8 {
