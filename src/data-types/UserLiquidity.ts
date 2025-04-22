@@ -130,7 +130,7 @@ export class UserLiquidity {
 
     /**
      * @method getReservedAmount
-     * @description Retrieves the reserved amount.
+     * @description Retrieves the reserved amount. Use a u128 but max value of a u120.
      * @returns {u128} - The reserved amount.
      */
     @inline
@@ -166,11 +166,16 @@ export class UserLiquidity {
 
     /**
      * @method setReservedAmount
-     * @description Sets the reserved amount.
+     * @description Sets the reserved amount. Use a u128 but max value of a u120.
      * @param {u128} amount - The reserved amount to set.
      */
     @inline
     public setReservedAmount(amount: u128): void {
+        if (amount > MAX_RESERVATION_AMOUNT_PROVIDER) {
+            throw new Revert(
+                `Invalid reserved amount. Must be smaller or equal to ${MAX_RESERVATION_AMOUNT_PROVIDER}`,
+            );
+        }
         this.ensureValues();
         if (this.reservedAmount != amount) {
             this.reservedAmount = amount;
@@ -293,11 +298,13 @@ export class UserLiquidity {
             // Unpack liquidityAmount (16 bytes, little endian)
             this.liquidityAmount = reader.readU128();
 
-            // Additional 15 bytes are for the reservation amount
+            // Additional 15 bytes are for the reservedAmount
+            // reservedAmount has the precision of a u120, ignore last byte
             const bytes = new Uint8Array(16);
             for (let i: i32 = 0; i < 15; i++) {
                 bytes[i] = reader.readU8();
             }
+            bytes[15] = 0;
 
             this.reservedAmount = u128.fromBytes(bytes, false);
 
@@ -325,6 +332,7 @@ export class UserLiquidity {
         // Pack liquidityAmount (16 bytes, little endian)
         writer.writeU128(this.liquidityAmount);
 
+        // reservedAmount has the precision of a u120, ignore last byte
         const bytes = this.reservedAmount.toBytes(false);
         for (let i: i32 = 0; i < 15; i++) {
             writer.writeU8(bytes[i] || 0);

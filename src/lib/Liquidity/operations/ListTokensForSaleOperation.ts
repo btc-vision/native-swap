@@ -9,7 +9,7 @@ import {
     SafeMath,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
-import { getTotalFeeCollected } from '../../../utils/NativeSwapUtils';
+import { getTotalFeeCollected, tokensToSatoshis } from '../../../utils/NativeSwapUtils';
 import { LiquidityListedEvent } from '../../../events/LiquidityListedEvent';
 import { FeeManager } from '../../FeeManager';
 
@@ -117,10 +117,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
     private ensureLiquidityNotTooLowInSatoshis(): void {
         const currentPrice: u256 = this.liquidityQueue.quote();
-        const liquidityInSatoshis: u256 = this.liquidityQueue.tokensToSatoshis(
-            this.amountIn.toU256(),
-            currentPrice,
-        );
+        const liquidityInSatoshis: u256 = tokensToSatoshis(this.amountIn.toU256(), currentPrice);
 
         if (
             u256.lt(

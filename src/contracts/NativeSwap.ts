@@ -30,7 +30,7 @@ import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReentrancyGuard } from '../lib/ReentrancyGuard';
 import { STAKING_CA_POINTER } from '../lib/StoredPointers';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
-import { QUOTE_SCALE } from '../utils/NativeSwapUtils';
+import { QUOTE_SCALE, satoshisToTokens, tokensToSatoshis } from '../utils/NativeSwapUtils';
 
 /**
  * OrderBook contract for the OP_NET order book system,
@@ -105,7 +105,7 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.createPool(calldata, token);
             }
             case encodeSelector(
-                'createPoolWithSignature(bytes,address,uint256,uint256,uint128,string,uint16,uint256,uint16)',
+                'createPoolWithSignature(bytes,uint256,uint256,address,uint256,uint128,string,uint16,uint256,uint16)',
             ): {
                 return this.createPoolWithSignature(calldata);
             }
@@ -245,7 +245,6 @@ export class NativeSwap extends ReentrancyGuard {
 
         const amount = calldata.readU256();
         const nonce = calldata.readU256();
-        const token: Address = calldata.readAddress();
 
         const calldataSend = new BytesWriter(
             SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH + U256_BYTE_LENGTH + 68,
@@ -256,6 +255,8 @@ export class NativeSwap extends ReentrancyGuard {
         calldataSend.writeU256(amount);
         calldataSend.writeU256(nonce);
         calldataSend.writeBytesWithLength(signature);
+
+        const token: Address = calldata.readAddress();
 
         Blockchain.call(token, calldataSend);
 
@@ -478,7 +479,7 @@ export class NativeSwap extends ReentrancyGuard {
         const price: u256 = queue.quote();
         this.ensurePriceNotZeroAndLiquidity(price);
 
-        let tokensOut = queue.satoshisToTokens(satoshisIn, price);
+        let tokensOut = satoshisToTokens(satoshisIn, price);
 
         // If tokensOut > availableLiquidity, cap it
         const availableLiquidity = SafeMath.sub(queue.liquidity, queue.reservedLiquidity);
@@ -486,7 +487,7 @@ export class NativeSwap extends ReentrancyGuard {
         let requiredSatoshis = satoshisIn;
         if (u256.gt(tokensOut, availableLiquidity)) {
             tokensOut = availableLiquidity;
-            requiredSatoshis = queue.tokensToSatoshis(tokensOut, price);
+            requiredSatoshis = tokensToSatoshis(tokensOut, price);
 
             // If that is bigger than satoshisIn, clamp
             if (u256.gt(requiredSatoshis, satoshisIn)) {

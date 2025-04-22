@@ -480,7 +480,7 @@ export class LiquidityQueue {
             tokensReserved = SafeMath.add(tokensReserved, reservedAmount.toU256());
 
             // Convert satoshis -> tokens
-            let tokensDesired = this.satoshisToTokens(satoshisSent, quoteAtReservation);
+            let tokensDesired = satoshisToTokens(satoshisSent, quoteAtReservation);
 
             if (queueType === LIQUIDITY_REMOVAL_TYPE) {
                 // (These tokens are not in provider.liquidity.)
@@ -496,12 +496,12 @@ export class LiquidityQueue {
                 }
 
                 // Convert that spent amount to tokens
-                let tokensDesiredRem = this.satoshisToTokens(actualSpent, quoteAtReservation);
+                let tokensDesiredRem = satoshisToTokens(actualSpent, quoteAtReservation);
                 tokensDesiredRem = SafeMath.min(tokensDesiredRem, reservedAmount.toU256());
 
                 if (tokensDesiredRem.isZero()) {
                     // If zero => revert the entire chunk from _lpBTCowedReserved
-                    const costInSats = this.tokensToSatoshis(
+                    const costInSats = tokensToSatoshis(
                         reservedAmount.toU256(),
                         quoteAtReservation,
                     );
@@ -514,7 +514,7 @@ export class LiquidityQueue {
                     // partial leftover
                     const leftover = SafeMath.sub128(reservedAmount, tokensDesiredRem.toU128());
                     if (!leftover.isZero()) {
-                        const costInSatsLeftover = this.tokensToSatoshis(
+                        const costInSatsLeftover = tokensToSatoshis(
                             leftover.toU256(),
                             quoteAtReservation,
                         );
@@ -565,7 +565,7 @@ export class LiquidityQueue {
                 }
 
                 // Convert the purchased portion to satoshis
-                satoshisSent = this.tokensToSatoshis(tokensDesired, quoteAtReservation);
+                satoshisSent = tokensToSatoshis(tokensDesired, quoteAtReservation);
 
                 provider.decreaseReserved(reservedAmount);
 
@@ -658,56 +658,24 @@ export class LiquidityQueue {
     }
 
     public getMaximumTokensLeftBeforeCap(): u256 {
-        // how many tokens are currently liquid vs. reserved
-        const reservedAmount: u256 = this.reservedLiquidity;
-        const totalLiquidity: u256 = this.liquidity;
         const maxPercentage: u256 = u256.fromU64(this.maxReserves5BlockPercent);
 
-        if (totalLiquidity.isZero()) {
+        if (this.liquidity.isZero()) {
             return u256.Zero;
         }
 
-        // Compute reserved ratio in scaled form:
-        // ratioScaled = (reserved * QUOTE_SCALE) / totalLiquidity
-        let ratioScaled: u256 = SafeMath.mul(reservedAmount, QUOTE_SCALE);
-        ratioScaled = SafeMath.div(ratioScaled, totalLiquidity);
+        const totalScaled = SafeMath.mul(this.liquidity, QUOTE_SCALE);
+        const reservedScaled = SafeMath.mul(this.reservedLiquidity, QUOTE_SCALE);
 
-        // Convert maxReserves5BlockPercent (like 5 => 5%)
-        //    into the same QUOTE_SCALE domain:
-        //    maxPercentScaled = (maxPercentage * QUOTE_SCALE) / 100
-        const hundred = u256.fromU64(100);
-        let maxPercentScaled = SafeMath.mul(maxPercentage, QUOTE_SCALE);
-        maxPercentScaled = SafeMath.div(maxPercentScaled, hundred);
+        const capScaled = SafeMath.div(SafeMath.mul(totalScaled, maxPercentage), u256.fromU32(100));
 
-        // leftoverRatioScaled = maxPercentScaled - ratioScaled
-        //    if leftoverRatioScaled < 0 => clamp to 0
-        let leftoverRatioScaled: u256;
-        if (u256.gt(ratioScaled, maxPercentScaled)) {
-            leftoverRatioScaled = u256.Zero;
-        } else {
-            leftoverRatioScaled = SafeMath.sub(maxPercentScaled, ratioScaled);
+        let availableScaled = u256.Zero;
+
+        if (reservedScaled < capScaled) {
+            availableScaled = SafeMath.div(SafeMath.sub(capScaled, reservedScaled), QUOTE_SCALE);
         }
 
-        // leftoverTokens = (totalLiquidity * leftoverRatioScaled) / QUOTE_SCALE
-        return SafeMath.div(SafeMath.mul(totalLiquidity, leftoverRatioScaled), QUOTE_SCALE);
-    }
-
-    /**
-     * tokensToSatoshis(tokenAmount, scaledPrice):
-     *   = tokenAmount * QUOTE_SCALE / scaledPrice
-     * because scaledPrice = (T * QUOTE_SCALE) / B
-     */
-    public tokensToSatoshis(tokenAmount: u256, scaledPrice: u256): u256 {
-        return tokensToSatoshis(tokenAmount, scaledPrice);
-    }
-
-    /**
-     * satoshisToTokens(satoshis, scaledPrice):
-     *   = (satoshis * scaledPrice) / QUOTE_SCALE
-     * because scaledPrice = (T * QUOTE_SCALE) / B
-     */
-    public satoshisToTokens(satoshis: u256, scaledPrice: u256): u256 {
-        return satoshisToTokens(satoshis, scaledPrice);
+        return availableScaled;
     }
 
     public addActiveReservationToList(blockNumber: u64, reservationId: u128): u32 {
@@ -988,7 +956,7 @@ export class LiquidityQueue {
     }
 
     private resetProviderOnDust(provider: Provider, quoteAtReservation: u256): void {
-        const satLeftValue = this.tokensToSatoshis(provider.liquidity.toU256(), quoteAtReservation);
+        const satLeftValue = tokensToSatoshis(provider.liquidity.toU256(), quoteAtReservation);
 
         if (u256.lt(satLeftValue, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
             this._providerManager.resetProvider(provider, false);
@@ -1107,7 +1075,7 @@ export class LiquidityQueue {
         //         from _lpBTCowedReserved (since it never got paid).
         if (queueType === LIQUIDITY_REMOVAL_TYPE) {
             // Convert 'reservedAmount' back to sat (approx) using the original quote
-            const costInSats = this.tokensToSatoshis(reservedAmount.toU256(), quoteAtReservation);
+            const costInSats = tokensToSatoshis(reservedAmount.toU256(), quoteAtReservation);
 
             // clamp by actual owedReserved
             const owedReserved = this.getBTCowedReserved(provider.providerId);
@@ -1135,7 +1103,7 @@ export class LiquidityQueue {
         }
 
         // figure out how many sat was associated with 'reservedAmount'
-        const costInSats = this.tokensToSatoshis(reservedAmount.toU256(), currentQuoteAtThatTime);
+        const costInSats = tokensToSatoshis(reservedAmount.toU256(), currentQuoteAtThatTime);
 
         // clamp by actual `_lpBTCowedReserved`
         const wasReservedSats = this.getBTCowedReserved(providerId);
