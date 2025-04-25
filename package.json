@@ -35,7 +35,7 @@
     "@btc-vision/as-pect-assembly": "^8.1.0",
     "@btc-vision/as-pect-cli": "^8.1.0",
     "@btc-vision/as-pect-transform": "^8.1.0",
-    "@btc-vision/btc-runtime": "^1.5.8",
+    "@btc-vision/btc-runtime": "file:../btc-runtime",
     "@btc-vision/opnet-transform": "^0.0.5",
     "@eslint/js": "^9.22.0",
     "ts-node": "^10.9.2",

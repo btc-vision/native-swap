@@ -1,6 +1,6 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { SafeMath, StoredU256 } from '@btc-vision/btc-runtime/runtime';
-import { VOLATILITY_POINTER } from './StoredPointers';
+import { VOLATILITY_POINTER } from '../constants/StoredPointers';
 
 const REF_TRADE_SIZE: u256 = u256.fromU64(200_000);
 

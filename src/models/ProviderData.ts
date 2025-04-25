@@ -1,0 +1,521 @@
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import {
+    Blockchain,
+    BytesReader,
+    BytesWriter,
+    encodePointer,
+    U64_BYTE_LENGTH,
+    U8_BYTE_LENGTH,
+} from '@btc-vision/btc-runtime/runtime';
+
+@final
+export class ProviderData {
+    private readonly pointerBuffer: Uint8Array;
+    private readonly liquidityProvidedPointer: Uint8Array;
+    private readonly liquidityAmountPointer: Uint8Array;
+    private readonly reservedAmountPointer: Uint8Array;
+    private valueLoaded: boolean = false;
+    private stateChanged: boolean = false;
+    private liquidityProvidedLoaded: boolean = false;
+    private liquidityAmountLoaded: boolean = false;
+    private reservedAmountLoaded: boolean = false;
+    private liquidityProvidedChanged: boolean = false;
+    private liquidityAmountChanged: boolean = false;
+    private reservedAmountChanged: boolean = false;
+
+    /**
+     * @constructor
+     * @param {u16} pointer - The primary pointer identifier.
+     * @param {u16} liquidityProvidedPointer - The liquidity provided pointer identifier.
+     * @param {u16} liquidityAmountPointer - The liquidity amount pointer identifier.
+     * @param {u16} reservedAmountPointer - The reserved amount pointer identifier.
+     * @param subPointer - The sub-pointer for memory slot addressing.
+     */
+    constructor(
+        pointer: u16,
+        liquidityProvidedPointer: u16,
+        liquidityAmountPointer: u16,
+        reservedAmountPointer: u16,
+        subPointer: Uint8Array,
+    ) {
+        assert(
+            subPointer.length <= 30,
+            `You must pass a 30 bytes sub-pointer. (UserLiquidity, got ${subPointer.length})`,
+        );
+
+        this.pointerBuffer = encodePointer(pointer, subPointer);
+        this.liquidityProvidedPointer = encodePointer(liquidityProvidedPointer, subPointer);
+        this.liquidityAmountPointer = encodePointer(liquidityAmountPointer, subPointer);
+        this.reservedAmountPointer = encodePointer(reservedAmountPointer, subPointer);
+    }
+
+    private _initialLiquidityProvider: boolean = false;
+
+    /**
+     * @method initialLiquidityProvider
+     * @description Gets if the provider is an initial liquidity provider.
+     * @returns {boolean} - true if an initial liquidity provider; false if not.
+     */
+    @inline
+    public get initialLiquidityProvider(): boolean {
+        this.ensureValues();
+        return this._initialLiquidityProvider;
+    }
+
+    /**
+     * @method initialLiquidityProvider
+     * @description Set if the provider is an initial liquidity provider.
+     * @param {boolean} value - true if an initial liquidity provider; false if not.
+     */
+    public set initialLiquidityProvider(value: boolean) {
+        this.ensureValues();
+        if (this._initialLiquidityProvider !== value) {
+            this._initialLiquidityProvider = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _pendingRemoval: boolean = false;
+
+    /**
+     * @method pendingRemoval
+     * @description Gets if the provider is in pending removal state.
+     * @returns {boolean} - true if in pending removal state; false if not.
+     */
+    @inline
+    public get pendingRemoval(): boolean {
+        this.ensureValues();
+        return this._pendingRemoval;
+    }
+
+    /**
+     * @method pendingRemoval
+     * @description Set if the provider is in pending removal state.
+     * @param {boolean} value - true if in pending removal; false if not.
+     */
+    public set pendingRemoval(value: boolean) {
+        this.ensureValues();
+        if (this._pendingRemoval !== value) {
+            this._pendingRemoval = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _active: boolean = false;
+
+    /**
+     * @method active
+     * @description Gets if the provider is active.
+     * @returns {boolean} - true if active; false if not.
+     */
+    @inline
+    public get active(): boolean {
+        this.ensureValues();
+        return this._active;
+    }
+
+    /**
+     * @method active
+     * @description Sets if the provider is active.
+     * @param {boolean} value - true if active; false if not.
+     */
+    public set active(value: boolean) {
+        this.ensureValues();
+        if (this._active !== value) {
+            this._active = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _priority: boolean = false;
+
+    /**
+     * @method priority
+     * @description Gets if the provider is a priority provider.
+     * @returns {boolean} - true if a priority provider; false if not.
+     */
+    @inline
+    public get priority(): boolean {
+        this.ensureValues();
+        return this._priority;
+    }
+
+    /**
+     * @method priority
+     * @description Sets if the provider is a priority provider.
+     * @param {boolean} value - true if a priority provider; false if not.
+     */
+    public set priority(value: boolean) {
+        this.ensureValues();
+        if (this._priority !== value) {
+            this._priority = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _liquidityProvisionAllowed: boolean = false;
+
+    /**
+     * @method liquidityProvisionAllowed
+     * @description Gets if the provider can provide liquidity.
+     * @returns {boolean} - true if can provide liquidity; false if not.
+     */
+    @inline
+    public get liquidityProvisionAllowed(): boolean {
+        this.ensureValues();
+        return this._liquidityProvisionAllowed;
+    }
+
+    /**
+     * @method liquidityProvisionAllowed
+     * @description Sets if the provider can provide liquidity.
+     * @param {boolean} value - true if can provide liquidity; false if not.
+     */
+    public set liquidityProvisionAllowed(value: boolean) {
+        this.ensureValues();
+        if (this._liquidityProvisionAllowed !== value) {
+            this._liquidityProvisionAllowed = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _liquidityProvider: boolean = false;
+
+    /**
+     * @method liquidityProvider
+     * @description Gets if the provider is a liquidity provider.
+     * @returns {boolean} - true if a liquidity provider; false if not.
+     */
+    @inline
+    public get liquidityProvider(): boolean {
+        this.ensureValues();
+        return this._liquidityProvider;
+    }
+
+    /**
+     * @method liquidityProvider
+     * @description Sets if the provider is a liquidity provider.
+     * @param {boolean} value - true if a liquidity provider; false if not.
+     */
+    public set liquidityProvider(value: boolean) {
+        this.ensureValues();
+        if (this._liquidityProvider !== value) {
+            this._liquidityProvider = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _queueIndex: u64 = 0;
+
+    /**
+     * @method queueIndex
+     * @description Gets the index of the provider in the queue.
+     * @returns {u256} - The index of the provider in the queue.
+     */
+    @inline
+    public get queueIndex(): u64 {
+        this.ensureValues();
+        return this._queueIndex;
+    }
+
+    /**
+     * @method queueIndex
+     * @description Sets the index of the provider in the queue.
+     * @param {u256} value - The index of the provider in the queue.
+     */
+    public set queueIndex(value: u64) {
+        this.ensureValues();
+        if (this._queueIndex !== value) {
+            this._queueIndex = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _liquidityProvided: u256 = u256.Zero;
+
+    /**
+     * @method liquidityProvided
+     * @description Gets the liquidity provided.
+     * @returns {u256} - The liquidity provided.
+     */
+    @inline
+    public get liquidityProvided(): u256 {
+        this.ensureLiquidityProvided();
+        return this._liquidityProvided;
+    }
+
+    /**
+     * @method liquidityProvided
+     * @description Sets the liquidity provided.
+     * @param {u256} value - The liquidity provided.
+     */
+    public set liquidityProvided(value: u256) {
+        this.ensureLiquidityProvided();
+        if (!u256.eq(this._liquidityProvided, value)) {
+            this._liquidityProvided = value;
+            this.liquidityProvidedChanged = true;
+        }
+    }
+
+    private _liquidityAmount: u256 = u256.Zero;
+
+    /**
+     * @method liquidityAmount
+     * @description Gets the liquidity amount.
+     * @returns {u256} - The liquidity amount.
+     */
+    @inline
+    public get liquidityAmount(): u256 {
+        this.ensureLiquidityAmount();
+        return this._liquidityAmount;
+    }
+
+    /**
+     * @method liquidityAmount
+     * @description Sets the liquidity amount.
+     * @param {u256} value - The liquidity amount.
+     */
+    public set liquidityAmount(value: u256) {
+        this.ensureLiquidityAmount();
+        if (!u256.eq(this._liquidityAmount, value)) {
+            this._liquidityAmount = value;
+            this.liquidityAmountChanged = true;
+        }
+    }
+
+    private _reservedAmount: u256 = u256.Zero;
+
+    /**
+     * @method reservedAmount
+     * @description Gets the reserved amount.
+     * @returns {u256} - The reserved amount.
+     */
+    @inline
+    public get reservedAmount(): u256 {
+        this.ensureReservedAmount();
+        return this._reservedAmount;
+    }
+
+    /**
+     * @method reservedAmount
+     * @description Sets the reserved amount.
+     * @param {u256} value - The reserved amount.
+     */
+    public set reservedAmount(value: u256) {
+        this.ensureReservedAmount();
+        if (!u256.eq(this._reservedAmount, value)) {
+            this._reservedAmount = value;
+            this.reservedAmountChanged = true;
+        }
+    }
+
+    /**
+     * @method save
+     * @description Persists the cached values to storage if any have been modified.
+     * @returns {void}
+     */
+    public save(): void {
+        this.saveStateIfChanged();
+        this.saveLiquidityProvidedIfChanged();
+        this.saveLiquidityAmountIfChanged();
+        this.saveReservedAmountIfChanged();
+    }
+
+    /**
+     * @method resetAll
+     * @description Reset all values (listing and liquidity provider).
+     * @returns {void}
+     */
+    public resetAll(): void {
+        this.resetListingValues();
+        this.resetLiquidityProviderValues();
+    }
+
+    /**
+     * @method resetListingValues
+     * @description Reset only the values used by a listing.
+     * @returns {void}
+     */
+    public resetListingValues(): void {
+        this.active = false;
+        this.priority = false;
+        this.liquidityProvisionAllowed = false;
+        this.liquidityAmount = u256.Zero;
+        this.reservedAmount = u256.Zero;
+        this.queueIndex = 0;
+    }
+
+    /**
+     * @method resetLiquidityProviderValues
+     * @description Reset only the values used by a liquidity provider.
+     * @returns {void}
+     */
+    public resetLiquidityProviderValues(): void {
+        this.liquidityProvided = u256.Zero;
+        this.pendingRemoval = false;
+        this.liquidityProvider = false;
+        this.queueIndex = 0;
+    }
+
+    /**
+     * @method saveStateIfChanged
+     * @description Persists the states if any have been modified
+     * @returns {void}.
+     */
+    private saveStateIfChanged(): void {
+        if (this.stateChanged) {
+            const packed = this.packValues();
+            Blockchain.setStorageAt(this.pointerBuffer, packed);
+            this.stateChanged = false;
+        }
+    }
+
+    /**
+     * @method saveLiquidityProvidedIfChanged
+     * @description Persists the liquidity provided if modified.
+     * @returns {void}
+     */
+    private saveLiquidityProvidedIfChanged(): void {
+        if (this.liquidityProvidedChanged) {
+            Blockchain.setStorageAt(
+                this.liquidityProvidedPointer,
+                this.liquidityProvided.toUint8Array(true),
+            );
+            this.liquidityProvidedChanged = false;
+        }
+    }
+
+    /**
+     * @method saveLiquidityAmountIfChanged
+     * @description Persists the liquidity amount if modified.
+     * @returns {void}
+     */
+    private saveLiquidityAmountIfChanged(): void {
+        if (this.liquidityAmountChanged) {
+            Blockchain.setStorageAt(
+                this.liquidityAmountPointer,
+                this.liquidityAmount.toUint8Array(true),
+            );
+            this.liquidityAmountChanged = false;
+        }
+    }
+
+    /**
+     * @method saveReservedAmountIfChanged
+     * @description Persists the liquidity amount if modified.
+     * @returns {void}
+     */
+    private saveReservedAmountIfChanged(): void {
+        if (this.reservedAmountChanged) {
+            Blockchain.setStorageAt(
+                this.reservedAmountPointer,
+                this.reservedAmount.toUint8Array(true),
+            );
+            this.reservedAmountChanged = false;
+        }
+    }
+
+    /**
+     * @private
+     * @method ensureLiquidityAmount
+     * @description Loads the liquidity amount from storage if needed.
+     * @returns {void}
+     */
+    private ensureLiquidityAmount(): void {
+        if (!this.liquidityAmountLoaded) {
+            const data = Blockchain.getStorageAt(this.liquidityAmountPointer);
+
+            this._liquidityAmount = u256.fromBytes(data, true);
+            this.liquidityAmountLoaded = true;
+        }
+    }
+
+    /**
+     * @private
+     * @method ensureLiquidityProvided
+     * @description Loads the liquidity provided from storage if needed.
+     * @returns {void}
+     */
+    private ensureLiquidityProvided(): void {
+        if (!this.liquidityProvidedLoaded) {
+            const data = Blockchain.getStorageAt(this.liquidityProvidedPointer);
+
+            this._liquidityProvided = u256.fromBytes(data, true);
+            this.liquidityProvidedLoaded = true;
+        }
+    }
+
+    /**
+     * @private
+     * @method ensureReservedAmount
+     * @description Loads the reserved amount from storage if needed.
+     * @returns {void}
+     */
+    private ensureReservedAmount(): void {
+        if (!this.reservedAmountLoaded) {
+            const data = Blockchain.getStorageAt(this.reservedAmountPointer);
+
+            this._reservedAmount = u256.fromBytes(data, true);
+            this.reservedAmountLoaded = true;
+        }
+    }
+
+    /**
+     * @private
+     * @method ensureValues
+     * @description Loads and unpack the values if needed.
+     * @returns {void}
+     */
+    private ensureValues(): void {
+        if (!this.valueLoaded) {
+            const storedData: Uint8Array = Blockchain.getStorageAt(this.pointerBuffer);
+            this.unpackValues(storedData);
+
+            this.valueLoaded = true;
+        }
+    }
+
+    /**
+     * @private
+     * @method unpackValues
+     * @description Unpacks the internal data.
+     * @param {Uint8Array} packedData - The data to unpack.
+     * @returns {void}
+     */
+    private unpackValues(packedData: Uint8Array): void {
+        const reader = new BytesReader(packedData);
+
+        const flag = reader.readU8();
+
+        this._active = (flag & 1) === 1;
+        this._priority = ((flag >> 1) & 1) === 1;
+        this._liquidityProvisionAllowed = ((flag >> 2) & 1) === 1;
+        this._liquidityProvider = ((flag >> 3) & 1) === 1;
+        this._pendingRemoval = ((flag >> 4) & 1) === 1;
+        this._initialLiquidityProvider = ((flag >> 5) & 1) === 1;
+
+        this._queueIndex = reader.readU64();
+    }
+
+    /**
+     * @private
+     * @method packValues
+     * @description Packs the internal data for storage.
+     * @returns The packed Uint8Array value.
+     */
+    private packValues(): Uint8Array {
+        const writer = new BytesWriter(U8_BYTE_LENGTH + U64_BYTE_LENGTH);
+        const flag =
+            (this._active ? 1 : 0) |
+            ((this._priority ? 1 : 0) << 1) |
+            ((this._liquidityProvisionAllowed ? 1 : 0) << 2) |
+            ((this._liquidityProvider ? 1 : 0) << 3) |
+            ((this._pendingRemoval ? 1 : 0) << 4) |
+            ((this._initialLiquidityProvider ? 1 : 0) << 5);
+
+        writer.writeU8(flag);
+        writer.writeU64(this._queueIndex);
+
+        return writer.getBuffer();
+    }
+}

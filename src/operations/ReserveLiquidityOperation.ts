@@ -6,7 +6,7 @@ import { LiquidityReservedEvent } from '../../../events/LiquidityReservedEvent';
 import { MAX_RESERVATION_AMOUNT_PROVIDER } from '../../../data-types/UserLiquidity';
 import { ReservationCreatedEvent } from '../../../events/ReservationCreatedEvent';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { FeeManager } from '../../FeeManager';
+import { FeeManager } from '../managers/FeeManager';
 import {
     getTotalFeeCollected,
     satoshisToTokens,
@@ -254,6 +254,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         }
     }
 
+    //!!! revalidate
     private ensureUserNotTimedOut(reservation: Reservation): void {
         const userTimeoutUntilBlock: u64 = reservation.userTimeoutBlockExpiration;
         if (

@@ -1,6 +1,6 @@
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders } from '../lib/Provider';
-import { AdvancedStoredString } from '../stored/AdvancedStoredString';
+import { AdvancedStoredString } from '../storage/AdvancedStoredString';
 
 describe('AdvancedStoredString', () => {
     beforeEach(() => {

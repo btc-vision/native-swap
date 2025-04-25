@@ -3,9 +3,11 @@ import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 export const FEE_SETTINGS_POINTER: u16 = Blockchain.nextPointer;
 export const TOTAL_RESERVES_POINTER: u16 = Blockchain.nextPointer;
 
-export const PROVIDER_LIQUIDITY_POINTER: u16 = Blockchain.nextPointer;
-export const LIQUIDITY_PROVIDER_POINTER: u16 = Blockchain.nextPointer;
-export const PROVIDER_ADDRESS_POINTER: u16 = Blockchain.nextPointer;
+export const PROVIDER_DATA_POINTER: u16 = Blockchain.nextPointer;
+export const LIQUIDITY_PROVIDED_POINTER: u16 = Blockchain.nextPointer;
+export const LIQUIDITY_AMOUNT_POINTER: u16 = Blockchain.nextPointer;
+export const RESERVED_AMOUNT_POINTER: u16 = Blockchain.nextPointer;
+export const BTC_RECEIVER_ADDRESS_POINTER: u16 = Blockchain.nextPointer;
 
 export const LIQUIDITY_QUOTE_HISTORY_POINTER: u16 = Blockchain.nextPointer;
 export const LIQUIDITY_QUEUE_POINTER: u16 = Blockchain.nextPointer;
@@ -16,12 +18,11 @@ export const LIQUIDITY_VIRTUAL_BTC_POINTER: u16 = Blockchain.nextPointer;
 export const LIQUIDITY_VIRTUAL_T_POINTER: u16 = Blockchain.nextPointer;
 export const RESERVATION_SETTINGS_POINTER: u16 = Blockchain.nextPointer;
 export const BLOCKS_WITH_RESERVATIONS_POINTER: u16 = Blockchain.nextPointer;
-export const INDEXED_PROVIDER_POINTER: u16 = Blockchain.nextPointer;
 
 export const RESERVATION_INDEXES: u16 = Blockchain.nextPointer;
 export const RESERVATION_AMOUNTS: u16 = Blockchain.nextPointer;
 export const RESERVATION_PRIORITY: u16 = Blockchain.nextPointer;
-export const RESERVATION_ID_POINTER: u16 = Blockchain.nextPointer;
+export const RESERVATION_DATA_POINTER: u16 = Blockchain.nextPointer;
 export const RESERVATION_IDS_BY_BLOCK_POINTER: u16 = Blockchain.nextPointer;
 export const ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER: u16 = Blockchain.nextPointer;
 
