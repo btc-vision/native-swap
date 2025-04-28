@@ -222,6 +222,7 @@ export class UserLiquidity {
     @inline
     public resetLPValues(): void {
         this.liquidityProvided = u256.Zero;
+        this.liquidityChanged = true;
         this.pendingRemoval = false;
         this.setIsLp(false);
         this.isChanged = true;

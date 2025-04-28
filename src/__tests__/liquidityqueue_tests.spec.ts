@@ -1608,7 +1608,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
     });
 
     it("should do nothing if the block range has no 'active' reservations => after the for loop => updatedOne=false => restoreIndex", () => {
-        setBlockchainEnvironment(6);
+        setBlockchainEnvironment(11);
 
         const queue: TestLiquidityQueue = new TestLiquidityQueue(
             tokenAddress1,
@@ -1623,7 +1623,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         queue.setPreviousReservationStartingIndex(100);
         queue.setPreviousReservationStandardStartingIndex(101);
         queue.setPreviousRemovalStartingIndex(102);
-        queue.lastPurgedBlock = 5;
+        queue.lastPurgedBlock = 10;
         expect(queue.getReservationListForBlock(6).getLength()).toStrictEqual(0);
 
         queue.callPurgeReservationsAndRestoreProviders();
@@ -1742,7 +1742,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         expect(queue.getPreviousReservationStandardStartingIndex()).toStrictEqual(0);
         expect(queue.getPreviousReservationStartingIndex()).toStrictEqual(0);
         expect(queue.reservedLiquidity).toStrictEqual(u256.fromU32(1000000));
-        expect(queue.lastPurgedBlock).toStrictEqual(95);
+        expect(queue.lastPurgedBlock).toStrictEqual(90);
     });
 
     it('should revert if reservation purge index mismatch', () => {
@@ -2030,7 +2030,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
     });
 
     it('should handle pendingRemoval provider => removal queue => calls purgeAndRestoreProviderRemovalQueue => costInSats < wasReservedSats => clamp by owedReserved', () => {
-        setBlockchainEnvironment(90);
+        setBlockchainEnvironment(85);
 
         const provider1: Provider = createProvider(
             providerAddress1,
@@ -2103,7 +2103,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
     });
 
     it('should handle pendingRemoval provider => removal queue => calls purgeAndRestoreProviderRemovalQueue => costInSats < wasReservedSats => clamp by owedReserved', () => {
-        setBlockchainEnvironment(90);
+        setBlockchainEnvironment(85);
 
         const provider1: Provider = createProvider(
             providerAddress1,
@@ -2176,7 +2176,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
     });
 
     it('should handle pendingRemoval provider => removal queue => calls purgeAndRestoreProviderRemovalQueue => costInSats > wasReservedSats => clamp by owedReserved', () => {
-        setBlockchainEnvironment(90);
+        setBlockchainEnvironment(85);
 
         const provider1: Provider = createProvider(
             providerAddress1,
@@ -2253,7 +2253,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
     });
 
     it('should handle multiple providers for a reservation', () => {
-        setBlockchainEnvironment(90);
+        setBlockchainEnvironment(85);
 
         const provider1: Provider = createProvider(
             providerAddress1,

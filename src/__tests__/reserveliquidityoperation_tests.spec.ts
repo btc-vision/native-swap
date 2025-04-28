@@ -952,7 +952,7 @@ describe('ReserveLiquidityOperation tests', () => {
         const reservation = new Reservation(tokenAddress1, providerAddress2);
         expect(reservation.getActivationDelay()).toStrictEqual(2);
         expect(reservation.reservedLP).toBeFalsy();
-        expect(reservation.expirationBlock()).toStrictEqual(108);
+        expect(reservation.expirationBlock()).toStrictEqual(113);
         expect(reservation.getPurgeIndex()).toStrictEqual(0);
 
         const values = reservation.getReservedValues();
