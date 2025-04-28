@@ -508,8 +508,9 @@ export class NativeSwap extends ReentrancyGuard {
         token: Address,
         tokenId: Uint8Array,
         purgeOldReservations: boolean,
+        timeoutEnabled: boolean = false,
     ): LiquidityQueue {
-        return new LiquidityQueue(token, tokenId, purgeOldReservations);
+        return new LiquidityQueue(token, tokenId, purgeOldReservations, timeoutEnabled);
     }
 
     private addressToPointerU256(address: Address, token: Address): u256 {

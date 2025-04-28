@@ -2,7 +2,7 @@ import { Blockchain, SafeMath, TransactionOutput } from '@btc-vision/btc-runtime
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
 export const FEE_COLLECT_SCRIPT_PUBKEY: string =
-    'bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh';
+    'tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c';
 
 export function getTotalFeeCollected(): u64 {
     const outputs = Blockchain.tx.outputs;

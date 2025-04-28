@@ -46,7 +46,7 @@ const ENABLE_FEES: bool = true;
 
 export class LiquidityQueue {
     // Reservation settings
-    public static RESERVATION_EXPIRE_AFTER: u64 = 5;
+    public static RESERVATION_EXPIRE_AFTER: u64 = 10; //5;
     public static VOLATILITY_WINDOW_BLOCKS: u32 = 5;
     public static STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(600);
 
