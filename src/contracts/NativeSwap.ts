@@ -213,6 +213,9 @@ export class NativeSwap extends ReentrancyGuard {
         const receiver = calldata.readStringWithLength();
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
+
+        this.ensurePoolExistsForToken(queue);
+
         const operation = new AddLiquidityOperation(queue, providerId, receiver);
 
         operation.execute();
@@ -228,6 +231,9 @@ export class NativeSwap extends ReentrancyGuard {
         const token = calldata.readAddress();
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+
+        this.ensurePoolExistsForToken(queue);
+
         const operation = new RemoveLiquidityOperation(queue, providerId);
 
         operation.execute();
@@ -325,6 +331,9 @@ export class NativeSwap extends ReentrancyGuard {
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const tokenId = this.addressToPointer(token);
         const queue = this.getLiquidityQueue(token, tokenId, true);
+
+        this.ensurePoolExistsForToken(queue);
+
         const operation = new ListTokensForSaleOperation(
             queue,
             providerId,
@@ -365,6 +374,9 @@ export class NativeSwap extends ReentrancyGuard {
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+
+        this.ensurePoolExistsForToken(queue);
+
         const operation = new ReserveLiquidityOperation(
             queue,
             providerId,
@@ -395,6 +407,9 @@ export class NativeSwap extends ReentrancyGuard {
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const tokenId = this.addressToPointer(token);
         const queue = this.getLiquidityQueue(token, tokenId, true);
+
+        this.ensurePoolExistsForToken(queue);
+
         const operation = new CancelListingOperation(queue, providerId);
 
         operation.execute();
@@ -419,6 +434,8 @@ export class NativeSwap extends ReentrancyGuard {
             this.addressToPointer(token),
             false,
         );
+
+        this.ensurePoolExistsForToken(queue);
 
         const operation = new SwapOperation(queue, this.stakingContractAddress);
 

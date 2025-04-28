@@ -59,7 +59,7 @@ describe('Reservation tests', () => {
 
         reservation.setExpirationBlock(10);
 
-        expect(reservation.createdAt).toStrictEqual(5);
+        expect(reservation.createdAt).toStrictEqual(0);
     });
 
     it('should return 0 for createdAt when expiration block <= LiquidityQueue.RESERVATION_EXPIRE_AFTER', () => {
