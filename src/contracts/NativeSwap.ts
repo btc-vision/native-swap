@@ -71,20 +71,12 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     public override onExecutionCompleted(): void {
+        super.onExecutionCompleted();
         FeeManager.save();
         saveAllProviders();
-
-        // Ensure that the reentrancy guard is reset
-        this._stopEntry();
     }
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        // Ensure that the reentrancy guard is not active
-        this.checkReentrancy();
-
-        // Start the reentrancy guard
-        this._startEntry();
-
         switch (method) {
             case encodeSelector('reserve(address,uint256,uint256,bool,uint8)'):
                 return this.reserve(calldata);

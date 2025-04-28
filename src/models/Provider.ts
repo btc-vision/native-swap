@@ -1,6 +1,10 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { Potential, SafeMath, u256To30Bytes } from '@btc-vision/btc-runtime/runtime';
-import { AdvancedStoredString } from '../storage/AdvancedStoredString';
+import {
+    AdvancedStoredString,
+    Potential,
+    SafeMath,
+    u256To30Bytes,
+} from '@btc-vision/btc-runtime/runtime';
 import { ProviderData } from './ProviderData';
 import {
     BTC_RECEIVER_ADDRESS_POINTER,
@@ -17,6 +21,10 @@ export class Provider {
     private readonly id: u256;
     private _btcReceiver: Potential<AdvancedStoredString> = null;
 
+    /**
+     * @constructor
+     * @param {u256} providerId - The provider id.
+     */
     constructor(providerId: u256) {
         this.id = providerId;
         this.fromRemovalQueue = false;
@@ -34,100 +42,274 @@ export class Provider {
         );
     }
 
+    /**
+     * @method internalBTCReceiver
+     * @description Gets if the btc receiver address. Ensure it is loaded first.
+     * @returns {AdvancedStoredString} - the btc receiver address.
+     */
     private get internalBTCReceiver(): AdvancedStoredString {
         this.ensureBTCReceiver();
 
         return this._btcReceiver as AdvancedStoredString;
     }
 
+    /**
+     * @method isInitialLiquidityProvider
+     * @description Gets if the provider is an initial liquidity provider.
+     * @returns {boolean} - true if an initial liquidity provider; false if not.
+     */
+    public isInitialLiquidityProvider(): boolean {
+        return this.providerData.initialLiquidityProvider;
+    }
+
+    /**
+     * @method markInitialLiquidityProvider
+     * @description Mark the provider as the initial liquidity provider.
+     * @returns {void}
+     */
+    public markInitialLiquidityProvider(): void {
+        this.providerData.initialLiquidityProvider = true;
+    }
+
+    /**
+     * @method clearInitialLiquidityProvider
+     * @description Clear the initial liquidity provider.
+     * @returns {void}
+     */
+    public clearInitialLiquidityProvider(): void {
+        this.providerData.initialLiquidityProvider = false;
+    }
+
+    /**
+     * @method isPriority
+     * @description Gets the priority state.
+     * @returns {boolean} - true if the provider is a priority provider; false if not.
+     */
     public isPriority(): boolean {
         return this.providerData.priority;
     }
 
-    public setPriority(): void {
+    /**
+     * @method markPriority
+     * @description Mark the provider as a priority provider.
+     * @returns {void}
+     */
+    public markPriority(): void {
         this.providerData.priority = true;
     }
 
-    public removePriority(): void {
+    /**
+     * @method clearPriority
+     * @description Clear the priority state of the provider.
+     * @returns {void}
+     */
+    public clearPriority(): void {
         this.providerData.priority = false;
     }
 
+    /**
+     * @method isActive
+     * @description Gets the active state.
+     * @returns {boolean} - true if the provider is active; false if not.
+     */
     public isActive(): boolean {
         return this.providerData.active;
     }
 
+    /**
+     * @method activate
+     * @description Mark the provider as active.
+     * @returns {void}
+     */
     public activate(): void {
         this.providerData.active = true;
     }
 
+    /**
+     * @method deactivate
+     * @description Mark the provider as inactive.
+     * @returns {void}
+     */
     public deactivate(): void {
         this.providerData.active = false;
     }
 
-    public disallowLiquidityProvision(): void {
-        this.providerData.liquidityProvisionAllowed = false;
-    }
-
-    public allowLiquidityProvision(): void {
-        this.providerData.liquidityProvisionAllowed = true;
-    }
-
+    /**
+     * @method isLiquidityProvisionAllowed
+     * @description Gets if the provider can provide liquidity.
+     * @returns {boolean} - true if the provider can provide liquidity; false if not.
+     */
     public isLiquidityProvisionAllowed(): boolean {
         return this.providerData.liquidityProvisionAllowed;
     }
 
+    /**
+     * @method disallowLiquidityProvision
+     * @description Mark the provider as it cannot provide liquidity.
+     * @returns {void}
+     */
+    public disallowLiquidityProvision(): void {
+        this.providerData.liquidityProvisionAllowed = false;
+    }
+
+    /**
+     * @method allowLiquidityProvision
+     * @description Mark the provider as it can provide liquidity.
+     * @returns {void}
+     */
+    public allowLiquidityProvision(): void {
+        this.providerData.liquidityProvisionAllowed = true;
+    }
+
+    /**
+     * @method getbtcReceiver
+     * @description Gets the btc receiver address.
+     * @returns {string} - The btc address.
+     */
     public getbtcReceiver(): string {
         return this.internalBTCReceiver.value;
     }
 
+    /**
+     * @method setbtcReceiver
+     * @description Sts the btc receiver address.
+     * @param {string} value - The btc address.
+     * @returns {void}.
+     */
     public setbtcReceiver(value: string): void {
         this.internalBTCReceiver.value = value;
     }
 
+    /**
+     * @method getReservedAmount
+     * @description Gets the reserved amount.
+     * @returns {u256} - The reserved amount.
+     */
     public getReservedAmount(): u256 {
         return this.providerData.reservedAmount;
     }
 
+    /**
+     * @method setReservedAmount
+     * @description Sets the reserved amount.
+     * @param {u256} value - The reserved amount.
+     * @returns {void}
+     */
     public setReservedAmount(value: u256): void {
         this.providerData.reservedAmount = value;
     }
 
+    /**
+     * @method addToReservedAmount
+     * @description Add a value to the reserved amount.
+     * @param {u256} value - The value to add.
+     * @returns {void}
+     */
     public addToReservedAmount(value: u256): void {
+        // !!! Check reserved < liquidity
         this.providerData.reservedAmount = SafeMath.add(this.providerData.reservedAmount, value);
     }
 
-    public substractFromReservedAmount(value: u256): void {
+    /**
+     * @method subtractFromReservedAmount
+     * @description Subtract a value to the reserved amount.
+     * @param {u256} value - The value to subtract.
+     * @returns {void}
+     */
+    public subtractFromReservedAmount(value: u256): void {
         this.providerData.reservedAmount = SafeMath.sub(this.providerData.reservedAmount, value);
     }
 
+    /**
+     * @method isReservedAmountValid
+     * @description Gets if the reserved amount is valid (<= liquidity amount).
+     * @returns {boolean} - true if not Zero; false if Zero.
+     */
+    public isReservedAmountValid(): boolean {
+        return u256.le(this.getLiquidityAmount(), this.getReservedAmount()) ? true : false;
+    }
+
+    /**
+     * @method hasReservedAmount
+     * @description Gets if the reserved amount is not Zero.
+     * @returns {boolean} - true if not Zero; false if Zero.
+     */
     public hasReservedAmount(): boolean {
         return !this.providerData.reservedAmount.isZero();
     }
 
+    /**
+     * @method getLiquidityAmount
+     * @description Gets the liquidity amount.
+     * @returns {u256} - The liquidity amount.
+     */
     public getLiquidityAmount(): u256 {
         return this.providerData.liquidityAmount;
     }
 
+    /**
+     * @method setLiquidityAmount
+     * @description Sets the liquidity amount.
+     * @param {u256} value - The liquidity amount.
+     * @returns {void}
+     */
     public setLiquidityAmount(value: u256): void {
         this.providerData.liquidityAmount = value;
     }
 
+    /**
+     * @method hasLiquidityAmount
+     * @description Gets if the liquidityAmount amount is not Zero.
+     * @returns {boolean} - true if not Zero; false if Zero.
+     */
     public hasLiquidityAmount(): boolean {
         return !this.providerData.liquidityAmount.isZero();
     }
 
-    public substractFromLiquidityAmount(value: u256): void {
+    /**
+     * @method subtractFromLiquidityAmount
+     * @description Subtract a value to the liquidity amount.
+     * @param {u256} value - The value to subtract.
+     * @returns {void}
+     */
+    public subtractFromLiquidityAmount(value: u256): void {
         this.providerData.liquidityAmount = SafeMath.sub(this.providerData.liquidityAmount, value);
     }
 
+    /**
+     * @method getAvailableLiquidityAmount
+     * @description Gets the available liquidity amount.
+     * @returns {u256} The available liquidity.
+     */
+    public getAvailableLiquidityAmount(): u256 {
+        return SafeMath.sub(this.getLiquidityAmount(), this.getReservedAmount());
+    }
+
+    /**
+     * @method getLiquidityProvided
+     * @description Gets the liquidity provided.
+     * @returns {u256} - The liquidity provided.
+     */
     public getLiquidityProvided(): u256 {
         return this.providerData.liquidityProvided;
     }
 
+    /**
+     * @method setLiquidityProvided
+     * @description Sets the liquidity provided.
+     * @param {u256} value - The liquidity provided.
+     * @returns {void}
+     */
     public setLiquidityProvided(value: u256): void {
         this.providerData.liquidityProvided = value;
     }
 
+    /**
+     * @method addToLiquidityProvided
+     * @description Add a value to the liquidity amount.
+     * @param {u256} value - The value to add.
+     * @returns {void}
+     */
     public addToLiquidityProvided(value: u256): void {
         this.providerData.liquidityProvided = SafeMath.add(
             this.providerData.liquidityProvided,
@@ -135,70 +317,156 @@ export class Provider {
         );
     }
 
+    /**
+     * @method isLiquidityProvider
+     * @description Gets if the provider is a liquidity provider.
+     * @returns {boolean} - true if a liquidity provider; false if not.
+     */
     public isLiquidityProvider(): boolean {
         return this.providerData.liquidityProvider;
     }
 
-    public enableLiquidityProvider(): void {
+    /**
+     * @method markLiquidityProvider
+     * @description Mark a provider as a liquidity provider.
+     * @returns {void}
+     */
+    public markLiquidityProvider(): void {
         this.providerData.liquidityProvider = true;
     }
 
-    public disableLiquidityProvider(): void {
+    /**
+     * @method ClearLiquidityProvider
+     * @description Clear the liquidity provider state of a provider.
+     * @returns {void}
+     */
+    public clearLiquidityProvider(): void {
         this.providerData.liquidityProvider = false;
     }
 
-    public markPendingRemoval(): void {
-        this.providerData.pendingRemoval = true;
-    }
-
-    public clearPendingRemoval(): void {
-        this.providerData.pendingRemoval = false;
-    }
-
+    /**
+     * @method isPendingRemoval
+     * @description Gets if a provider is a pending removal.
+     * @returns {boolean} - true if pending removal; false if not.
+     */
     public isPendingRemoval(): boolean {
         return this.providerData.pendingRemoval;
     }
 
+    /**
+     * @method markPendingRemoval
+     * @description Mark a provider as pending removal.
+     * @returns {void}
+     */
+    public markPendingRemoval(): void {
+        this.providerData.pendingRemoval = true;
+    }
+
+    /**
+     * @method clearPendingRemoval
+     * @description Clear the pending removal state of a provider.
+     * @returns {void}
+     */
+    public clearPendingRemoval(): void {
+        this.providerData.pendingRemoval = false;
+    }
+
+    /**
+     * @method getQueueIndex
+     * @description Gets the provider index in a provider queue.
+     * @returns {u64} - The provider index in a provider queue.
+     */
     public getQueueIndex(): u64 {
         return this.providerData.queueIndex;
     }
 
+    /**
+     * @method setQueueIndex
+     * @description Sets the provider index in a provider queue.
+     * @param {u64} value - The provider index in a provider queue.
+     * @returns {void}
+     */
     public setQueueIndex(value: u64): void {
         this.providerData.queueIndex = value;
     }
 
+    /**
+     * @method getId
+     * @description Gets the provider id.
+     * @returns {u256} - The provider id.
+     */
     public getId(): u256 {
         return this.id;
     }
 
+    /**
+     * @method isFromRemovalQueue
+     * @description Gets if a provider is from the removal queue.
+     * @returns {boolean} - true if from the removal queue; false if not.
+     */
     public isFromRemovalQueue(): boolean {
         return this.fromRemovalQueue;
     }
 
+    /**
+     * @method markFromRemovalQueue
+     * @description Marks a provider is from the removal queue.
+     * @returns {void}
+     */
     public markFromRemovalQueue(): void {
         this.fromRemovalQueue = true;
     }
 
+    /**
+     * @method clearFromRemovalQueue
+     * @description Unmarks a provider is from the removal queue.
+     * @returns {void}
+     */
     public clearFromRemovalQueue(): void {
         this.fromRemovalQueue = false;
     }
 
+    /**
+     * @method resetAll
+     * @description Reset all provider fields.
+     * @returns {void}
+     */
     public resetAll(): void {
         this.providerData.resetAll();
     }
 
+    /**
+     * @method resetLiquidityProviderValues
+     * @description Reset all fields related to the liquidity providing.
+     * @returns {void}
+     */
     public resetLiquidityProviderValues(): void {
         this.providerData.resetLiquidityProviderValues();
     }
 
+    /**
+     * @method resetListingValues
+     * @description Reset all fields related to the listing.
+     * @returns {void}
+     */
     public resetListingValues(): void {
         this.providerData.resetListingValues();
     }
 
+    /**
+     * @method save
+     * @description Save the provider information.
+     * @returns {void}
+     */
     public save(): void {
         this.providerData.save();
     }
 
+    /**
+     * @method ensureBTCReceiver
+     * @description Make sure the btc receiver is loaded from storage.
+     * @returns {void}
+     */
     private ensureBTCReceiver(): void {
         if (this._btcReceiver === null) {
             const loader = new AdvancedStoredString(
