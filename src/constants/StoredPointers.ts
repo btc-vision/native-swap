@@ -10,8 +10,8 @@ export const RESERVED_AMOUNT_POINTER: u16 = Blockchain.nextPointer;
 export const BTC_RECEIVER_ADDRESS_POINTER: u16 = Blockchain.nextPointer;
 
 export const LIQUIDITY_QUOTE_HISTORY_POINTER: u16 = Blockchain.nextPointer;
-export const LIQUIDITY_QUEUE_POINTER: u16 = Blockchain.nextPointer;
-export const LIQUIDITY_PRIORITY_QUEUE_POINTER: u16 = Blockchain.nextPointer;
+export const STANDARD_QUEUE_POINTER: u16 = Blockchain.nextPointer;
+export const PRIORITY_QUEUE_POINTER: u16 = Blockchain.nextPointer;
 export const LIQUIDITY_RESERVED_POINTER: u16 = Blockchain.nextPointer;
 
 export const LIQUIDITY_VIRTUAL_BTC_POINTER: u16 = Blockchain.nextPointer;
@@ -27,14 +27,14 @@ export const RESERVATION_IDS_BY_BLOCK_POINTER: u16 = Blockchain.nextPointer;
 export const ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER: u16 = Blockchain.nextPointer;
 
 export const ANTI_BOT_MAX_TOKENS_PER_RESERVATION: u16 = Blockchain.nextPointer;
-export const INITIAL_LIQUIDITY: u16 = Blockchain.nextPointer;
+export const INITIAL_LIQUIDITY_PROVIDER_POINTER: u16 = Blockchain.nextPointer;
 
 export const DELTA_BTC_BUY: u16 = Blockchain.nextPointer;
 export const DELTA_TOKENS_ADD: u16 = Blockchain.nextPointer;
 export const DELTA_TOKENS_BUY: u16 = Blockchain.nextPointer;
 
-export const LP_BTC_OWED_POINTER: u16 = Blockchain.nextPointer;
-export const LP_BTC_OWED_RESERVED_POINTER: u16 = Blockchain.nextPointer;
+export const BTC_OWED_POINTER: u16 = Blockchain.nextPointer;
+export const BTC_OWED_RESERVED_POINTER: u16 = Blockchain.nextPointer;
 
 export const REMOVAL_QUEUE_POINTER: u16 = Blockchain.nextPointer;
 export const VOLATILITY_POINTER: u16 = Blockchain.nextPointer;
