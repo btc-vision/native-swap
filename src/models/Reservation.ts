@@ -106,6 +106,24 @@ export class Reservation {
         this.reservationData.timeout = true;
     }
 
+    public ensureCanBeConsumed(): void {
+        if (!this.isValid()) {
+            throw new Revert('No valid reservation for this address.');
+        }
+
+        if (this.getActivationDelay() === 0) {
+            if (this.getCreationBlock() === Blockchain.block.number) {
+                throw new Revert('Reservation cannot be consumed in the same block');
+            }
+        } else {
+            if (this.getCreationBlock() + this.getActivationDelay() > Blockchain.block.number) {
+                throw new Revert(
+                    `Too early to consume reservation: (${this.getCreationBlock()}, ${this.getActivationDelay()})`,
+                );
+            }
+        }
+    }
+
     public save(): void {
         this.reservationData.save();
         this.reservedIndexes.save();

@@ -15,7 +15,6 @@ export function getTotalFeeCollected(): u64 {
             continue;
         }
 
-        // !!!! More fees than we can handle.
         if (u64.MAX_VALUE - totalFee < output.value) {
             break;
         }

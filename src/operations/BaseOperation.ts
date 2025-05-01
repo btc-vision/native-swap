@@ -1,12 +1,11 @@
-import { LiquidityQueue } from '../LiquidityQueue';
+import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 
 export class BaseOperation {
-    protected liquidityQueue: LiquidityQueue;
+    protected liquidityQueue: ILiquidityQueue;
 
-    constructor(liquidityQueue: LiquidityQueue) {
+    constructor(liquidityQueue: ILiquidityQueue) {
         this.liquidityQueue = liquidityQueue;
     }
 
-    public execute(): void {
-    }
+    public execute(): void {}
 }

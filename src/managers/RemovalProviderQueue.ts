@@ -41,6 +41,23 @@ export class RemovalProviderQueue extends ProviderQueue {
         return index;
     }
 
+    public override resetProvider(
+        provider: Provider,
+        burnRemainingFunds: boolean = true,
+        canceled: boolean = false,
+    ): void {
+        throw new Revert('Impossible state: removal provider cannot be reset.');
+    }
+
+    public removeFromQueue(provider: Provider): void {
+        this.queue.delete_physical(provider.getQueueIndex());
+
+        provider.clearPendingRemoval();
+        provider.clearLiquidityProvider();
+
+        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, true));
+    }
+
     protected tryNextCandidate(_currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
         const providerId = this.queue.get_physical(this._currentIndex);
@@ -60,7 +77,7 @@ export class RemovalProviderQueue extends ProviderQueue {
 
     private getProviderIfOwedBTC(providerId: u256, provider: Provider): Provider | null {
         let result: Potential<Provider> = null;
-        
+
         const owedBTC = this.owedBTCManager.getBTCowed(providerId);
         const reservedBTC = this.owedBTCManager.getBTCowedReserved(providerId);
 
@@ -79,15 +96,6 @@ export class RemovalProviderQueue extends ProviderQueue {
             }
         }
         return result;
-    }
-
-    private removeFromQueue(provider: Provider): void {
-        this.queue.delete_physical(provider.getQueueIndex());
-
-        provider.clearPendingRemoval();
-        provider.clearLiquidityProvider();
-
-        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, true));
     }
 
     private ensureReservedBTCValid(reservedBTC: u256, owedBTC: u256): void {

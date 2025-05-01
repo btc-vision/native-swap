@@ -164,7 +164,7 @@ export class ReservationData {
         this.ensureValues();
         if (this._creationBlock !== value) {
             this._creationBlock = value;
-            this._timeout = false; //!!!! CHECK
+            this._timeout = false;
             this.isChanged = true;
         }
     }
@@ -190,7 +190,6 @@ export class ReservationData {
     public get userTimeoutExpirationBlock(): u64 {
         this.ensureValues();
 
-        //!!!! CHECK USAGE
         if (this.timeout) {
             return this.expirationBlock + TIMEOUT_AFTER_EXPIRATION_BLOCKS;
         } else {
@@ -225,7 +224,6 @@ export class ReservationData {
         this.activationDelay = 0;
         this.timeout = isTimeout;
 
-        //!!!! VALIDATE
         if (!isTimeout) {
             this.creationBlock = 0;
         }

@@ -1,8 +1,8 @@
 import { BaseOperation } from './BaseOperation';
-import { LiquidityQueue } from '../LiquidityQueue';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, Blockchain, Revert } from '@btc-vision/btc-runtime/runtime';
 import { ListTokensForSaleOperation } from './ListTokensForSaleOperation';
+import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 
 export class CreatePoolOperation extends BaseOperation {
     private readonly floorPrice: u256;
@@ -14,7 +14,7 @@ export class CreatePoolOperation extends BaseOperation {
     private readonly maxReservesIn5BlocksPercent: u16;
 
     constructor(
-        liquidityQueue: LiquidityQueue,
+        liquidityQueue: ILiquidityQueue,
         floorPrice: u256,
         providerId: u256,
         initialLiquidity: u128,
@@ -36,22 +36,31 @@ export class CreatePoolOperation extends BaseOperation {
     }
 
     public execute(): void {
-        this.ensureValidReceiverAddress();
+        this.checkPreConditions();
+        this.initializeLiquidity();
+        this.listTokenForSale();
+        this.applyAntibotSettingsIfNeeded();
+    }
+
+    private checkPreConditions(): void {
+        this.ensureReceiverAddressValid();
         this.ensureFloorPriceNotZero();
         this.ensureInitialLiquidityNotZero();
         this.ensureAntibotSettingsValid();
         this.ensureInitialLiquidityProviderNotAlreadySet();
-        this.ensureValidMaxReservesIn5BlocksPercent();
+        this.ensureMaxReservesIn5BlocksPercentValid();
+    }
 
+    private initializeLiquidity(): void {
         this.liquidityQueue.initializeInitialLiquidity(
             this.floorPrice,
             this.providerId,
             this.initialLiquidity.toU256(),
             this.maxReservesIn5BlocksPercent,
         );
+    }
 
-        // Instead of calling "listLiquidity", we do a direct "listTokensForSale"
-        // if we want these tokens to be 'initially queued' for purchase
+    private listTokenForSale(): void {
         const listTokenForSaleOp = new ListTokensForSaleOperation(
             this.liquidityQueue,
             this.providerId,
@@ -63,7 +72,9 @@ export class CreatePoolOperation extends BaseOperation {
         );
 
         listTokenForSaleOp.execute();
+    }
 
+    private applyAntibotSettingsIfNeeded(): void {
         if (this.antiBotEnabledFor > 0) {
             this.liquidityQueue.antiBotExpirationBlock =
                 Blockchain.block.number + u64(this.antiBotEnabledFor);
@@ -71,7 +82,7 @@ export class CreatePoolOperation extends BaseOperation {
         }
     }
 
-    private ensureValidMaxReservesIn5BlocksPercent(): void {
+    private ensureMaxReservesIn5BlocksPercentValid(): void {
         if (this.maxReservesIn5BlocksPercent > 100) {
             throw new Revert(
                 'NATIVE_SWAP: The maximum reservation percentage for 5 blocks must be less than or equal to 100',
@@ -79,7 +90,7 @@ export class CreatePoolOperation extends BaseOperation {
         }
     }
 
-    private ensureValidReceiverAddress(): void {
+    private ensureReceiverAddressValid(): void {
         if (Blockchain.validateBitcoinAddress(this.receiver) == false) {
             throw new Revert('NATIVE_SWAP: Invalid receiver address');
         }
@@ -104,7 +115,7 @@ export class CreatePoolOperation extends BaseOperation {
     }
 
     private ensureInitialLiquidityProviderNotAlreadySet(): void {
-        if (!this.liquidityQueue.initialLiquidityProvider.isZero()) {
+        if (!this.liquidityQueue.initialLiquidityProviderId.isZero()) {
             throw new Revert('Base quote already set');
         }
     }

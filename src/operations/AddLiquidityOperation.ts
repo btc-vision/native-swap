@@ -1,112 +1,130 @@
 import { BaseOperation } from './BaseOperation';
-import { LiquidityQueue } from '../LiquidityQueue';
-import { getProvider, Provider } from '../../Provider';
+import { getProvider, Provider } from '../models/Provider';
 import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
-import { LiquidityAddedEvent } from '../../../events/LiquidityAddedEvent';
+import { LiquidityAddedEvent } from '../events/LiquidityAddedEvent';
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { Reservation } from '../../Reservation';
+import { Reservation } from '../models/Reservation';
+import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
+import { ITradeManager } from '../managers/interfaces/ITradeManager';
+import { CompletedTrade } from '../models/CompletedTrade';
 
 export class AddLiquidityOperation extends BaseOperation {
     private readonly providerId: u256;
     private readonly receiver: string;
     private provider: Provider;
+    private tradeManager: ITradeManager;
 
-    constructor(liquidityQueue: LiquidityQueue, providerId: u256, receiver: string) {
+    constructor(
+        liquidityQueue: ILiquidityQueue,
+        tradeManager: ITradeManager,
+        providerId: u256,
+        receiver: string,
+    ) {
         super(liquidityQueue);
 
+        this.tradeManager = tradeManager;
         this.providerId = providerId;
         this.receiver = receiver;
         this.provider = getProvider(providerId);
     }
 
     public execute(): void {
+        this.checkPreConditions();
+
+        const reservation = this.getReservation();
+        const { trade, tokensBoughtFromQueue, btcSpent } = this.executeTrade(reservation);
+        this.updateLiquidityQueue(trade, tokensBoughtFromQueue, btcSpent);
+        this.updateProvider(tokensBoughtFromQueue);
+        this.postProcessQueues();
+        this.emitLiquidityAddedEvent(tokensBoughtFromQueue, btcSpent);
+    }
+
+    private checkPreConditions(): void {
         this.ensureNotInRemovalQueue();
+    }
 
-        // Make sure there's an active reservation for LP
+    private getReservation(): Reservation {
         const reservation = this.liquidityQueue.getReservationWithExpirationChecks();
-        this.ensureReservedLiquidityFirst(reservation);
+        this.ensureReservationForLP(reservation);
 
-        // First, execute the trade to see how many tokens were purchased (T)
-        // and how much BTC was used (B).
-        const trade = this.liquidityQueue.executeTrade(reservation);
+        return reservation;
+    }
+
+    private executeTrade(reservation: Reservation): {
+        trade: CompletedTrade;
+        tokensBoughtFromQueue: u256;
+        btcSpent: u256;
+    } {
+        const trade = this.tradeManager.executeTrade(reservation);
+
         const tokensBoughtFromQueue = SafeMath.add(
             trade.totalTokensPurchased,
             trade.totalTokensRefunded,
-        ); // T
+        );
 
-        const btcSpent = SafeMath.add(trade.totalSatoshisSpent, trade.totalRefundedBTC); // B
-        this.ensurePurchaseMade(tokensBoughtFromQueue, btcSpent);
+        const btcSpent = SafeMath.add(trade.totalSatoshisSpent, trade.totalRefundedBTC);
+        this.ensurePurchaseWasMade(tokensBoughtFromQueue, btcSpent);
 
-        //  Enforce 50/50 => The user must deposit exactly `tokensBoughtFromQueue` more tokens
-        //  from their wallet. This ensures that in total, they've contributed equal "value"
-        //  in BTC and in tokens.
-        //  So we do a safeTransferFrom of that exact token amount:
         TransferHelper.safeTransferFrom(
             this.liquidityQueue.token,
             Blockchain.tx.sender,
             Blockchain.contractAddress,
             tokensBoughtFromQueue,
         );
+        return { trade, tokensBoughtFromQueue, btcSpent };
+    }
 
-        // Because the purchase from the queue effectively "used BTC to buy tokens,"
-        // update our totalReserved to un-reserve those tokens.
-        this.liquidityQueue.decreaseTotalReserved(trade.tokensReserved);
-
-        // Combine the user’s newly deposited tokens (the "other 50%" side)
-        // into the pool’s total reserves.
+    private updateLiquidityQueue(
+        trade: CompletedTrade,
+        tokensBoughtFromQueue: u256,
+        btcSpent: u256,
+    ): void {
+        this.liquidityQueue.decreaseTotalReserved(trade.totalTokensReserved);
         this.liquidityQueue.increaseTotalReserve(tokensBoughtFromQueue);
-
         this.liquidityQueue.increaseVirtualBTCReserve(btcSpent);
         this.liquidityQueue.increaseVirtualTokenReserve(tokensBoughtFromQueue);
-
-        // Credit the user’s "virtual BTC" so they can withdraw it later in removeLiquidity.
         this.liquidityQueue.increaseBTCowed(this.providerId, btcSpent);
+    }
 
-        // Mark the provider as an LP
-        this.markProviderAsLPProvider(tokensBoughtFromQueue);
+    private updateProvider(tokensBoughtFromQueue: u256): void {
+        this.provider.markLiquidityProvider();
 
-        // Clean up providers
+        if (!this.provider.hasReservedAmount()) {
+            this.provider.setbtcReceiver(this.receiver);
+        }
+
+        this.provider.addToLiquidityProvided(tokensBoughtFromQueue);
+    }
+
+    private postProcessQueues(): void {
         this.liquidityQueue.cleanUpQueues();
-
-        this.emitLiquidityAddedEvent(tokensBoughtFromQueue, btcSpent);
     }
 
     private ensureNotInRemovalQueue(): void {
-        if (this.provider.pendingRemoval) {
+        if (this.provider.isPendingRemoval()) {
             throw new Revert(
                 'NATIVE_SWAP: You are in the removal queue. Wait for removal of your liquidity first.',
             );
         }
     }
 
-    private ensureReservedLiquidityFirst(reservation: Reservation): void {
-        if (!reservation.reservedLP) {
+    private ensureReservationForLP(reservation: Reservation): void {
+        if (!reservation.isForLiquidityPool()) {
             throw new Revert('NATIVE_SWAP: You must reserve liquidity for LP first.');
         }
     }
 
-    private ensurePurchaseMade(tokensBoughtFromQueue: u256, btcSpent: u256): void {
+    private ensurePurchaseWasMade(tokensBoughtFromQueue: u256, btcSpent: u256): void {
         if (tokensBoughtFromQueue.isZero() || btcSpent.isZero()) {
             throw new Revert('NATIVE_SWAP: No effective purchase made. Check your BTC outputs.');
         }
     }
 
-    private markProviderAsLPProvider(tokensBoughtFromQueue: u256): void {
-        this.provider.isLp = true;
-
-        // Prevent exploits where someone add liquidity then change receiving address
-        if (!this.provider.haveReserved()) {
-            this.provider.btcReceiver = this.receiver;
-        }
-
-        this.provider.increaseLiquidityProvided(tokensBoughtFromQueue);
-    }
-
     private emitLiquidityAddedEvent(tokensBoughtFromQueue: u256, btcSpent: u256): void {
         Blockchain.emit(
             new LiquidityAddedEvent(
-                SafeMath.add(tokensBoughtFromQueue, tokensBoughtFromQueue), // The tokens from the user wallet
-                tokensBoughtFromQueue, // The tokens purchased from queue
+                SafeMath.add(tokensBoughtFromQueue, tokensBoughtFromQueue),
+                tokensBoughtFromQueue,
                 btcSpent,
             ),
         );

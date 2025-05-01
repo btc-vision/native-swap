@@ -1,15 +1,15 @@
 import { BaseOperation } from './BaseOperation';
-import { LiquidityQueue } from '../LiquidityQueue';
-import { getProvider, Provider } from '../../Provider';
+import { getProvider, Provider } from '../models/Provider';
 import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { ListingCanceledEvent } from '../../../events/ListingCanceledEvent';
+import { ListingCanceledEvent } from '../events/ListingCanceledEvent';
+import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 
 export class CancelListingOperation extends BaseOperation {
     private readonly providerId: u256;
     private readonly provider: Provider;
 
-    constructor(liquidityQueue: LiquidityQueue, providerId: u256) {
+    constructor(liquidityQueue: ILiquidityQueue, providerId: u256) {
         super(liquidityQueue);
 
         this.providerId = providerId;
@@ -17,28 +17,37 @@ export class CancelListingOperation extends BaseOperation {
     }
 
     public execute(): void {
-        const amount: u256 = this.provider.liquidity.toU256();
+        this.checkPreConditions();
 
+        const refundAmount: u256 = this.provider.getLiquidityAmount();
+
+        this.prepareProviderForRefund();
+        this.transferLiquidityBack(refundAmount);
+        this.postProcessQueues();
+        this.emitListingCanceledEvent(refundAmount.toU128());
+    }
+
+    private prepareProviderForRefund(): void {
+        // !!!this.provider.loadIndexedAt();
+
+        this.liquidityQueue.resetProvider(this.provider, false, true);
+    }
+
+    private transferLiquidityBack(amount: u256): void {
+        TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
+    }
+
+    private postProcessQueues(): void {
+        this.liquidityQueue.cleanUpQueues();
+    }
+
+    private checkPreConditions(): void {
         this.ensureProviderIsActive();
         this.ensureNoActiveReservation();
-        this.ensureLiquidity(amount);
+        this.ensureLiquidityNotZero();
         this.ensureProviderCannotProvideLiquidity();
         this.ensureNotInitialProvider();
         this.ensureProviderNotPendingRemoval();
-
-        // Load the index of the provider
-        this.provider.loadIndexedAt();
-
-        // Reset the provider
-        this.liquidityQueue.resetProvider(this.provider, false, true);
-
-        // Transfer tokens back to the provider
-        TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
-
-        // Decrease the total reserves
-        this.liquidityQueue.cleanUpQueues();
-
-        this.emitListingCanceledEvent(amount.toU128());
     }
 
     private ensureProviderIsActive(): void {
@@ -48,21 +57,21 @@ export class CancelListingOperation extends BaseOperation {
     }
 
     private ensureNoActiveReservation(): void {
-        if (this.provider.haveReserved()) {
+        if (this.provider.hasReservedAmount()) {
             throw new Revert(
-                `NATIVE_SWAP: Someone have active reservations on your liquidity. ${this.provider.reserved}`,
+                `NATIVE_SWAP: Someone have active reservations on your liquidity. ${this.provider.getReservedAmount()}`,
             );
         }
     }
 
-    private ensureLiquidity(amount: u256): void {
-        if (amount.isZero()) {
+    private ensureLiquidityNotZero(): void {
+        if (!this.provider.hasLiquidityAmount()) {
             throw new Revert('NATIVE_SWAP: Provider has no liquidity.');
         }
     }
 
     private ensureProviderCannotProvideLiquidity(): void {
-        if (this.provider.canProvideLiquidity()) {
+        if (this.provider.isLiquidityProvisionAllowed()) {
             throw new Revert(
                 'NATIVE_SWAP: You can no longer cancel this listing. Provider is providing liquidity.',
             );
@@ -70,13 +79,13 @@ export class CancelListingOperation extends BaseOperation {
     }
 
     private ensureNotInitialProvider(): void {
-        if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProvider)) {
+        if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProviderId)) {
             throw new Revert('NATIVE_SWAP: Initial provider cannot cancel listing.');
         }
     }
 
     private ensureProviderNotPendingRemoval(): void {
-        if (this.provider.pendingRemoval) {
+        if (this.provider.isPendingRemoval()) {
             throw new Revert('NATIVE_SWAP: Provider is in pending removal.');
         }
     }

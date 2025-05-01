@@ -8,8 +8,6 @@ import {
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
 import {
-    BTC_OWED_POINTER,
-    BTC_OWED_RESERVED_POINTER,
     INITIAL_LIQUIDITY_PROVIDER_POINTER,
     PRIORITY_QUEUE_POINTER,
     REMOVAL_QUEUE_POINTER,
@@ -17,28 +15,30 @@ import {
     STARTING_INDEX_POINTER,
 } from '../constants/StoredPointers';
 import { getProvider, Provider } from '../models/Provider';
-import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
 import { ProviderQueue } from './ProviderQueue';
 import { PriorityProviderQueue } from './PriorityProviderQueue';
 import { RemovalProviderQueue } from './RemovalProviderQueue';
 import { OwedBTCManager } from './OwedBTCManager';
+import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
+import { ProviderTypes } from '../types/ProviderTypes';
+import { IProviderManager } from './interfaces/IProviderManager';
 
-const ENABLE_INDEX_VERIFICATION: bool = true;
-
-export class ProviderManager {
+export class ProviderManager implements IProviderManager {
+    protected readonly token: Address;
+    protected readonly tokenIdUint8Array: Uint8Array;
     protected readonly standardQueue: ProviderQueue;
     protected readonly priorityQueue: PriorityProviderQueue;
     protected readonly removalQueue: RemovalProviderQueue;
     protected readonly owedBTCManager: OwedBTCManager;
 
     private readonly _startingIndex: StoredU64;
-    private readonly _initialLiquidityProvider: StoredU256;
+    private readonly _initialLiquidityProviderId: StoredU256;
 
-    constructor(
-        public readonly token: Address,
-        public readonly tokenIdUint8Array: Uint8Array,
-    ) {
-        this.owedBTCManager = new OwedBTCManager(BTC_OWED_POINTER, BTC_OWED_RESERVED_POINTER);
+    constructor(token: Address, tokenIdUint8Array: Uint8Array, owedBTCManager: OwedBTCManager) {
+        this.token = token;
+        this.tokenIdUint8Array = tokenIdUint8Array;
+        this.owedBTCManager = owedBTCManager; //new OwedBTCManager(BTC_OWED_POINTER, BTC_OWED_RESERVED_POINTER);
         this.standardQueue = new ProviderQueue(token, STANDARD_QUEUE_POINTER, tokenIdUint8Array);
         this.priorityQueue = new PriorityProviderQueue(
             token,
@@ -51,7 +51,7 @@ export class ProviderManager {
             REMOVAL_QUEUE_POINTER,
             tokenIdUint8Array,
         );
-        this._initialLiquidityProvider = new StoredU256(
+        this._initialLiquidityProviderId = new StoredU256(
             INITIAL_LIQUIDITY_PROVIDER_POINTER,
             tokenIdUint8Array,
         );
@@ -106,12 +106,12 @@ export class ProviderManager {
         this._startingIndex.set(2, value);
     }
 
-    public get initialLiquidityProvider(): u256 {
-        return this._initialLiquidityProvider.value;
+    public get initialLiquidityProviderId(): u256 {
+        return this._initialLiquidityProviderId.value;
     }
 
-    public set initialLiquidityProvider(value: u256) {
-        this._initialLiquidityProvider.value = value;
+    public set initialLiquidityProviderId(value: u256) {
+        this._initialLiquidityProviderId.value = value;
     }
 
     public get currentIndexStandard(): u64 {
@@ -126,16 +126,51 @@ export class ProviderManager {
         return this.removalQueue.currentIndex;
     }
 
-    public addToStandardQueue(providerId: u256): u64 {
-        return this.standardQueue.add(providerId);
+    public addToStandardQueue(provider: Provider): u64 {
+        return this.standardQueue.add(provider);
     }
 
-    public addToPriorityQueue(providerId: u256): u64 {
-        return this.priorityQueue.add(providerId);
+    public addToPriorityQueue(provider: Provider): u64 {
+        return this.priorityQueue.add(provider);
     }
 
-    public addToRemovalQueue(providerId: u256): u64 {
-        return this.removalQueue.add(providerId);
+    public addToRemovalQueue(provider: Provider): u64 {
+        return this.removalQueue.add(provider);
+    }
+
+    public getIdFromQueue(index: u64, type: ProviderTypes): u256 {
+        switch (type) {
+            case ProviderTypes.Normal: {
+                return this.standardQueue.getAt(index);
+            }
+            case ProviderTypes.Priority: {
+                return this.priorityQueue.getAt(index);
+            }
+            case ProviderTypes.LiquidityRemoval: {
+                return this.removalQueue.getAt(index);
+            }
+            default: {
+                throw new Revert('Impossible state: Invalid provider type');
+            }
+        }
+    }
+
+    public getProviderFromQueue(index: u64, type: ProviderTypes): Provider {
+        let providerId: u256 = u256.Zero;
+
+        if (index === INITIAL_LIQUIDITY_PROVIDER_INDEX) {
+            providerId = this.initialLiquidityProviderId;
+        } else {
+            providerId = this.getIdFromQueue(index, type);
+        }
+
+        if (providerId.isZero()) {
+            throw new Revert(
+                `Impossible state: Cannot load provider. Index: ${index} Type: ${type}. Pool corrupted.`,
+            );
+        }
+
+        return getProvider(providerId);
     }
 
     public getFromStandardQueue(index: u64): u256 {
@@ -160,6 +195,10 @@ export class ProviderManager {
 
     public setBTCowed(providerId: u256, amount: u256): void {
         this.owedBTCManager.setBTCowed(providerId, amount);
+    }
+
+    public getBTCOwedLeft(providerId: u256): u256 {
+        return this.owedBTCManager.getBTCOwedLeft(providerId);
     }
 
     public getBTCowedReserved(providerId: u256): u256 {
@@ -205,34 +244,32 @@ export class ProviderManager {
         return this.getInitialProvider(currentQuote);
     }
 
-    /*
-    public removePendingLiquidityProviderFromRemovalQueue(provider: Provider, i: u64): void {
-        this._removalQueue.delete_physical(i);
-
-        provider.pendingRemoval = false;
-        provider.isLp = false;
-
-        Blockchain.emit(new FulfilledProviderEvent(provider.providerId, false, true));
+    public removePendingLiquidityProviderFromRemovalQueue(provider: Provider): void {
+        this.removalQueue.removeFromQueue(provider);
     }
-*/
+
     public resetProvider(
         provider: Provider,
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
-        if (burnRemainingFunds && provider.haveLiquidity()) {
-            TransferHelper.safeTransfer(this.token, Address.dead(), provider.liquidity.toU256());
+        if (provider.isPendingRemoval()) {
+            throw new Revert('Impossible state: removal provider cannot be reset.');
         }
 
-        if (!u256.eq(provider.providerId, this._initialLiquidityProvider.value)) {
+        if (burnRemainingFunds && provider.hasLiquidityAmount()) {
+            TransferHelper.safeTransfer(this.token, Address.dead(), provider.getLiquidityAmount());
+        }
+
+        if (!provider.isInitialLiquidityProvider()) {
             if (provider.isPriority()) {
-                this._priorityQueue.delete_physical(provider.indexedAt);
+                this.priorityQueue.removeAt(provider.getQueueIndex());
             } else {
-                this._queue.delete_physical(provider.indexedAt);
+                this.standardQueue.removeAt(provider.getQueueIndex());
             }
         }
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.providerId, canceled, false));
+        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
 
         provider.resetListingValues();
     }
@@ -272,11 +309,11 @@ export class ProviderManager {
     }
 
     private getInitialProvider(currentQuote: u256): Provider | null {
-        if (this._initialLiquidityProvider.value.isZero()) {
+        if (this._initialLiquidityProviderId.value.isZero()) {
             return null;
         }
 
-        const initialProvider = getProvider(this._initialLiquidityProvider.value);
+        const initialProvider = getProvider(this._initialLiquidityProviderId.value);
         if (!initialProvider.isActive()) {
             return null;
         }
@@ -292,19 +329,22 @@ export class ProviderManager {
         }
 
         if (!currentQuote.isZero()) {
-            const hasEnoughLiquidity = this.verifyProviderRemainingLiquidity(
-                initialProvider,
-                availableLiquidity.toU256(),
-                currentQuote,
-            );
+            if (
+                !Provider.checkTokenAmountGEMinimumReservationAmount(
+                    availableLiquidity,
+                    currentQuote,
+                )
+            ) {
+                if (!initialProvider.hasReservedAmount()) {
+                    this.resetProvider(initialProvider);
+                }
 
-            if (!hasEnoughLiquidity) {
                 return null;
             }
         }
-        ///!!!! WHAT WHEN current quote is 0
 
-        initialProvider.indexedAt = u32.MAX_VALUE;
+        initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+
         return initialProvider;
     }
 }

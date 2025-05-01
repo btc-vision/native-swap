@@ -8,9 +8,7 @@ import {
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
 import { getProvider, Provider } from '../models/Provider';
-import { tokensToSatoshis } from '../utils/SatoshisConversion';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
-import { STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT } from '../constants/Contract';
 
 const ENABLE_INDEX_VERIFICATION: bool = true;
 
@@ -38,10 +36,13 @@ export class ProviderQueue {
         return this.queue.getLength();
     }
 
-    public add(providerId: u256): u64 {
-        this.queue.push(providerId, true);
+    public add(provider: Provider): u64 {
+        this.queue.push(provider.getId(), true);
 
-        return this.queue.getLength() - 1;
+        const index = this.queue.getLength() - 1;
+        provider.setQueueIndex(index);
+
+        return index;
     }
 
     public getAt(index: u64): u256 {
@@ -61,13 +62,15 @@ export class ProviderQueue {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
+        if (provider.isInitialLiquidityProvider()) {
+            throw new Revert('Impossible state: initial liquidity provider cannot be in a queue.');
+        }
+
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
             TransferHelper.safeTransfer(this.token, Address.dead(), provider.getLiquidityAmount());
         }
 
-        if (!provider.isInitialLiquidityProvider()) {
-            this.queue.delete_physical(provider.getQueueIndex());
-        }
+        this.queue.delete_physical(provider.getQueueIndex());
 
         Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
 
@@ -205,23 +208,17 @@ export class ProviderQueue {
                 );
             }
 
-            if (this.checkProviderHasEnoughLiquidity(availableLiquidity, currentQuote)) {
+            if (
+                Provider.checkTokenAmountGEMinimumReservationAmount(
+                    availableLiquidity,
+                    currentQuote,
+                )
+            ) {
                 provider.clearFromRemovalQueue();
                 result = provider;
             } else if (!provider.hasReservedAmount()) {
                 this.resetProvider(provider);
             }
-        }
-
-        return result;
-    }
-
-    private checkProviderHasEnoughLiquidity(availableLiquidity: u256, currentQuote: u256): boolean {
-        let result: boolean = true;
-        const maxCostInSatoshis = tokensToSatoshis(availableLiquidity, currentQuote);
-
-        if (u256.lt(maxCostInSatoshis, STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)) {
-            result = false;
         }
 
         return result;

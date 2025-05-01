@@ -13,6 +13,9 @@ import {
     PROVIDER_DATA_POINTER,
     RESERVED_AMOUNT_POINTER,
 } from '../constants/StoredPointers';
+import { tokensToSatoshis } from '../utils/SatoshisConversion';
+import { STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT } from '../constants/Contract';
+import { ProviderTypes } from '../types/ProviderTypes';
 
 export class Provider {
     private readonly providerData: ProviderData;
@@ -29,7 +32,6 @@ export class Provider {
         this.id = providerId;
         this.fromRemovalQueue = false;
 
-        // discard 2 bytes. ??? WHY!!!!
         const providerBuffer = u256To30Bytes(providerId);
         this.providerBuffer = providerBuffer;
 
@@ -51,6 +53,27 @@ export class Provider {
         this.ensureBTCReceiver();
 
         return this._btcReceiver as AdvancedStoredString;
+    }
+
+    /**
+     * @method checkTokenAmountGEMinimumReservationAmount
+     * @description Checks if a given amount of token is greater or equal to the minimum reservation amount in satoshi.
+     * @param {u256} tokenAmount - The token amount.
+     * @param {u256} currentQuote - The quote to use for the conversion.
+     * @returns {boolean} - true if token amount is GE; false if not.
+     */
+    public static checkTokenAmountGEMinimumReservationAmount(
+        tokenAmount: u256,
+        currentQuote: u256,
+    ): boolean {
+        let result: boolean = true;
+        const maxCostInSatoshis = tokensToSatoshis(tokenAmount, currentQuote);
+
+        if (u256.lt(maxCostInSatoshis, STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)) {
+            result = false;
+        }
+
+        return result;
     }
 
     /**
@@ -78,6 +101,23 @@ export class Provider {
      */
     public clearInitialLiquidityProvider(): void {
         this.providerData.initialLiquidityProvider = false;
+    }
+
+    /**
+     * @method getProviderType
+     * @description Gets the provider type.
+     * @returns {ProviderTypes} - The provider type.
+     */
+    public getProviderType(): ProviderTypes {
+        let providerType: ProviderTypes = ProviderTypes.Normal;
+
+        if (this.isPriority()) {
+            providerType = ProviderTypes.Priority;
+        } else if (this.isPendingRemoval()) {
+            providerType = ProviderTypes.LiquidityRemoval;
+        }
+
+        return providerType;
     }
 
     /**
@@ -206,7 +246,6 @@ export class Provider {
      * @returns {void}
      */
     public addToReservedAmount(value: u256): void {
-        // !!! Check reserved < liquidity
         this.providerData.reservedAmount = SafeMath.add(this.providerData.reservedAmount, value);
     }
 
