@@ -103,29 +103,29 @@ export class TradeManager implements ITradeManager {
     ): void {
         const providerId = provider.getId();
 
-        //!!!! ISHHHH... ca marche pas....
-        // exemple:
+        //!!!! To check
+        // example:
         // u1: reserve 10 sats,
         // u2: reserve 40 sats,
-        // u1: envoie 50 sats,
-        // u1: pourrait gober la reservation de u2
+        // u1: send 50 sats,
+        // u1: can use u2 reservation
         const owedReserved = this.providerManager.getBTCowedReserved(providerId);
         let actualSpent = SafeMath.min(satoshisSent, owedReserved);
         const oldOwed = this.providerManager.getBTCowed(providerId);
 
-        //!!!! donc actualSpent = oldOwed a la sortie
+        //!!!! so actualSpent = oldOwed after if
         if (u256.lt(oldOwed, actualSpent)) {
             const difference = SafeMath.sub(actualSpent, oldOwed);
             actualSpent = SafeMath.sub(actualSpent, difference);
         }
 
-        // !!!! Check pour le minimum de sats
+        // !!!! Check for minimum sats???
 
         let tokensDesiredRemoval = satoshisToTokens(actualSpent, this.quoteAtReservation);
         tokensDesiredRemoval = SafeMath.min(tokensDesiredRemoval, requestedTokens);
 
-        //!!! CHeck pour minimum de token????
-        
+        // !!!! Check for minimum tokens???
+
         if (!tokensDesiredRemoval.isZero()) {
             const leftover = SafeMath.sub(requestedTokens, tokensDesiredRemoval);
 
@@ -148,7 +148,7 @@ export class TradeManager implements ITradeManager {
                 this.reportUTXOUsed(provider.getbtcReceiver(), actualSpent);
             }
 
-            // !!! Ca fait quoi si leftover = 0
+            // !!! Whatif leftover = 0
         } else {
             this.restoreReservedLiquidityForRemovalProvider(
                 providerId,
@@ -171,14 +171,15 @@ export class TradeManager implements ITradeManager {
             provider.getLiquidityAmount(),
         );
 
-        // !!! On fait quoi si providedAmount != tokensDesired? Le count tokenReserved a deja ete incrementer par providedAmount
+        // !!! What if providedAmount != tokensDesired?
+        // tokenReserved was already incremented by providedAmount
         if (!actualTokens.isZero()) {
             this.ensureReservedAmountIsValid(provider, requestedTokens);
             this.ensureProviderHasEnoughLiquidity(provider, actualTokens);
 
             const tokensDesiredSatoshis = tokensToSatoshis(actualTokens, this.quoteAtReservation);
 
-            //!!! CHeck pour minimum satoshis????
+            //!!! CHeck for minimu, sats????
             provider.subtractFromReservedAmount(requestedTokens);
 
             if (
