@@ -62,19 +62,21 @@ export class ProviderQueue {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
-        if (provider.isInitialLiquidityProvider()) {
-            throw new Revert('Impossible state: initial liquidity provider cannot be in a queue.');
-        }
+        this.ensureNotInitialLiquidityProvider(provider);
 
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
-            TransferHelper.safeTransfer(this.token, Address.dead(), provider.getLiquidityAmount());
+            TransferHelper.safeTransfer(
+                this.token,
+                Address.dead(),
+                provider.getLiquidityAmount().toU256(),
+            );
         }
 
         this.queue.delete_physical(provider.getQueueIndex());
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
-
         provider.resetListingValues();
+
+        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
     }
 
     public restoreCurrentIndex(previousStartingIndex: u64): void {
@@ -88,7 +90,7 @@ export class ProviderQueue {
     public getNextWithLiquidity(currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
 
-        //!!!! Revalidate
+        //!!!! Revalidate overflow
         this.ensureCurrentIndexNotOverflow();
         this.ensureStartingIndexIsValid();
         this.initializeCurrentIndex();
@@ -107,13 +109,14 @@ export class ProviderQueue {
     }
 
     public cleanUp(previousStartingIndex: u64): u64 {
-        const length: u64 = this.length;
         let index: u64 = previousStartingIndex;
 
-        while (index < length) {
+        while (index < this.length) {
             const providerId = this.queue.get_physical(index);
-            if (providerId !== u256.Zero) {
+
+            if (!providerId.isZero()) {
                 const provider = getProvider(providerId);
+
                 if (provider.isActive()) {
                     this.queue.setStartingIndex(index);
                     break;
@@ -136,12 +139,6 @@ export class ProviderQueue {
         if (provider.isPriority()) {
             throw new Revert(
                 `Impossible state: priority provider in standard queue (${provider.getId()}).`,
-            );
-        }
-
-        if (!provider.isReservedAmountValid()) {
-            throw new Revert(
-                `Impossible state: liquidity < reserved for provider ${provider.getId()}.`,
             );
         }
 
@@ -175,24 +172,24 @@ export class ProviderQueue {
     }
 
     protected tryNextCandidate(currentQuote: u256): Provider | null {
+        let result: Potential<Provider> = null;
         const providerId = this.queue.get_physical(this._currentIndex);
 
-        if (providerId === u256.Zero) {
-            return null;
+        if (!providerId.isZero()) {
+            const provider = getProvider(providerId);
+
+            if (this.isEligible(provider)) {
+                result = this.returnProvider(provider, this._currentIndex, currentQuote);
+            }
         }
 
-        const provider = getProvider(providerId);
-        if (!this.isEligible(provider)) {
-            return null;
-        }
-
-        return this.returnProvider(provider, this._currentIndex, currentQuote);
+        return result;
     }
 
     // TODO: we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
     private returnProvider(provider: Provider, index: u64, currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
-        const availableLiquidity: u256 = provider.getAvailableLiquidityAmount();
+        const availableLiquidity = provider.getAvailableLiquidityAmount();
 
         if (!availableLiquidity.isZero()) {
             if (ENABLE_INDEX_VERIFICATION) {
@@ -208,12 +205,7 @@ export class ProviderQueue {
                 );
             }
 
-            if (
-                Provider.checkTokenAmountGEMinimumReservationAmount(
-                    availableLiquidity,
-                    currentQuote,
-                )
-            ) {
+            if (Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)) {
                 provider.clearFromRemovalQueue();
                 result = provider;
             } else if (!provider.hasReservedAmount()) {
@@ -222,5 +214,11 @@ export class ProviderQueue {
         }
 
         return result;
+    }
+
+    private ensureNotInitialLiquidityProvider(provider: Provider): void {
+        if (provider.isInitialLiquidityProvider()) {
+            throw new Revert('Impossible state: initial liquidity provider cannot be in a queue.');
+        }
     }
 }

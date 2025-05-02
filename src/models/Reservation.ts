@@ -4,7 +4,7 @@ import {
     Blockchain,
     BytesWriter,
     Revert,
-    StoredU256Array,
+    StoredU128Array,
     StoredU64Array,
     StoredU8Array,
 } from '@btc-vision/btc-runtime/runtime';
@@ -22,7 +22,7 @@ import { ReservationProviderData } from './ReservationProdiverData';
 export class Reservation {
     private reservationData: ReservationData;
     private reservedIndexes: StoredU64Array;
-    private reservedValues: StoredU256Array;
+    private reservedValues: StoredU128Array;
     private reservedPriority: StoredU8Array;
     private readonly id: u128;
 
@@ -38,7 +38,7 @@ export class Reservation {
         this.reservationData = new ReservationData(RESERVATION_DATA_POINTER, reservationId);
         this.id = u128.fromBytes(reservationId, true);
         this.reservedIndexes = new StoredU64Array(RESERVATION_INDEXES, reservationId);
-        this.reservedValues = new StoredU256Array(RESERVATION_AMOUNTS, reservationId);
+        this.reservedValues = new StoredU128Array(RESERVATION_AMOUNTS, reservationId);
         this.reservedPriority = new StoredU8Array(RESERVATION_PRIORITY, reservationId);
     }
 
@@ -102,7 +102,7 @@ export class Reservation {
         return this.id;
     }
 
-    public timeout(): void {
+    public timeoutUser(): void {
         this.reservationData.timeout = true;
     }
 

@@ -1,17 +1,17 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     AdvancedStoredString,
     Potential,
+    Revert,
     SafeMath,
     u256To30Bytes,
 } from '@btc-vision/btc-runtime/runtime';
 import { ProviderData } from './ProviderData';
 import {
+    AMOUNT_POINTER,
     BTC_RECEIVER_ADDRESS_POINTER,
-    LIQUIDITY_AMOUNT_POINTER,
     LIQUIDITY_PROVIDED_POINTER,
     PROVIDER_DATA_POINTER,
-    RESERVED_AMOUNT_POINTER,
 } from '../constants/StoredPointers';
 import { tokensToSatoshis } from '../utils/SatoshisConversion';
 import { STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT } from '../constants/Contract';
@@ -38,8 +38,7 @@ export class Provider {
         this.providerData = new ProviderData(
             PROVIDER_DATA_POINTER,
             LIQUIDITY_PROVIDED_POINTER,
-            LIQUIDITY_AMOUNT_POINTER,
-            RESERVED_AMOUNT_POINTER,
+            AMOUNT_POINTER,
             providerBuffer,
         );
     }
@@ -56,18 +55,15 @@ export class Provider {
     }
 
     /**
-     * @method checkTokenAmountGEMinimumReservationAmount
+     * @method meetsMinimumReservationAmount
      * @description Checks if a given amount of token is greater or equal to the minimum reservation amount in satoshi.
-     * @param {u256} tokenAmount - The token amount.
+     * @param {u128} tokenAmount - The token amount.
      * @param {u256} currentQuote - The quote to use for the conversion.
      * @returns {boolean} - true if token amount is GE; false if not.
      */
-    public static checkTokenAmountGEMinimumReservationAmount(
-        tokenAmount: u256,
-        currentQuote: u256,
-    ): boolean {
+    public static meetsMinimumReservationAmount(tokenAmount: u128, currentQuote: u256): boolean {
         let result: boolean = true;
-        const maxCostInSatoshis = tokensToSatoshis(tokenAmount, currentQuote);
+        const maxCostInSatoshis = tokensToSatoshis(tokenAmount.toU256(), currentQuote);
 
         if (u256.lt(maxCostInSatoshis, STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)) {
             result = false;
@@ -223,49 +219,49 @@ export class Provider {
     /**
      * @method getReservedAmount
      * @description Gets the reserved amount.
-     * @returns {u256} - The reserved amount.
+     * @returns {u128} - The reserved amount.
      */
-    public getReservedAmount(): u256 {
+    public getReservedAmount(): u128 {
         return this.providerData.reservedAmount;
     }
 
     /**
      * @method setReservedAmount
      * @description Sets the reserved amount.
-     * @param {u256} value - The reserved amount.
+     * @param {u128} value - The reserved amount.
      * @returns {void}
      */
-    public setReservedAmount(value: u256): void {
+    public setReservedAmount(value: u128): void {
         this.providerData.reservedAmount = value;
     }
 
     /**
      * @method addToReservedAmount
      * @description Add a value to the reserved amount.
-     * @param {u256} value - The value to add.
+     * @param {u128} value - The value to add.
      * @returns {void}
      */
-    public addToReservedAmount(value: u256): void {
-        this.providerData.reservedAmount = SafeMath.add(this.providerData.reservedAmount, value);
+    public addToReservedAmount(value: u128): void {
+        this.providerData.reservedAmount = SafeMath.add128(this.providerData.reservedAmount, value);
     }
 
     /**
      * @method subtractFromReservedAmount
      * @description Subtract a value to the reserved amount.
-     * @param {u256} value - The value to subtract.
+     * @param {u128} value - The value to subtract.
      * @returns {void}
      */
-    public subtractFromReservedAmount(value: u256): void {
-        this.providerData.reservedAmount = SafeMath.sub(this.providerData.reservedAmount, value);
+    public subtractFromReservedAmount(value: u128): void {
+        this.providerData.reservedAmount = SafeMath.sub128(this.providerData.reservedAmount, value);
     }
 
     /**
-     * @method isReservedAmountValid
+     * @method canCoverReservedAmount
      * @description Gets if the reserved amount is valid (<= liquidity amount).
-     * @returns {boolean} - true if not Zero; false if Zero.
+     * @returns {boolean} - true if reserved amount is valid; false if not.
      */
-    public isReservedAmountValid(): boolean {
-        return u256.le(this.getLiquidityAmount(), this.getReservedAmount()) ? true : false;
+    public canCoverReservedAmount(): boolean {
+        return u128.lt(this.getLiquidityAmount(), this.getReservedAmount()) ? false : true;
     }
 
     /**
@@ -280,19 +276,19 @@ export class Provider {
     /**
      * @method getLiquidityAmount
      * @description Gets the liquidity amount.
-     * @returns {u256} - The liquidity amount.
+     * @returns {u128} - The liquidity amount.
      */
-    public getLiquidityAmount(): u256 {
+    public getLiquidityAmount(): u128 {
         return this.providerData.liquidityAmount;
     }
 
     /**
      * @method setLiquidityAmount
      * @description Sets the liquidity amount.
-     * @param {u256} value - The liquidity amount.
+     * @param {u128} value - The liquidity amount.
      * @returns {void}
      */
-    public setLiquidityAmount(value: u256): void {
+    public setLiquidityAmount(value: u128): void {
         this.providerData.liquidityAmount = value;
     }
 
@@ -308,20 +304,29 @@ export class Provider {
     /**
      * @method subtractFromLiquidityAmount
      * @description Subtract a value to the liquidity amount.
-     * @param {u256} value - The value to subtract.
+     * @param {u128} value - The value to subtract.
      * @returns {void}
      */
-    public subtractFromLiquidityAmount(value: u256): void {
-        this.providerData.liquidityAmount = SafeMath.sub(this.providerData.liquidityAmount, value);
+    public subtractFromLiquidityAmount(value: u128): void {
+        this.providerData.liquidityAmount = SafeMath.sub128(
+            this.providerData.liquidityAmount,
+            value,
+        );
     }
 
     /**
      * @method getAvailableLiquidityAmount
      * @description Gets the available liquidity amount.
-     * @returns {u256} The available liquidity.
+     * @returns {u128} The available liquidity.
      */
-    public getAvailableLiquidityAmount(): u256 {
-        return SafeMath.sub(this.getLiquidityAmount(), this.getReservedAmount());
+    public getAvailableLiquidityAmount(): u128 {
+        if (!this.canCoverReservedAmount()) {
+            throw new Revert(
+                `Impossible state: liquidity < reserved for provider ${this.getId()}.`,
+            );
+        }
+
+        return SafeMath.sub128(this.getLiquidityAmount(), this.getReservedAmount());
     }
 
     /**
@@ -412,8 +417,8 @@ export class Provider {
 
     /**
      * @method getQueueIndex
-     * @description Gets the provider index in a provider queue.
-     * @returns {u64} - The provider index in a provider queue.
+     * @description Gets the provider index in the normal/priority provider queue.
+     * @returns {u64} - The provider index in the normal/priority provider queue.
      */
     public getQueueIndex(): u64 {
         return this.providerData.queueIndex;
@@ -421,12 +426,31 @@ export class Provider {
 
     /**
      * @method setQueueIndex
-     * @description Sets the provider index in a provider queue.
-     * @param {u64} value - The provider index in a provider queue.
+     * @description Sets the provider index in the normal/priority provider queue.
+     * @param {u64} value - The provider index in the normal/priority provider queue.
      * @returns {void}
      */
     public setQueueIndex(value: u64): void {
         this.providerData.queueIndex = value;
+    }
+
+    /**
+     * @method getRemovalQueueIndex
+     * @description Gets the provider index in the removal provider queue.
+     * @returns {u64} - The provider index in the removal provider queue.
+     */
+    public getRemovalQueueIndex(): u64 {
+        return this.providerData.removalQueueIndex;
+    }
+
+    /**
+     * @method setRemovalQueueIndex
+     * @description Sets the provider index in the removal provider queue.
+     * @param {u64} value - The provider index in the removal provider queue.
+     * @returns {void}
+     */
+    public setRemovalQueueIndex(value: u64): void {
+        this.providerData.removalQueueIndex = value;
     }
 
     /**

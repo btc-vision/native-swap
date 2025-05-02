@@ -9,6 +9,13 @@ export interface IQuoteManager {
     getBlockQuote(blockNumber: u64): u256;
 
     /**
+     * Retrieves the stored quote for a given block. If the quote is Zero the functions throw.
+     * @param {u64} blockNumber — the block height at which the quote was saved
+     * @returns {u256} - the quote recorded at that block
+     */
+    getValidBlockQuote(blockNumber: u64): u256;
+
+    /**
      * Stores the quote for the current block.
      * @param {u64} blockNumber — the block height at which the quote was saved
      * @param {u256} value — the quote

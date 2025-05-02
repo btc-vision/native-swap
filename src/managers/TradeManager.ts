@@ -52,7 +52,7 @@ export class TradeManager implements ITradeManager {
     public executeTrade(reservation: Reservation): CompletedTrade {
         this.ensureReservationIsValid(reservation);
         this.ensurePurgeIndexIsValid(reservation.getPurgeIndex());
-        this.getValidQuoteOrThrow(reservation.getCreationBlock());
+        this.getValidQuote(reservation.getCreationBlock());
         this.removeReservationFromActiveList(reservation);
         this.resetTotals();
 
@@ -361,16 +361,8 @@ export class TradeManager implements ITradeManager {
         this.totalTokensRefunded = SafeMath.add(this.totalTokensRefunded, value);
     }
 
-    private getValidQuoteOrThrow(blockNumber: u64): void {
-        const quote = this.quoteManager.getBlockQuote(blockNumber);
-
-        if (quote.isZero()) {
-            throw new Revert(
-                `Impossible state: Quote at reservation is zero. (createdAt: ${blockNumber}, quote: ${quote})`,
-            );
-        }
-
-        this.quoteAtReservation = quote;
+    private getValidQuote(blockNumber: u64): void {
+        this.quoteAtReservation = this.quoteManager.getValidBlockQuote(blockNumber);
     }
 
     private ensureProviderHasEnoughLiquidity(provider: Provider, tokensDesired: u256): void {

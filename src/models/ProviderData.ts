@@ -1,9 +1,10 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Blockchain,
     BytesReader,
     BytesWriter,
     encodePointer,
+    U256_BYTE_LENGTH,
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
@@ -12,30 +13,25 @@ import {
 export class ProviderData {
     private readonly pointerBuffer: Uint8Array;
     private readonly liquidityProvidedPointer: Uint8Array;
-    private readonly liquidityAmountPointer: Uint8Array;
-    private readonly reservedAmountPointer: Uint8Array;
+    private readonly amountPointer: Uint8Array;
     private valueLoaded: boolean = false;
     private stateChanged: boolean = false;
     private liquidityProvidedLoaded: boolean = false;
-    private liquidityAmountLoaded: boolean = false;
-    private reservedAmountLoaded: boolean = false;
+    private amountLoaded: boolean = false;
     private liquidityProvidedChanged: boolean = false;
-    private liquidityAmountChanged: boolean = false;
-    private reservedAmountChanged: boolean = false;
+    private amountChanged: boolean = false;
 
     /**
      * @constructor
      * @param {u16} pointer - The primary pointer identifier.
      * @param {u16} liquidityProvidedPointer - The liquidity provided pointer identifier.
-     * @param {u16} liquidityAmountPointer - The liquidity amount pointer identifier.
-     * @param {u16} reservedAmountPointer - The reserved amount pointer identifier.
+     * @param {u16} amountPointer - The liquidity amount and reserved amount pointer identifier.
      * @param subPointer - The sub-pointer for memory slot addressing.
      */
     constructor(
         pointer: u16,
         liquidityProvidedPointer: u16,
-        liquidityAmountPointer: u16,
-        reservedAmountPointer: u16,
+        amountPointer: u16,
         subPointer: Uint8Array,
     ) {
         assert(
@@ -45,8 +41,33 @@ export class ProviderData {
 
         this.pointerBuffer = encodePointer(pointer, subPointer);
         this.liquidityProvidedPointer = encodePointer(liquidityProvidedPointer, subPointer);
-        this.liquidityAmountPointer = encodePointer(liquidityAmountPointer, subPointer);
-        this.reservedAmountPointer = encodePointer(reservedAmountPointer, subPointer);
+        this.amountPointer = encodePointer(amountPointer, subPointer);
+    }
+
+    private _removalQueueIndex: u64 = 0;
+
+    /**
+     * @method removalQueueIndex
+     * @description Gets the index of the provider in the removal queue.
+     * @returns {u64} - The index of the provider in the removal queue.
+     */
+    @inline
+    public get removalQueueIndex(): u64 {
+        this.ensureValues();
+        return this._removalQueueIndex;
+    }
+
+    /**
+     * @method removalQueueIndex
+     * @description Sets the index of the provider in the removal queue.
+     * @param {u64} value - The index of the provider in the removal queue.
+     */
+    public set removalQueueIndex(value: u64) {
+        this.ensureValues();
+        if (this._removalQueueIndex !== value) {
+            this._removalQueueIndex = value;
+            this.stateChanged = true;
+        }
     }
 
     private _initialLiquidityProvider: boolean = false;
@@ -209,8 +230,8 @@ export class ProviderData {
 
     /**
      * @method queueIndex
-     * @description Gets the index of the provider in the queue.
-     * @returns {u256} - The index of the provider in the queue.
+     * @description Gets the index of the provider in the normal/priority queue.
+     * @returns {u64} - The index of the provider in the normal/priority queue.
      */
     @inline
     public get queueIndex(): u64 {
@@ -220,8 +241,8 @@ export class ProviderData {
 
     /**
      * @method queueIndex
-     * @description Sets the index of the provider in the queue.
-     * @param {u256} value - The index of the provider in the queue.
+     * @description Sets the index of the provider in the normal/priority queue.
+     * @param {u64} value - The index of the provider in the normal/priority queue.
      */
     public set queueIndex(value: u64) {
         this.ensureValues();
@@ -257,55 +278,55 @@ export class ProviderData {
         }
     }
 
-    private _liquidityAmount: u256 = u256.Zero;
+    private _liquidityAmount: u128 = u128.Zero;
 
     /**
      * @method liquidityAmount
      * @description Gets the liquidity amount.
-     * @returns {u256} - The liquidity amount.
+     * @returns {u128} - The liquidity amount.
      */
     @inline
-    public get liquidityAmount(): u256 {
-        this.ensureLiquidityAmount();
+    public get liquidityAmount(): u128 {
+        this.ensureAmount();
         return this._liquidityAmount;
     }
 
     /**
      * @method liquidityAmount
      * @description Sets the liquidity amount.
-     * @param {u256} value - The liquidity amount.
+     * @param {u128} value - The liquidity amount.
      */
-    public set liquidityAmount(value: u256) {
-        this.ensureLiquidityAmount();
-        if (!u256.eq(this._liquidityAmount, value)) {
+    public set liquidityAmount(value: u128) {
+        this.ensureAmount();
+        if (!u128.eq(this._liquidityAmount, value)) {
             this._liquidityAmount = value;
-            this.liquidityAmountChanged = true;
+            this.amountChanged = true;
         }
     }
 
-    private _reservedAmount: u256 = u256.Zero;
+    private _reservedAmount: u128 = u128.Zero;
 
     /**
      * @method reservedAmount
      * @description Gets the reserved amount.
-     * @returns {u256} - The reserved amount.
+     * @returns {u128} - The reserved amount.
      */
     @inline
-    public get reservedAmount(): u256 {
-        this.ensureReservedAmount();
+    public get reservedAmount(): u128 {
+        this.ensureAmount();
         return this._reservedAmount;
     }
 
     /**
      * @method reservedAmount
      * @description Sets the reserved amount.
-     * @param {u256} value - The reserved amount.
+     * @param {u128} value - The reserved amount.
      */
-    public set reservedAmount(value: u256) {
-        this.ensureReservedAmount();
-        if (!u256.eq(this._reservedAmount, value)) {
+    public set reservedAmount(value: u128) {
+        this.ensureAmount();
+        if (!u128.eq(this._reservedAmount, value)) {
             this._reservedAmount = value;
-            this.reservedAmountChanged = true;
+            this.amountChanged = true;
         }
     }
 
@@ -317,8 +338,7 @@ export class ProviderData {
     public save(): void {
         this.saveStateIfChanged();
         this.saveLiquidityProvidedIfChanged();
-        this.saveLiquidityAmountIfChanged();
-        this.saveReservedAmountIfChanged();
+        this.saveAmountIfChanged();
     }
 
     /**
@@ -340,8 +360,8 @@ export class ProviderData {
         this.active = false;
         this.priority = false;
         this.liquidityProvisionAllowed = false;
-        this.liquidityAmount = u256.Zero;
-        this.reservedAmount = u256.Zero;
+        this.liquidityAmount = u128.Zero;
+        this.reservedAmount = u128.Zero;
         this.queueIndex = 0;
     }
 
@@ -354,7 +374,7 @@ export class ProviderData {
         this.liquidityProvided = u256.Zero;
         this.pendingRemoval = false;
         this.liquidityProvider = false;
-        this.queueIndex = 0;
+        this.removalQueueIndex = 0;
     }
 
     /**
@@ -386,47 +406,15 @@ export class ProviderData {
     }
 
     /**
-     * @method saveLiquidityAmountIfChanged
-     * @description Persists the liquidity amount if modified.
+     * @method saveAmountIfChanged
+     * @description Persists the liquidity and reserved amount if modified.
      * @returns {void}
      */
-    private saveLiquidityAmountIfChanged(): void {
-        if (this.liquidityAmountChanged) {
-            Blockchain.setStorageAt(
-                this.liquidityAmountPointer,
-                this.liquidityAmount.toUint8Array(true),
-            );
-            this.liquidityAmountChanged = false;
-        }
-    }
-
-    /**
-     * @method saveReservedAmountIfChanged
-     * @description Persists the liquidity amount if modified.
-     * @returns {void}
-     */
-    private saveReservedAmountIfChanged(): void {
-        if (this.reservedAmountChanged) {
-            Blockchain.setStorageAt(
-                this.reservedAmountPointer,
-                this.reservedAmount.toUint8Array(true),
-            );
-            this.reservedAmountChanged = false;
-        }
-    }
-
-    /**
-     * @private
-     * @method ensureLiquidityAmount
-     * @description Loads the liquidity amount from storage if needed.
-     * @returns {void}
-     */
-    private ensureLiquidityAmount(): void {
-        if (!this.liquidityAmountLoaded) {
-            const data = Blockchain.getStorageAt(this.liquidityAmountPointer);
-
-            this._liquidityAmount = u256.fromBytes(data, true);
-            this.liquidityAmountLoaded = true;
+    private saveAmountIfChanged(): void {
+        if (this.amountChanged) {
+            const packed = this.packAmounts();
+            Blockchain.setStorageAt(this.amountPointer, packed);
+            this.amountChanged = false;
         }
     }
 
@@ -447,16 +435,15 @@ export class ProviderData {
 
     /**
      * @private
-     * @method ensureReservedAmount
-     * @description Loads the reserved amount from storage if needed.
+     * @method ensureAmount
+     * @description Loads the liquidity and reserved amount from storage if needed.
      * @returns {void}
      */
-    private ensureReservedAmount(): void {
-        if (!this.reservedAmountLoaded) {
-            const data = Blockchain.getStorageAt(this.reservedAmountPointer);
-
-            this._reservedAmount = u256.fromBytes(data, true);
-            this.reservedAmountLoaded = true;
+    private ensureAmount(): void {
+        if (!this.amountLoaded) {
+            const storedData = Blockchain.getStorageAt(this.amountPointer);
+            this.unpackAmounts(storedData);
+            this.amountLoaded = true;
         }
     }
 
@@ -470,7 +457,6 @@ export class ProviderData {
         if (!this.valueLoaded) {
             const storedData: Uint8Array = Blockchain.getStorageAt(this.pointerBuffer);
             this.unpackValues(storedData);
-
             this.valueLoaded = true;
         }
     }
@@ -493,18 +479,31 @@ export class ProviderData {
         this._liquidityProvider = ((flag >> 3) & 1) === 1;
         this._pendingRemoval = ((flag >> 4) & 1) === 1;
         this._initialLiquidityProvider = ((flag >> 5) & 1) === 1;
-
         this._queueIndex = reader.readU64();
+        this._removalQueueIndex = reader.readU64();
+    }
+
+    /**
+     * @private
+     * @method unpackValues
+     * @description Unpacks the liquidity amount and reserved amount.
+     * @param {Uint8Array} packedData - The data to unpack.
+     * @returns {void}
+     */
+    private unpackAmounts(packedData: Uint8Array): void {
+        const reader = new BytesReader(packedData);
+        this._liquidityAmount = reader.readU128();
+        this._reservedAmount = reader.readU128();
     }
 
     /**
      * @private
      * @method packValues
      * @description Packs the internal data for storage.
-     * @returns The packed Uint8Array value.
+     * @returns {Uint8Array} The packed Uint8Array value.
      */
     private packValues(): Uint8Array {
-        const writer = new BytesWriter(U8_BYTE_LENGTH + U64_BYTE_LENGTH);
+        const writer = new BytesWriter(U8_BYTE_LENGTH + 2 * U64_BYTE_LENGTH);
         const flag =
             (this._active ? 1 : 0) |
             ((this._priority ? 1 : 0) << 1) |
@@ -515,6 +514,21 @@ export class ProviderData {
 
         writer.writeU8(flag);
         writer.writeU64(this._queueIndex);
+        writer.writeU64(this._removalQueueIndex);
+
+        return writer.getBuffer();
+    }
+
+    /**
+     * @private
+     * @method packAmounts
+     * @description Packs the liquidity amount and the reserved amount data for storage.
+     * @returns {Uint8Array} The packed Uint8Array value.
+     */
+    private packAmounts(): Uint8Array {
+        const writer = new BytesWriter(U256_BYTE_LENGTH);
+        writer.writeU128(this._liquidityAmount);
+        writer.writeU128(this._reservedAmount);
 
         return writer.getBuffer();
     }

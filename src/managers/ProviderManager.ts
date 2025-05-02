@@ -164,11 +164,7 @@ export class ProviderManager implements IProviderManager {
             providerId = this.getIdFromQueue(index, type);
         }
 
-        if (providerId.isZero()) {
-            throw new Revert(
-                `Impossible state: Cannot load provider. Index: ${index} Type: ${type}. Pool corrupted.`,
-            );
-        }
+        this.ensureProviderExists(providerId, index, type);
 
         return getProvider(providerId);
     }
@@ -253,12 +249,14 @@ export class ProviderManager implements IProviderManager {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
-        if (provider.isPendingRemoval()) {
-            throw new Revert('Impossible state: removal provider cannot be reset.');
-        }
+        this.ensureProviderIsNotPendingRemoval(provider);
 
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
-            TransferHelper.safeTransfer(this.token, Address.dead(), provider.getLiquidityAmount());
+            TransferHelper.safeTransfer(
+                this.token,
+                Address.dead(),
+                provider.getLiquidityAmount().toU256(),
+            );
         }
 
         if (!provider.isInitialLiquidityProvider()) {
@@ -269,9 +267,9 @@ export class ProviderManager implements IProviderManager {
             }
         }
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
-
         provider.resetListingValues();
+
+        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
     }
 
     public resetStartingIndex(): void {
@@ -318,33 +316,39 @@ export class ProviderManager implements IProviderManager {
             return null;
         }
 
-        if (!initialProvider.isReservedAmountValid()) {
-            throw new Revert(`Impossible state: reserved cannot be > liquidity.`);
-        }
-
-        const availableLiquidity: u256 = initialProvider.getAvailableLiquidityAmount();
+        const availableLiquidity = initialProvider.getAvailableLiquidityAmount();
 
         if (availableLiquidity.isZero()) {
             return null;
         }
 
-        if (!currentQuote.isZero()) {
-            if (
-                !Provider.checkTokenAmountGEMinimumReservationAmount(
-                    availableLiquidity,
-                    currentQuote,
-                )
-            ) {
-                if (!initialProvider.hasReservedAmount()) {
-                    this.resetProvider(initialProvider);
-                }
-
-                return null;
+        if (
+            !currentQuote.isZero() &&
+            !Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)
+        ) {
+            if (!initialProvider.hasReservedAmount()) {
+                this.resetProvider(initialProvider);
             }
+
+            return null;
         }
 
         initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
 
         return initialProvider;
+    }
+
+    private ensureProviderExists(providerId: u256, index: u64, type: ProviderTypes): void {
+        if (providerId.isZero()) {
+            throw new Revert(
+                `Impossible state: Cannot load provider. Index: ${index} Type: ${type}. Pool corrupted.`,
+            );
+        }
+    }
+
+    private ensureProviderIsNotPendingRemoval(provider: Provider): void {
+        if (provider.isPendingRemoval()) {
+            throw new Revert('Impossible state: removal provider cannot be reset.');
+        }
     }
 }

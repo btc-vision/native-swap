@@ -19,14 +19,24 @@ export class RemovalProviderQueue extends ProviderQueue {
         this.owedBTCManager = owedBTCManager;
     }
 
+    public override add(provider: Provider): u64 {
+        this.queue.push(provider.getId(), true);
+
+        const index = this.queue.getLength() - 1;
+        provider.setRemovalQueueIndex(index);
+
+        return index;
+    }
+
     public override cleanUp(previousStartingIndex: u64): u64 {
-        const length: u64 = this.length;
         let index: u64 = previousStartingIndex;
 
-        while (index < length) {
+        while (index < this.length) {
             const providerId = this.queue.get_physical(index);
+
             if (providerId !== u256.Zero) {
                 const provider = getProvider(providerId);
+
                 if (provider.isPendingRemoval()) {
                     this.queue.setStartingIndex(index);
                     break;
@@ -50,7 +60,7 @@ export class RemovalProviderQueue extends ProviderQueue {
     }
 
     public removeFromQueue(provider: Provider): void {
-        this.queue.delete_physical(provider.getQueueIndex());
+        this.queue.delete_physical(provider.getRemovalQueueIndex());
 
         provider.clearPendingRemoval();
         provider.clearLiquidityProvider();
@@ -77,11 +87,10 @@ export class RemovalProviderQueue extends ProviderQueue {
 
     private getProviderIfOwedBTC(providerId: u256, provider: Provider): Provider | null {
         let result: Potential<Provider> = null;
-
         const owedBTC = this.owedBTCManager.getBTCowed(providerId);
         const reservedBTC = this.owedBTCManager.getBTCowedReserved(providerId);
 
-        this.ensureReservedBTCValid(reservedBTC, owedBTC);
+        this.ensureReservedBTCIsValid(reservedBTC, owedBTC);
 
         const left = SafeMath.sub(owedBTC, reservedBTC);
 
@@ -89,16 +98,20 @@ export class RemovalProviderQueue extends ProviderQueue {
             provider.markFromRemovalQueue();
             result = provider;
         } else {
-            if (u256.lt(owedBTC, STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)) {
-                throw new Revert(
-                    `Impossible state: Provider should have been removed from queue during swap operation.`,
-                );
-            }
+            this.ensureOwedAboveMinimum(owedBTC);
         }
         return result;
     }
 
-    private ensureReservedBTCValid(reservedBTC: u256, owedBTC: u256): void {
+    private ensureOwedAboveMinimum(owedBTC: u256): void {
+        if (u256.lt(owedBTC, STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)) {
+            throw new Revert(
+                `Impossible state: Provider should have been removed from queue during swap operation.`,
+            );
+        }
+    }
+
+    private ensureReservedBTCIsValid(reservedBTC: u256, owedBTC: u256): void {
         if (u256.gt(reservedBTC, owedBTC)) {
             throw new Revert(`Impossible state: reservedBTC cannot be > owedBTC.`);
         }

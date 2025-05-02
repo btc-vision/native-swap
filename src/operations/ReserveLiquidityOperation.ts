@@ -251,7 +251,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         reservation.setCreationBlock(Blockchain.block.number);
 
-        const index: u32 = this.liquidityQueue.addActiveReservationToList(
+        const index: u32 = this.liquidityQueue.addActiveReservation(
             Blockchain.block.number,
             reservation.getId(),
         );

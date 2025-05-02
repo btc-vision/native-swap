@@ -398,8 +398,8 @@ export class LiquidityQueue implements ILiquidityQueue {
         return availableScaled;
     }
 
-    public addActiveReservationToList(blockNumber: u64, reservationId: u128): u32 {
-        return this.reservationManager.addActiveReservationToList(blockNumber, reservationId);
+    public addActiveReservation(blockNumber: u64, reservationId: u128): u32 {
+        return this.reservationManager.addActiveReservation(blockNumber, reservationId);
     }
 
     public setBlockQuote(): void {
@@ -409,10 +409,6 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         const blockNumberU32: u64 = Blockchain.block.number % <u64>(u32.MAX_VALUE - 1);
         this.quoteManager.setBlockQuote(blockNumberU32, this.quote());
-    }
-
-    public getBlockQuote(blockNumber: u64): u256 {
-        return this.quoteManager.getBlockQuote(blockNumber);
     }
 
     public increaseVirtualBTCReserve(value: u256): void {
@@ -484,22 +480,23 @@ export class LiquidityQueue implements ILiquidityQueue {
         currentBlock: u64,
         windowSize: u32 = VOLATILITY_WINDOW_IN_BLOCKS,
     ): u256 {
+        let volatility: u256 = u256.Zero;
+
         const blockNumber: u64 = currentBlock % <u64>(u32.MAX_VALUE - 1);
-        const currentQuote = this.getBlockQuote(blockNumber);
-
-        // older quote from (currentBlock - windowSize)
+        const currentQuote = this.quoteManager.getBlockQuote(blockNumber);
         const oldBlock = (currentBlock - windowSize) % <u64>(u32.MAX_VALUE - 1);
-        const oldQuote = this.getBlockQuote(oldBlock);
+        const oldQuote = this.quoteManager.getBlockQuote(oldBlock);
 
-        if (oldQuote.isZero() || currentQuote.isZero()) {
-            return u256.Zero;
+        if (!oldQuote.isZero() && !currentQuote.isZero()) {
+            let diff = u256.sub(currentQuote, oldQuote);
+            //!!!! There is no negative number ?????
+            if (diff.toI64() < 0) {
+                diff = u256.mul(diff, u256.fromI64(-1));
+            }
+
+            volatility = SafeMath.div(SafeMath.mul(diff, u256.fromU64(10000)), oldQuote);
         }
 
-        let diff = u256.sub(currentQuote, oldQuote);
-        if (diff.toI64() < 0) {
-            diff = u256.mul(diff, u256.fromI64(-1));
-        }
-
-        return SafeMath.div(SafeMath.mul(diff, u256.fromU64(10000)), oldQuote);
+        return volatility;
     }
 }

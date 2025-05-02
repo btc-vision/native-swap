@@ -5,8 +5,7 @@ export const TOTAL_RESERVES_POINTER: u16 = Blockchain.nextPointer;
 
 export const PROVIDER_DATA_POINTER: u16 = Blockchain.nextPointer;
 export const LIQUIDITY_PROVIDED_POINTER: u16 = Blockchain.nextPointer;
-export const LIQUIDITY_AMOUNT_POINTER: u16 = Blockchain.nextPointer;
-export const RESERVED_AMOUNT_POINTER: u16 = Blockchain.nextPointer;
+export const AMOUNT_POINTER: u16 = Blockchain.nextPointer;
 export const BTC_RECEIVER_ADDRESS_POINTER: u16 = Blockchain.nextPointer;
 
 export const LIQUIDITY_QUOTE_HISTORY_POINTER: u16 = Blockchain.nextPointer;

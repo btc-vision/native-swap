@@ -56,28 +56,16 @@ export class ReservationManager implements IReservationManager {
 
     public getReservationWithExpirationChecks(sender: Address): Reservation {
         const reservation = new Reservation(this.token, sender);
-
         reservation.ensureCanBeConsumed();
 
         return reservation;
     }
 
-    public addActiveReservationToList(blockNumber: u64, reservationId: u128): u64 {
-        const reservationList = this.getReservationListForBlock(blockNumber);
-        reservationList.push(reservationId);
-        reservationList.save();
+    public addActiveReservation(blockNumber: u64, reservationId: u128): u64 {
+        const reservationIndex = this.addToList(blockNumber, reservationId);
+        const reservationActiveIndex = this.addToActiveList(blockNumber);
 
-        const reservationActiveList = this.getActiveReservationListForBlock(blockNumber);
-        reservationActiveList.push(true);
-        reservationActiveList.save();
-
-        const reservationIndex = reservationList.getLength() - 1;
-        const reservationActiveIndex = reservationActiveList.getLength() - 1;
-
-        if (reservationIndex !== reservationActiveIndex) {
-            throw new Revert('Impossible state: Reservation index mismatch');
-        }
-
+        this.ensureReservedIndexMatch(reservationIndex, reservationActiveIndex);
         this.pushBlockIfNotExists(blockNumber);
 
         return reservationIndex;
@@ -97,36 +85,7 @@ export class ReservationManager implements IReservationManager {
             return lastPurgedBlock;
         }
 
-        let totalFreed: u256 = u256.Zero;
-        const length = this.blocksWithReservations.getLength();
-
-        let count: u64 = 0;
-
-        for (let index: u64 = 0; index < length; index++) {
-            const blockNumber = this.blocksWithReservations.get(index);
-
-            if (blockNumber >= maxBlockToPurge) {
-                break;
-            }
-
-            const freed = this.purgeBlock(blockNumber);
-
-            if (!freed.isZero()) {
-                totalFreed = SafeMath.add(totalFreed, freed);
-            }
-
-            count++;
-        }
-
-        for (
-            let index: u64 = 0;
-            index < count && this.blocksWithReservations.getLength() > 0;
-            index++
-        ) {
-            this.blocksWithReservations.shift();
-        }
-
-        this.blocksWithReservations.save();
+        const totalFreed = this.purgeBlocksWithReservations(maxBlockToPurge);
 
         if (!totalFreed.isZero()) {
             this.liquidityQueueReserve.subFromTotalReserved(totalFreed);
@@ -136,6 +95,22 @@ export class ReservationManager implements IReservationManager {
         }
 
         return maxBlockToPurge;
+    }
+
+    private addToList(blockNumber: u64, reservationId: u128): u64 {
+        const reservationList = this.getReservationListForBlock(blockNumber);
+        reservationList.push(reservationId);
+        reservationList.save();
+
+        return reservationList.getLength() - 1;
+    }
+
+    private addToActiveList(blockNumber: u64): u64 {
+        const reservationActiveList = this.getActiveReservationListForBlock(blockNumber);
+        reservationActiveList.push(true);
+        reservationActiveList.save();
+
+        return reservationActiveList.getLength() - 1;
     }
 
     private getReservationListForBlock(blockNumber: u64): StoredU128Array {
@@ -171,7 +146,7 @@ export class ReservationManager implements IReservationManager {
 
     private purgeBlock(blockNumber: u64): u256 {
         const reservationList = this.getReservationListForBlock(blockNumber);
-        const activeIds: StoredBooleanArray = this.getActiveReservationListForBlock(blockNumber);
+        const activeIds = this.getActiveReservationListForBlock(blockNumber);
 
         const length = reservationList.getLength();
         let totalFreed = u256.Zero;
@@ -198,8 +173,9 @@ export class ReservationManager implements IReservationManager {
 
     private restoreReservation(reservation: Reservation): u256 {
         let restoredLiquidity: u256 = u256.Zero;
+        const providerCount = reservation.getProviderCount();
 
-        for (let index = 0; index < reservation.getProviderCount(); index++) {
+        for (let index = 0; index < providerCount; index++) {
             const providerReservationData = reservation.getProviderAt(index);
 
             const provider: Provider = this.providerManager.getProviderFromQueue(
@@ -225,7 +201,7 @@ export class ReservationManager implements IReservationManager {
 
             restoredLiquidity = SafeMath.add(
                 restoredLiquidity,
-                providerReservationData.providedAmount,
+                providerReservationData.providedAmount.toU256(),
             );
         }
 
@@ -236,29 +212,63 @@ export class ReservationManager implements IReservationManager {
 
     private purgeAndRestoreProviderRemovalQueue(
         providerId: u256,
-        reservedAmount: u256,
+        reservedAmount: u128,
         createdAt: u64,
     ): void {
-        const quoteAtBlock = this.quoteManager.getBlockQuote(createdAt);
-
-        this.ensureQuoteIsValid(quoteAtBlock);
-
-        const costInSats = tokensToSatoshis(reservedAmount.toU256(), quoteAtBlock);
+        const quote = this.quoteManager.getValidBlockQuote(createdAt);
+        const costInSats = tokensToSatoshis(reservedAmount.toU256(), quote);
         const wasReservedSats = this.providerManager.getBTCowedReserved(providerId);
         const revertSats = SafeMath.min(costInSats, wasReservedSats);
-
         const newOwedReserved = SafeMath.sub(wasReservedSats, revertSats);
+
         this.providerManager.setBTCowedReserved(providerId, newOwedReserved);
     }
 
-    private purgeAndRestoreProvider(provider: Provider, reservedAmount: u256): void {
+    private purgeAndRestoreProvider(provider: Provider, reservedAmount: u128): void {
         provider.subtractFromReservedAmount(reservedAmount);
 
         const availableLiquidity = provider.getAvailableLiquidityAmount();
 
-        if (u256.lt(availableLiquidity, STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)) {
+        //!!! Is availableLiquidity satoshis???
+        if (
+            u256.lt(availableLiquidity.toU256(), STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)
+        ) {
             this.providerManager.resetProvider(provider, false);
         }
+    }
+
+    private purgeBlocksWithReservations(maxBlockToPurge: u64): u256 {
+        let totalFreed: u256 = u256.Zero;
+        const length = this.blocksWithReservations.getLength();
+
+        let count: u64 = 0;
+        for (let index: u64 = 0; index < length; index++) {
+            const blockNumber = this.blocksWithReservations.get(index);
+
+            if (blockNumber >= maxBlockToPurge) {
+                break;
+            }
+
+            const freed = this.purgeBlock(blockNumber);
+
+            if (!freed.isZero()) {
+                totalFreed = SafeMath.add(totalFreed, freed);
+            }
+
+            count++;
+        }
+
+        for (
+            let index: u64 = 0;
+            index < count && this.blocksWithReservations.getLength() > 0;
+            index++
+        ) {
+            this.blocksWithReservations.shift();
+        }
+
+        this.blocksWithReservations.save();
+
+        return totalFreed;
     }
 
     private ensureReservationPurgeIndexMatch(
@@ -293,15 +303,15 @@ export class ReservationManager implements IReservationManager {
         }
     }
 
-    private ensureReservedAmountValid(provider: Provider, reservedAmount: u256): void {
-        if (u256.lt(provider.getReservedAmount(), reservedAmount)) {
+    private ensureReservedAmountValid(provider: Provider, reservedAmount: u128): void {
+        if (u128.lt(provider.getReservedAmount(), reservedAmount)) {
             throw new Revert('Impossible state: reserved amount bigger than provider reserved');
         }
     }
 
-    private ensureQuoteIsValid(quote: u256): void {
-        if (quote.isZero()) {
-            throw new Revert('Impossible state: No quote at block.');
+    private ensureReservedIndexMatch(reservationIndex: u64, reservationActiveIndex: u64): void {
+        if (reservationIndex !== reservationActiveIndex) {
+            throw new Revert('Impossible state: Reservation index mismatch');
         }
     }
 }

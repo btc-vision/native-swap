@@ -46,7 +46,7 @@ export interface ILiquidityQueue {
 
     cleanUpQueues(): void;
 
-    addActiveReservationToList(blockNumber: u64, reservationId: u128): u32;
+    addActiveReservation(blockNumber: u64, reservationId: u128): u32;
 
     initializeInitialLiquidity(
         floorPrice: u256,
@@ -62,8 +62,6 @@ export interface ILiquidityQueue {
     updateVirtualPoolIfNeeded(): void;
 
     setBlockQuote(): void;
-
-    getBlockQuote(blockNumber: u64): u256;
 
     increaseVirtualBTCReserve(value: u256): void;
 
