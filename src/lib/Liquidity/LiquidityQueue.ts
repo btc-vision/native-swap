@@ -74,9 +74,9 @@ export class LiquidityQueue {
     private readonly _maxTokenPerSwap: StoredU256;
 
     // "delta" accumulators - used in updated stepwise logic
-    private readonly _deltaTokensAdd: StoredU256;
-    private readonly _deltaBTCBuy: StoredU256;
-    private readonly _deltaTokensBuy: StoredU256;
+    private readonly _totalTokensSellActivated: StoredU256;
+    private readonly _totalBTCExchangedForTokens: StoredU256;
+    private readonly _totalTokensExchangedForBTC: StoredU256;
 
     private consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
 
@@ -110,9 +110,9 @@ export class LiquidityQueue {
         this._virtualTokenReserve = new StoredU256(LIQUIDITY_VIRTUAL_T_POINTER, tokenIdUint8Array);
 
         // accumulators
-        this._deltaTokensAdd = new StoredU256(DELTA_TOKENS_ADD, tokenIdUint8Array);
-        this._deltaBTCBuy = new StoredU256(DELTA_BTC_BUY, tokenIdUint8Array);
-        this._deltaTokensBuy = new StoredU256(DELTA_TOKENS_BUY, tokenIdUint8Array);
+        this._totalTokensSellActivated = new StoredU256(DELTA_TOKENS_ADD, tokenIdUint8Array);
+        this._totalBTCExchangedForTokens = new StoredU256(DELTA_BTC_BUY, tokenIdUint8Array);
+        this._totalTokensExchangedForBTC = new StoredU256(DELTA_TOKENS_BUY, tokenIdUint8Array);
 
         this._maxTokenPerSwap = new StoredU256(
             ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
@@ -165,28 +165,28 @@ export class LiquidityQueue {
         this._virtualTokenReserve.value = value;
     }
 
-    public get deltaTokensAdd(): u256 {
-        return this._deltaTokensAdd.value;
+    public get totalTokensSellActivated(): u256 {
+        return this._totalTokensSellActivated.value;
     }
 
-    public set deltaTokensAdd(val: u256) {
-        this._deltaTokensAdd.value = val;
+    public set totalTokensSellActivated(val: u256) {
+        this._totalTokensSellActivated.value = val;
     }
 
-    public get deltaBTCBuy(): u256 {
-        return this._deltaBTCBuy.value;
+    public get totalBTCExchangedForTokens(): u256 {
+        return this._totalBTCExchangedForTokens.value;
     }
 
-    public set deltaBTCBuy(val: u256) {
-        this._deltaBTCBuy.value = val;
+    public set totalBTCExchangedForTokens(val: u256) {
+        this._totalBTCExchangedForTokens.value = val;
     }
 
-    public get deltaTokensBuy(): u256 {
-        return this._deltaTokensBuy.value;
+    public get totalTokensExchangedForBTC(): u256 {
+        return this._totalTokensExchangedForBTC.value;
     }
 
-    public set deltaTokensBuy(val: u256) {
-        this._deltaTokensBuy.value = val;
+    public set totalTokensExchangedForBTC(val: u256) {
+        this._totalTokensExchangedForBTC.value = val;
     }
 
     public get reservedLiquidity(): u256 {
@@ -335,8 +335,8 @@ export class LiquidityQueue {
 
     public buyTokens(tokensOut: u256, satoshisIn: u256): void {
         // accumulate
-        this.increaseDeltaBTCBuy(satoshisIn);
-        this.increaseDeltaTokensBuy(tokensOut);
+        this.increaseTotalBTCExchangedForTokens(satoshisIn);
+        this.increaseTotalTokensExchangedForBTC(tokensOut);
     }
 
     public updateVirtualPoolIfNeeded(): void {
@@ -349,37 +349,29 @@ export class LiquidityQueue {
         let B = this.virtualBTCReserve;
         let T = this.virtualTokenReserve;
 
-        // Add tokens from deltaTokensAdd
-        const dT_add = this.deltaTokensAdd;
+        const dT_add = this.totalTokensSellActivated;
         if (!dT_add.isZero()) {
             T = SafeMath.add(T, dT_add);
         }
 
-        // apply net "buys"
-        const dB_buy = this.deltaBTCBuy;
-        const dT_buy = this.deltaTokensBuy;
+        const dB_buy = this.totalBTCExchangedForTokens;
+        const dT_buy = this.totalTokensExchangedForBTC;
 
         if (!dT_buy.isZero()) {
-            let Tprime: u256;
-            if (u256.ge(dT_buy, T)) {
-                Tprime = u256.One;
-            } else {
-                Tprime = SafeMath.sub(T, dT_buy);
-            }
-
-            const numerator = SafeMath.mul(B, T);
-            let Bprime = SafeMath.div(numerator, Tprime);
+            let Tprime = T >= dT_buy ? SafeMath.sub(T, dT_buy) : u256.One;
+            let Bprime = SafeMath.div(SafeMath.mul(B, T), Tprime);
             const incB = SafeMath.sub(Bprime, B);
 
-            if (u256.gt(incB, dB_buy)) {
+            if (incB > dB_buy) {
                 Bprime = SafeMath.add(B, dB_buy);
-
-                let newTprime = SafeMath.div(numerator, Bprime);
-                if (u256.lt(newTprime, u256.One)) {
-                    newTprime = u256.One;
-                }
-                Tprime = newTprime;
+                Tprime = SafeMath.div(SafeMath.mul(B, T), Bprime);
+                if (Tprime < u256.One) Tprime = u256.One;
+            } else if (incB < dB_buy) {
+                Bprime = SafeMath.add(B, dB_buy);
+                Tprime = SafeMath.div(SafeMath.mul(B, T), Bprime);
+                if (Tprime < u256.One) Tprime = u256.One;
             }
+
             B = Bprime;
             T = Tprime;
         }
@@ -778,15 +770,15 @@ export class LiquidityQueue {
     }
 
     public increaseDeltaTokensAdd(amount: u256): void {
-        this.deltaTokensAdd = SafeMath.add(this.deltaTokensAdd, amount);
+        this.totalTokensSellActivated = SafeMath.add(this.totalTokensSellActivated, amount);
     }
 
-    public increaseDeltaTokensBuy(amount: u256): void {
-        this.deltaTokensBuy = SafeMath.add(this.deltaTokensBuy, amount);
+    public increaseTotalTokensExchangedForBTC(amount: u256): void {
+        this.totalTokensExchangedForBTC = SafeMath.add(this.totalTokensExchangedForBTC, amount);
     }
 
-    public increaseDeltaBTCBuy(amount: u256): void {
-        this.deltaBTCBuy = SafeMath.add(this.deltaBTCBuy, amount);
+    public increaseTotalBTCExchangedForTokens(amount: u256): void {
+        this.totalBTCExchangedForTokens = SafeMath.add(this.totalBTCExchangedForTokens, amount);
     }
 
     public distributeFee(totalFee: u256, stakingAddress: Address): void {
@@ -964,9 +956,9 @@ export class LiquidityQueue {
     }
 
     private resetAccumulators(): void {
-        this.deltaTokensAdd = u256.Zero;
-        this.deltaBTCBuy = u256.Zero;
-        this.deltaTokensBuy = u256.Zero;
+        this.totalTokensSellActivated = u256.Zero;
+        this.totalBTCExchangedForTokens = u256.Zero;
+        this.totalTokensExchangedForBTC = u256.Zero;
     }
 
     private computeVolatility(
