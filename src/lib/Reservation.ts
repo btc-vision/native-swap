@@ -153,4 +153,8 @@ export class Reservation {
     public getReservedValues(): u128[] {
         return this.reservedValues.getAll(0, this.reservedValues.getLength() as u32);
     }
+
+    public toString(): string {
+        return `Reservation ${this.reservationId.toString()} (getExpirationBlock: ${this.userReservation.getExpirationBlock()} - block: ${Blockchain.block.number} - index length: ${this.reservedIndexes.getLength()})`;
+    }
 }

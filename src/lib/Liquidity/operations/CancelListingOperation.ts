@@ -35,9 +35,6 @@ export class CancelListingOperation extends BaseOperation {
         // Transfer tokens back to the provider
         TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
 
-        // Decrease the total reserves
-        this.liquidityQueue.cleanUpQueues();
-
         this.emitListingCanceledEvent(amount.toU128());
     }
 
