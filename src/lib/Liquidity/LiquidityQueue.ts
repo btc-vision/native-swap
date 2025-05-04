@@ -577,7 +577,7 @@ export class LiquidityQueue {
                     provider.enableLiquidityProvision();
 
                     // track that we effectively "added" them to the virtual pool
-                    this.increaseDeltaTokensAdd(provider.liquidity.toU256());
+                    this.increaseTotalTokenSellActivated(provider.liquidity.toU256());
 
                     this.emitActivateProviderEvent(provider);
                 }
@@ -769,7 +769,7 @@ export class LiquidityQueue {
         this._totalReserved.set(this.tokenId, newReserved);
     }
 
-    public increaseDeltaTokensAdd(amount: u256): void {
+    public increaseTotalTokenSellActivated(amount: u256): void {
         this.totalTokensSellActivated = SafeMath.add(this.totalTokensSellActivated, amount);
     }
 
