@@ -95,8 +95,8 @@ export class ProviderQueue {
         this.ensureStartingIndexIsValid();
         this.initializeCurrentIndex();
 
-        const end = this.length;
-        while (this._currentIndex < end && result === null) {
+        const length = this.length;
+        while (this._currentIndex < length && result === null) {
             const candidate = this.tryNextCandidate(currentQuote);
             this.advanceCurrentIndex();
 
@@ -109,9 +109,10 @@ export class ProviderQueue {
     }
 
     public cleanUp(previousStartingIndex: u64): u64 {
+        const length = this.length;
         let index: u64 = previousStartingIndex;
 
-        while (index < this.length) {
+        while (index < length) {
             const providerId = this.queue.get_physical(index);
 
             if (!providerId.isZero()) {

@@ -1,14 +1,15 @@
 import { SafeMath, StoredMapU256 } from '@btc-vision/btc-runtime/runtime';
 import { u256 } from '@btc-vision/as-bignum';
 import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
+import { BTC_OWED_POINTER, BTC_OWED_RESERVED_POINTER } from '../constants/StoredPointers';
 
 export class OwedBTCManager implements IOwedBTCManager {
     private readonly BTCowed: StoredMapU256;
     private readonly BTCowedReserved: StoredMapU256;
 
-    constructor(BTCOwedPointer: u16, BTCOwedReservedPointer: u16) {
-        this.BTCowed = new StoredMapU256(BTCOwedPointer);
-        this.BTCowedReserved = new StoredMapU256(BTCOwedReservedPointer);
+    constructor() {
+        this.BTCowed = new StoredMapU256(BTC_OWED_POINTER);
+        this.BTCowedReserved = new StoredMapU256(BTC_OWED_RESERVED_POINTER);
     }
 
     public getBTCowed(providerId: u256): u256 {

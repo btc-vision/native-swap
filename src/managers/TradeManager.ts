@@ -23,6 +23,7 @@ import { ActivateProviderEvent } from '../events/ActivateProviderEvent';
 import { ILiquidityQueue } from './interfaces/ILiquidityQueue';
 import { ITradeManager } from './interfaces/ITradeManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
+import { u128 } from '@btc-vision/as-bignum/assembly';
 
 export class TradeManager implements ITradeManager {
     private readonly providerManager: IProviderManager;
@@ -64,7 +65,7 @@ export class TradeManager implements ITradeManager {
             const satoshisSent = this.getSathosisSent(provider.getbtcReceiver());
 
             if (!satoshisSent.isZero()) {
-                this.increaseTokenReserved(providerData.providedAmount);
+                this.increaseTokenReserved(providerData.providedAmount.toU256());
 
                 if (providerData.providerType === ProviderTypes.LiquidityRemoval) {
                     this.executeLiquidityRemovalTrade(
@@ -99,7 +100,7 @@ export class TradeManager implements ITradeManager {
     private executeLiquidityRemovalTrade(
         provider: Provider,
         satoshisSent: u256,
-        requestedTokens: u256,
+        requestedTokens: u128,
     ): void {
         const providerId = provider.getId();
 
@@ -161,7 +162,7 @@ export class TradeManager implements ITradeManager {
 
     private executeNormalOrPriorityTrade(
         provider: Provider,
-        requestedTokens: u256,
+        requestedTokens: u128,
         satoshisSent: u256,
         isForLiquidityPool: boolean,
     ): void {
@@ -210,8 +211,8 @@ export class TradeManager implements ITradeManager {
 
     private getTargetTokens(
         satoshisSent: u256,
-        requestedTokens: u256,
-        providerLiquidity: u256,
+        requestedTokens: u128,
+        providerLiquidity: u128,
     ): u256 {
         let targetTokens = satoshisToTokens(satoshisSent, this.quoteAtReservation);
         targetTokens = SafeMath.min(targetTokens, requestedTokens);
@@ -303,9 +304,9 @@ export class TradeManager implements ITradeManager {
         }
     }
 
-    private restoreReservedLiquidityForProvider(provider: Provider, reserved: u256): void {
-        provider.subtractFromReservedAmount(reserved);
-        this.liquidityQueue.decreaseTotalReserved(reserved);
+    private restoreReservedLiquidityForProvider(provider: Provider, amount: u128): void {
+        provider.subtractFromReservedAmount(amount);
+        this.liquidityQueue.decreaseTotalReserved(amount);
     }
 
     private reportUTXOUsed(addy: string, amount: u256): void {
@@ -365,16 +366,16 @@ export class TradeManager implements ITradeManager {
         this.quoteAtReservation = this.quoteManager.getValidBlockQuote(blockNumber);
     }
 
-    private ensureProviderHasEnoughLiquidity(provider: Provider, tokensDesired: u256): void {
-        if (u256.lt(provider.getLiquidityAmount(), tokensDesired)) {
-            throw new Revert('Impossible state: liquidity < tokensDesired');
+    private ensureProviderHasEnoughLiquidity(provider: Provider, tokensDesired: u128): void {
+        if (u128.lt(provider.getLiquidityAmount(), tokensDesired)) {
+            throw new Revert('Impossible state: liquidity < tokensDesired.');
         }
     }
 
-    private ensureReservedAmountIsValid(provider: Provider, providedAmount: u256): void {
-        if (u256.lt(provider.getReservedAmount(), providedAmount)) {
+    private ensureReservedAmountIsValid(provider: Provider, providedAmount: u128): void {
+        if (u128.lt(provider.getReservedAmount(), providedAmount)) {
             throw new Revert(
-                `Impossible state: provider.reserved < reservedAmount (${provider.getReservedAmount()} < ${providedAmount})`,
+                `Impossible state: provider.reserved < reservedAmount (${provider.getReservedAmount()} < ${providedAmount}).`,
             );
         }
     }
@@ -388,13 +389,13 @@ export class TradeManager implements ITradeManager {
     private ensureRemovalTypeIsValid(queueType: ProviderTypes, provider: Provider): void {
         if (queueType === ProviderTypes.LiquidityRemoval && !provider.isPendingRemoval()) {
             throw new Revert(
-                'Impossible state: provider is in removal queue but is not flagged pendingRemoval',
+                'Impossible state: provider is in removal queue but is not flagged pendingRemoval.',
             );
         }
 
         if (queueType !== ProviderTypes.LiquidityRemoval && provider.isPendingRemoval()) {
             throw new Revert(
-                'Impossible state: provider is flagged pendingRemoval but is not in removal queue',
+                'Impossible state: provider is flagged pendingRemoval but is not in removal queue.',
             );
         }
     }
@@ -402,7 +403,7 @@ export class TradeManager implements ITradeManager {
     private ensurePurgeIndexIsValid(purgeIndex: u64): void {
         //!!!! CHECK MAX_VALUE
         if (purgeIndex === u64.MAX_VALUE) {
-            throw new Revert('Impossible state: purgeIndex is MAX_VALUE');
+            throw new Revert('Impossible state: purgeIndex is MAX_VALUE.');
         }
     }
 

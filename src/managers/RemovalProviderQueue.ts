@@ -3,14 +3,14 @@ import { ProviderQueue } from './ProviderQueue';
 import { u256 } from '@btc-vision/as-bignum';
 import { Address, Blockchain, Potential, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
-import { OwedBTCManager } from './OwedBTCManager';
 import { STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT } from '../constants/Contract';
+import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 
 export class RemovalProviderQueue extends ProviderQueue {
-    private owedBTCManager: OwedBTCManager;
+    private owedBTCManager: IOwedBTCManager;
 
     constructor(
-        owedBTCManager: OwedBTCManager,
+        owedBTCManager: IOwedBTCManager,
         token: Address,
         pointer: u16,
         subPointer: Uint8Array,
@@ -29,9 +29,10 @@ export class RemovalProviderQueue extends ProviderQueue {
     }
 
     public override cleanUp(previousStartingIndex: u64): u64 {
+        const length = this.length;
         let index: u64 = previousStartingIndex;
 
-        while (index < this.length) {
+        while (index < length) {
             const providerId = this.queue.get_physical(index);
 
             if (providerId !== u256.Zero) {
@@ -52,9 +53,9 @@ export class RemovalProviderQueue extends ProviderQueue {
     }
 
     public override resetProvider(
-        provider: Provider,
-        burnRemainingFunds: boolean = true,
-        canceled: boolean = false,
+        _provider: Provider,
+        _burnRemainingFunds: boolean = true,
+        _canceled: boolean = false,
     ): void {
         throw new Revert('Impossible state: removal provider cannot be reset.');
     }

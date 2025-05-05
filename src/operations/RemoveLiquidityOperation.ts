@@ -20,7 +20,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
     public execute(): void {
         this.checkPreConditions();
         const btcOwed = this.getBtcOwed();
-        const tokenAmount: u256 = this.getLiquidityProvided();
+        const tokenAmount = this.getLiquidityProvided();
         this.pullOutTokens(tokenAmount);
         this.updateProvider();
         this.updateLiquidityQueue(tokenAmount, btcOwed);
@@ -43,7 +43,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
     }
 
     private getLiquidityProvided(): u256 {
-        const tokenAmount: u256 = this.provider.getLiquidityProvided();
+        const tokenAmount = this.provider.getLiquidityProvided();
         this.ensureLiquidityProvidedNotZero(tokenAmount);
 
         return tokenAmount;

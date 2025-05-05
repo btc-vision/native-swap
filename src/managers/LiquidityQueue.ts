@@ -16,12 +16,7 @@ import {
 
 import { Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
-import {
-    PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
-    PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX,
-    QUOTE_SCALE,
-    VOLATILITY_WINDOW_IN_BLOCKS,
-} from '../constants/Contract';
+import { QUOTE_SCALE, VOLATILITY_WINDOW_IN_BLOCKS } from '../constants/Contract';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
@@ -233,15 +228,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         return this.providerManager.getNextProviderWithLiquidity(currentQuote);
     }
 
-    public getTokensAfterTax(amountIn: u128): u128 {
-        const tokensForPriorityQueue: u128 = SafeMath.div128(
-            SafeMath.mul128(amountIn, PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX),
-            PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
-        );
-
-        return SafeMath.sub128(amountIn, tokensForPriorityQueue);
-    }
-
     // Return number of token per satoshi
     public quote(): u256 {
         const T: u256 = this.virtualTokenReserve;
@@ -273,16 +259,15 @@ export class LiquidityQueue implements ILiquidityQueue {
     public initializeInitialLiquidity(
         floorPrice: u256,
         providerId: u256,
-        initialLiquidity: u256,
+        initialLiquidity: u128,
         maxReserves5BlockPercent: u64,
     ): void {
         this.initialLiquidityProviderId = providerId;
 
-        // The contract simulates BTC side:
-        this.virtualBTCReserve = SafeMath.div(initialLiquidity, floorPrice);
-        this.virtualTokenReserve = initialLiquidity;
+        const initialLiquidity256 = initialLiquidity.toU256();
+        this.virtualBTCReserve = SafeMath.div(initialLiquidity256, floorPrice);
+        this.virtualTokenReserve = initialLiquidity256;
 
-        // set max reserves in 5 blocks
         this.maxReserves5BlockPercent = maxReserves5BlockPercent;
     }
 

@@ -87,7 +87,7 @@ export class SwapOperation extends BaseOperation {
 
     private ensureReservationForLP(reservation: Reservation): void {
         if (reservation.isForLiquidityPool()) {
-            throw new Revert('NATIVE_SWAP: Reserved for LP; cannot swap');
+            throw new Revert('NATIVE_SWAP: Reserved for LP; cannot swap.');
         }
     }
 

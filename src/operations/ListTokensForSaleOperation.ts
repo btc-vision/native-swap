@@ -13,16 +13,21 @@ import { getTotalFeeCollected } from '../utils/BlockchainUtils';
 import { LiquidityListedEvent } from '../events/LiquidityListedEvent';
 import { FeeManager } from '../managers/FeeManager';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
-import { MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT } from '../constants/Contract';
+import {
+    MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
+    PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
+    PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX,
+} from '../constants/Contract';
 
 export class ListTokensForSaleOperation extends BaseOperation {
     private readonly providerId: u256;
     private readonly amountIn: u128;
+    private readonly amountIn256: u256;
     private readonly receiver: string;
     private readonly usePriorityQueue: boolean;
-    private readonly initialLiquidity: boolean;
+    private readonly isForInitialLiquidity: boolean;
     private readonly provider: Provider;
-    private readonly oldLiquidity: u256;
+    private readonly oldLiquidity: u128;
 
     constructor(
         liquidityQueue: ILiquidityQueue,
@@ -31,15 +36,16 @@ export class ListTokensForSaleOperation extends BaseOperation {
         receiver: string,
         private readonly stakingAddress: Address,
         usePriorityQueue: boolean,
-        initialLiquidity: boolean = false,
+        isForInitialLiquidity: boolean = false,
     ) {
         super(liquidityQueue);
 
         this.providerId = providerId;
         this.amountIn = amountIn;
+        this.amountIn256 = amountIn.toU256();
         this.receiver = receiver;
         this.usePriorityQueue = usePriorityQueue;
-        this.initialLiquidity = initialLiquidity;
+        this.isForInitialLiquidity = isForInitialLiquidity;
 
         const provider = getProvider(providerId);
         this.provider = provider;
@@ -53,33 +59,23 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private transferToken(): void {
-        const amount = this.amountIn.toU256();
-        this.pullInTokens(amount);
-        const tax = this.calculateTax(this.amountIn);
+        this.pullInTokens();
         this.assertQueueSwitchAllowed();
         this.transitionProviderIfNeeded();
         this.updateProviderLiquidity();
         this.assignReceiver();
-        this.increaseGlobalReserve(amount);
-        this.deductTaxIfPriority(tax);
+        this.increaseGlobalReserve();
+        this.deductTaxIfPriority();
         this.snapshotBlockQuote();
     }
 
-    private pullInTokens(amount: u256): void {
+    private pullInTokens(): void {
         TransferHelper.safeTransferFrom(
             this.liquidityQueue.token,
             Blockchain.tx.sender,
             Blockchain.contractAddress,
-            amount,
+            this.amountIn256,
         );
-    }
-
-    private calculateTax(gross: u128): u128 {
-        const netLiquidity = this.usePriorityQueue
-            ? this.liquidityQueue.getTokensAfterTax(gross)
-            : gross;
-        const tax = SafeMath.sub128(gross, netLiquidity);
-        return tax;
     }
 
     private assertQueueSwitchAllowed(): void {
@@ -102,7 +98,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         } else if (!this.provider.isActive()) {
             this.provider.activate();
 
-            if (!this.initialLiquidity) {
+            if (!this.isForInitialLiquidity) {
                 if (this.usePriorityQueue) {
                     this.provider.markPriority();
                     this.liquidityQueue.addToPriorityQueue(this.provider);
@@ -125,35 +121,38 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.setProviderReceiver(this.provider);
     }
 
-    private increaseGlobalReserve(amount: u256): void {
-        this.liquidityQueue.increaseTotalReserve(amount);
+    private increaseGlobalReserve(): void {
+        this.liquidityQueue.increaseTotalReserve(this.amountIn256);
     }
 
     private snapshotBlockQuote(): void {
         this.liquidityQueue.setBlockQuote();
     }
 
-    private deductTaxIfPriority(tax: u128): void {
+    private deductTaxIfPriority(): void {
         if (this.usePriorityQueue) {
-            this.removeTax(this.provider, tax);
+            const tax = this.calculateTax();
+
+            if (!tax.isZero()) {
+                const tax256 = tax.toU256();
+
+                this.provider.subtractFromLiquidityAmount(tax);
+
+                this.liquidityQueue.buyTokens(tax256, u256.Zero);
+                this.liquidityQueue.decreaseTotalReserve(tax256);
+
+                TransferHelper.safeTransfer(this.liquidityQueue.token, this.stakingAddress, tax256);
+            }
         }
     }
 
-    private removeTax(provider: Provider, totalTax: u128): void {
-        if (totalTax.isZero()) {
-            return;
-        }
-
-        provider.subtractFromLiquidityAmount(totalTax);
-
-        this.liquidityQueue.buyTokens(totalTax.toU256(), u256.Zero);
-        this.liquidityQueue.decreaseTotalReserve(totalTax.toU256());
-
-        TransferHelper.safeTransfer(
-            this.liquidityQueue.token,
-            this.stakingAddress,
-            totalTax.toU256(),
+    private calculateTax(): u128 {
+        const tokensForPriorityQueue: u128 = SafeMath.div128(
+            SafeMath.mul128(this.amountIn, PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX),
+            PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
         );
+
+        return tokensForPriorityQueue;
     }
 
     private setProviderReceiver(provider: Provider): void {
@@ -164,23 +163,18 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
     }
 
-    private emitLiquidityListedEvent(): void {
-        const ev = new LiquidityListedEvent(this.provider.getLiquidityAmount(), this.receiver);
-        Blockchain.emit(ev);
-    }
-
     private checkPreConditions(): void {
         if (this.usePriorityQueue) {
             this.ensureEnoughPriorityFees();
         }
 
-        this.ensureAmountInNotZero();
+        this.ensureAmountInIsNotZero();
         this.ensureNoLiquidityOverflow();
         this.ensureNoActivePositionInPriorityQueue();
         this.ensureProviderNotAlreadyProvidingLiquidity();
         this.ensureNotInRemovalQueue();
 
-        if (!this.initialLiquidity) {
+        if (!this.isForInitialLiquidity) {
             this.ensurePriceIsNotZero();
             this.ensureInitialProviderAddOnce();
             this.ensureLiquidityNotTooLowInSatoshis();
@@ -240,7 +234,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
         if (u256.lt(liquidityInSatoshis, MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT)) {
             throw new Revert(
-                `NATIVE_SWAP: Liquidity value is too low in satoshis. (provided: ${liquidityInSatoshis})`,
+                `NATIVE_SWAP: Liquidity value is too low in satoshis. (provided: ${liquidityInSatoshis}.)`,
             );
         }
     }
@@ -254,9 +248,14 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
     }
 
-    private ensureAmountInNotZero(): void {
+    private ensureAmountInIsNotZero(): void {
         if (this.amountIn.isZero()) {
             throw new Revert('NATIVE_SWAP: Amount in cannot be zero');
         }
+    }
+
+    private emitLiquidityListedEvent(): void {
+        const ev = new LiquidityListedEvent(this.provider.getLiquidityAmount(), this.receiver);
+        Blockchain.emit(ev);
     }
 }

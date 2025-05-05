@@ -55,7 +55,7 @@ export class CreatePoolOperation extends BaseOperation {
         this.liquidityQueue.initializeInitialLiquidity(
             this.floorPrice,
             this.providerId,
-            this.initialLiquidity.toU256(),
+            this.initialLiquidity,
             this.maxReservesIn5BlocksPercent,
         );
     }
@@ -85,7 +85,7 @@ export class CreatePoolOperation extends BaseOperation {
     private ensureMaxReservesIn5BlocksPercentValid(): void {
         if (this.maxReservesIn5BlocksPercent > 100) {
             throw new Revert(
-                'NATIVE_SWAP: The maximum reservation percentage for 5 blocks must be less than or equal to 100',
+                'NATIVE_SWAP: The maximum reservation percentage for 5 blocks must be less than or equal to 100.',
             );
         }
     }

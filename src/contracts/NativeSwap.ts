@@ -15,22 +15,38 @@ import {
     ZERO_ADDRESS,
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
-import { getProvider, saveAllProviders } from '../lib/Provider';
-import { FeeManager } from '../lib/FeeManager';
-import { AddLiquidityOperation } from '../lib/Liquidity/operations/AddLiquidityOperation';
-import { RemoveLiquidityOperation } from '../lib/Liquidity/operations/RemoveLiquidityOperation';
-import { CreatePoolOperation } from '../lib/Liquidity/operations/CreatePoolOperation';
-import { ListTokensForSaleOperation } from '../lib/Liquidity/operations/ListTokensForSaleOperation';
-import { ReserveLiquidityOperation } from '../lib/Liquidity/operations/ReserveLiquidityOperation';
-import { CancelListingOperation } from '../lib/Liquidity/operations/CancelListingOperation';
-import { SwapOperation } from '../lib/Liquidity/operations/SwapOperation';
+import { LiquidityQueue } from '../managers/LiquidityQueue';
+import { getProvider, saveAllProviders } from '../models/Provider';
+import { FeeManager } from '../managers/FeeManager';
+import { AddLiquidityOperation } from '../operations/AddLiquidityOperation';
+import { RemoveLiquidityOperation } from '../operations/RemoveLiquidityOperation';
+import { CreatePoolOperation } from '../operations/CreatePoolOperation';
+import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
+import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
+import { CancelListingOperation } from '../operations/CancelListingOperation';
+import { SwapOperation } from '../operations/SwapOperation';
 import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import { ReentrancyGuard } from '../lib/ReentrancyGuard';
-import { STAKING_CA_POINTER } from '../lib/StoredPointers';
+import { ReentrancyGuard } from '../contracts/ReentrancyGuard';
+import { STAKING_CA_POINTER } from '../constants/StoredPointers';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
-import { QUOTE_SCALE, satoshisToTokens, tokensToSatoshis } from '../utils/NativeSwapUtils';
+import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
+import { QUOTE_SCALE } from '../constants/Contract';
+import { ITradeManager } from '../managers/interfaces/ITradeManager';
+import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
+import { TradeManager } from '../managers/TradeManager';
+import { QuoteManager } from '../managers/QuoteManager';
+import { ProviderManager } from '../managers/ProviderManager';
+import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
+import { IOwedBTCManager } from '../managers/interfaces/IOwedBTCManager';
+import { OwedBTCManager } from '../managers/OwedBTCManager';
+import { IProviderManager } from '../managers/interfaces/IProviderManager';
+import { ILiquidityQueueReserve } from '../managers/interfaces/ILiquidityQueueReserve';
+import { LiquidityQueueReserve } from '../models/LiquidityQueueReserve';
+import { IReservationManager } from '../managers/interfaces/IReservationManager';
+import { ReservationManager } from '../managers/ReservationManager';
+import { IDynamicFee } from '../managers/interfaces/IDynamicFee';
+import { DynamicFee } from '../managers/DynamicFee';
 
 /**
  * OrderBook contract for the OP_NET order book system,
@@ -128,19 +144,23 @@ export class NativeSwap extends ReentrancyGuard {
 
     private getAntibotSettings(calldata: Calldata): BytesWriter {
         const token = calldata.readAddress();
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
+        const { liquidityQueue, tradeManager } = this.getLiquidityQueueAndTradeManager(
+            token,
+            this.addressToPointer(token),
+            false,
+        );
 
         const writer = new BytesWriter(U64_BYTE_LENGTH + U256_BYTE_LENGTH);
-        writer.writeU64(queue.antiBotExpirationBlock);
-        writer.writeU256(queue.maxTokensPerReservation);
+        writer.writeU64(liquidityQueue.antiBotExpirationBlock);
+        writer.writeU256(liquidityQueue.maxTokensPerReservation);
 
         return writer;
     }
 
     private getFees(): BytesWriter {
         const writer = new BytesWriter(2 * U64_BYTE_LENGTH);
-        writer.writeU64(FeeManager.RESERVATION_BASE_FEE);
-        writer.writeU64(FeeManager.PRIORITY_QUEUE_BASE_FEE);
+        writer.writeU64(FeeManager.reservationBaseFee);
+        writer.writeU64(FeeManager.priorityQueueBaseFee);
 
         return writer;
     }
@@ -148,8 +168,8 @@ export class NativeSwap extends ReentrancyGuard {
     private setFees(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
-        FeeManager.RESERVATION_BASE_FEE = calldata.readU64();
-        FeeManager.PRIORITY_QUEUE_BASE_FEE = calldata.readU64();
+        FeeManager.reservationBaseFee = calldata.readU64();
+        FeeManager.priorityQueueBaseFee = calldata.readU64();
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
@@ -181,18 +201,18 @@ export class NativeSwap extends ReentrancyGuard {
         const provider = getProvider(providerId);
 
         const writer = new BytesWriter(
-            U128_BYTE_LENGTH * 2 + (2 + provider.btcReceiver.length) + 32,
+            U128_BYTE_LENGTH * 2 + (2 + provider.getbtcReceiver().length) + 32,
         );
-        writer.writeU128(provider.liquidity);
-        writer.writeU128(provider.reserved);
-        writer.writeU256(provider.liquidityProvided);
-        writer.writeStringWithLength(provider.btcReceiver);
+        writer.writeU128(provider.getLiquidityAmount());
+        writer.writeU128(provider.getReservedAmount());
+        writer.writeU256(provider.getLiquidityProvided());
+        writer.writeStringWithLength(provider.getbtcReceiver());
 
         return writer;
     }
 
     private getPriorityQueueCost(): BytesWriter {
-        const cost = FeeManager.PRIORITY_QUEUE_BASE_FEE;
+        const cost = FeeManager.priorityQueueBaseFee;
 
         const writer = new BytesWriter(U64_BYTE_LENGTH);
         writer.writeU64(cost);
@@ -204,11 +224,20 @@ export class NativeSwap extends ReentrancyGuard {
         const token = calldata.readAddress();
         const receiver = calldata.readStringWithLength();
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
-        const operation = new AddLiquidityOperation(queue, providerId, receiver);
+        const { liquidityQueue, tradeManager } = this.getLiquidityQueueAndTradeManager(
+            token,
+            this.addressToPointer(token),
+            false,
+        );
+        const operation = new AddLiquidityOperation(
+            liquidityQueue,
+            tradeManager,
+            providerId,
+            receiver,
+        );
 
         operation.execute();
-        queue.save();
+        liquidityQueue.save();
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
@@ -219,11 +248,15 @@ export class NativeSwap extends ReentrancyGuard {
     private removeLiquidity(calldata: Calldata): BytesWriter {
         const token = calldata.readAddress();
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
-        const operation = new RemoveLiquidityOperation(queue, providerId);
+        const { liquidityQueue, tradeManager } = this.getLiquidityQueueAndTradeManager(
+            token,
+            this.addressToPointer(token),
+            true,
+        );
+        const operation = new RemoveLiquidityOperation(liquidityQueue, providerId);
 
         operation.execute();
-        queue.save();
+        liquidityQueue.save();
 
         const result = new BytesWriter(1);
         result.writeBoolean(true);
@@ -266,10 +299,14 @@ export class NativeSwap extends ReentrancyGuard {
         const antiBotEnabledFor: u16 = calldata.readU16();
         const antiBotMaximumTokensPerReservation: u256 = calldata.readU256();
         const maxReservesIn5BlocksPercent: u16 = calldata.readU16();
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+        const { liquidityQueue, tradeManager } = this.getLiquidityQueueAndTradeManager(
+            token,
+            this.addressToPointer(token),
+            true,
+        );
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const operation = new CreatePoolOperation(
-            queue,
+            liquidityQueue,
             floorPrice,
             providerId,
             initialLiquidity,
@@ -281,7 +318,7 @@ export class NativeSwap extends ReentrancyGuard {
         );
 
         operation.execute();
-        queue.save();
+        liquidityQueue.save();
 
         const writer = new BytesWriter(1);
         writer.writeBoolean(true);
@@ -316,9 +353,13 @@ export class NativeSwap extends ReentrancyGuard {
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const tokenId = this.addressToPointer(token);
-        const queue = this.getLiquidityQueue(token, tokenId, true);
+        const { liquidityQueue, tradeManager } = this.getLiquidityQueueAndTradeManager(
+            token,
+            tokenId,
+            true,
+        );
         const operation = new ListTokensForSaleOperation(
-            queue,
+            liquidityQueue,
             providerId,
             amountIn,
             receiver,
@@ -328,7 +369,7 @@ export class NativeSwap extends ReentrancyGuard {
         );
 
         operation.execute();
-        queue.save();
+        liquidityQueue.save();
     }
 
     private reserve(calldata: Calldata): BytesWriter {
@@ -356,9 +397,13 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureValidTokenAddress(token);
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+        const { liquidityQueue, tradeManager } = this.getLiquidityQueueAndTradeManager(
+            token,
+            this.addressToPointer(token),
+            true,
+        );
         const operation = new ReserveLiquidityOperation(
-            queue,
+            liquidityQueue,
             providerId,
             Blockchain.tx.sender,
             maximumAmountIn,
@@ -368,7 +413,7 @@ export class NativeSwap extends ReentrancyGuard {
         );
 
         operation.execute();
-        queue.save();
+        liquidityQueue.save();
     }
 
     private cancelListing(calldata: Calldata): BytesWriter {
@@ -386,11 +431,15 @@ export class NativeSwap extends ReentrancyGuard {
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
         const tokenId = this.addressToPointer(token);
-        const queue = this.getLiquidityQueue(token, tokenId, true);
-        const operation = new CancelListingOperation(queue, providerId);
+        const { liquidityQueue, tradeManager } = this.getLiquidityQueueAndTradeManager(
+            token,
+            tokenId,
+            true,
+        );
+        const operation = new CancelListingOperation(liquidityQueue, providerId);
 
         operation.execute();
-        queue.save();
+        liquidityQueue.save();
     }
 
     private swap(calldata: Calldata): BytesWriter {
@@ -406,16 +455,20 @@ export class NativeSwap extends ReentrancyGuard {
     private _swap(token: Address): void {
         this.ensureValidTokenAddress(token);
 
-        const queue: LiquidityQueue = this.getLiquidityQueue(
+        const { liquidityQueue, tradeManager } = this.getLiquidityQueueAndTradeManager(
             token,
             this.addressToPointer(token),
             false,
         );
 
-        const operation = new SwapOperation(queue, this.stakingContractAddress);
+        const operation = new SwapOperation(
+            liquidityQueue,
+            tradeManager,
+            this.stakingContractAddress,
+        );
 
         operation.execute();
-        queue.save();
+        liquidityQueue.save();
     }
 
     private getReserve(calldata: Calldata): BytesWriter {
@@ -427,15 +480,19 @@ export class NativeSwap extends ReentrancyGuard {
     private _getReserve(token: Address): BytesWriter {
         this.ensureValidTokenAddress(token);
 
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+        const { liquidityQueue, tradeManager } = this.getLiquidityQueueAndTradeManager(
+            token,
+            this.addressToPointer(token),
+            true,
+        );
 
-        this.ensurePoolExistsForToken(queue);
+        this.ensurePoolExistsForToken(liquidityQueue);
 
         const result = new BytesWriter(4 * U256_BYTE_LENGTH);
-        result.writeU256(queue.liquidity);
-        result.writeU256(queue.reservedLiquidity);
-        result.writeU256(queue.virtualBTCReserve);
-        result.writeU256(queue.virtualTokenReserve);
+        result.writeU256(liquidityQueue.liquidity);
+        result.writeU256(liquidityQueue.reservedLiquidity);
+        result.writeU256(liquidityQueue.virtualBTCReserve);
+        result.writeU256(liquidityQueue.virtualTokenReserve);
 
         return result;
     }
@@ -461,20 +518,23 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureValidTokenAddress(token);
         this.ensureMaximumAmountInNotZero(satoshisIn);
 
-        const queue: LiquidityQueue = this.getLiquidityQueue(
+        const { liquidityQueue, tradeManager } = this.getLiquidityQueueAndTradeManager(
             token,
             this.addressToPointer(token),
             false,
         );
-        this.ensurePoolExistsForToken(queue);
+        this.ensurePoolExistsForToken(liquidityQueue);
 
-        const price: u256 = queue.quote();
+        const price: u256 = liquidityQueue.quote();
         this.ensurePriceNotZeroAndLiquidity(price);
 
         let tokensOut = satoshisToTokens(satoshisIn, price);
 
         // If tokensOut > availableLiquidity, cap it
-        const availableLiquidity = SafeMath.sub(queue.liquidity, queue.reservedLiquidity);
+        const availableLiquidity = SafeMath.sub(
+            liquidityQueue.liquidity,
+            liquidityQueue.reservedLiquidity,
+        );
 
         let requiredSatoshis = satoshisIn;
         if (u256.gt(tokensOut, availableLiquidity)) {
@@ -496,12 +556,83 @@ export class NativeSwap extends ReentrancyGuard {
         return result;
     }
 
-    private getLiquidityQueue(
+    private getLiquidityQueueAndTradeManager(
         token: Address,
         tokenId: Uint8Array,
         purgeOldReservations: boolean,
-    ): LiquidityQueue {
-        return new LiquidityQueue(token, tokenId, purgeOldReservations);
+    ): { liquidityQueue: ILiquidityQueue; tradeManager: ITradeManager } {
+        const owedBtcManager = this.getOwedBtcManager();
+        const quoteManager = this.getQuoteManager(tokenId);
+        const liquidityQueueReserve = this.getLiquidityQueueReserve(token, tokenId);
+        const providerManager = this.getProviderManager(token, tokenId, owedBtcManager);
+        const reservationManager = this.getReservationManager(
+            token,
+            tokenId,
+            providerManager,
+            quoteManager,
+            liquidityQueueReserve,
+        );
+        const dynamicFee = this.getDynamicFee(tokenId);
+
+        const liquidityQueue = new LiquidityQueue(
+            token,
+            tokenId,
+            providerManager,
+            liquidityQueueReserve,
+            quoteManager,
+            reservationManager,
+            dynamicFee,
+            purgeOldReservations,
+        );
+
+        const tradeManager = new TradeManager(
+            tokenId,
+            quoteManager,
+            providerManager,
+            liquidityQueue,
+        );
+
+        return { liquidityQueue, tradeManager };
+    }
+
+    private getQuoteManager(tokenId: Uint8Array): IQuoteManager {
+        return new QuoteManager(tokenId);
+    }
+
+    private getProviderManager(
+        token: Address,
+        tokenId: Uint8Array,
+        owedBtcManager: IOwedBTCManager,
+    ): IProviderManager {
+        return new ProviderManager(token, tokenId, owedBtcManager);
+    }
+
+    private getOwedBtcManager(): IOwedBTCManager {
+        return new OwedBTCManager();
+    }
+
+    private getLiquidityQueueReserve(token: Address, tokenId: Uint8Array): ILiquidityQueueReserve {
+        return new LiquidityQueueReserve(token, tokenId);
+    }
+
+    private getReservationManager(
+        token: Address,
+        tokenId: Uint8Array,
+        providerManager: IProviderManager,
+        quoteManager: IQuoteManager,
+        liquidityQueueReserve: ILiquidityQueueReserve,
+    ): IReservationManager {
+        return new ReservationManager(
+            token,
+            tokenId,
+            providerManager,
+            quoteManager,
+            liquidityQueueReserve,
+        );
+    }
+
+    private getDynamicFee(tokenId: Uint8Array): IDynamicFee {
+        return new DynamicFee(tokenId);
     }
 
     private addressToPointerU256(address: Address, token: Address): u256 {
@@ -541,8 +672,8 @@ export class NativeSwap extends ReentrancyGuard {
         }
     }
 
-    private ensurePoolExistsForToken(queue: LiquidityQueue): void {
-        if (queue.initialLiquidityProvider.isZero()) {
+    private ensurePoolExistsForToken(queue: ILiquidityQueue): void {
+        if (queue.initialLiquidityProviderId.isZero()) {
             throw new Revert('NATIVE_SWAP: Pool does not exist for token');
         }
     }

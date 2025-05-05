@@ -30,8 +30,6 @@ export interface ILiquidityQueue {
 
     distributeFee(totalFee: u256, stakingAddress: Address): void;
 
-    getTokensAfterTax(amountIn: u128): u128;
-
     quote(): u256;
 
     getUtilizationRatio(): u256;
@@ -51,7 +49,7 @@ export interface ILiquidityQueue {
     initializeInitialLiquidity(
         floorPrice: u256,
         providerId: u256,
-        initialLiquidity: u256,
+        initialLiquidity: u128,
         maxReserves5BlockPercent: u64,
     ): void;
 

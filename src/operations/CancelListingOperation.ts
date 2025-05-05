@@ -19,12 +19,12 @@ export class CancelListingOperation extends BaseOperation {
     public execute(): void {
         this.checkPreConditions();
 
-        const refundAmount: u256 = this.provider.getLiquidityAmount();
+        const refundAmount = this.provider.getLiquidityAmount();
 
         this.prepareProviderForRefund();
         this.transferLiquidityBack(refundAmount);
         this.postProcessQueues();
-        this.emitListingCanceledEvent(refundAmount.toU128());
+        this.emitListingCanceledEvent(refundAmount);
     }
 
     private prepareProviderForRefund(): void {
@@ -33,8 +33,12 @@ export class CancelListingOperation extends BaseOperation {
         this.liquidityQueue.resetProvider(this.provider, false, true);
     }
 
-    private transferLiquidityBack(amount: u256): void {
-        TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
+    private transferLiquidityBack(amount: u128): void {
+        TransferHelper.safeTransfer(
+            this.liquidityQueue.token,
+            Blockchain.tx.sender,
+            amount.toU256(),
+        );
     }
 
     private postProcessQueues(): void {
@@ -59,7 +63,7 @@ export class CancelListingOperation extends BaseOperation {
     private ensureNoActiveReservation(): void {
         if (this.provider.hasReservedAmount()) {
             throw new Revert(
-                `NATIVE_SWAP: Someone have active reservations on your liquidity. ${this.provider.getReservedAmount()}`,
+                `NATIVE_SWAP: Someone have active reservations on your liquidity. ${this.provider.getReservedAmount()}.`,
             );
         }
     }

@@ -18,7 +18,7 @@ import { getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
 import { PriorityProviderQueue } from './PriorityProviderQueue';
 import { RemovalProviderQueue } from './RemovalProviderQueue';
-import { OwedBTCManager } from './OwedBTCManager';
+import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
 import { ProviderTypes } from '../types/ProviderTypes';
@@ -30,15 +30,15 @@ export class ProviderManager implements IProviderManager {
     protected readonly standardQueue: ProviderQueue;
     protected readonly priorityQueue: PriorityProviderQueue;
     protected readonly removalQueue: RemovalProviderQueue;
-    protected readonly owedBTCManager: OwedBTCManager;
+    protected readonly owedBTCManager: IOwedBTCManager;
 
     private readonly _startingIndex: StoredU64;
     private readonly _initialLiquidityProviderId: StoredU256;
 
-    constructor(token: Address, tokenIdUint8Array: Uint8Array, owedBTCManager: OwedBTCManager) {
+    constructor(token: Address, tokenIdUint8Array: Uint8Array, owedBTCManager: IOwedBTCManager) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
-        this.owedBTCManager = owedBTCManager; //new OwedBTCManager(BTC_OWED_POINTER, BTC_OWED_RESERVED_POINTER);
+        this.owedBTCManager = owedBTCManager;
         this.standardQueue = new ProviderQueue(token, STANDARD_QUEUE_POINTER, tokenIdUint8Array);
         this.priorityQueue = new PriorityProviderQueue(
             token,
