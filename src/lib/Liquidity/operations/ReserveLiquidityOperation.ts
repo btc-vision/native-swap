@@ -232,6 +232,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         this.liquidityQueue.setBlockQuote();
         this.emitReservationCreatedEvent(tokensReserved, satSpent);
+
+        Blockchain.log(`Reservation created at ${reservation.reservationId}.`);
     }
 
     private emitReservationCreatedEvent(tokensReserved: u256, satSpent: u256): void {

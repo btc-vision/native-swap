@@ -605,6 +605,8 @@ export class LiquidityQueue {
 
     public getReservationWithExpirationChecks(): Reservation {
         const reservation = new Reservation(this.token, Blockchain.tx.sender);
+        Blockchain.log(reservation.toString());
+
         if (!reservation.valid()) {
             throw new Revert('No valid reservation for this address.');
         }
@@ -721,7 +723,12 @@ export class LiquidityQueue {
         }
 
         const blockNumberU32: u64 = Blockchain.block.number % <u64>(u32.MAX_VALUE - 1);
-        this._quoteHistory.set(blockNumberU32, this.quote());
+        const currentQuote = this._quoteHistory.get(blockNumberU32);
+        const quote = this.quote();
+
+        if (u256.eq(currentQuote, quote)) return;
+        
+        this._quoteHistory.set(blockNumberU32, quote);
     }
 
     public getBlockQuote(blockNumber: u64): u256 {
