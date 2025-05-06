@@ -474,7 +474,7 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         if (!oldQuote.isZero() && !currentQuote.isZero()) {
             let diff = u256.sub(currentQuote, oldQuote);
-            //!!!! There is no negative number ?????
+
             if (diff.toI64() < 0) {
                 diff = u256.mul(diff, u256.fromI64(-1));
             }

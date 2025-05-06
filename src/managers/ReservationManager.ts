@@ -17,10 +17,7 @@ import {
     BLOCKS_WITH_RESERVATIONS_POINTER,
     RESERVATION_IDS_BY_BLOCK_POINTER,
 } from '../constants/StoredPointers';
-import {
-    RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
-    STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
-} from '../constants/Contract';
+import { RESERVATION_EXPIRE_AFTER_IN_BLOCKS } from '../constants/Contract';
 import { Provider } from '../models/Provider';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { IProviderManager } from './interfaces/IProviderManager';
@@ -227,14 +224,15 @@ export class ReservationManager implements IReservationManager {
     private purgeAndRestoreProvider(provider: Provider, reservedAmount: u128): void {
         provider.subtractFromReservedAmount(reservedAmount);
 
-        const availableLiquidity = provider.getAvailableLiquidityAmount();
+        //!!!!const availableLiquidity = provider.getAvailableLiquidityAmount();
 
-        //!!! Is availableLiquidity satoshis???
-        if (
+        /*if (
             u256.lt(availableLiquidity.toU256(), STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)
         ) {
             this.providerManager.resetProvider(provider, false);
-        }
+        }*/
+
+        this.providerManager.resetProvider(provider, false);
     }
 
     private purgeBlocksWithReservations(maxBlockToPurge: u64): u256 {

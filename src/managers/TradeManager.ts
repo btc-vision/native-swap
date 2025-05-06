@@ -65,8 +65,6 @@ export class TradeManager implements ITradeManager {
             const satoshisSent = this.getSathosisSent(provider.getbtcReceiver());
 
             if (!satoshisSent.isZero()) {
-                this.increaseTokenReserved(providerData.providedAmount.toU256());
-
                 if (providerData.providerType === ProviderTypes.LiquidityRemoval) {
                     this.executeLiquidityRemovalTrade(
                         provider,
@@ -74,6 +72,8 @@ export class TradeManager implements ITradeManager {
                         providerData.providedAmount,
                     );
                 } else {
+                    this.increaseTokenReserved(providerData.providedAmount.toU256());
+
                     this.executeNormalOrPriorityTrade(
                         provider,
                         providerData.providedAmount,
@@ -103,60 +103,43 @@ export class TradeManager implements ITradeManager {
         requestedTokens: u128,
     ): void {
         const providerId = provider.getId();
-
-        //!!!! To check
-        // example:
-        // u1: reserve 10 sats,
-        // u2: reserve 40 sats,
-        // u1: send 50 sats,
-        // u1: can use u2 reservation
-        const owedReserved = this.providerManager.getBTCowedReserved(providerId);
-        let actualSpent = SafeMath.min(satoshisSent, owedReserved);
+        let owedReserved = this.providerManager.getBTCowedReserved(providerId);
         const oldOwed = this.providerManager.getBTCowed(providerId);
 
-        //!!!! so actualSpent = oldOwed after if
-        if (u256.lt(oldOwed, actualSpent)) {
-            const difference = SafeMath.sub(actualSpent, oldOwed);
-            actualSpent = SafeMath.sub(actualSpent, difference);
-        }
+        // will never be > u128
+        let tokensDesiredRemoval = satoshisToTokens(satoshisSent, this.quoteAtReservation);
 
-        // !!!! Check for minimum sats???
-
-        let tokensDesiredRemoval = satoshisToTokens(actualSpent, this.quoteAtReservation);
-        tokensDesiredRemoval = SafeMath.min(tokensDesiredRemoval, requestedTokens);
-
-        // !!!! Check for minimum tokens???
-
+        // Partial fill
         if (!tokensDesiredRemoval.isZero()) {
+            // User did not pay enough
             const leftover = SafeMath.sub(requestedTokens, tokensDesiredRemoval);
-
             if (!leftover.isZero()) {
                 const costInSatsLeftover = tokensToSatoshis(leftover, this.quoteAtReservation);
+                const revertSats = SafeMath.min(costInSatsLeftover, owedReserved);
 
-                const owedReservedNow = this.providerManager.getBTCowedReserved(providerId);
-                const revertSats = SafeMath.min(costInSatsLeftover, owedReservedNow);
-                //!!!!
-                const newOwedReserved = SafeMath.sub(owedReservedNow, revertSats);
-                this.providerManager.setBTCowedReserved(providerId, newOwedReserved);
-
-                //!!!!newOwedReserved2 -> newOwedReserved
-                const newOwedReserved2 = SafeMath.sub(owedReserved, actualSpent);
-                this.providerManager.setBTCowedReserved(providerId, newOwedReserved2);
-
-                this.setNewOwedValueCleanQueueIfNeeded(provider, oldOwed, actualSpent);
-                this.increaseTotalRefundedBTC(actualSpent);
-                this.increaseTotalTokensRefunded(tokensDesiredRemoval);
-                this.reportUTXOUsed(provider.getbtcReceiver(), actualSpent);
+                owedReserved = SafeMath.sub(owedReserved, revertSats);
             }
 
-            // !!! Whatif leftover = 0
+            // User paid too much
+            let actualSpent = satoshisSent;
+            if (u256.gt(tokensDesiredRemoval, requestedTokens)) {
+                tokensDesiredRemoval = requestedTokens;
+                actualSpent = tokensToSatoshis(tokensDesiredRemoval, this.quoteAtReservation);
+            }
+
+            const newOwedReserved = SafeMath.sub(owedReserved, actualSpent);
+            this.providerManager.setBTCowedReserved(providerId, newOwedReserved);
+
+            this.setNewOwedValueCleanQueueIfNeeded(provider, oldOwed, newOwedReserved);
+            this.increaseTotalRefundedBTC(actualSpent);
+            this.increaseTotalTokensRefunded(tokensDesiredRemoval);
+            this.reportUTXOUsed(provider.getbtcReceiver(), satoshisSent);
         } else {
             this.restoreReservedLiquidityForRemovalProvider(
                 providerId,
                 requestedTokens,
                 owedReserved,
             );
-            //!!!! Decrease tokenReserved????
         }
     }
 
@@ -173,14 +156,11 @@ export class TradeManager implements ITradeManager {
         );
 
         // !!! What if providedAmount != tokensDesired?
-        // tokenReserved was already incremented by providedAmount
         if (!actualTokens.isZero()) {
             this.ensureReservedAmountIsValid(provider, requestedTokens);
             this.ensureProviderHasEnoughLiquidity(provider, actualTokens);
 
             const tokensDesiredSatoshis = tokensToSatoshis(actualTokens, this.quoteAtReservation);
-
-            //!!! CHeck for minimu, sats????
             provider.subtractFromReservedAmount(requestedTokens);
 
             if (

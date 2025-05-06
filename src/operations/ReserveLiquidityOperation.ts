@@ -197,13 +197,10 @@ export class ReserveLiquidityOperation extends BaseOperation {
             availableLiquidity,
         );
 
-        //!!! When using leftover, nb of tokens will be > tokensToAttempt
         const finalTokensToReserve = satoshisToTokens(costInSatoshis, this.currentQuote);
-        //!!! Must recap it to avoid u256 > u128
-        const { tokens, satoshis } = this.capTokensU256ToU128(finalTokensToReserve, u256.Zero);
 
         if (!finalTokensToReserve.isZero()) {
-            this.applyReservation(reservation, provider, tokens, costInSatoshis);
+            this.applyReservation(reservation, provider, finalTokensToReserve, costInSatoshis);
         }
     }
 
