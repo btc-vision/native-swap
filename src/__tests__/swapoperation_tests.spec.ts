@@ -20,7 +20,7 @@ import {
     tokenIdUint8Array1,
 } from './test_helper';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum';
 import { CreatePoolOperation } from '../lib/Liquidity/operations/CreatePoolOperation';
 import { ReserveLiquidityOperation } from '../lib/Liquidity/operations/ReserveLiquidityOperation';
 import { SwapOperation } from '../lib/Liquidity/operations/SwapOperation';
@@ -237,7 +237,7 @@ describe('SwapOperation tests', () => {
         expect(queue4.liquidity).toStrictEqual(u256.fromString(`1000000000000000000000000`));
         expect(queue4.reservedLiquidity).toStrictEqual(u256.Zero);
         expect(queue4.deltaTokensBuy).toStrictEqual(u256.Zero);
-        expect(queue4.deltaBTCBuy).toStrictEqual(u256.Zero);
+        expect(queue4.deltaBTCBuy).toStrictEqual(0);
         expect(TransferHelper.safeTransferCalled).toBeFalsy();
     });
 
@@ -384,7 +384,7 @@ describe('SwapOperation tests', () => {
         );
         expect(queue4.liquidity).toStrictEqual(u256.fromString(`999993340000000000000000`));
         expect(queue4.reservedLiquidity).toStrictEqual(u256.Zero);
-        expect(queue4.deltaBTCBuy).toStrictEqual(u256.fromU32(10000));
+        expect(queue4.deltaBTCBuy).toStrictEqual(10000);
         expect(queue4.deltaTokensBuy).toStrictEqual(u256.fromString(`6653333333333333333`));
         expect(TransferHelper.safeTransferCalled).toBeTruthy();
     });
@@ -481,7 +481,7 @@ describe('SwapOperation tests', () => {
 
         expect(provider2.reserved).toStrictEqual(u128.Zero);
         expect(queue4.reservedLiquidity).toStrictEqual(u256.Zero);
-        expect(queue4.deltaBTCBuy).toStrictEqual(u256.fromU64(10000));
+        expect(queue4.deltaBTCBuy).toStrictEqual(10000);
         expect(queue4.deltaTokensBuy).toStrictEqual(u256.fromString(`6653333333333333333`));
         expect(reservationActiveList.get(0)).toBeFalsy();
         expect(TransferHelper.safeTransferCalled).toBeTruthy();
@@ -717,7 +717,7 @@ describe('SwapOperation tests', () => {
         expect(queue7.getBTCowed(providerId3)).toStrictEqual(u256.Zero);
         expect(queue7.reservedLiquidity).toStrictEqual(u256.Zero);
         expect(queue7.liquidity).toStrictEqual(u256.fromString(`999999610400000000000000`));
-        expect(queue7.deltaBTCBuy).toStrictEqual(u256.fromString(`15600`));
+        expect(queue7.deltaBTCBuy).toStrictEqual(15600);
         expect(queue7.deltaTokensBuy).toStrictEqual(u256.fromString(`10379200000000000000`), '2');
 
         expect(provider3.liquidity).toStrictEqual(u128.Zero);
@@ -842,7 +842,7 @@ describe('SwapOperation tests', () => {
 
         expect(provider3.reserved).toStrictEqual(u128.Zero);
         expect(queue4.reservedLiquidity).toStrictEqual(u256.Zero);
-        expect(queue4.deltaBTCBuy).toStrictEqual(u256.fromU64(10000));
+        expect(queue4.deltaBTCBuy).toStrictEqual(10000);
         expect(queue4.deltaTokensBuy).toStrictEqual(u256.fromString(`6653333333333333333`));
         expect(reservationActiveList.get(0)).toBeFalsy();
         expect(TransferHelper.safeTransferCalled).toBeTruthy();

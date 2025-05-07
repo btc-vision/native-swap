@@ -1,4 +1,4 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum';
 import { Provider } from '../../models/Provider';
 import { ProviderTypes } from '../../types/ProviderTypes';
 import { ProviderQueue } from '../ProviderQueue';
@@ -36,15 +36,15 @@ export interface IProviderManager {
 
     getStandardQueue(): ProviderQueue;
 
-    getBTCowed(providerId: u256): u256;
+    getBTCowed(providerId: u256): u64;
 
-    setBTCowed(providerId: u256, amount: u256): void;
+    setBTCowed(providerId: u256, amount: u64): void;
 
-    getBTCOwedLeft(providerId: u256): u256;
+    getBTCOwedLeft(providerId: u256): u64;
 
-    getBTCowedReserved(providerId: u256): u256;
+    getBTCowedReserved(providerId: u256): u64;
 
-    setBTCowedReserved(providerId: u256, amount: u256): void;
+    setBTCowedReserved(providerId: u256, amount: u64): void;
 
     cleanUpQueues(): void;
 

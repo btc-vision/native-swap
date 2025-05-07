@@ -1,4 +1,4 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum';
 
 export interface IDynamicFee {
     /** Base fee in basis points (e.g. 20 => 0.20%) */
@@ -30,7 +30,7 @@ export interface IDynamicFee {
      * @param utilizationRatio — current pool utilization ratio (0–100)
      * @returns fee in basis points
      */
-    getDynamicFeeBP(tradeSize: u256, utilizationRatio: u256): u64;
+    getDynamicFeeBP(tradeSize: u64, utilizationRatio: u256): u64;
 
     /**
      * Converts a fee (in basis points) into an absolute amount on a given value:

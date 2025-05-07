@@ -1,4 +1,4 @@
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum';
 import {
     AdvancedStoredString,
     Potential,
@@ -7,12 +7,7 @@ import {
     u256To30Bytes,
 } from '@btc-vision/btc-runtime/runtime';
 import { ProviderData } from './ProviderData';
-import {
-    AMOUNT_POINTER,
-    BTC_RECEIVER_ADDRESS_POINTER,
-    LIQUIDITY_PROVIDED_POINTER,
-    PROVIDER_DATA_POINTER,
-} from '../constants/StoredPointers';
+import { BTC_RECEIVER_ADDRESS_POINTER, PROVIDER_DATA_POINTER } from '../constants/StoredPointers';
 import { tokensToSatoshis } from '../utils/SatoshisConversion';
 import { STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
@@ -32,15 +27,10 @@ export class Provider {
         this.id = providerId;
         this.fromRemovalQueue = false;
 
-        const providerBuffer = u256To30Bytes(providerId);
+        const providerBuffer: Uint8Array = u256To30Bytes(providerId);
         this.providerBuffer = providerBuffer;
 
-        this.providerData = new ProviderData(
-            PROVIDER_DATA_POINTER,
-            LIQUIDITY_PROVIDED_POINTER,
-            AMOUNT_POINTER,
-            providerBuffer,
-        );
+        this.providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
     }
 
     /**
@@ -62,14 +52,9 @@ export class Provider {
      * @returns {boolean} - true if token amount is GE; false if not.
      */
     public static meetsMinimumReservationAmount(tokenAmount: u128, currentQuote: u256): boolean {
-        let result: boolean = true;
-        const maxCostInSatoshis = tokensToSatoshis(tokenAmount.toU256(), currentQuote);
+        const maxCostInSatoshis: u64 = tokensToSatoshis(tokenAmount.toU256(), currentQuote);
 
-        if (u256.lt(maxCostInSatoshis, STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)) {
-            result = false;
-        }
-
-        return result;
+        return maxCostInSatoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT;
     }
 
     /**
@@ -198,28 +183,28 @@ export class Provider {
     }
 
     /**
-     * @method getbtcReceiver
+     * @method getBtcReceiver
      * @description Gets the btc receiver address.
      * @returns {string} - The btc address.
      */
-    public getbtcReceiver(): string {
+    public getBtcReceiver(): string {
         return this.internalBTCReceiver.value;
     }
 
     /**
-     * @method setbtcReceiver
-     * @description Sts the btc receiver address.
+     * @method setBtcReceiver
+     * @description Sets the btc receiver address.
      * @param {string} value - The btc address.
      * @returns {void}.
      */
-    public setbtcReceiver(value: string): void {
+    public setBtcReceiver(value: string): void {
         this.internalBTCReceiver.value = value;
     }
 
     /**
      * @method getReservedAmount
-     * @description Gets the reserved amount.
-     * @returns {u128} - The reserved amount.
+     * @description Gets the reserved amount in tokens.
+     * @returns {u128} - The reserved amount in tokens.
      */
     public getReservedAmount(): u128 {
         return this.providerData.reservedAmount;
@@ -227,8 +212,8 @@ export class Provider {
 
     /**
      * @method setReservedAmount
-     * @description Sets the reserved amount.
-     * @param {u128} value - The reserved amount.
+     * @description Sets the reserved amount in tokens.
+     * @param {u128} value - The reserved amount in tokens.
      * @returns {void}
      */
     public setReservedAmount(value: u128): void {
@@ -238,7 +223,7 @@ export class Provider {
     /**
      * @method addToReservedAmount
      * @description Add a value to the reserved amount.
-     * @param {u128} value - The value to add.
+     * @param {u128} value - The value to add in tokens.
      * @returns {void}
      */
     public addToReservedAmount(value: u128): void {
@@ -248,7 +233,7 @@ export class Provider {
     /**
      * @method subtractFromReservedAmount
      * @description Subtract a value to the reserved amount.
-     * @param {u128} value - The value to subtract.
+     * @param {u128} value - The value to subtract in tokens.
      * @returns {void}
      */
     public subtractFromReservedAmount(value: u128): void {
@@ -275,8 +260,8 @@ export class Provider {
 
     /**
      * @method getLiquidityAmount
-     * @description Gets the liquidity amount.
-     * @returns {u128} - The liquidity amount.
+     * @description Gets the liquidity amount in tokens.
+     * @returns {u128} - The liquidity amount in tokens.
      */
     public getLiquidityAmount(): u128 {
         return this.providerData.liquidityAmount;
@@ -284,8 +269,8 @@ export class Provider {
 
     /**
      * @method setLiquidityAmount
-     * @description Sets the liquidity amount.
-     * @param {u128} value - The liquidity amount.
+     * @description Sets the liquidity amount in tokens.
+     * @param {u128} value - The liquidity amount in tokens.
      * @returns {void}
      */
     public setLiquidityAmount(value: u128): void {
@@ -304,7 +289,7 @@ export class Provider {
     /**
      * @method subtractFromLiquidityAmount
      * @description Subtract a value to the liquidity amount.
-     * @param {u128} value - The value to subtract.
+     * @param {u128} value - The value to subtract in tokens.
      * @returns {void}
      */
     public subtractFromLiquidityAmount(value: u128): void {
@@ -316,8 +301,8 @@ export class Provider {
 
     /**
      * @method getAvailableLiquidityAmount
-     * @description Gets the available liquidity amount.
-     * @returns {u128} The available liquidity.
+     * @description Gets the available liquidity amount in tokens.
+     * @returns {u128} The available liquidity in tokens.
      */
     public getAvailableLiquidityAmount(): u128 {
         if (!this.canCoverReservedAmount()) {
@@ -331,31 +316,31 @@ export class Provider {
 
     /**
      * @method getLiquidityProvided
-     * @description Gets the liquidity provided.
-     * @returns {u256} - The liquidity provided.
+     * @description Gets the liquidity provided in tokens.
+     * @returns {u128} - The liquidity provided in tokens.
      */
-    public getLiquidityProvided(): u256 {
+    public getLiquidityProvided(): u128 {
         return this.providerData.liquidityProvided;
     }
 
     /**
      * @method setLiquidityProvided
-     * @description Sets the liquidity provided.
-     * @param {u256} value - The liquidity provided.
+     * @description Sets the liquidity provided in tokens.
+     * @param {u128} value - The liquidity provided in tokens.
      * @returns {void}
      */
-    public setLiquidityProvided(value: u256): void {
+    public setLiquidityProvided(value: u128): void {
         this.providerData.liquidityProvided = value;
     }
 
     /**
      * @method addToLiquidityProvided
-     * @description Add a value to the liquidity amount.
-     * @param {u256} value - The value to add.
+     * @description Add a value to the liquidity provided.
+     * @param {u128} value - The value to add in tokens.
      * @returns {void}
      */
-    public addToLiquidityProvided(value: u256): void {
-        this.providerData.liquidityProvided = SafeMath.add(
+    public addToLiquidityProvided(value: u128): void {
+        this.providerData.liquidityProvided = SafeMath.add128(
             this.providerData.liquidityProvided,
             value,
         );
@@ -532,11 +517,10 @@ export class Provider {
      */
     private ensureBTCReceiver(): void {
         if (this._btcReceiver === null) {
-            const loader = new AdvancedStoredString(
+            this._btcReceiver = new AdvancedStoredString(
                 BTC_RECEIVER_ADDRESS_POINTER,
                 this.providerBuffer,
             );
-            this._btcReceiver = loader;
         }
     }
 }

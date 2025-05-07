@@ -4,7 +4,7 @@ export interface ILiquidityQueueReserve {
     virtualBTCReserve: u256;
     virtualTokenReserve: u256;
     deltaTokensAdd: u256;
-    deltaBTCBuy: u256;
+    deltaBTCBuy: u64;
     deltaTokensBuy: u256;
     readonly availableLiquidity: u256;
     readonly reservedLiquidity: u256;
@@ -16,7 +16,7 @@ export interface ILiquidityQueueReserve {
 
     addToVirtualTokenReserve(value: u256): void;
 
-    subVirtualTokenReserve(value: u256): void;
+    subFromVirtualTokenReserve(value: u256): void;
 
     addToTotalReserve(value: u256): void;
 
@@ -30,5 +30,5 @@ export interface ILiquidityQueueReserve {
 
     addToDeltaTokensBuy(value: u256): void;
 
-    addToDeltaBTCBuy(value: u256): void;
+    addToDeltaBTCBuy(value: u64): void;
 }

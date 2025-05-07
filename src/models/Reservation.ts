@@ -14,7 +14,7 @@ import {
     RESERVATION_INDEXES,
     RESERVATION_PRIORITY,
 } from '../constants/StoredPointers';
-import { u128 } from '@btc-vision/as-bignum/assembly';
+import { u128 } from '@btc-vision/as-bignum';
 import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReservationData } from './ReservationData';
 import { ReservationProviderData } from './ReservationProdiverData';
@@ -47,11 +47,11 @@ export class Reservation {
     }
 
     public static generateId(token: Address, owner: Address): Uint8Array {
-        const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
+        const writer: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
         writer.writeAddress(token);
         writer.writeAddress(owner);
 
-        const hash = ripemd160(writer.getBuffer());
+        const hash: Uint8Array = ripemd160(writer.getBuffer());
 
         // only use the first 16 bytes (fit 128 bits)
         // this is a design choice. the odds that two ACTIVE reservations have the same ID is 1 in 2^128

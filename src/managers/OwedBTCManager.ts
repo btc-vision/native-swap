@@ -12,23 +12,23 @@ export class OwedBTCManager implements IOwedBTCManager {
         this.BTCowedReserved = new StoredMapU256(BTC_OWED_RESERVED_POINTER);
     }
 
-    public getBTCowed(providerId: u256): u256 {
-        return this.BTCowed.get(providerId);
+    public getBTCowed(providerId: u256): u64 {
+        return this.BTCowed.get(providerId).toU64();
     }
 
-    public setBTCowed(providerId: u256, amount: u256): void {
-        this.BTCowed.set(providerId, amount);
+    public setBTCowed(providerId: u256, amount: u64): void {
+        this.BTCowed.set(providerId, u256.fromU64(amount));
     }
 
-    public getBTCowedReserved(providerId: u256): u256 {
-        return this.BTCowedReserved.get(providerId);
+    public getBTCowedReserved(providerId: u256): u64 {
+        return this.BTCowedReserved.get(providerId).toU64();
     }
 
-    public setBTCowedReserved(providerId: u256, amount: u256): void {
-        this.BTCowedReserved.set(providerId, amount);
+    public setBTCowedReserved(providerId: u256, amount: u64): void {
+        this.BTCowedReserved.set(providerId, u256.fromU64(amount));
     }
 
-    public getBTCOwedLeft(providerId: u256): u256 {
-        return SafeMath.sub(this.getBTCowed(providerId), this.getBTCowedReserved(providerId));
+    public getBTCOwedLeft(providerId: u256): u64 {
+        return SafeMath.sub64(this.getBTCowed(providerId), this.getBTCowedReserved(providerId));
     }
 }

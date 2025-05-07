@@ -2,7 +2,7 @@ import { BaseOperation } from './BaseOperation';
 import { getProvider, Provider } from '../models/Provider';
 import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityAddedEvent } from '../events/LiquidityAddedEvent';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum';
 import { Reservation } from '../models/Reservation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
@@ -32,11 +32,14 @@ export class AddLiquidityOperation extends BaseOperation {
         this.checkPreConditions();
 
         const reservation = this.getReservation();
-        const { trade, tokensBoughtFromQueue, btcSpent } = this.executeTrade(reservation);
-        this.updateLiquidityQueue(trade, tokensBoughtFromQueue, btcSpent);
-        this.updateProvider(tokensBoughtFromQueue);
+        const trade = this.executeTrade(reservation);
+        this.updateLiquidityQueue(trade);
+        this.updateProvider(trade.getTotalTokensPurchased());
         this.postProcessQueues();
-        this.emitLiquidityAddedEvent(tokensBoughtFromQueue, btcSpent);
+        this.emitLiquidityAddedEvent(
+            trade.getTotalTokensPurchased(),
+            trade.getTotalSatoshisSpent(),
+        );
     }
 
     private checkPreConditions(): void {
@@ -50,49 +53,36 @@ export class AddLiquidityOperation extends BaseOperation {
         return reservation;
     }
 
-    private executeTrade(reservation: Reservation): {
-        trade: CompletedTrade;
-        tokensBoughtFromQueue: u256;
-        btcSpent: u256;
-    } {
+    private executeTrade(reservation: Reservation): CompletedTrade {
         const trade = this.tradeManager.executeTrade(reservation);
 
-        const tokensBoughtFromQueue = SafeMath.add(
-            trade.totalTokensPurchased,
-            trade.totalTokensRefunded,
-        );
-
-        const btcSpent = SafeMath.add(trade.totalSatoshisSpent, trade.totalRefundedBTC);
-        this.ensurePurchaseWasMade(tokensBoughtFromQueue, btcSpent);
+        this.ensurePurchaseWasMade(trade.getTotalTokensPurchased(), trade.getTotalSatoshisSpent());
 
         TransferHelper.safeTransferFrom(
             this.liquidityQueue.token,
             Blockchain.tx.sender,
             Blockchain.contractAddress,
-            tokensBoughtFromQueue,
+            trade.getTotalTokensPurchased(),
         );
-        return { trade, tokensBoughtFromQueue, btcSpent };
+        return trade;
     }
 
-    private updateLiquidityQueue(
-        trade: CompletedTrade,
-        tokensBoughtFromQueue: u256,
-        btcSpent: u256,
-    ): void {
+    private updateLiquidityQueue(trade: CompletedTrade): void {
         this.liquidityQueue.decreaseTotalReserved(trade.totalTokensReserved);
-        this.liquidityQueue.increaseTotalReserve(tokensBoughtFromQueue);
-        this.liquidityQueue.increaseVirtualBTCReserve(btcSpent);
-        this.liquidityQueue.increaseVirtualTokenReserve(tokensBoughtFromQueue);
-        this.liquidityQueue.increaseBTCowed(this.providerId, btcSpent);
+        this.liquidityQueue.increaseTotalReserve(trade.getTotalTokensPurchased());
+        this.liquidityQueue.increaseVirtualBTCReserve(trade.getTotalSatoshisSpent());
+        this.liquidityQueue.increaseVirtualTokenReserve(trade.getTotalTokensPurchased());
+        this.liquidityQueue.increaseBTCowed(this.providerId, trade.getTotalSatoshisSpent());
     }
 
     private updateProvider(tokensBoughtFromQueue: u256): void {
         this.provider.markLiquidityProvider();
 
         if (!this.provider.hasReservedAmount()) {
-            this.provider.setbtcReceiver(this.receiver);
+            this.provider.setBtcReceiver(this.receiver);
         }
 
+        //!!!! tokensBoughtFromQueue = u256, liq. prov. = u128
         this.provider.addToLiquidityProvided(tokensBoughtFromQueue);
     }
 
@@ -114,13 +104,13 @@ export class AddLiquidityOperation extends BaseOperation {
         }
     }
 
-    private ensurePurchaseWasMade(tokensBoughtFromQueue: u256, btcSpent: u256): void {
-        if (tokensBoughtFromQueue.isZero() || btcSpent.isZero()) {
+    private ensurePurchaseWasMade(tokensBoughtFromQueue: u256, btcSpent: u64): void {
+        if (tokensBoughtFromQueue.isZero() || btcSpent === 0) {
             throw new Revert('NATIVE_SWAP: No effective purchase made. Check your BTC outputs.');
         }
     }
 
-    private emitLiquidityAddedEvent(tokensBoughtFromQueue: u256, btcSpent: u256): void {
+    private emitLiquidityAddedEvent(tokensBoughtFromQueue: u256, btcSpent: u64): void {
         Blockchain.emit(
             new LiquidityAddedEvent(
                 SafeMath.add(tokensBoughtFromQueue, tokensBoughtFromQueue),

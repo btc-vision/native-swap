@@ -8,9 +8,10 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { SwapExecutedEvent } from '../events/SwapExecutedEvent';
 import { Reservation } from '../models/Reservation';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
+import { CompletedTrade } from '../models/CompletedTrade';
 
 export class SwapOperation extends BaseOperation {
     private readonly tradeManager: ITradeManager;
@@ -25,13 +26,13 @@ export class SwapOperation extends BaseOperation {
     }
 
     public execute(): void {
-        const reservation = this.liquidityQueue.getReservationWithExpirationChecks();
+        const reservation: Reservation = this.liquidityQueue.getReservationWithExpirationChecks();
         this.ensureReservationForLP(reservation);
 
-        const trade = this.tradeManager.executeTrade(reservation);
+        const trade: CompletedTrade = this.tradeManager.executeTrade(reservation);
 
-        let totalTokensPurchased = trade.getTotalTokensPurchased();
-        const totalSatoshisSpent = trade.getTotalSatoshisSpent();
+        let totalTokensPurchased: u256 = trade.getTotalTokensPurchased();
+        const totalSatoshisSpent: u64 = trade.getTotalSatoshisSpent();
 
         if (!totalTokensPurchased.isZero()) {
             totalTokensPurchased = this.applyFeesIfEnabled(
@@ -51,7 +52,7 @@ export class SwapOperation extends BaseOperation {
         this.emitSwapExecutedEvent(Blockchain.tx.sender, totalSatoshisSpent, totalTokensPurchased);
     }
 
-    private applyFeesIfEnabled(totalTokensPurchased: u256, totalSatoshisSpent: u256): u256 {
+    private applyFeesIfEnabled(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256 {
         let newTotalTokensPurchased = totalTokensPurchased;
 
         if (this.liquidityQueue.feesEnabled) {
@@ -70,7 +71,7 @@ export class SwapOperation extends BaseOperation {
     private updateLiquidityQueue(
         totalTokensReserved: u256,
         totalTokensPurchased: u256,
-        totalSatoshisSpent: u256,
+        totalSatoshisSpent: u64,
     ): void {
         this.liquidityQueue.decreaseTotalReserved(totalTokensReserved);
         this.liquidityQueue.decreaseTotalReserve(totalTokensPurchased);
@@ -93,7 +94,7 @@ export class SwapOperation extends BaseOperation {
 
     private emitSwapExecutedEvent(
         buyer: Address,
-        totalSatoshisSpent: u256,
+        totalSatoshisSpent: u64,
         totalTokensPurchased: u256,
     ): void {
         Blockchain.emit(new SwapExecutedEvent(buyer, totalSatoshisSpent, totalTokensPurchased));

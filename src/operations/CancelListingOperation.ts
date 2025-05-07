@@ -1,7 +1,7 @@
 import { BaseOperation } from './BaseOperation';
 import { getProvider, Provider } from '../models/Provider';
 import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum';
 import { ListingCanceledEvent } from '../events/ListingCanceledEvent';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 

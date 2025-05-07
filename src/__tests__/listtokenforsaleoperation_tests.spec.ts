@@ -16,7 +16,7 @@ import {
 } from './test_helper';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { ListTokensForSaleOperation } from '../lib/Liquidity/operations/ListTokensForSaleOperation';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum';
 import { FeeManager } from '../lib/FeeManager';
 import { FEE_COLLECT_SCRIPT_PUBKEY } from '../utils/NativeSwapUtils';
 
@@ -579,7 +579,7 @@ describe('ListTokenForSaleOperation tests', () => {
         operation.execute();
 
         expect(provider.liquidity).toStrictEqual(u128.fromU64(297000000));
-        expect(queue.deltaBTCBuy).toStrictEqual(u256.Zero);
+        expect(queue.deltaBTCBuy).toStrictEqual(0);
         expect(queue.deltaTokensBuy).toStrictEqual(u256.fromU64(3000000));
         expect(queue.liquidity).toStrictEqual(u256.fromU64(97000000));
         expect(TransferHelper.safeTransferCalled).toBeTruthy();

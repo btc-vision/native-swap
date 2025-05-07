@@ -1,5 +1,5 @@
 import { BaseOperation } from './BaseOperation';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum';
 import { getProvider, Provider } from '../models/Provider';
 import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityRemovedEvent } from '../events/LiquidityRemovedEvent';
@@ -19,11 +19,13 @@ export class RemoveLiquidityOperation extends BaseOperation {
 
     public execute(): void {
         this.checkPreConditions();
-        const btcOwed = this.getBtcOwed();
-        const tokenAmount = this.getLiquidityProvided();
-        this.pullOutTokens(tokenAmount);
+        const btcOwed: u64 = this.getBtcOwed();
+        const tokenAmount: u128 = this.getLiquidityProvided();
+        const tokenAmount256: u256 = tokenAmount.toU256();
+
+        this.pullOutTokens(tokenAmount256);
         this.updateProvider();
-        this.updateLiquidityQueue(tokenAmount, btcOwed);
+        this.updateLiquidityQueue(tokenAmount256, btcOwed);
         this.emitActivateProviderEvent(btcOwed);
         this.emitLiquidityRemovedEvent(btcOwed, tokenAmount);
     }
@@ -35,18 +37,18 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.ensureNotInPendingRemoval();
     }
 
-    private getBtcOwed(): u256 {
-        const btcOwed = this.liquidityQueue.getBTCowed(this.providerId);
+    private getBtcOwed(): u64 {
+        const btcOwed: u64 = this.liquidityQueue.getBTCowed(this.providerId);
         this.ensureBTCOwedNotZero(btcOwed);
 
         return btcOwed;
     }
 
-    private getLiquidityProvided(): u256 {
-        const tokenAmount = this.provider.getLiquidityProvided();
-        this.ensureLiquidityProvidedNotZero(tokenAmount);
+    private getLiquidityProvided(): u128 {
+        const liquidityProvided: u128 = this.provider.getLiquidityProvided();
+        this.ensureLiquidityProvidedNotZero(liquidityProvided);
 
-        return tokenAmount;
+        return liquidityProvided;
     }
 
     private pullOutTokens(amount: u256): void {
@@ -54,11 +56,11 @@ export class RemoveLiquidityOperation extends BaseOperation {
     }
 
     private updateProvider(): void {
-        this.provider.setLiquidityProvided(u256.Zero);
+        this.provider.setLiquidityProvided(u128.Zero);
         this.provider.markPendingRemoval();
     }
 
-    private updateLiquidityQueue(tokenAmount: u256, btcOwed: u256): void {
+    private updateLiquidityQueue(tokenAmount: u256, btcOwed: u64): void {
         this.liquidityQueue.decreaseTotalReserve(tokenAmount);
         this.liquidityQueue.decreaseVirtualTokenReserve(tokenAmount);
         this.liquidityQueue.decreaseVirtualBTCReserve(btcOwed);
@@ -67,13 +69,13 @@ export class RemoveLiquidityOperation extends BaseOperation {
 
     private ensureIsLiquidityProvider(): void {
         if (!this.provider.isLiquidityProvider()) {
-            throw new Revert('NATIVE_SWAP: Not a liquidity provider');
+            throw new Revert('NATIVE_SWAP: Not a liquidity provider.');
         }
     }
 
     private ensureIsNotInitialProvider(): void {
         if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProviderId)) {
-            throw new Revert('NATIVE_SWAP: Initial provider cannot remove liquidity');
+            throw new Revert('NATIVE_SWAP: Initial provider cannot remove liquidity.');
         }
     }
 
@@ -91,25 +93,25 @@ export class RemoveLiquidityOperation extends BaseOperation {
         }
     }
 
-    private ensureBTCOwedNotZero(btcOwed: u256): void {
-        if (btcOwed.isZero()) {
+    private ensureBTCOwedNotZero(btcOwed: u64): void {
+        if (btcOwed === 0) {
             throw new Revert(
                 'NATIVE_SWAP: You have no BTC owed. Did you already remove everything?',
             );
         }
     }
 
-    private ensureLiquidityProvidedNotZero(tokenAmount: u256): void {
-        if (tokenAmount.isZero()) {
-            throw new Revert('NATIVE_SWAP: You have no tokens to remove.');
+    private ensureLiquidityProvidedNotZero(liquidityProvided: u128): void {
+        if (liquidityProvided.isZero()) {
+            throw new Revert('NATIVE_SWAP: You have no liquidity to remove.');
         }
     }
 
-    private emitActivateProviderEvent(btcOwed: u256): void {
+    private emitActivateProviderEvent(btcOwed: u64): void {
         Blockchain.emit(new ActivateProviderEvent(this.providerId, u128.Zero, btcOwed));
     }
 
-    private emitLiquidityRemovedEvent(btcOwed: u256, tokenAmount: u256): void {
+    private emitLiquidityRemovedEvent(btcOwed: u64, tokenAmount: u128): void {
         Blockchain.emit(new LiquidityRemovedEvent(this.providerId, btcOwed, tokenAmount));
     }
 }

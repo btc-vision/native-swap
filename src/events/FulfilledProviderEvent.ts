@@ -4,7 +4,7 @@ import {
     NetEvent,
     U256_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum';
 
 @final
 export class FulfilledProviderEvent extends NetEvent {

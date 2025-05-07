@@ -1,7 +1,7 @@
 import { clearCachedProviders } from '../lib/Provider';
 import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 import { DynamicFee } from '../lib/DynamicFee';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum';
 
 describe('DynamicFee tests', () => {
     beforeEach(() => {

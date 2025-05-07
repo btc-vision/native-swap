@@ -8,7 +8,7 @@ import {
     u256To30Bytes,
     U64_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum';
 import { getProvider, Provider } from '../lib/Provider';
 import { Reservation } from '../lib/Reservation';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';

@@ -11,7 +11,7 @@ import {
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum';
 
 describe('CreatePoolOperation tests', () => {
     beforeEach(() => {

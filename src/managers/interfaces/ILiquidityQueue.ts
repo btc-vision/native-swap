@@ -1,4 +1,4 @@
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum';
 import { Provider } from '../../models/Provider';
 import { Reservation } from '../../models/Reservation';
 import { Address } from '@btc-vision/btc-runtime/runtime';
@@ -9,7 +9,7 @@ export interface ILiquidityQueue {
     virtualBTCReserve: u256;
     virtualTokenReserve: u256;
     deltaTokensAdd: u256;
-    deltaBTCBuy: u256;
+    deltaBTCBuy: u64;
     deltaTokensBuy: u256;
     readonly availableLiquidity: u256;
     readonly reservedLiquidity: u256;
@@ -26,7 +26,7 @@ export interface ILiquidityQueue {
 
     getNextProviderWithLiquidity(currentQuote: u256): Provider | null;
 
-    computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u256): u256;
+    computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256;
 
     distributeFee(totalFee: u256, stakingAddress: Address): void;
 
@@ -44,7 +44,7 @@ export interface ILiquidityQueue {
 
     cleanUpQueues(): void;
 
-    addActiveReservation(blockNumber: u64, reservationId: u128): u32;
+    addActiveReservation(reservation: Reservation): u32;
 
     initializeInitialLiquidity(
         floorPrice: u256,
@@ -61,9 +61,9 @@ export interface ILiquidityQueue {
 
     setBlockQuote(): void;
 
-    increaseVirtualBTCReserve(value: u256): void;
+    increaseVirtualBTCReserve(value: u64): void;
 
-    decreaseVirtualBTCReserve(value: u256): void;
+    decreaseVirtualBTCReserve(value: u64): void;
 
     increaseVirtualTokenReserve(value: u256): void;
 
@@ -81,19 +81,21 @@ export interface ILiquidityQueue {
 
     increaseDeltaTokensBuy(value: u256): void;
 
-    increaseDeltaBTCBuy(value: u256): void;
+    increaseDeltaBTCBuy(value: u64): void;
 
-    buyTokens(tokensOut: u256, satoshisIn: u256): void;
+    buyTokens(tokensOut: u256, satoshisIn: u64): void;
 
-    getBTCowed(providerId: u256): u256;
+    getBTCowed(providerId: u256): u64;
 
-    setBTCowed(providerId: u256, value: u256): void;
+    setBTCowed(providerId: u256, value: u64): void;
 
-    increaseBTCowed(providerId: u256, value: u256): void;
+    increaseBTCowed(providerId: u256, value: u64): void;
 
-    getBTCowedReserved(providerId: u256): u256;
+    getBTCowedReserved(providerId: u256): u64;
 
-    setBTCowedReserved(providerId: u256, value: u256): void;
+    setBTCowedReserved(providerId: u256, value: u64): void;
 
-    getBTCOwedLeft(providerId: u256): u256;
+    increaseBTCowedReserved(providerId: u256, value: u64): void;
+
+    getBTCOwedLeft(providerId: u256): u64;
 }

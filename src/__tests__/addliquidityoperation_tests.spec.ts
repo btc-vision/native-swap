@@ -1,5 +1,11 @@
 import { clearCachedProviders, getProvider } from '../lib/Provider';
-import { Address, Blockchain, SafeMath, TransactionOutput, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import {
+    Address,
+    Blockchain,
+    SafeMath,
+    TransactionOutput,
+    TransferHelper,
+} from '@btc-vision/btc-runtime/runtime';
 import {
     createProvider,
     createProviderId,
@@ -16,7 +22,7 @@ import {
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { AddLiquidityOperation } from '../lib/Liquidity/operations/AddLiquidityOperation';
 import { NORMAL_TYPE } from '../lib/Reservation';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum';
 import { CreatePoolOperation } from '../lib/Liquidity/operations/CreatePoolOperation';
 import { ReserveLiquidityOperation } from '../lib/Liquidity/operations/ReserveLiquidityOperation';
 import { FEE_COLLECT_SCRIPT_PUBKEY } from '../utils/NativeSwapUtils';
@@ -29,7 +35,7 @@ describe('AddLiquidityOperation tests', () => {
         TransferHelper.clearMockedResults();
     });
 
-    it('should revert if provider is in removal queue => \'Wait for removal\'', () => {
+    it("should revert if provider is in removal queue => 'Wait for removal'", () => {
         expect(() => {
             setBlockchainEnvironment(100);
 
@@ -42,7 +48,7 @@ describe('AddLiquidityOperation tests', () => {
         }).toThrow();
     });
 
-    it('should revert if reservation.reservedLP= false => \'You must reserve liquidity for LP first\'', () => {
+    it("should revert if reservation.reservedLP= false => 'You must reserve liquidity for LP first'", () => {
         expect(() => {
             setBlockchainEnvironment(100);
 
@@ -60,7 +66,7 @@ describe('AddLiquidityOperation tests', () => {
         }).toThrow();
     });
 
-    it('should revert if tokensBoughtFromQueue=0 || btcSpent=0 => \'No effective purchase made\'', () => {
+    it("should revert if tokensBoughtFromQueue=0 || btcSpent=0 => 'No effective purchase made'", () => {
         expect(() => {
             setBlockchainEnvironment(100, msgSender1, msgSender1);
             Blockchain.mockValidateBitcoinAddressResult(true);

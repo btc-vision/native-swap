@@ -1,4 +1,4 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum';
 import {
     Address,
     Blockchain,
@@ -185,23 +185,23 @@ export class ProviderManager implements IProviderManager {
         return this.standardQueue;
     }
 
-    public getBTCowed(providerId: u256): u256 {
+    public getBTCowed(providerId: u256): u64 {
         return this.owedBTCManager.getBTCowed(providerId);
     }
 
-    public setBTCowed(providerId: u256, amount: u256): void {
+    public setBTCowed(providerId: u256, amount: u64): void {
         this.owedBTCManager.setBTCowed(providerId, amount);
     }
 
-    public getBTCOwedLeft(providerId: u256): u256 {
+    public getBTCOwedLeft(providerId: u256): u64 {
         return this.owedBTCManager.getBTCOwedLeft(providerId);
     }
 
-    public getBTCowedReserved(providerId: u256): u256 {
+    public getBTCowedReserved(providerId: u256): u64 {
         return this.owedBTCManager.getBTCowedReserved(providerId);
     }
 
-    public setBTCowedReserved(providerId: u256, amount: u256): void {
+    public setBTCowedReserved(providerId: u256, amount: u64): void {
         this.owedBTCManager.setBTCowedReserved(providerId, amount);
     }
 

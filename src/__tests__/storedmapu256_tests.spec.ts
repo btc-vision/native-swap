@@ -1,7 +1,7 @@
 import { clearCachedProviders } from '../lib/Provider';
 import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 import { StoredMapU256 } from '../storage/StoredMapU256';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum';
 
 describe('StoredMapU256 tests', () => {
     beforeEach(() => {

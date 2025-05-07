@@ -1,5 +1,5 @@
 import { ProviderTypes } from '../types/ProviderTypes';
-import { u128 } from '@btc-vision/as-bignum/assembly';
+import { u128 } from '@btc-vision/as-bignum';
 
 export class ReservationProviderData {
     constructor(

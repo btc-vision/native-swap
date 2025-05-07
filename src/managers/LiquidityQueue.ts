@@ -7,7 +7,7 @@ import {
     StoredU64,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum';
 
 import {
     ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
@@ -84,6 +84,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         return this.liquidityQueueReserve.virtualBTCReserve;
     }
 
+    ///!!!! u256???
     public set virtualBTCReserve(value: u256) {
         this.liquidityQueueReserve.virtualBTCReserve = value;
     }
@@ -104,11 +105,11 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.liquidityQueueReserve.deltaTokensAdd = value;
     }
 
-    public get deltaBTCBuy(): u256 {
+    public get deltaBTCBuy(): u64 {
         return this.liquidityQueueReserve.deltaBTCBuy;
     }
 
-    public set deltaBTCBuy(value: u256) {
+    public set deltaBTCBuy(value: u64) {
         this.liquidityQueueReserve.deltaBTCBuy = value;
     }
 
@@ -180,30 +181,36 @@ export class LiquidityQueue implements ILiquidityQueue {
         return this.timeoutEnabled;
     }
 
-    public getBTCowed(providerId: u256): u256 {
+    public getBTCowed(providerId: u256): u64 {
         return this.providerManager.getBTCowed(providerId);
     }
 
-    public setBTCowed(providerId: u256, value: u256): void {
+    public setBTCowed(providerId: u256, value: u64): void {
         this.providerManager.setBTCowed(providerId, value);
     }
 
-    public getBTCOwedLeft(providerId: u256): u256 {
+    public getBTCOwedLeft(providerId: u256): u64 {
         return this.providerManager.getBTCOwedLeft(providerId);
     }
 
-    public increaseBTCowed(providerId: u256, value: u256): void {
-        const owedBefore = this.getBTCowed(providerId);
-        const owedAfter = SafeMath.add(owedBefore, value);
+    public increaseBTCowed(providerId: u256, value: u64): void {
+        const owedBefore: u64 = this.getBTCowed(providerId);
+        const owedAfter: u64 = SafeMath.add64(owedBefore, value);
         this.setBTCowed(providerId, owedAfter);
     }
 
-    public getBTCowedReserved(providerId: u256): u256 {
+    public getBTCowedReserved(providerId: u256): u64 {
         return this.providerManager.getBTCowedReserved(providerId);
     }
 
-    public setBTCowedReserved(providerId: u256, value: u256): void {
+    public setBTCowedReserved(providerId: u256, value: u64): void {
         this.providerManager.setBTCowedReserved(providerId, value);
+    }
+
+    public increaseBTCowedReserved(providerId: u256, value: u64): void {
+        const owedReservedBefore: u64 = this.getBTCowedReserved(providerId);
+        const owedReservedAfter: u64 = SafeMath.add64(owedReservedBefore, value);
+        this.setBTCowed(providerId, owedReservedAfter);
     }
 
     public cleanUpQueues(): void {
@@ -218,7 +225,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.providerManager.resetProvider(provider, burnRemainingFunds, canceled);
     }
 
-    public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u256): u256 {
+    public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256 {
         const utilizationRatio = this.getUtilizationRatio();
         const feeBP = this.dynamicFee.getDynamicFeeBP(totalSatoshisSpent, utilizationRatio);
         return this.dynamicFee.computeFeeAmount(totalTokensPurchased, feeBP);
@@ -277,7 +284,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.quoteManager.save();
     }
 
-    public buyTokens(tokensOut: u256, satoshisIn: u256): void {
+    public buyTokens(tokensOut: u256, satoshisIn: u64): void {
         this.increaseDeltaBTCBuy(satoshisIn);
         this.increaseDeltaTokensBuy(tokensOut);
     }
@@ -383,8 +390,11 @@ export class LiquidityQueue implements ILiquidityQueue {
         return availableScaled;
     }
 
-    public addActiveReservation(blockNumber: u64, reservationId: u128): u32 {
-        return this.reservationManager.addActiveReservation(blockNumber, reservationId);
+    public addActiveReservation(reservation: Reservation): u32 {
+        return this.reservationManager.addActiveReservation(
+            reservation.getCreationBlock(),
+            reservation.getId(),
+        );
     }
 
     public setBlockQuote(): void {
@@ -396,12 +406,12 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.quoteManager.setBlockQuote(blockNumberU32, this.quote());
     }
 
-    public increaseVirtualBTCReserve(value: u256): void {
-        this.virtualBTCReserve = SafeMath.add(this.virtualBTCReserve, value);
+    public increaseVirtualBTCReserve(value: u64): void {
+        this.virtualBTCReserve = SafeMath.add(this.virtualBTCReserve, u256.fromU64(value));
     }
 
-    public decreaseVirtualBTCReserve(value: u256): void {
-        this.virtualBTCReserve = SafeMath.sub(this.virtualBTCReserve, value);
+    public decreaseVirtualBTCReserve(value: u64): void {
+        this.virtualBTCReserve = SafeMath.sub(this.virtualBTCReserve, u256.fromU64(value));
     }
 
     public increaseVirtualTokenReserve(value: u256): void {
@@ -436,7 +446,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.liquidityQueueReserve.addToDeltaTokensBuy(value);
     }
 
-    public increaseDeltaBTCBuy(value: u256): void {
+    public increaseDeltaBTCBuy(value: u64): void {
         this.liquidityQueueReserve.addToDeltaBTCBuy(value);
     }
 
@@ -457,7 +467,7 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     private resetAccumulators(): void {
         this.liquidityQueueReserve.deltaTokensAdd = u256.Zero;
-        this.liquidityQueueReserve.deltaBTCBuy = u256.Zero;
+        this.liquidityQueueReserve.deltaBTCBuy = 0;
         this.liquidityQueueReserve.deltaTokensBuy = u256.Zero;
     }
 

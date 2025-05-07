@@ -1,5 +1,5 @@
 import { BaseOperation } from './BaseOperation';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum';
 import { getProvider, Provider } from '../models/Provider';
 import {
     Address,
@@ -138,7 +138,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
                 this.provider.subtractFromLiquidityAmount(tax);
 
-                this.liquidityQueue.buyTokens(tax256, u256.Zero);
+                this.liquidityQueue.buyTokens(tax256, 0);
                 this.liquidityQueue.decreaseTotalReserve(tax256);
 
                 TransferHelper.safeTransfer(this.liquidityQueue.token, this.stakingAddress, tax256);
@@ -156,10 +156,10 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private setProviderReceiver(provider: Provider): void {
-        if (provider.hasReservedAmount() && provider.getbtcReceiver() !== this.receiver) {
+        if (provider.hasReservedAmount() && provider.getBtcReceiver() !== this.receiver) {
             throw new Revert('NATIVE_SWAP: Cannot change receiver address while reserved.');
         } else if (!provider.hasReservedAmount()) {
-            provider.setbtcReceiver(this.receiver);
+            provider.setBtcReceiver(this.receiver);
         }
     }
 
@@ -230,9 +230,9 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
     private ensureLiquidityNotTooLowInSatoshis(): void {
         const currentPrice: u256 = this.liquidityQueue.quote();
-        const liquidityInSatoshis: u256 = tokensToSatoshis(this.amountIn.toU256(), currentPrice);
+        const liquidityInSatoshis: u64 = tokensToSatoshis(this.amountIn256, currentPrice);
 
-        if (u256.lt(liquidityInSatoshis, MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT)) {
+        if (liquidityInSatoshis < MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT) {
             throw new Revert(
                 `NATIVE_SWAP: Liquidity value is too low in satoshis. (provided: ${liquidityInSatoshis}.)`,
             );

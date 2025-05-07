@@ -1,4 +1,4 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum';
 import { SafeMath, StoredU256 } from '@btc-vision/btc-runtime/runtime';
 import { VOLATILITY_POINTER } from '../constants/StoredPointers';
 import { IDynamicFee } from './interfaces/IDynamicFee';
@@ -53,10 +53,10 @@ export class DynamicFee implements IDynamicFee {
      * Because SafeMath.log256(...) returns a scaled ln (1e6 => ln * 1,000,000),
      * we must decode that carefully to keep it consistent with alpha.
      */
-    public getDynamicFeeBP(tradeSize: u256, utilizationRatio: u256): u64 {
+    public getDynamicFeeBP(tradeSize: u64, utilizationRatio: u256): u64 {
         let feeBP = this.baseFeeBP;
 
-        let ratio = SafeMath.div(tradeSize, REF_TRADE_SIZE);
+        let ratio = SafeMath.div(u256.fromU64(tradeSize), REF_TRADE_SIZE);
 
         if (ratio.isZero()) {
             ratio = u256.One;
