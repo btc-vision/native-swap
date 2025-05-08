@@ -394,7 +394,7 @@ describe('AddLiquidityOperation tests', () => {
         expect(queue4.virtualTokenReserve).toStrictEqual(
             u256.fromString('1000006666666666666666666'),
         );
-        expect(queue4.getBTCowed(providerId2)).toStrictEqual(u256.fromU32(10000));
+        expect(queue4.getSatoshisOwed(providerId2)).toStrictEqual(u256.fromU32(10000));
         expect(provider2.isLp).toBeTruthy();
         expect(provider2.liquidityProvided).toStrictEqual(u256.fromString('6666666666666666666'));
     });
@@ -473,7 +473,7 @@ describe('AddLiquidityOperation tests', () => {
         expect(queue4.virtualTokenReserve).toStrictEqual(
             u256.fromString('1000006666666666666666666'),
         );
-        expect(queue4.getBTCowed(providerId2)).toStrictEqual(u256.fromU32(10000));
+        expect(queue4.getSatoshisOwed(providerId2)).toStrictEqual(u256.fromU32(10000));
         expect(provider2.isLp).toBeTruthy();
         expect(provider2.liquidityProvided).toStrictEqual(u256.fromString('6666666666666666666'));
 
@@ -515,7 +515,7 @@ describe('AddLiquidityOperation tests', () => {
         expect(queue6.virtualTokenReserve).toStrictEqual(
             u256.fromString('1000013333333333333333332'),
         );
-        expect(queue6.getBTCowed(providerId2)).toStrictEqual(u256.fromU32(20000));
+        expect(queue6.getSatoshisOwed(providerId2)).toStrictEqual(u256.fromU32(20000));
         expect(provider2.isLp).toBeTruthy();
         expect(provider2.liquidityProvided).toStrictEqual(u256.fromString('13333333333333333332'));
     });

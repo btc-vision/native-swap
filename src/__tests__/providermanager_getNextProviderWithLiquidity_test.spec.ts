@@ -49,8 +49,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         );
 
         manager.addToRemovalQueue(provider.providerId);
-        manager.setBTCowed(provider.providerId, u256.fromU32(100000));
-        manager.setBTCowedReserved(provider.providerId, u256.fromU32(10000));
+        manager.setSatoshisOwed(provider.providerId, u256.fromU32(100000));
+        manager.setSatoshisOwedReserved(provider.providerId, u256.fromU32(10000));
 
         manager.cleanUpQueues();
 
@@ -80,8 +80,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const providersPendingRemoval = createProviders(2, 3, true);
         for (let i: u8 = 0; i < 2; i++) {
             manager.addToRemovalQueue(providersPendingRemoval[i].providerId);
-            manager.setBTCowed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
-            manager.setBTCowedReserved(providersPendingRemoval[i].providerId, u256.fromU32(10000));
+            manager.setSatoshisOwed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
+            manager.setSatoshisOwedReserved(
+                providersPendingRemoval[i].providerId,
+                u256.fromU32(10000),
+            );
         }
 
         // Move removalQueue starting index to 4
@@ -108,8 +111,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const providersPendingRemoval = createProviders(4, 0, true);
         for (let i: u8 = 0; i < 4; i++) {
             manager.addToRemovalQueue(providersPendingRemoval[i].providerId);
-            manager.setBTCowed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
-            manager.setBTCowedReserved(providersPendingRemoval[i].providerId, u256.fromU32(10000));
+            manager.setSatoshisOwed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
+            manager.setSatoshisOwedReserved(
+                providersPendingRemoval[i].providerId,
+                u256.fromU32(10000),
+            );
         }
 
         manager.removePendingLiquidityProviderFromRemovalQueue(providersPendingRemoval[0], 0);
@@ -131,8 +137,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const providersPendingRemoval = createProviders(4, 0, true);
         for (let i: u8 = 0; i < 4; i++) {
             manager.addToRemovalQueue(providersPendingRemoval[i].providerId);
-            manager.setBTCowed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
-            manager.setBTCowedReserved(providersPendingRemoval[i].providerId, u256.fromU32(10000));
+            manager.setSatoshisOwed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
+            manager.setSatoshisOwedReserved(
+                providersPendingRemoval[i].providerId,
+                u256.fromU32(10000),
+            );
         }
 
         providersPendingRemoval[0].pendingRemoval = false;
@@ -155,8 +164,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const providersPendingRemoval = createProviders(4, 0, true);
         for (let i: u8 = 0; i < 4; i++) {
             manager.addToRemovalQueue(providersPendingRemoval[i].providerId);
-            manager.setBTCowed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
-            manager.setBTCowedReserved(providersPendingRemoval[i].providerId, u256.fromU32(10000));
+            manager.setSatoshisOwed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
+            manager.setSatoshisOwedReserved(
+                providersPendingRemoval[i].providerId,
+                u256.fromU32(10000),
+            );
         }
 
         providersPendingRemoval[0].isLp = false;
@@ -180,8 +192,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
         const providersPendingRemoval = createProviders(4, 0, true);
         for (let i: u8 = 0; i < 4; i++) {
             manager.addToRemovalQueue(providersPendingRemoval[i].providerId);
-            manager.setBTCowed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
-            manager.setBTCowedReserved(providersPendingRemoval[i].providerId, u256.fromU32(10000));
+            manager.setSatoshisOwed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
+            manager.setSatoshisOwedReserved(
+                providersPendingRemoval[i].providerId,
+                u256.fromU32(10000),
+            );
         }
 
         providersPendingRemoval[0].isLp = false;
@@ -203,8 +218,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
 
         const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
         manager.addToRemovalQueue(provider.providerId);
-        manager.setBTCowedReserved(provider.providerId, u256.fromU32(10000));
-        manager.setBTCowed(provider.providerId, u256.fromU32(1000000));
+        manager.setSatoshisOwedReserved(provider.providerId, u256.fromU32(10000));
+        manager.setSatoshisOwed(provider.providerId, u256.fromU32(1000000));
 
         const currentQuote = u256.fromU32(1000);
         const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
@@ -223,8 +238,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
             manager.addToRemovalQueue(provider.providerId);
-            manager.setBTCowedReserved(provider.providerId, u256.fromU32(450));
-            manager.setBTCowed(provider.providerId, u256.fromU32(550));
+            manager.setSatoshisOwedReserved(provider.providerId, u256.fromU32(450));
+            manager.setSatoshisOwed(provider.providerId, u256.fromU32(550));
 
             const currentQuote = u256.fromU32(1000);
             manager.getNextProviderWithLiquidity(currentQuote);
@@ -303,8 +318,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
         provider.indexedAt = at2;
         saveIndexForProvider(provider.providerId, at2);
 
-        manager.setBTCowed(provider.providerId, u256.fromU32(100000));
-        manager.setBTCowedReserved(provider.providerId, u256.fromU32(10000));
+        manager.setSatoshisOwed(provider.providerId, u256.fromU32(100000));
+        manager.setSatoshisOwedReserved(provider.providerId, u256.fromU32(10000));
 
         manager.cleanUpQueues();
 
@@ -363,8 +378,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             providersPriority[i].indexedAt = at;
             saveIndexForProvider(providersPriority[i].providerId, at);
 
-            manager.setBTCowed(providersPriority[i].providerId, u256.fromU32(100000));
-            manager.setBTCowedReserved(providersPriority[i].providerId, u256.fromU32(10000));
+            manager.setSatoshisOwed(providersPriority[i].providerId, u256.fromU32(100000));
+            manager.setSatoshisOwedReserved(providersPriority[i].providerId, u256.fromU32(10000));
         }
 
         // Move priorityQueue starting index to 4
@@ -406,8 +421,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             providersPriority[i].indexedAt = at;
             saveIndexForProvider(providersPriority[i].providerId, at);
 
-            manager.setBTCowed(providersPriority[i].providerId, u256.fromU32(100000));
-            manager.setBTCowedReserved(providersPriority[i].providerId, u256.fromU32(10000));
+            manager.setSatoshisOwed(providersPriority[i].providerId, u256.fromU32(100000));
+            manager.setSatoshisOwedReserved(providersPriority[i].providerId, u256.fromU32(10000));
         }
 
         manager.resetProvider(providersPriority[0], false);
@@ -444,8 +459,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             providersPriority[i].indexedAt = at;
             saveIndexForProvider(providersPriority[i].providerId, at);
 
-            manager.setBTCowed(providersPriority[i].providerId, u256.fromU32(100000));
-            manager.setBTCowedReserved(providersPriority[i].providerId, u256.fromU32(10000));
+            manager.setSatoshisOwed(providersPriority[i].providerId, u256.fromU32(100000));
+            manager.setSatoshisOwedReserved(providersPriority[i].providerId, u256.fromU32(10000));
         }
 
         providersPriority[0].setActive(false, true);
@@ -483,8 +498,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
                 providersPriority[i].indexedAt = at;
                 saveIndexForProvider(providersPriority[i].providerId, at);
 
-                manager.setBTCowed(providersPriority[i].providerId, u256.fromU32(100000));
-                manager.setBTCowedReserved(providersPriority[i].providerId, u256.fromU32(10000));
+                manager.setSatoshisOwed(providersPriority[i].providerId, u256.fromU32(100000));
+                manager.setSatoshisOwedReserved(
+                    providersPriority[i].providerId,
+                    u256.fromU32(10000),
+                );
             }
 
             providersPriority[0].setActive(true, false);
@@ -629,8 +647,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
         provider.indexedAt = at2;
         saveIndexForProvider(provider.providerId, at2);
 
-        manager.setBTCowed(provider.providerId, u256.fromU32(100000));
-        manager.setBTCowedReserved(provider.providerId, u256.fromU32(10000));
+        manager.setSatoshisOwed(provider.providerId, u256.fromU32(100000));
+        manager.setSatoshisOwedReserved(provider.providerId, u256.fromU32(10000));
 
         manager.cleanUpQueues();
 
@@ -689,8 +707,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             providers[i].indexedAt = at;
             saveIndexForProvider(providers[i].providerId, at);
 
-            manager.setBTCowed(providers[i].providerId, u256.fromU32(100000));
-            manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(10000));
+            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(100000));
+            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(10000));
         }
 
         // Move standard queue starting index to 4
@@ -732,8 +750,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             providers[i].indexedAt = at;
             saveIndexForProvider(providers[i].providerId, at);
 
-            manager.setBTCowed(providers[i].providerId, u256.fromU32(100000));
-            manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(10000));
+            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(100000));
+            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(10000));
         }
 
         manager.resetProvider(providers[0], false);
@@ -770,8 +788,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             providers[i].indexedAt = at;
             saveIndexForProvider(providers[i].providerId, at);
 
-            manager.setBTCowed(providers[i].providerId, u256.fromU32(100000));
-            manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(10000));
+            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(100000));
+            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(10000));
         }
 
         providers[0].setActive(false, false);
@@ -809,8 +827,8 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
                 providers[i].indexedAt = at;
                 saveIndexForProvider(providers[i].providerId, at);
 
-                manager.setBTCowed(providers[i].providerId, u256.fromU32(100000));
-                manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(10000));
+                manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(100000));
+                manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(10000));
             }
 
             providers[0].setActive(true, true);

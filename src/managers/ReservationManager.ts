@@ -26,6 +26,7 @@ import { IQuoteManager } from './interfaces/IQuoteManager';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { min64 } from '../utils/MathUtils';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
+import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 
 export class ReservationManager implements IReservationManager {
     private readonly token: Address;
@@ -34,6 +35,7 @@ export class ReservationManager implements IReservationManager {
     private readonly providerManager: IProviderManager;
     private readonly quoteManager: IQuoteManager;
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
+    private readonly owedBTCManager: IOwedBTCManager;
 
     constructor(
         token: Address,
@@ -41,12 +43,14 @@ export class ReservationManager implements IReservationManager {
         providerManager: IProviderManager,
         quoteManager: IQuoteManager,
         liquidityQueueReserve: ILiquidityQueueReserve,
+        owedBTCManager: IOwedBTCManager,
     ) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
         this.providerManager = providerManager;
         this.quoteManager = quoteManager;
         this.liquidityQueueReserve = liquidityQueueReserve;
+        this.owedBTCManager = owedBTCManager;
         this.blocksWithReservations = new StoredU64Array(
             BLOCKS_WITH_RESERVATIONS_POINTER,
             tokenIdUint8Array,
@@ -156,11 +160,11 @@ export class ReservationManager implements IReservationManager {
     ): void {
         const quote: u256 = this.quoteManager.getValidBlockQuote(createdAt);
         const reservedAmountSatoshis: u64 = tokensToSatoshis128(reservedAmount, quote);
-        const actualReservedSatoshis: u64 = this.providerManager.getBTCowedReserved(providerId);
+        const actualReservedSatoshis: u64 = this.owedBTCManager.getSatoshisOwedReserved(providerId);
         const revertSatoshis: u64 = min64(reservedAmountSatoshis, actualReservedSatoshis);
         const newOwedReserved: u64 = SafeMath.sub64(actualReservedSatoshis, revertSatoshis);
 
-        this.providerManager.setBTCowedReserved(providerId, newOwedReserved);
+        this.owedBTCManager.setSatoshisOwedReserved(providerId, newOwedReserved);
     }
 
     private purgeBlock(blockNumber: u64): u256 {

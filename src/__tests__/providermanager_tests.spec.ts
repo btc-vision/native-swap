@@ -50,7 +50,7 @@ describe('ProviderManager tests', () => {
         expect(manager.initialLiquidityProvider).toStrictEqual(initialLiquidityProvider);
     });
 
-    it('should set the BTCowed correctly', () => {
+    it('should set the SatoshisOwed correctly', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
@@ -60,12 +60,12 @@ describe('ProviderManager tests', () => {
         const providerId1: u256 = u256.fromU64(10000);
         const amount1: u256 = u256.fromU64(99999);
 
-        manager.setBTCowed(providerId1, amount1);
+        manager.setSatoshisOwed(providerId1, amount1);
 
-        expect(manager.getBTCowed(providerId1)).toStrictEqual(amount1);
+        expect(manager.getSatoshisOwed(providerId1)).toStrictEqual(amount1);
     });
 
-    it('should return 0 BTCowed when no BTC owed to provider', () => {
+    it('should return 0 SatoshisOwed when no BTC owed to provider', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
@@ -74,10 +74,10 @@ describe('ProviderManager tests', () => {
 
         const providerId1: u256 = u256.fromU64(10000);
 
-        expect(manager.getBTCowed(providerId1)).toStrictEqual(u256.Zero);
+        expect(manager.getSatoshisOwed(providerId1)).toStrictEqual(u256.Zero);
     });
 
-    it('should replace the BTCowed for an existing BTC balance', () => {
+    it('should replace the SatoshisOwed for an existing BTC balance', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
@@ -88,16 +88,16 @@ describe('ProviderManager tests', () => {
         const amount1: u256 = u256.fromU64(99999);
         const amount2: u256 = u256.fromU64(88888);
 
-        manager.setBTCowed(providerId1, amount1);
+        manager.setSatoshisOwed(providerId1, amount1);
 
-        expect(manager.getBTCowed(providerId1)).toStrictEqual(amount1);
+        expect(manager.getSatoshisOwed(providerId1)).toStrictEqual(amount1);
 
-        manager.setBTCowed(providerId1, amount2);
+        manager.setSatoshisOwed(providerId1, amount2);
 
-        expect(manager.getBTCowed(providerId1)).toStrictEqual(amount2);
+        expect(manager.getSatoshisOwed(providerId1)).toStrictEqual(amount2);
     });
 
-    it('should set the BTCowedReserved correctly', () => {
+    it('should set the SatoshisOwedReserved correctly', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
@@ -107,12 +107,12 @@ describe('ProviderManager tests', () => {
         const providerId1: u256 = u256.fromU64(22222);
         const amount1: u256 = u256.fromU64(11111);
 
-        manager.setBTCowedReserved(providerId1, amount1);
+        manager.setSatoshisOwedReserved(providerId1, amount1);
 
-        expect(manager.getBTCowedReserved(providerId1)).toStrictEqual(amount1);
+        expect(manager.getSatoshisOwedReserved(providerId1)).toStrictEqual(amount1);
     });
 
-    it('should return 0 BTCowedReserved when no BTC owed to provider', () => {
+    it('should return 0 SatoshisOwedReserved when no BTC owed to provider', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
@@ -121,10 +121,10 @@ describe('ProviderManager tests', () => {
 
         const providerId1: u256 = u256.fromU64(22222);
 
-        expect(manager.getBTCowedReserved(providerId1)).toStrictEqual(u256.Zero);
+        expect(manager.getSatoshisOwedReserved(providerId1)).toStrictEqual(u256.Zero);
     });
 
-    it('should replace the BTCowedReserved for an existing BTC balance', () => {
+    it('should replace the SatoshisOwedReserved for an existing BTC balance', () => {
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
@@ -135,13 +135,13 @@ describe('ProviderManager tests', () => {
         const amount1: u256 = u256.fromU64(33333);
         const amount2: u256 = u256.fromU64(44444);
 
-        manager.setBTCowedReserved(providerId1, amount1);
+        manager.setSatoshisOwedReserved(providerId1, amount1);
 
-        expect(manager.getBTCowedReserved(providerId1)).toStrictEqual(amount1);
+        expect(manager.getSatoshisOwedReserved(providerId1)).toStrictEqual(amount1);
 
-        manager.setBTCowedReserved(providerId1, amount2);
+        manager.setSatoshisOwedReserved(providerId1, amount2);
 
-        expect(manager.getBTCowedReserved(providerId1)).toStrictEqual(amount2);
+        expect(manager.getSatoshisOwedReserved(providerId1)).toStrictEqual(amount2);
     });
 
     it('should return 0 when getFromPriorityQueue does not contains the provider index or is empty', () => {
@@ -321,10 +321,10 @@ describe('ProviderManager tests', () => {
         );
 
         manager.initialLiquidityProvider = u256.fromU32(1);
-        manager.setBTCowedReserved(u256.fromU32(10), u256.fromU32(999999));
-        manager.setBTCowedReserved(u256.fromU32(11), u256.fromU32(888888));
-        manager.setBTCowed(u256.fromU32(20), u256.fromU32(777777));
-        manager.setBTCowed(u256.fromU32(21), u256.fromU32(666666));
+        manager.setSatoshisOwedReserved(u256.fromU32(10), u256.fromU32(999999));
+        manager.setSatoshisOwedReserved(u256.fromU32(11), u256.fromU32(888888));
+        manager.setSatoshisOwed(u256.fromU32(20), u256.fromU32(777777));
+        manager.setSatoshisOwed(u256.fromU32(21), u256.fromU32(666666));
 
         manager.addToStandardQueue(u256.fromU32(1000));
         manager.addToStandardQueue(u256.fromU32(1001));
@@ -347,10 +347,14 @@ describe('ProviderManager tests', () => {
         );
 
         expect(manager.initialLiquidityProvider).toStrictEqual(u256.fromU32(1));
-        expect(manager2.getBTCowedReserved(u256.fromU32(10))).toStrictEqual(u256.fromU32(999999));
-        expect(manager2.getBTCowedReserved(u256.fromU32(11))).toStrictEqual(u256.fromU32(888888));
-        expect(manager2.getBTCowed(u256.fromU32(20))).toStrictEqual(u256.fromU32(777777));
-        expect(manager2.getBTCowed(u256.fromU32(21))).toStrictEqual(u256.fromU32(666666));
+        expect(manager2.getSatoshisOwedReserved(u256.fromU32(10))).toStrictEqual(
+            u256.fromU32(999999),
+        );
+        expect(manager2.getSatoshisOwedReserved(u256.fromU32(11))).toStrictEqual(
+            u256.fromU32(888888),
+        );
+        expect(manager2.getSatoshisOwed(u256.fromU32(20))).toStrictEqual(u256.fromU32(777777));
+        expect(manager2.getSatoshisOwed(u256.fromU32(21))).toStrictEqual(u256.fromU32(666666));
 
         expect(manager2.previousReservationStartingIndex).toStrictEqual(0);
         expect(manager2.previousReservationStandardStartingIndex).toStrictEqual(0);
@@ -389,8 +393,8 @@ describe('ProviderManager tests', () => {
         for (let i: u8 = 0; i < 4; i++) {
             providers[i].liquidity = u128.fromU32(1000);
             providers[i].reserved = u128.fromU32(999);
-            manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(777777));
-            manager.setBTCowed(providers[i].providerId, u256.fromU32(666666));
+            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(777777));
+            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(666666));
             const at = manager.addToStandardQueue(providers[i].providerId);
             providers[i].indexedAt = at;
             saveIndexForProvider(providers[i].providerId, at);
@@ -420,8 +424,8 @@ describe('ProviderManager tests', () => {
             providers[i].setActive(true, true);
             providers[i].liquidity = u128.fromU32(1000);
             providers[i].reserved = u128.fromU32(999);
-            manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(777777));
-            manager.setBTCowed(providers[i].providerId, u256.fromU32(666666));
+            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(777777));
+            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(666666));
             const at = manager.addToPriorityQueue(providers[i].providerId);
             providers[i].indexedAt = at;
             saveIndexForProvider(providers[i].providerId, at);
@@ -453,8 +457,8 @@ describe('ProviderManager tests', () => {
         const providers = createProviders(4, 0, true);
 
         for (let i: u8 = 0; i < 4; i++) {
-            manager.setBTCowedReserved(providers[i].providerId, u256.fromU32(777777));
-            manager.setBTCowed(providers[i].providerId, u256.fromU32(888888));
+            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(777777));
+            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(888888));
             manager.addToRemovalQueue(providers[i].providerId);
         }
 

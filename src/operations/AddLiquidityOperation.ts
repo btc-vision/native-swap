@@ -70,9 +70,9 @@ export class AddLiquidityOperation extends BaseOperation {
     private updateLiquidityQueue(trade: CompletedTrade): void {
         this.liquidityQueue.decreaseTotalReserved(trade.totalTokensReserved);
         this.liquidityQueue.increaseTotalReserve(trade.getTotalTokensPurchased());
-        this.liquidityQueue.increaseVirtualBTCReserve(trade.getTotalSatoshisSpent());
+        this.liquidityQueue.increaseVirtualSatoshisReserve(trade.getTotalSatoshisSpent());
         this.liquidityQueue.increaseVirtualTokenReserve(trade.getTotalTokensPurchased());
-        this.liquidityQueue.increaseBTCowed(this.providerId, trade.getTotalSatoshisSpent());
+        this.liquidityQueue.increaseSatoshisOwed(this.providerId, trade.getTotalSatoshisSpent());
     }
 
     private updateProvider(tokensBoughtFromQueue: u256): void {
@@ -82,8 +82,7 @@ export class AddLiquidityOperation extends BaseOperation {
             this.provider.setBtcReceiver(this.receiver);
         }
 
-        //!!!! tokensBoughtFromQueue = u256, liq. prov. = u128
-        this.provider.addToLiquidityProvided(tokensBoughtFromQueue);
+        this.provider.addToLiquidityProvided(tokensBoughtFromQueue.toU128());
     }
 
     private postProcessQueues(): void {

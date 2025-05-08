@@ -213,13 +213,11 @@ export class NativeSwap extends ReentrancyGuard {
         const provider: Provider = getProvider(providerId);
 
         const writer: BytesWriter = new BytesWriter(
-            U128_BYTE_LENGTH * 2 +
-                (U16_BYTE_LENGTH + provider.getBtcReceiver().length) +
-                U256_BYTE_LENGTH,
+            U128_BYTE_LENGTH * 3 + (U16_BYTE_LENGTH + provider.getBtcReceiver().length),
         );
         writer.writeU128(provider.getLiquidityAmount());
         writer.writeU128(provider.getReservedAmount());
-        writer.writeU256(provider.getLiquidityProvided()); //!!!!
+        writer.writeU128(provider.getLiquidityProvided());
         writer.writeStringWithLength(provider.getBtcReceiver());
 
         return writer;
@@ -598,6 +596,7 @@ export class NativeSwap extends ReentrancyGuard {
             providerManager,
             quoteManager,
             liquidityQueueReserve,
+            owedBtcManager,
         );
         const dynamicFee: IDynamicFee = this.getDynamicFee(tokenId);
 
@@ -609,6 +608,7 @@ export class NativeSwap extends ReentrancyGuard {
             quoteManager,
             reservationManager,
             dynamicFee,
+            owedBtcManager,
             purgeOldReservations,
         );
 
@@ -617,6 +617,7 @@ export class NativeSwap extends ReentrancyGuard {
             quoteManager,
             providerManager,
             liquidityQueueReserve,
+            owedBtcManager,
         );
 
         return new GetLiquidityQueueResult(liquidityQueue, tradeManager);
@@ -648,6 +649,7 @@ export class NativeSwap extends ReentrancyGuard {
         providerManager: IProviderManager,
         quoteManager: IQuoteManager,
         liquidityQueueReserve: ILiquidityQueueReserve,
+        owedBTCManager: IOwedBTCManager,
     ): IReservationManager {
         return new ReservationManager(
             token,
@@ -655,6 +657,7 @@ export class NativeSwap extends ReentrancyGuard {
             providerManager,
             quoteManager,
             liquidityQueueReserve,
+            owedBTCManager,
         );
     }
 

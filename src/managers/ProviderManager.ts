@@ -225,26 +225,6 @@ export class ProviderManager implements IProviderManager {
         return this.normalQueue;
     }
 
-    public getBTCowed(providerId: u256): u64 {
-        return this.owedBTCManager.getBTCowed(providerId);
-    }
-
-    public setBTCowed(providerId: u256, amount: u64): void {
-        this.owedBTCManager.setBTCowed(providerId, amount);
-    }
-
-    public getBTCOwedLeft(providerId: u256): u64 {
-        return this.owedBTCManager.getBTCOwedLeft(providerId);
-    }
-
-    public getBTCowedReserved(providerId: u256): u64 {
-        return this.owedBTCManager.getBTCowedReserved(providerId);
-    }
-
-    public setBTCowedReserved(providerId: u256, amount: u64): void {
-        this.owedBTCManager.setBTCowedReserved(providerId, amount);
-    }
-
     public removePendingLiquidityProviderFromRemovalQueue(provider: Provider): void {
         this.removalQueue.removeFromQueue(provider);
     }

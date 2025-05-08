@@ -19,15 +19,15 @@ export class RemoveLiquidityOperation extends BaseOperation {
 
     public execute(): void {
         this.checkPreConditions();
-        const btcOwed: u64 = this.getBtcOwed();
+        const SatoshisOwed: u64 = this.getSatoshisOwed();
         const tokenAmount: u128 = this.getLiquidityProvided();
         const tokenAmount256: u256 = tokenAmount.toU256();
 
         this.pullOutTokens(tokenAmount256);
         this.updateProvider();
-        this.updateLiquidityQueue(tokenAmount256, btcOwed);
-        this.emitActivateProviderEvent(btcOwed);
-        this.emitLiquidityRemovedEvent(btcOwed, tokenAmount);
+        this.updateLiquidityQueue(tokenAmount256, SatoshisOwed);
+        this.emitActivateProviderEvent(SatoshisOwed);
+        this.emitLiquidityRemovedEvent(SatoshisOwed, tokenAmount);
     }
 
     private checkPreConditions(): void {
@@ -37,11 +37,11 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.ensureNotInPendingRemoval();
     }
 
-    private getBtcOwed(): u64 {
-        const btcOwed: u64 = this.liquidityQueue.getBTCowed(this.providerId);
-        this.ensureBTCOwedNotZero(btcOwed);
+    private getSatoshisOwed(): u64 {
+        const SatoshisOwed: u64 = this.liquidityQueue.getSatoshisOwed(this.providerId);
+        this.ensureSatoshisOwedNotZero(SatoshisOwed);
 
-        return btcOwed;
+        return SatoshisOwed;
     }
 
     private getLiquidityProvided(): u128 {
@@ -60,10 +60,10 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.provider.markPendingRemoval();
     }
 
-    private updateLiquidityQueue(tokenAmount: u256, btcOwed: u64): void {
+    private updateLiquidityQueue(tokenAmount: u256, SatoshisOwed: u64): void {
         this.liquidityQueue.decreaseTotalReserve(tokenAmount);
         this.liquidityQueue.decreaseVirtualTokenReserve(tokenAmount);
-        this.liquidityQueue.decreaseVirtualSatoshisReserve(btcOwed);
+        this.liquidityQueue.decreaseVirtualSatoshisReserve(SatoshisOwed);
         this.liquidityQueue.addToRemovalQueue(this.provider);
     }
 
@@ -93,8 +93,8 @@ export class RemoveLiquidityOperation extends BaseOperation {
         }
     }
 
-    private ensureBTCOwedNotZero(btcOwed: u64): void {
-        if (btcOwed === 0) {
+    private ensureSatoshisOwedNotZero(SatoshisOwed: u64): void {
+        if (SatoshisOwed === 0) {
             throw new Revert(
                 'NATIVE_SWAP: You have no BTC owed. Did you already remove everything?',
             );
@@ -107,11 +107,11 @@ export class RemoveLiquidityOperation extends BaseOperation {
         }
     }
 
-    private emitActivateProviderEvent(btcOwed: u64): void {
-        Blockchain.emit(new ActivateProviderEvent(this.providerId, u128.Zero, btcOwed));
+    private emitActivateProviderEvent(SatoshisOwed: u64): void {
+        Blockchain.emit(new ActivateProviderEvent(this.providerId, u128.Zero, SatoshisOwed));
     }
 
-    private emitLiquidityRemovedEvent(btcOwed: u64, tokenAmount: u128): void {
-        Blockchain.emit(new LiquidityRemovedEvent(this.providerId, btcOwed, tokenAmount));
+    private emitLiquidityRemovedEvent(SatoshisOwed: u64, tokenAmount: u128): void {
+        Blockchain.emit(new LiquidityRemovedEvent(this.providerId, SatoshisOwed, tokenAmount));
     }
 }

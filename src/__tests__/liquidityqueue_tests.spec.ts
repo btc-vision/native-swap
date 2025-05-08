@@ -401,20 +401,20 @@ describe('Liquidity queue tests', () => {
         expect(queue.antiBotExpirationBlock).toStrictEqual(25);
     });
 
-    it('should correctly get/set BTCowed value', () => {
+    it('should correctly get/set SatoshisOwed value', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        queue.setBTCowed(u256.fromU32(9), u256.fromU32(1000));
-        expect(queue.getBTCowed(u256.fromU32(9))).toStrictEqual(u256.fromU32(1000));
+        queue.setSatoshisOwed(u256.fromU32(9), u256.fromU32(1000));
+        expect(queue.getSatoshisOwed(u256.fromU32(9))).toStrictEqual(u256.fromU32(1000));
     });
 
-    it('should correctly get/set BTCowedReserved value', () => {
+    it('should correctly get/set SatoshisOwedReserved value', () => {
         setBlockchainEnvironment(1);
         const queue: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        queue.setBTCowedReserved(u256.fromU32(10), u256.fromU32(2000));
-        expect(queue.getBTCowedReserved(u256.fromU32(10))).toStrictEqual(u256.fromU32(2000));
+        queue.setSatoshisOwedReserved(u256.fromU32(10), u256.fromU32(2000));
+        expect(queue.getSatoshisOwedReserved(u256.fromU32(10))).toStrictEqual(u256.fromU32(2000));
     });
 
     it('should return 0 when getUtilizationRatio is called and liquidity is 0', () => {
@@ -1477,7 +1477,7 @@ describe('Liquidity executeTrade tests', () => {
         }).toThrow();
     });
 
-    it('should update BTCowedReserved when queueType = LIQUIDITY_REMOVAL_TYPE and no UTXO sent', () => {
+    it('should update SatoshisOwedReserved when queueType = LIQUIDITY_REMOVAL_TYPE and no UTXO sent', () => {
         setBlockchainEnvironment(1000);
 
         const provider1: Provider = createProvider(
@@ -1517,7 +1517,7 @@ describe('Liquidity executeTrade tests', () => {
         queue.addToRemovalQueue(provider2.providerId);
         queue.increaseTotalReserve(u256.fromU64(3000000000));
         queue.increaseTotalReserved(u256.fromU64(10));
-        queue.setBTCowedReserved(provider2.providerId, u256.fromU64(20000));
+        queue.setSatoshisOwedReserved(provider2.providerId, u256.fromU64(20000));
         expect(queue.quote()).not.toStrictEqual(u256.Zero);
 
         queue.setBlockQuote();
@@ -1548,7 +1548,9 @@ describe('Liquidity executeTrade tests', () => {
 
         const queue3: LiquidityQueue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        expect(queue3.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(19900));
+        expect(queue3.getSatoshisOwedReserved(provider2.providerId)).toStrictEqual(
+            u256.fromU32(19900),
+        );
     });
 });
 
@@ -2082,7 +2084,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         queue.increaseTotalReserved(u256.fromU64(1000000));
         queue.setBlockQuote();
         queue.addToRemovalQueue(provider2.providerId);
-        queue.setBTCowedReserved(provider2.providerId, u256.from(100));
+        queue.setSatoshisOwedReserved(provider2.providerId, u256.from(100));
         queue.lastPurgedBlock = 0;
         const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
 
@@ -2099,7 +2101,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         setBlockchainEnvironment(96);
         queue.callPurgeReservationsAndRestoreProviders();
 
-        expect(queue.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(90));
+        expect(queue.getSatoshisOwedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(90));
     });
 
     it('should handle pendingRemoval provider => removal queue => calls purgeAndRestoreProviderRemovalQueue => costInSats < wasReservedSats => clamp by owedReserved', () => {
@@ -2155,7 +2157,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         queue.increaseTotalReserved(u256.fromU64(1000000));
         queue.setBlockQuote();
         queue.addToRemovalQueue(provider2.providerId);
-        queue.setBTCowedReserved(provider2.providerId, u256.from(100));
+        queue.setSatoshisOwedReserved(provider2.providerId, u256.from(100));
         queue.lastPurgedBlock = 0;
         const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
 
@@ -2172,7 +2174,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         setBlockchainEnvironment(96);
         queue.callPurgeReservationsAndRestoreProviders();
 
-        expect(queue.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(90));
+        expect(queue.getSatoshisOwedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(90));
     });
 
     it('should handle pendingRemoval provider => removal queue => calls purgeAndRestoreProviderRemovalQueue => costInSats > wasReservedSats => clamp by owedReserved', () => {
@@ -2228,7 +2230,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         queue.increaseTotalReserved(u256.fromU64(1000000));
         queue.setBlockQuote();
         queue.addToRemovalQueue(provider2.providerId);
-        queue.setBTCowedReserved(provider2.providerId, u256.from(9));
+        queue.setSatoshisOwedReserved(provider2.providerId, u256.from(9));
         queue.lastPurgedBlock = 0;
         const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
 
@@ -2245,7 +2247,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         setBlockchainEnvironment(96);
         queue.callPurgeReservationsAndRestoreProviders();
 
-        expect(queue.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(0));
+        expect(queue.getSatoshisOwedReserved(provider2.providerId)).toStrictEqual(u256.fromU32(0));
         expect(queue.reservedLiquidity).toStrictEqual(u256.Zero);
         expect(queue.getPreviousReservationStartingIndex()).toStrictEqual(0);
         expect(queue.getPreviousRemovalStartingIndex()).toStrictEqual(0);
@@ -2319,8 +2321,8 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         queue.setBlockQuote();
         queue.addToRemovalQueue(provider2.providerId);
         queue.addToStandardQueue(provider3.providerId);
-        queue.setBTCowedReserved(provider2.providerId, u256.from(10000000));
-        queue.setBTCowedReserved(provider3.providerId, u256.from(2000000));
+        queue.setSatoshisOwedReserved(provider2.providerId, u256.from(10000000));
+        queue.setSatoshisOwedReserved(provider3.providerId, u256.from(2000000));
         queue.lastPurgedBlock = 0;
         const purgeIndex = queue.addActiveReservationToList(0, reservation.reservationId);
 
@@ -2338,7 +2340,7 @@ describe('LiquidityQueue => purgeReservationsAndRestoreProviders', () => {
         setBlockchainEnvironment(96);
         queue.callPurgeReservationsAndRestoreProviders();
 
-        expect(queue.getBTCowedReserved(provider2.providerId)).toStrictEqual(u256.Zero);
+        expect(queue.getSatoshisOwedReserved(provider2.providerId)).toStrictEqual(u256.Zero);
         expect(queue.reservedLiquidity).toStrictEqual(u256.Zero);
         expect(queue.getPreviousReservationStartingIndex()).toStrictEqual(0);
         expect(queue.getPreviousRemovalStartingIndex()).toStrictEqual(0);

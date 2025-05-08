@@ -88,27 +88,21 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private transitionProviderIfNeeded(): void {
-        const isPromote: boolean =
-            !this.provider.isPriority() && this.provider.isActive() && this.usePriorityQueue;
+        if (this.provider.isActive()) {
+            return;
+        }
 
-        if (isPromote) {
-            this.provider.activate();
-            this.provider.markPriority();
-            this.liquidityQueue.addToPriorityQueue(this.provider);
-        } else if (!this.provider.isActive()) {
-            this.provider.activate();
-
-            if (!this.isForInitialLiquidity) {
-                if (this.usePriorityQueue) {
-                    this.provider.markPriority();
-                    this.liquidityQueue.addToPriorityQueue(this.provider);
-                } else {
-                    this.provider.clearPriority();
-                    this.liquidityQueue.addToNormalQueue(this.provider);
-                }
+        this.provider.activate();
+        if (!this.isForInitialLiquidity) {
+            if (this.usePriorityQueue) {
+                this.provider.markPriority();
+                this.liquidityQueue.addToPriorityQueue(this.provider);
             } else {
                 this.provider.clearPriority();
+                this.liquidityQueue.addToNormalQueue(this.provider);
             }
+        } else {
+            this.provider.clearPriority();
         }
     }
 

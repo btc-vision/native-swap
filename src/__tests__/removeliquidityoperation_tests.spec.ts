@@ -77,7 +77,7 @@ describe('RemoveLiquidityOperation tests', () => {
         }).toThrow();
     });
 
-    it("should revert if getBTCowed(...)= 0 => 'You have no BTC owed'", () => {
+    it("should revert if getSatoshisOwed(...)= 0 => 'You have no BTC owed'", () => {
         setBlockchainEnvironment(100, msgSender1, msgSender1);
         Blockchain.mockValidateBitcoinAddressResult(true);
 
@@ -145,7 +145,7 @@ describe('RemoveLiquidityOperation tests', () => {
             setBlockchainEnvironment(103, providerAddress2, providerAddress2);
             const queue5 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            queue5.setBTCowed(providerId2, u256.Zero);
+            queue5.setSatoshisOwed(providerId2, u256.Zero);
             const removeOp = new RemoveLiquidityOperation(queue5, providerId2);
             removeOp.execute();
             queue5.save();
@@ -378,7 +378,7 @@ describe('RemoveLiquidityOperation tests', () => {
         const liquidity = queue4.liquidity;
         const virtualTokenReserve = queue4.virtualTokenReserve;
         const virtualBTCReserve = queue4.virtualBTCReserve;
-        const BTCOwed = queue4.getBTCowed(providerId2);
+        const SatoshisOwed = queue4.getSatoshisOwed(providerId2);
 
         const queue5 = new TestLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const removeOp = new RemoveLiquidityOperation(queue5, providerId2);
@@ -393,6 +393,8 @@ describe('RemoveLiquidityOperation tests', () => {
         expect(queue5.virtualTokenReserve).toStrictEqual(
             SafeMath.sub(virtualTokenReserve, liquidityProvided),
         );
-        expect(queue5.virtualBTCReserve).toStrictEqual(SafeMath.sub(virtualBTCReserve, BTCOwed));
+        expect(queue5.virtualBTCReserve).toStrictEqual(
+            SafeMath.sub(virtualBTCReserve, SatoshisOwed),
+        );
     });
 });

@@ -713,8 +713,8 @@ describe('SwapOperation tests', () => {
         swapOp.execute();
         queue7.save();
 
-        expect(queue7.getBTCowedReserved(providerId3)).toStrictEqual(u256.Zero);
-        expect(queue7.getBTCowed(providerId3)).toStrictEqual(u256.Zero);
+        expect(queue7.getSatoshisOwedReserved(providerId3)).toStrictEqual(u256.Zero);
+        expect(queue7.getSatoshisOwed(providerId3)).toStrictEqual(u256.Zero);
         expect(queue7.reservedLiquidity).toStrictEqual(u256.Zero);
         expect(queue7.liquidity).toStrictEqual(u256.fromString(`999999610400000000000000`));
         expect(queue7.deltaBTCBuy).toStrictEqual(15600);

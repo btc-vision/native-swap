@@ -36,19 +36,9 @@ export interface IProviderManager {
 
     getNormalQueue(): ProviderQueue;
 
-    getBTCowed(providerId: u256): u64;
-
-    setBTCowed(providerId: u256, amount: u64): void;
-
-    getBTCOwedLeft(providerId: u256): u64;
-
-    getBTCowedReserved(providerId: u256): u64;
-
-    setBTCowedReserved(providerId: u256, amount: u64): void;
-
     cleanUpQueues(): void;
 
-    getNextProviderWithLiquidity(currentQuote: u256): Provider | null;
+    getNextProviderWithLiquidity(quote: u256): Provider | null;
 
     removePendingLiquidityProviderFromRemovalQueue(provider: Provider): void;
 

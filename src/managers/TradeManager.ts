@@ -30,10 +30,12 @@ import { ITradeManager } from './interfaces/ITradeManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { min128, min64 } from '../utils/MathUtils';
+import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 
 export class TradeManager implements ITradeManager {
     private readonly providerManager: IProviderManager;
     private readonly quoteManager: IQuoteManager;
+    private readonly owedBTCManager: IOwedBTCManager;
     private readonly tokenIdUint8Array: Uint8Array;
     private readonly consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
@@ -49,11 +51,13 @@ export class TradeManager implements ITradeManager {
         quoteManager: IQuoteManager,
         providerManager: IProviderManager,
         liquidityQueueReserve: ILiquidityQueueReserve,
+        owedBTCManager: IOwedBTCManager,
     ) {
         this.tokenIdUint8Array = tokenIdUint8Array;
         this.quoteManager = quoteManager;
         this.providerManager = providerManager;
         this.liquidityQueueReserve = liquidityQueueReserve;
+        this.owedBTCManager = owedBTCManager;
     }
 
     public executeTrade(reservation: Reservation): CompletedTrade {
@@ -106,47 +110,39 @@ export class TradeManager implements ITradeManager {
         satoshisSent: u64,
         requestedTokens: u128,
     ): void {
+        const requestedTokens256: u256 = requestedTokens.toU256();
         const providerId: u256 = provider.getId();
-        let owedReserved: u64 = this.providerManager.getBTCowedReserved(providerId);
-        const oldOwed: u64 = this.providerManager.getBTCowed(providerId);
+        let owedReserved: u64 = this.owedBTCManager.getSatoshisOwedReserved(providerId);
+        const oldOwed: u64 = this.owedBTCManager.getSatoshisOwed(providerId);
         let tokensDesiredRemoval: u256 = satoshisToTokens(satoshisSent, this.quoteAtReservation);
-        //!!!! On remove combien de token max????
 
         // Partial fill
         if (!tokensDesiredRemoval.isZero()) {
             // User did not pay enough
-            const leftover: u256 = SafeMath.sub(requestedTokens, tokensDesiredRemoval);
+            const leftover: u256 = SafeMath.sub(requestedTokens256, tokensDesiredRemoval);
             if (!leftover.isZero()) {
-                const costInSatsLeftover: u256 = tokensToSatoshis(
-                    leftover,
-                    this.quoteAtReservation,
-                );
-                const revertSats: u256 = SafeMath.min(costInSatsLeftover, owedReserved);
+                const costInSatsLeftover: u64 = tokensToSatoshis(leftover, this.quoteAtReservation);
+                const revertSats: u64 = min64(costInSatsLeftover, owedReserved);
 
-                owedReserved = SafeMath.sub(owedReserved, revertSats);
+                owedReserved = SafeMath.sub64(owedReserved, revertSats);
             }
 
             // User paid too much
             let actualSpent: u64 = satoshisSent;
-            if (u256.gt(tokensDesiredRemoval, requestedTokens)) {
-                tokensDesiredRemoval = requestedTokens;
+            if (u256.gt(tokensDesiredRemoval, requestedTokens256)) {
+                tokensDesiredRemoval = requestedTokens256;
                 actualSpent = tokensToSatoshis(tokensDesiredRemoval, this.quoteAtReservation);
             }
 
-            const newOwedReserved: u256 = SafeMath.sub(owedReserved, actualSpent);
-            this.providerManager.setBTCowedReserved(providerId, newOwedReserved);
+            const newOwedReserved: u64 = SafeMath.sub64(owedReserved, actualSpent);
+            this.owedBTCManager.setSatoshisOwedReserved(providerId, newOwedReserved);
 
             this.setNewOwedValueAndRemoveIfNeeded(provider, oldOwed, newOwedReserved);
             this.increaseTotalSatoshisRefunded(actualSpent);
             this.increaseTotalTokensRefunded(tokensDesiredRemoval);
             this.reportUTXOUsed(provider.getBtcReceiver(), satoshisSent);
         } else {
-            //!!! Ca marche pas.... c'est pas des owedReserved qu'on restore mais des tokens dans la function????
-            this.restoreReservedLiquidityForRemovalProvider(
-                providerId,
-                requestedTokens,
-                owedReserved,
-            );
+            this.restoreReservedLiquidityForRemovalProvider(providerId, requestedTokens);
         }
     }
 
@@ -209,12 +205,12 @@ export class TradeManager implements ITradeManager {
     }
 
     private restoreReservedLiquidityForRemovalProvider(providerId: u256, amount: u128): void {
-        const currentOwedReserved: u64 = this.providerManager.getBTCowedReserved(providerId);
+        const currentOwedReserved: u64 = this.owedBTCManager.getSatoshisOwedReserved(providerId);
         const originalCostInSats: u64 = tokensToSatoshis128(amount, this.quoteAtReservation);
         const revertCostInSats: u64 = min64(originalCostInSats, currentOwedReserved);
         const newReserved = SafeMath.sub64(currentOwedReserved, revertCostInSats);
 
-        this.providerManager.setBTCowedReserved(providerId, newReserved);
+        this.owedBTCManager.setSatoshisOwedReserved(providerId, newReserved);
     }
 
     private resetTotals(): void {
@@ -321,7 +317,7 @@ export class TradeManager implements ITradeManager {
         spent: u64,
     ): void {
         const newOwed = SafeMath.sub64(currentOwed, spent);
-        this.providerManager.setBTCowed(provider.getId(), newOwed);
+        this.owedBTCManager.setSatoshisOwed(provider.getId(), newOwed);
 
         if (newOwed < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
             this.providerManager.removePendingLiquidityProviderFromRemovalQueue(provider);

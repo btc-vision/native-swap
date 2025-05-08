@@ -46,11 +46,11 @@ export interface ILiquidityQueue {
 
     distributeFee(totalFee: u256, stakingAddress: Address): void;
 
-    getBTCowed(providerId: u256): u64;
+    getSatoshisOwed(providerId: u256): u64;
 
-    getBTCOwedLeft(providerId: u256): u64;
+    getSatoshisOwedLeft(providerId: u256): u64;
 
-    getBTCowedReserved(providerId: u256): u64;
+    getSatoshisOwedReserved(providerId: u256): u64;
 
     getMaximumTokensLeftBeforeCap(): u256;
 
@@ -60,9 +60,9 @@ export interface ILiquidityQueue {
 
     getUtilizationRatio(): u256;
 
-    increaseBTCowed(providerId: u256, value: u64): void;
+    increaseSatoshisOwed(providerId: u256, value: u64): void;
 
-    increaseBTCowedReserved(providerId: u256, value: u64): void;
+    increaseSatoshisOwedReserved(providerId: u256, value: u64): void;
 
     increaseDeltaSatoshisBuy(value: u64): void;
 
@@ -93,9 +93,9 @@ export interface ILiquidityQueue {
 
     setBlockQuote(): void;
 
-    setBTCowed(providerId: u256, value: u64): void;
+    setSatoshisOwed(providerId: u256, value: u64): void;
 
-    setBTCowedReserved(providerId: u256, value: u64): void;
+    setSatoshisOwedReserved(providerId: u256, value: u64): void;
 
     updateVirtualPoolIfNeeded(): void;
 }

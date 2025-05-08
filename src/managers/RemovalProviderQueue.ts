@@ -88,8 +88,8 @@ export class RemovalProviderQueue extends ProviderQueue {
 
     private getProviderIfOwedBTC(providerId: u256, provider: Provider): Provider | null {
         let result: Potential<Provider> = null;
-        const owedBTC: u64 = this.owedBTCManager.getBTCowed(providerId);
-        const reservedBTC: u64 = this.owedBTCManager.getBTCowedReserved(providerId);
+        const owedBTC: u64 = this.owedBTCManager.getSatoshisOwed(providerId);
+        const reservedBTC: u64 = this.owedBTCManager.getSatoshisOwedReserved(providerId);
 
         this.ensureReservedBTCIsValid(reservedBTC, owedBTC);
 

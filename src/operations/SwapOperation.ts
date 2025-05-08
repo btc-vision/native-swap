@@ -27,7 +27,7 @@ export class SwapOperation extends BaseOperation {
 
     public execute(): void {
         const reservation: Reservation = this.liquidityQueue.getReservationWithExpirationChecks();
-        this.ensureReservationForLP(reservation);
+        this.ensureReservationNotForLP(reservation);
 
         const trade: CompletedTrade = this.tradeManager.executeTrade(reservation);
 
@@ -86,7 +86,7 @@ export class SwapOperation extends BaseOperation {
         this.liquidityQueue.cleanUpQueues();
     }
 
-    private ensureReservationForLP(reservation: Reservation): void {
+    private ensureReservationNotForLP(reservation: Reservation): void {
         if (reservation.isForLiquidityPool()) {
             throw new Revert('NATIVE_SWAP: Reserved for LP; cannot swap.');
         }

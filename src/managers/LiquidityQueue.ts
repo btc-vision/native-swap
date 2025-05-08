@@ -23,6 +23,7 @@ import { IProviderManager } from './interfaces/IProviderManager';
 import { IReservationManager } from './interfaces/IReservationManager';
 import { ILiquidityQueue } from './interfaces/ILiquidityQueue';
 import { IDynamicFee } from './interfaces/IDynamicFee';
+import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 
 const ENABLE_FEES: bool = true;
 
@@ -32,6 +33,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
     private readonly quoteManager: IQuoteManager;
     private readonly reservationManager: IReservationManager;
+    private readonly owedBTCManager: IOwedBTCManager;
     private readonly settings: StoredU64;
     private readonly _maxTokensPerReservation: StoredU256;
     private readonly dynamicFee: IDynamicFee;
@@ -45,6 +47,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         quoteManager: IQuoteManager,
         reservationManager: IReservationManager,
         dynamicFee: IDynamicFee,
+        owedBTCManager: IOwedBTCManager,
         purgeOldReservations: boolean,
         timeoutEnabled: boolean = false,
     ) {
@@ -54,6 +57,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.liquidityQueueReserve = liquidityQueueReserve;
         this.quoteManager = quoteManager;
         this.reservationManager = reservationManager;
+        this.owedBTCManager = owedBTCManager;
 
         this._maxTokensPerReservation = new StoredU256(
             ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
@@ -248,16 +252,16 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
     }
 
-    public getBTCowed(providerId: u256): u64 {
-        return this.providerManager.getBTCowed(providerId);
+    public getSatoshisOwed(providerId: u256): u64 {
+        return this.owedBTCManager.getSatoshisOwed(providerId);
     }
 
-    public getBTCOwedLeft(providerId: u256): u64 {
-        return this.providerManager.getBTCOwedLeft(providerId);
+    public getSatoshisOwedLeft(providerId: u256): u64 {
+        return this.owedBTCManager.getSatoshisOwedLeft(providerId);
     }
 
-    public getBTCowedReserved(providerId: u256): u64 {
-        return this.providerManager.getBTCowedReserved(providerId);
+    public getSatoshisOwedReserved(providerId: u256): u64 {
+        return this.owedBTCManager.getSatoshisOwedReserved(providerId);
     }
 
     public getMaximumTokensLeftBeforeCap(): u256 {
@@ -300,16 +304,16 @@ export class LiquidityQueue implements ILiquidityQueue {
         );
     }
 
-    public increaseBTCowed(providerId: u256, value: u64): void {
-        const owedBefore: u64 = this.getBTCowed(providerId);
+    public increaseSatoshisOwed(providerId: u256, value: u64): void {
+        const owedBefore: u64 = this.getSatoshisOwed(providerId);
         const owedAfter: u64 = SafeMath.add64(owedBefore, value);
-        this.setBTCowed(providerId, owedAfter);
+        this.setSatoshisOwed(providerId, owedAfter);
     }
 
-    public increaseBTCowedReserved(providerId: u256, value: u64): void {
-        const owedReservedBefore: u64 = this.getBTCowedReserved(providerId);
+    public increaseSatoshisOwedReserved(providerId: u256, value: u64): void {
+        const owedReservedBefore: u64 = this.getSatoshisOwedReserved(providerId);
         const owedReservedAfter: u64 = SafeMath.add64(owedReservedBefore, value);
-        this.setBTCowed(providerId, owedReservedAfter);
+        this.setSatoshisOwed(providerId, owedReservedAfter);
     }
 
     public increaseDeltaSatoshisBuy(value: u64): void {
@@ -394,12 +398,12 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.quoteManager.setBlockQuote(blockNumberU32, this.quote());
     }
 
-    public setBTCowed(providerId: u256, value: u64): void {
-        this.providerManager.setBTCowed(providerId, value);
+    public setSatoshisOwed(providerId: u256, value: u64): void {
+        this.owedBTCManager.setSatoshisOwed(providerId, value);
     }
 
-    public setBTCowedReserved(providerId: u256, value: u64): void {
-        this.providerManager.setBTCowedReserved(providerId, value);
+    public setSatoshisOwedReserved(providerId: u256, value: u64): void {
+        this.owedBTCManager.setSatoshisOwedReserved(providerId, value);
     }
 
     public updateVirtualPoolIfNeeded(): void {
