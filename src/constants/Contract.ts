@@ -1,4 +1,4 @@
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 export const FEE_COLLECT_SCRIPT_PUBKEY: string =
     'bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh';
@@ -15,3 +15,4 @@ export const TIMEOUT_AFTER_EXPIRATION_BLOCKS: u8 = 5;
 export const INITIAL_LIQUIDITY_PROVIDER_INDEX: u64 = u64.MAX_VALUE;
 export const MAX_TOTAL_SATOSHIS: u256 = u256.fromU64(21_000_000 * 100_000_000);
 export const MAX_ACTIVATION_DELAY: u8 = 3;
+export const PURGE_INDEX_NOT_SET_VALUE: u32 = U32.MAX_VALUE;

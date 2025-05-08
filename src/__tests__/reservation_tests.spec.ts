@@ -1,6 +1,6 @@
 import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders } from '../lib/Provider';
-import { u128 } from '@btc-vision/as-bignum';
+import { u128 } from '@btc-vision/as-bignum/assembly';
 import {
     LIQUIDITY_REMOVAL_TYPE,
     NORMAL_TYPE,

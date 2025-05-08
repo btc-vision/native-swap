@@ -3,7 +3,7 @@ import { Address, Blockchain, Revert, SafeMath } from '@btc-vision/btc-runtime/r
 import { Reservation } from '../models/Reservation';
 import { LiquidityReservedEvent } from '../events/LiquidityReservedEvent';
 import { ReservationCreatedEvent } from '../events/ReservationCreatedEvent';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../managers/FeeManager';
 import { getTotalFeeCollected } from '../utils/BlockchainUtils';
 import {
@@ -21,6 +21,7 @@ import {
     STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
 } from '../constants/Contract';
 import { Provider } from '../models/Provider';
+import { ReservationProviderData } from '../models/ReservationProdiverData';
 
 export class ReserveLiquidityOperation extends BaseOperation {
     private readonly buyer: Address;
@@ -124,7 +125,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private createReservation(): Reservation {
-        const reservation = new Reservation(this.liquidityQueue.token, this.buyer);
+        const reservation: Reservation = new Reservation(this.liquidityQueue.token, this.buyer);
         this.ensureNoActiveReservation(reservation);
         this.ensureUserNotTimedOut(reservation);
 
@@ -181,19 +182,21 @@ export class ReserveLiquidityOperation extends BaseOperation {
         tokens: u128,
         satoshis: u64,
     ): void {
-        const providerId = provider.getId();
-        const tokens256 = tokens.toU256();
+        const providerId: u256 = provider.getId();
+        const tokens256: u256 = tokens.toU256();
 
         this.increaseTokensReserved(tokens256);
         this.decreaseTokensRemaining(tokens256);
         this.increaseSatSpent(satoshis);
         this.liquidityQueue.increaseBTCowedReserved(providerId, satoshis);
 
-        reservation.addProvider({
-            providedAmount: tokens,
-            providerIndex: provider.getQueueIndex(),
-            providerType: provider.getProviderType(),
-        });
+        reservation.addProvider(
+            new ReservationProviderData(
+                provider.getQueueIndex(),
+                tokens,
+                provider.getProviderType(),
+            ),
+        );
 
         this.emitLiquidityReservedEvent(providerId, provider.getBtcReceiver(), satoshis);
     }
@@ -253,7 +256,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         tokens: u128,
         costInSatoshis: u64,
     ): void {
-        const tokens256 = tokens.toU256();
+        const tokens256: u256 = tokens.toU256();
 
         provider.addToReservedAmount(tokens);
         this.increaseSatSpent(costInSatoshis);
@@ -265,11 +268,13 @@ export class ReserveLiquidityOperation extends BaseOperation {
             this.tokensRemaining = u256.Zero;
         }
 
-        reservation.addProvider({
-            providedAmount: tokens,
-            providerIndex: provider.getQueueIndex(),
-            providerType: provider.getProviderType(),
-        });
+        reservation.addProvider(
+            new ReservationProviderData(
+                provider.getQueueIndex(),
+                tokens,
+                provider.getProviderType(),
+            ),
+        );
 
         this.emitLiquidityReservedEvent(
             provider.getId(),
@@ -298,11 +303,11 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private computeTokenRemaining(): u256 {
-        const tokens = satoshisToTokens(this.maximumAmountInSats, this.currentQuote);
-        const limitedByLiquidity = this.limitByAvailableLiquidity(tokens);
+        const tokens: u256 = satoshisToTokens(this.maximumAmountInSats, this.currentQuote);
+        const limitedByLiquidity: u256 = this.limitByAvailableLiquidity(tokens);
         this.ensureAvailableLiquidityNonZero(limitedByLiquidity);
 
-        const limitedByCap = this.limitByReservationCap(limitedByLiquidity);
+        const limitedByCap: u256 = this.limitByReservationCap(limitedByLiquidity);
         this.ensureCapNotReached(limitedByCap);
         this.ensureMinimumReservationMet(limitedByCap);
 
@@ -314,9 +319,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private limitByReservationCap(tokens: u256): u256 {
-        const cap = this.liquidityQueue.getMaximumTokensLeftBeforeCap();
-
-        return SafeMath.min(tokens, cap);
+        return SafeMath.min(tokens, this.liquidityQueue.getMaximumTokensLeftBeforeCap());
     }
 
     private capTokensU256ToU128(tokensIn: u256, satoshisIn: u64): CappedTokensResult {
@@ -340,15 +343,15 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.ensureCurrentQuoteValid();
     }
 
-    private increaseTokensReserved(value: u256) {
+    private increaseTokensReserved(value: u256): void {
         this.tokensReserved = SafeMath.add(this.tokensReserved, value);
     }
 
-    private decreaseTokensRemaining(value: u256) {
+    private decreaseTokensRemaining(value: u256): void {
         this.tokensRemaining = SafeMath.sub(this.tokensRemaining, value);
     }
 
-    private increaseSatSpent(value: u64) {
+    private increaseSatSpent(value: u64): void {
         this.satSpent = SafeMath.add64(this.satSpent, value);
     }
 
@@ -365,7 +368,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private ensureMinimumReservationMet(tokens: u256): void {
-        const satCost = tokensToSatoshis(tokens, this.currentQuote);
+        const satCost: u64 = tokensToSatoshis(tokens, this.currentQuote);
 
         if (satCost < MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
             throw new Revert(`NATIVE_SWAP: Minimum liquidity not met (${satCost} sat).`);
@@ -398,7 +401,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private ensureNoBots(): void {
-        //!!!!
+        //!!!!maximumAmountInSats is Sat maxTokensPerReservation is tokens
         if (Blockchain.block.number <= this.liquidityQueue.antiBotExpirationBlock) {
             if (u256.gt(this.maximumAmountInSats, this.liquidityQueue.maxTokensPerReservation)) {
                 throw new Revert('NATIVE_SWAP: Cannot exceed anti-bot max tokens per reservation.');
@@ -441,7 +444,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private ensureSufficientFeesCollected(): void {
-        const totalFee = getTotalFeeCollected();
+        const totalFee: u64 = getTotalFeeCollected();
 
         if (totalFee < FeeManager.reservationBaseFee) {
             throw new Revert('NATIVE_SWAP: Insufficient fees collected.');

@@ -6,7 +6,7 @@ import {
     U256_BYTE_LENGTH,
     U64_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
-import { u256 } from '@btc-vision/as-bignum';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 
 @final
 export class SwapExecutedEvent extends NetEvent {

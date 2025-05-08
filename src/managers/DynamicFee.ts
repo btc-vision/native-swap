@@ -1,4 +1,4 @@
-import { u256 } from '@btc-vision/as-bignum';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { SafeMath, StoredU256 } from '@btc-vision/btc-runtime/runtime';
 import { VOLATILITY_POINTER } from '../constants/StoredPointers';
 import { IDynamicFee } from './interfaces/IDynamicFee';

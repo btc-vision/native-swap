@@ -2,7 +2,7 @@ import { BaseOperation } from './BaseOperation';
 import { getProvider, Provider } from '../models/Provider';
 import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityAddedEvent } from '../events/LiquidityAddedEvent';
-import { u256 } from '@btc-vision/as-bignum';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Reservation } from '../models/Reservation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
@@ -31,8 +31,8 @@ export class AddLiquidityOperation extends BaseOperation {
     public execute(): void {
         this.checkPreConditions();
 
-        const reservation = this.getReservation();
-        const trade = this.executeTrade(reservation);
+        const reservation: Reservation = this.getReservation();
+        const trade: CompletedTrade = this.executeTrade(reservation);
         this.updateLiquidityQueue(trade);
         this.updateProvider(trade.getTotalTokensPurchased());
         this.postProcessQueues();
@@ -47,14 +47,14 @@ export class AddLiquidityOperation extends BaseOperation {
     }
 
     private getReservation(): Reservation {
-        const reservation = this.liquidityQueue.getReservationWithExpirationChecks();
+        const reservation: Reservation = this.liquidityQueue.getReservationWithExpirationChecks();
         this.ensureReservationForLP(reservation);
 
         return reservation;
     }
 
     private executeTrade(reservation: Reservation): CompletedTrade {
-        const trade = this.tradeManager.executeTrade(reservation);
+        const trade: CompletedTrade = this.tradeManager.executeTrade(reservation);
 
         this.ensurePurchaseWasMade(trade.getTotalTokensPurchased(), trade.getTotalSatoshisSpent());
 

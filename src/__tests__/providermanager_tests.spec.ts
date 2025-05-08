@@ -1,7 +1,7 @@
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders, Provider } from '../lib/Provider';
 import { ProviderManager } from '../lib/Liquidity/ProviderManager';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     createProvider,
     createProviders,

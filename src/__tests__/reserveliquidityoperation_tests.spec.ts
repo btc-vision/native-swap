@@ -15,7 +15,7 @@ import {
 } from './test_helper';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { ReserveLiquidityOperation } from '../lib/Liquidity/operations/ReserveLiquidityOperation';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { CreatePoolOperation } from '../lib/Liquidity/operations/CreatePoolOperation';
 import { FeeManager } from '../lib/FeeManager';
 import { ListTokensForSaleOperation } from '../lib/Liquidity/operations/ListTokensForSaleOperation';

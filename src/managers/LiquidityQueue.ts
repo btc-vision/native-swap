@@ -7,7 +7,7 @@ import {
     StoredU64,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 import {
     ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
@@ -80,13 +80,12 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.providerManager.initialLiquidityProviderId = value;
     }
 
-    public get virtualBTCReserve(): u256 {
-        return this.liquidityQueueReserve.virtualBTCReserve;
+    public get virtualSatoshisReserve(): u64 {
+        return this.liquidityQueueReserve.virtualSatoshisReserve;
     }
 
-    ///!!!! u256???
-    public set virtualBTCReserve(value: u256) {
-        this.liquidityQueueReserve.virtualBTCReserve = value;
+    public set virtualSatoshisReserve(value: u64) {
+        this.liquidityQueueReserve.virtualSatoshisReserve = value;
     }
 
     public get virtualTokenReserve(): u256 {
@@ -105,12 +104,12 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.liquidityQueueReserve.deltaTokensAdd = value;
     }
 
-    public get deltaBTCBuy(): u64 {
-        return this.liquidityQueueReserve.deltaBTCBuy;
+    public get deltaSatoshisBuy(): u64 {
+        return this.liquidityQueueReserve.deltaSatoshisBuy;
     }
 
-    public set deltaBTCBuy(value: u64) {
-        this.liquidityQueueReserve.deltaBTCBuy = value;
+    public set deltaSatoshisBuy(value: u64) {
+        this.liquidityQueueReserve.deltaSatoshisBuy = value;
     }
 
     public get deltaTokensBuy(): u256 {
@@ -181,16 +180,124 @@ export class LiquidityQueue implements ILiquidityQueue {
         return this.timeoutEnabled;
     }
 
+    public addActiveReservation(reservation: Reservation): u64 {
+        return this.reservationManager.addActiveReservation(
+            reservation.getCreationBlock(),
+            reservation.getId(),
+        );
+    }
+
+    public addToPriorityQueue(provider: Provider): void {
+        this.providerManager.addToPriorityQueue(provider);
+    }
+
+    public addToNormalQueue(provider: Provider): void {
+        this.providerManager.addToNormalQueue(provider);
+    }
+
+    public addToRemovalQueue(provider: Provider): void {
+        this.providerManager.addToRemovalQueue(provider);
+    }
+
+    public buyTokens(tokensOut: u256, satoshisIn: u64): void {
+        this.increaseDeltaSatoshisBuy(satoshisIn);
+        this.increaseDeltaTokensBuy(tokensOut);
+    }
+
+    public cleanUpQueues(): void {
+        this.providerManager.cleanUpQueues();
+    }
+
+    public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256 {
+        const utilizationRatio = this.getUtilizationRatio();
+        const feeBP = this.dynamicFee.getDynamicFeeBP(totalSatoshisSpent, utilizationRatio);
+        return this.dynamicFee.computeFeeAmount(totalTokensPurchased, feeBP);
+    }
+
+    public decreaseTotalReserve(value: u256): void {
+        this.liquidityQueueReserve.subFromTotalReserve(value);
+    }
+
+    public decreaseTotalReserved(value: u256): void {
+        this.liquidityQueueReserve.subFromTotalReserved(value);
+    }
+
+    public decreaseVirtualSatoshisReserve(value: u64): void {
+        this.virtualSatoshisReserve = SafeMath.sub64(this.virtualSatoshisReserve, value);
+    }
+
+    public decreaseVirtualTokenReserve(value: u256): void {
+        this.virtualTokenReserve = SafeMath.sub(this.virtualTokenReserve, value);
+    }
+
+    public distributeFee(totalFee: u256, stakingAddress: Address): void {
+        const feeLP: u256 = SafeMath.div(
+            SafeMath.mul(totalFee, u256.fromU64(50)),
+            u256.fromU64(100),
+        );
+        const feeMoto: u256 = SafeMath.sub(totalFee, feeLP);
+
+        // Do nothing with half the fee
+        this.increaseVirtualTokenReserve(feeLP);
+
+        // Only transfer if the fee is non-zero
+        if (feeMoto > u256.Zero) {
+            // Send other half of fee to staking contract
+            TransferHelper.safeTransfer(this.token, stakingAddress, feeMoto);
+            this.decreaseTotalReserve(feeMoto);
+        }
+    }
+
     public getBTCowed(providerId: u256): u64 {
         return this.providerManager.getBTCowed(providerId);
     }
 
-    public setBTCowed(providerId: u256, value: u64): void {
-        this.providerManager.setBTCowed(providerId, value);
-    }
-
     public getBTCOwedLeft(providerId: u256): u64 {
         return this.providerManager.getBTCOwedLeft(providerId);
+    }
+
+    public getBTCowedReserved(providerId: u256): u64 {
+        return this.providerManager.getBTCowedReserved(providerId);
+    }
+
+    public getMaximumTokensLeftBeforeCap(): u256 {
+        if (this.liquidity.isZero()) {
+            return u256.Zero;
+        }
+
+        const maxPercentage: u256 = u256.fromU64(this.maxReserves5BlockPercent);
+        const totalScaled = SafeMath.mul(this.liquidity, QUOTE_SCALE);
+        const reservedScaled = SafeMath.mul(this.reservedLiquidity, QUOTE_SCALE);
+        const capScaled = SafeMath.div(SafeMath.mul(totalScaled, maxPercentage), u256.fromU32(100));
+        let availableScaled = u256.Zero;
+
+        if (reservedScaled < capScaled) {
+            availableScaled = SafeMath.div(SafeMath.sub(capScaled, reservedScaled), QUOTE_SCALE);
+        }
+
+        return availableScaled;
+    }
+
+    public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
+        return this.providerManager.getNextProviderWithLiquidity(currentQuote);
+    }
+
+    public getReservationWithExpirationChecks(): Reservation {
+        const reservation = new Reservation(this.token, Blockchain.tx.sender);
+        reservation.ensureCanBeConsumed();
+
+        return reservation;
+    }
+
+    public getUtilizationRatio(): u256 {
+        if (this.liquidity.isZero()) {
+            return u256.Zero;
+        }
+
+        return SafeMath.div(
+            SafeMath.mul(this.reservedLiquidity, u256.fromU64(100)),
+            this.liquidity,
+        );
     }
 
     public increaseBTCowed(providerId: u256, value: u64): void {
@@ -199,22 +306,54 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.setBTCowed(providerId, owedAfter);
     }
 
-    public getBTCowedReserved(providerId: u256): u64 {
-        return this.providerManager.getBTCowedReserved(providerId);
-    }
-
-    public setBTCowedReserved(providerId: u256, value: u64): void {
-        this.providerManager.setBTCowedReserved(providerId, value);
-    }
-
     public increaseBTCowedReserved(providerId: u256, value: u64): void {
         const owedReservedBefore: u64 = this.getBTCowedReserved(providerId);
         const owedReservedAfter: u64 = SafeMath.add64(owedReservedBefore, value);
         this.setBTCowed(providerId, owedReservedAfter);
     }
 
-    public cleanUpQueues(): void {
-        this.providerManager.cleanUpQueues();
+    public increaseDeltaSatoshisBuy(value: u64): void {
+        this.liquidityQueueReserve.addToDeltaSatoshisBuy(value);
+    }
+
+    public increaseDeltaTokensAdd(value: u256): void {
+        this.liquidityQueueReserve.addToDeltaTokensAdd(value);
+    }
+
+    public increaseDeltaTokensBuy(value: u256): void {
+        this.liquidityQueueReserve.addToDeltaTokensBuy(value);
+    }
+
+    public increaseTotalReserve(value: u256): void {
+        this.liquidityQueueReserve.addToTotalReserve(value);
+    }
+
+    public increaseTotalReserved(value: u256): void {
+        this.liquidityQueueReserve.addToTotalReserved(value);
+    }
+
+    public increaseVirtualSatoshisReserve(value: u64): void {
+        this.virtualSatoshisReserve = SafeMath.add64(this.virtualSatoshisReserve, value);
+    }
+
+    public increaseVirtualTokenReserve(value: u256): void {
+        this.virtualTokenReserve = SafeMath.add(this.virtualTokenReserve, value);
+    }
+
+    public initializeInitialLiquidity(
+        floorPrice: u256,
+        providerId: u256,
+        initialLiquidity: u128, //!!!! Peut pas reserver plus qu'un u128, sinon break ou throw si meme provider
+        maxReserves5BlockPercent: u64,
+    ): void {
+        this.initialLiquidityProviderId = providerId;
+
+        const initialLiquidity256 = initialLiquidity.toU256();
+        this.virtualSatoshisReserve = SafeMath.div(initialLiquidity256, floorPrice);
+        //!!!!
+        this.virtualTokenReserve = initialLiquidity256;
+
+        this.maxReserves5BlockPercent = maxReserves5BlockPercent;
     }
 
     public resetProvider(
@@ -225,57 +364,20 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.providerManager.resetProvider(provider, burnRemainingFunds, canceled);
     }
 
-    public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256 {
-        const utilizationRatio = this.getUtilizationRatio();
-        const feeBP = this.dynamicFee.getDynamicFeeBP(totalSatoshisSpent, utilizationRatio);
-        return this.dynamicFee.computeFeeAmount(totalTokensPurchased, feeBP);
-    }
-
-    public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
-        return this.providerManager.getNextProviderWithLiquidity(currentQuote);
-    }
-
-    // Return number of token per satoshi
+    // Return number of tokens per satoshi
     public quote(): u256 {
         const T: u256 = this.virtualTokenReserve;
         if (T.isZero()) {
             return u256.Zero;
         }
 
-        if (this.virtualBTCReserve.isZero()) {
-            throw new Revert(`Impossible state: Not enough liquidity`);
+        if (this.virtualSatoshisReserve === 0) {
+            throw new Revert(`Impossible state: Not enough liquidity.`);
         }
 
         // scaledQuote = T * QUOTE_SCALE / B
         const scaled = SafeMath.mul(T, QUOTE_SCALE);
-        return SafeMath.div(scaled, this.virtualBTCReserve);
-    }
-
-    public addToPriorityQueue(provider: Provider): void {
-        this.providerManager.addToPriorityQueue(provider);
-    }
-
-    public addToStandardQueue(provider: Provider): void {
-        this.providerManager.addToStandardQueue(provider);
-    }
-
-    public addToRemovalQueue(provider: Provider): void {
-        this.providerManager.addToRemovalQueue(provider);
-    }
-
-    public initializeInitialLiquidity(
-        floorPrice: u256,
-        providerId: u256,
-        initialLiquidity: u128,
-        maxReserves5BlockPercent: u64,
-    ): void {
-        this.initialLiquidityProviderId = providerId;
-
-        const initialLiquidity256 = initialLiquidity.toU256();
-        this.virtualBTCReserve = SafeMath.div(initialLiquidity256, floorPrice);
-        this.virtualTokenReserve = initialLiquidity256;
-
-        this.maxReserves5BlockPercent = maxReserves5BlockPercent;
+        return SafeMath.div(scaled, u256.fromU64(this.virtualSatoshisReserve));
     }
 
     public save(): void {
@@ -284,30 +386,42 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.quoteManager.save();
     }
 
-    public buyTokens(tokensOut: u256, satoshisIn: u64): void {
-        this.increaseDeltaBTCBuy(satoshisIn);
-        this.increaseDeltaTokensBuy(tokensOut);
+    public setBlockQuote(): void {
+        if (<u64>u32.MAX_VALUE - 1 < Blockchain.block.number) {
+            throw new Revert('Impossible state: Block number too large, max array size.');
+        }
+
+        const blockNumberU32: u64 = Blockchain.block.number % <u64>(u32.MAX_VALUE - 1);
+        this.quoteManager.setBlockQuote(blockNumberU32, this.quote());
+    }
+
+    public setBTCowed(providerId: u256, value: u64): void {
+        this.providerManager.setBTCowed(providerId, value);
+    }
+
+    public setBTCowedReserved(providerId: u256, value: u64): void {
+        this.providerManager.setBTCowedReserved(providerId, value);
     }
 
     public updateVirtualPoolIfNeeded(): void {
-        const currentBlock = Blockchain.block.number;
+        const currentBlock: u64 = Blockchain.block.number;
 
         if (currentBlock <= this.lastVirtualUpdateBlock) {
             return;
         }
 
-        let B = this.virtualBTCReserve;
-        let T = this.virtualTokenReserve;
+        let B: u256 = u256.fromU64(this.virtualSatoshisReserve);
+        let T: u256 = this.virtualTokenReserve;
 
         // Add tokens from deltaTokensAdd
-        const dT_add = this.deltaTokensAdd;
+        const dT_add: u256 = this.deltaTokensAdd;
         if (!dT_add.isZero()) {
             T = SafeMath.add(T, dT_add);
         }
 
         // apply net "buys"
-        const dB_buy = this.deltaBTCBuy;
-        const dT_buy = this.deltaTokensBuy;
+        const dB_buy: u256 = u256.fromU64(this.deltaSatoshisBuy);
+        const dT_buy: u256 = this.deltaTokensBuy;
 
         if (!dT_buy.isZero()) {
             let Tprime: u256;
@@ -317,14 +431,14 @@ export class LiquidityQueue implements ILiquidityQueue {
                 Tprime = SafeMath.sub(T, dT_buy);
             }
 
-            const numerator = SafeMath.mul(B, T);
-            let Bprime = SafeMath.div(numerator, Tprime);
-            const incB = SafeMath.sub(Bprime, B);
+            const numerator: u256 = SafeMath.mul(B, T);
+            let Bprime: u256 = SafeMath.div(numerator, Tprime);
+            const incB: u256 = SafeMath.sub(Bprime, B);
 
             if (u256.gt(incB, dB_buy)) {
                 Bprime = SafeMath.add(B, dB_buy);
 
-                let newTprime = SafeMath.div(numerator, Bprime);
+                let newTprime: u256 = SafeMath.div(numerator, Bprime);
                 if (u256.lt(newTprime, u256.One)) {
                     newTprime = u256.One;
                 }
@@ -338,7 +452,11 @@ export class LiquidityQueue implements ILiquidityQueue {
             T = u256.One;
         }
 
-        this.virtualBTCReserve = B;
+        if (B > u256.fromU64(u64.MAX_VALUE)) {
+            throw new Revert(`Impossible state: New virtual satoshis reserve out of range.`);
+        }
+
+        this.virtualSatoshisReserve = B.toU64();
         this.virtualTokenReserve = T;
         this.resetAccumulators();
 
@@ -350,124 +468,9 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.lastVirtualUpdateBlock = currentBlock;
     }
 
-    public getUtilizationRatio(): u256 {
-        const reserved = this.reservedLiquidity;
-        const total = this.liquidity;
-
-        if (total.isZero()) {
-            return u256.Zero;
-        }
-
-        return SafeMath.div(SafeMath.mul(reserved, u256.fromU64(100)), total);
-    }
-
-    public getReservationWithExpirationChecks(): Reservation {
-        const reservation = new Reservation(this.token, Blockchain.tx.sender);
-
-        reservation.ensureCanBeConsumed();
-
-        return reservation;
-    }
-
-    public getMaximumTokensLeftBeforeCap(): u256 {
-        const maxPercentage: u256 = u256.fromU64(this.maxReserves5BlockPercent);
-
-        if (this.liquidity.isZero()) {
-            return u256.Zero;
-        }
-
-        const totalScaled = SafeMath.mul(this.liquidity, QUOTE_SCALE);
-        const reservedScaled = SafeMath.mul(this.reservedLiquidity, QUOTE_SCALE);
-
-        const capScaled = SafeMath.div(SafeMath.mul(totalScaled, maxPercentage), u256.fromU32(100));
-
-        let availableScaled = u256.Zero;
-
-        if (reservedScaled < capScaled) {
-            availableScaled = SafeMath.div(SafeMath.sub(capScaled, reservedScaled), QUOTE_SCALE);
-        }
-
-        return availableScaled;
-    }
-
-    public addActiveReservation(reservation: Reservation): u32 {
-        return this.reservationManager.addActiveReservation(
-            reservation.getCreationBlock(),
-            reservation.getId(),
-        );
-    }
-
-    public setBlockQuote(): void {
-        if (<u64>u32.MAX_VALUE - 1 < Blockchain.block.number) {
-            throw new Revert('Impossible state: Block number too large, max array size.');
-        }
-
-        const blockNumberU32: u64 = Blockchain.block.number % <u64>(u32.MAX_VALUE - 1);
-        this.quoteManager.setBlockQuote(blockNumberU32, this.quote());
-    }
-
-    public increaseVirtualBTCReserve(value: u64): void {
-        this.virtualBTCReserve = SafeMath.add(this.virtualBTCReserve, u256.fromU64(value));
-    }
-
-    public decreaseVirtualBTCReserve(value: u64): void {
-        this.virtualBTCReserve = SafeMath.sub(this.virtualBTCReserve, u256.fromU64(value));
-    }
-
-    public increaseVirtualTokenReserve(value: u256): void {
-        this.virtualTokenReserve = SafeMath.add(this.virtualTokenReserve, value);
-    }
-
-    public decreaseVirtualTokenReserve(value: u256): void {
-        this.virtualTokenReserve = SafeMath.sub(this.virtualTokenReserve, value);
-    }
-
-    public increaseTotalReserve(value: u256): void {
-        this.liquidityQueueReserve.addToTotalReserve(value);
-    }
-
-    public decreaseTotalReserve(value: u256): void {
-        this.liquidityQueueReserve.subFromTotalReserve(value);
-    }
-
-    public increaseTotalReserved(value: u256): void {
-        this.liquidityQueueReserve.addToTotalReserved(value);
-    }
-
-    public decreaseTotalReserved(value: u256): void {
-        this.liquidityQueueReserve.subFromTotalReserved(value);
-    }
-
-    public increaseDeltaTokensAdd(value: u256): void {
-        this.liquidityQueueReserve.addToDeltaTokensAdd(value);
-    }
-
-    public increaseDeltaTokensBuy(value: u256): void {
-        this.liquidityQueueReserve.addToDeltaTokensBuy(value);
-    }
-
-    public increaseDeltaBTCBuy(value: u64): void {
-        this.liquidityQueueReserve.addToDeltaBTCBuy(value);
-    }
-
-    public distributeFee(totalFee: u256, stakingAddress: Address): void {
-        const feeLP = SafeMath.div(SafeMath.mul(totalFee, u256.fromU64(50)), u256.fromU64(100));
-        const feeMoto = SafeMath.sub(totalFee, feeLP);
-
-        // Do nothing with half the fee
-        this.increaseVirtualTokenReserve(feeLP);
-
-        // Only transfer if the fee is non-zero
-        if (feeMoto > u256.Zero) {
-            // Send other half of fee to staking contract
-            TransferHelper.safeTransfer(this.token, stakingAddress, feeMoto);
-            this.decreaseTotalReserve(feeMoto);
-        }
-    }
-
     private resetAccumulators(): void {
         this.liquidityQueueReserve.deltaTokensAdd = u256.Zero;
-        this.liquidityQueueReserve.deltaBTCBuy = 0;
+        this.liquidityQueueReserve.deltaSatoshisBuy = 0;
         this.liquidityQueueReserve.deltaTokensBuy = u256.Zero;
     }
 
@@ -478,9 +481,9 @@ export class LiquidityQueue implements ILiquidityQueue {
         let volatility: u256 = u256.Zero;
 
         const blockNumber: u64 = currentBlock % <u64>(u32.MAX_VALUE - 1);
-        const currentQuote = this.quoteManager.getBlockQuote(blockNumber);
-        const oldBlock = (currentBlock - windowSize) % <u64>(u32.MAX_VALUE - 1);
-        const oldQuote = this.quoteManager.getBlockQuote(oldBlock);
+        const currentQuote: u256 = this.quoteManager.getBlockQuote(blockNumber);
+        const oldBlock: u64 = (currentBlock - windowSize) % <u64>(u32.MAX_VALUE - 1);
+        const oldQuote: u256 = this.quoteManager.getBlockQuote(oldBlock);
 
         if (!oldQuote.isZero() && !currentQuote.isZero()) {
             let diff = u256.sub(currentQuote, oldQuote);

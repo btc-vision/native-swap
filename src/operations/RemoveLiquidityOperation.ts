@@ -1,5 +1,5 @@
 import { BaseOperation } from './BaseOperation';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../models/Provider';
 import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityRemovedEvent } from '../events/LiquidityRemovedEvent';
@@ -63,7 +63,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
     private updateLiquidityQueue(tokenAmount: u256, btcOwed: u64): void {
         this.liquidityQueue.decreaseTotalReserve(tokenAmount);
         this.liquidityQueue.decreaseVirtualTokenReserve(tokenAmount);
-        this.liquidityQueue.decreaseVirtualBTCReserve(btcOwed);
+        this.liquidityQueue.decreaseVirtualSatoshisReserve(btcOwed);
         this.liquidityQueue.addToRemovalQueue(this.provider);
     }
 

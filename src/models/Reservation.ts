@@ -14,7 +14,7 @@ import {
     RESERVATION_INDEXES,
     RESERVATION_PRIORITY,
 } from '../constants/StoredPointers';
-import { u128 } from '@btc-vision/as-bignum';
+import { u128 } from '@btc-vision/as-bignum/assembly';
 import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReservationData } from './ReservationData';
 import { ReservationProviderData } from './ReservationProdiverData';
@@ -62,15 +62,15 @@ export class Reservation {
         return this.reservationData.activationDelay;
     }
 
-    public setActivationDelay(value: u8) {
+    public setActivationDelay(value: u8): void {
         this.reservationData.activationDelay = value;
     }
 
-    public getPurgeIndex(): u64 {
+    public getPurgeIndex(): u32 {
         return this.reservationData.purgeIndex;
     }
 
-    public setPurgeIndex(index: u64): void {
+    public setPurgeIndex(index: u32): void {
         this.reservationData.purgeIndex = index;
     }
 

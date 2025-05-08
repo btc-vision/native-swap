@@ -1,4 +1,4 @@
-import { u256 } from '@btc-vision/as-bignum';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { SafeMath } from '@btc-vision/btc-runtime/runtime';
 
 export class CompletedTrade {

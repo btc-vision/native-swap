@@ -9,7 +9,7 @@ export const AMOUNT_POINTER: u16 = Blockchain.nextPointer;
 export const BTC_RECEIVER_ADDRESS_POINTER: u16 = Blockchain.nextPointer;
 
 export const LIQUIDITY_QUOTE_HISTORY_POINTER: u16 = Blockchain.nextPointer;
-export const STANDARD_QUEUE_POINTER: u16 = Blockchain.nextPointer;
+export const NORMAL_QUEUE_POINTER: u16 = Blockchain.nextPointer;
 export const PRIORITY_QUEUE_POINTER: u16 = Blockchain.nextPointer;
 export const LIQUIDITY_RESERVED_POINTER: u16 = Blockchain.nextPointer;
 

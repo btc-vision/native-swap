@@ -1,4 +1,4 @@
-import { u256 } from '@btc-vision/as-bignum';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 
 export interface IDynamicFee {
     /** Base fee in basis points (e.g. 20 => 0.20%) */

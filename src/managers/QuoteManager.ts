@@ -1,5 +1,5 @@
 import { Revert, StoredU256Array } from '@btc-vision/btc-runtime/runtime';
-import { u256 } from '@btc-vision/as-bignum';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { LIQUIDITY_QUOTE_HISTORY_POINTER } from '../constants/StoredPointers';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 
@@ -18,7 +18,7 @@ export class QuoteManager implements IQuoteManager {
     }
 
     public getValidBlockQuote(blockNumber: u64): u256 {
-        const quote = this._quoteHistory.get(blockNumber);
+        const quote: u256 = this._quoteHistory.get(blockNumber);
         this.ensureQuoteIsValid(quote, blockNumber);
 
         return quote;

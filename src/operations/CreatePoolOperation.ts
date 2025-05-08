@@ -1,5 +1,5 @@
 import { BaseOperation } from './BaseOperation';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, Blockchain, Revert } from '@btc-vision/btc-runtime/runtime';
 import { ListTokensForSaleOperation } from './ListTokensForSaleOperation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
@@ -61,7 +61,7 @@ export class CreatePoolOperation extends BaseOperation {
     }
 
     private listTokenForSale(): void {
-        const listTokenForSaleOp = new ListTokensForSaleOperation(
+        const listTokenForSaleOp: ListTokensForSaleOperation = new ListTokensForSaleOperation(
             this.liquidityQueue,
             this.providerId,
             this.initialLiquidity,

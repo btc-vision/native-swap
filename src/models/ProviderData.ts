@@ -1,4 +1,4 @@
-import { u128 } from '@btc-vision/as-bignum';
+import { u128 } from '@btc-vision/as-bignum/assembly';
 import {
     Blockchain,
     BytesReader,
@@ -222,6 +222,7 @@ export class ProviderData {
 
     private _queueIndex: u64 = 0;
 
+    //!!!!
     /**
      * @method queueIndex
      * @description Gets the index of the provider in the normal/priority queue.
@@ -382,7 +383,7 @@ export class ProviderData {
      */
     private saveStateIfChanged(): void {
         if (this.stateChanged) {
-            const packed = this.packValues();
+            const packed: Uint8Array = this.packValues();
             Blockchain.setStorageAt(this.pointerBuffer, packed);
             this.stateChanged = false;
         }
@@ -395,7 +396,7 @@ export class ProviderData {
      */
     private saveLiquidityProvidedIfChanged(): void {
         if (this.liquidityProvidedChanged) {
-            const packed = this.packLiquidityProvided();
+            const packed: Uint8Array = this.packLiquidityProvided();
             Blockchain.setStorageAt(this.liquidityProvidedPointer, packed);
             this.liquidityProvidedChanged = false;
         }
@@ -408,7 +409,7 @@ export class ProviderData {
      */
     private saveAmountIfChanged(): void {
         if (this.amountChanged) {
-            const packed = this.packAmounts();
+            const packed: Uint8Array = this.packAmounts();
             Blockchain.setStorageAt(this.amountPointer, packed);
             this.amountChanged = false;
         }
@@ -422,7 +423,7 @@ export class ProviderData {
      */
     private ensureLiquidityProvided(): void {
         if (!this.liquidityProvidedLoaded) {
-            const storedData = Blockchain.getStorageAt(this.liquidityProvidedPointer);
+            const storedData: Uint8Array = Blockchain.getStorageAt(this.liquidityProvidedPointer);
             this.unpackLiquidityProvided(storedData);
             this.liquidityProvidedLoaded = true;
         }
@@ -436,7 +437,7 @@ export class ProviderData {
      */
     private ensureAmount(): void {
         if (!this.amountLoaded) {
-            const storedData = Blockchain.getStorageAt(this.amountPointer);
+            const storedData: Uint8Array = Blockchain.getStorageAt(this.amountPointer);
             this.unpackAmounts(storedData);
             this.amountLoaded = true;
         }
@@ -464,9 +465,9 @@ export class ProviderData {
      * @returns {void}
      */
     private unpackValues(packedData: Uint8Array): void {
-        const reader = new BytesReader(packedData);
+        const reader: BytesReader = new BytesReader(packedData);
 
-        const flag = reader.readU8();
+        const flag: u8 = reader.readU8();
 
         this._active = (flag & 1) === 1;
         this._priority = ((flag >> 1) & 1) === 1;
@@ -486,7 +487,7 @@ export class ProviderData {
      * @returns {void}
      */
     private unpackLiquidityProvided(packedData: Uint8Array): void {
-        const reader = new BytesReader(packedData);
+        const reader: BytesReader = new BytesReader(packedData);
         this._liquidityProvided = reader.readU128();
     }
 
@@ -498,7 +499,7 @@ export class ProviderData {
      * @returns {void}
      */
     private unpackAmounts(packedData: Uint8Array): void {
-        const reader = new BytesReader(packedData);
+        const reader: BytesReader = new BytesReader(packedData);
         this._liquidityAmount = reader.readU128();
         this._reservedAmount = reader.readU128();
     }
@@ -510,7 +511,7 @@ export class ProviderData {
      * @returns {Uint8Array} The packed Uint8Array value.
      */
     private packValues(): Uint8Array {
-        const writer = new BytesWriter(U8_BYTE_LENGTH + 2 * U64_BYTE_LENGTH);
+        const writer: BytesWriter = new BytesWriter(U8_BYTE_LENGTH + 2 * U64_BYTE_LENGTH);
         const flag =
             (this._active ? 1 : 0) |
             ((this._priority ? 1 : 0) << 1) |
@@ -533,7 +534,7 @@ export class ProviderData {
      * @returns {Uint8Array} The packed Uint8Array value.
      */
     private packLiquidityProvided(): Uint8Array {
-        const writer = new BytesWriter(U256_BYTE_LENGTH);
+        const writer: BytesWriter = new BytesWriter(U256_BYTE_LENGTH);
         writer.writeU128(this._liquidityProvided);
 
         return writer.getBuffer();
@@ -546,7 +547,7 @@ export class ProviderData {
      * @returns {Uint8Array} The packed Uint8Array value.
      */
     private packAmounts(): Uint8Array {
-        const writer = new BytesWriter(U256_BYTE_LENGTH);
+        const writer: BytesWriter = new BytesWriter(U256_BYTE_LENGTH);
         writer.writeU128(this._liquidityAmount);
         writer.writeU128(this._reservedAmount);
 

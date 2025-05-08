@@ -16,7 +16,7 @@ import {
 } from './test_helper';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { ListTokensForSaleOperation } from '../lib/Liquidity/operations/ListTokensForSaleOperation';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../lib/FeeManager';
 import { FEE_COLLECT_SCRIPT_PUBKEY } from '../utils/NativeSwapUtils';
 

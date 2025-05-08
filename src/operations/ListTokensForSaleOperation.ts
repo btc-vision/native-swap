@@ -1,5 +1,5 @@
 import { BaseOperation } from './BaseOperation';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../models/Provider';
 import {
     Address,
@@ -47,7 +47,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.usePriorityQueue = usePriorityQueue;
         this.isForInitialLiquidity = isForInitialLiquidity;
 
-        const provider = getProvider(providerId);
+        const provider: Provider = getProvider(providerId);
         this.provider = provider;
         this.oldLiquidity = provider.getLiquidityAmount();
     }
@@ -79,7 +79,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private assertQueueSwitchAllowed(): void {
-        const switched = this.usePriorityQueue !== this.provider.isPriority();
+        const switched: boolean = this.usePriorityQueue !== this.provider.isPriority();
         if (!this.oldLiquidity.isZero() && switched) {
             throw new Revert(
                 `NATIVE_SWAP: You must cancel your listings before using the priority queue.`,
@@ -88,7 +88,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private transitionProviderIfNeeded(): void {
-        const isPromote =
+        const isPromote: boolean =
             !this.provider.isPriority() && this.provider.isActive() && this.usePriorityQueue;
 
         if (isPromote) {
@@ -104,7 +104,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
                     this.liquidityQueue.addToPriorityQueue(this.provider);
                 } else {
                     this.provider.clearPriority();
-                    this.liquidityQueue.addToStandardQueue(this.provider);
+                    this.liquidityQueue.addToNormalQueue(this.provider);
                 }
             } else {
                 this.provider.clearPriority();
@@ -113,7 +113,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private updateProviderLiquidity(): void {
-        const updatedAmount = SafeMath.add128(this.oldLiquidity, this.amountIn);
+        const updatedAmount: u128 = SafeMath.add128(this.oldLiquidity, this.amountIn);
         this.provider.setLiquidityAmount(updatedAmount);
     }
 
@@ -131,10 +131,10 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
     private deductTaxIfPriority(): void {
         if (this.usePriorityQueue) {
-            const tax = this.calculateTax();
+            const tax: u128 = this.calculateTax();
 
             if (!tax.isZero()) {
-                const tax256 = tax.toU256();
+                const tax256: u256 = tax.toU256();
 
                 this.provider.subtractFromLiquidityAmount(tax);
 
@@ -255,7 +255,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private emitLiquidityListedEvent(): void {
-        const ev = new LiquidityListedEvent(this.provider.getLiquidityAmount(), this.receiver);
-        Blockchain.emit(ev);
+        Blockchain.emit(
+            new LiquidityListedEvent(this.provider.getLiquidityAmount(), this.receiver),
+        );
     }
 }

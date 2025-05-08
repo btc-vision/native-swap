@@ -9,9 +9,11 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 import {
+    PURGE_INDEX_NOT_SET_VALUE,
     RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
     TIMEOUT_AFTER_EXPIRATION_BLOCKS,
 } from '../constants/Contract';
+import { U32_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
 
 @final
 export class ReservationData {
@@ -88,15 +90,15 @@ export class ReservationData {
         }
     }
 
-    private _purgeIndex: u64 = u64.MAX_VALUE;
+    private _purgeIndex: u32 = PURGE_INDEX_NOT_SET_VALUE;
 
     /**
      * @method purgeIndex
      * @description Gets the purge index.
-     * @returns {u64}
+     * @returns {u32}
      */
     @inline
-    public get purgeIndex(): u64 {
+    public get purgeIndex(): u32 {
         this.ensureValues();
         return this._purgeIndex;
     }
@@ -104,9 +106,9 @@ export class ReservationData {
     /**
      * @method purgeIndex
      * @description Sets the purge index.
-     * @param {u64} value - The purge index.
+     * @param {u32} value - The purge index.
      */
-    public set purgeIndex(value: u64) {
+    public set purgeIndex(value: u32) {
         this.ensureValues();
         if (this._purgeIndex !== value) {
             this._purgeIndex = value;
@@ -204,7 +206,7 @@ export class ReservationData {
      */
     public save(): void {
         if (this.isChanged) {
-            const packed = this.packValues();
+            const packed: Uint8Array = this.packValues();
             Blockchain.setStorageAt(this.pointerBuffer, packed);
 
             this.isChanged = false;
@@ -220,7 +222,7 @@ export class ReservationData {
     @inline
     public reset(isTimeout: boolean): void {
         this.forLiquidityPool = false;
-        this.purgeIndex = u64.MAX_VALUE;
+        this.purgeIndex = PURGE_INDEX_NOT_SET_VALUE;
         this.activationDelay = 0;
         this.timeout = isTimeout;
 
@@ -286,11 +288,11 @@ export class ReservationData {
      * @returns {void}
      */
     private unpackValues(packedData: Uint8Array): void {
-        const reader = new BytesReader(packedData);
+        const reader: BytesReader = new BytesReader(packedData);
 
         this.unpackFlags(reader.readU8());
         this._creationBlock = reader.readU64();
-        this._purgeIndex = reader.readU64();
+        this._purgeIndex = reader.readU32();
         this._activationDelay = reader.readU8();
     }
 
@@ -301,11 +303,13 @@ export class ReservationData {
      * @returns The packed Uint8Array value.
      */
     private packValues(): Uint8Array {
-        const writer = new BytesWriter(2 * U8_BYTE_LENGTH + 2 * U64_BYTE_LENGTH);
+        const writer: BytesWriter = new BytesWriter(
+            2 * U8_BYTE_LENGTH + U64_BYTE_LENGTH + U32_BYTE_LENGTH,
+        );
 
         writer.writeU8(this.packFlags());
         writer.writeU64(this.creationBlock);
-        writer.writeU64(this.purgeIndex);
+        writer.writeU32(this.purgeIndex);
         writer.writeU8(this.activationDelay);
 
         return writer.getBuffer();

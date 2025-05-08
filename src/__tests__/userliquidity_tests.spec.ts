@@ -1,7 +1,7 @@
 import { Blockchain, BytesReader } from '@btc-vision/btc-runtime/runtime';
 import { LIQUIDITY_PROVIDER_POINTER, PROVIDER_LIQUIDITY_POINTER } from '../lib/StoredPointers';
 import { MAX_RESERVATION_AMOUNT_PROVIDER, UserLiquidity } from '../data-types/UserLiquidity';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 const providerId: Uint8Array = u256.fromU32(1).toUint8Array(true).slice(0, 30);
 

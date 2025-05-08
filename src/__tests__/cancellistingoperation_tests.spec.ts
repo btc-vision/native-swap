@@ -9,7 +9,7 @@ import {
 } from './test_helper';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { CancelListingOperation } from '../lib/Liquidity/operations/CancelListingOperation';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 describe('CancelListTokenForSaleOperation tests', () => {
     beforeEach(() => {

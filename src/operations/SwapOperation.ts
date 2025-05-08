@@ -8,7 +8,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { SwapExecutedEvent } from '../events/SwapExecutedEvent';
 import { Reservation } from '../models/Reservation';
-import { u256 } from '@btc-vision/as-bignum';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
 import { CompletedTrade } from '../models/CompletedTrade';
@@ -56,7 +56,7 @@ export class SwapOperation extends BaseOperation {
         let newTotalTokensPurchased = totalTokensPurchased;
 
         if (this.liquidityQueue.feesEnabled) {
-            const totalFeeTokens = this.liquidityQueue.computeFees(
+            const totalFeeTokens: u256 = this.liquidityQueue.computeFees(
                 totalTokensPurchased,
                 totalSatoshisSpent,
             );

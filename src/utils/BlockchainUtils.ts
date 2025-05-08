@@ -7,7 +7,7 @@ export function getTotalFeeCollected(): u64 {
     let totalFee: u64 = 0;
 
     // Start as 1 as it will never be the first output.
-    for (let i = 1; i < outputs.length; i++) {
+    for (let i: i32 = 1; i < outputs.length; i++) {
         const output: TransactionOutput = outputs[i];
 
         // The output destination must be for the fees

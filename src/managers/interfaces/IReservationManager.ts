@@ -1,6 +1,6 @@
 import { Address } from '@btc-vision/btc-runtime/runtime';
 import { Reservation } from '../../models/Reservation';
-import { u128 } from '@btc-vision/as-bignum';
+import { u128 } from '@btc-vision/as-bignum/assembly';
 
 export interface IReservationManager {
     getReservationWithExpirationChecks(sender: Address): Reservation;

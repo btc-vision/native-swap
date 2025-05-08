@@ -1,4 +1,4 @@
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     AdvancedStoredString,
     Potential,

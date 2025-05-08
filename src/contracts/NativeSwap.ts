@@ -11,11 +11,12 @@ import {
     Selector,
     StoredAddress,
     U128_BYTE_LENGTH,
+    U16_BYTE_LENGTH,
     U256_BYTE_LENGTH,
     U64_BYTE_LENGTH,
     ZERO_ADDRESS,
 } from '@btc-vision/btc-runtime/runtime';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
 import { getProvider, Provider, saveAllProviders } from '../models/Provider';
 import { FeeManager } from '../managers/FeeManager';
@@ -212,11 +213,13 @@ export class NativeSwap extends ReentrancyGuard {
         const provider: Provider = getProvider(providerId);
 
         const writer: BytesWriter = new BytesWriter(
-            U128_BYTE_LENGTH * 2 + (2 + provider.getBtcReceiver().length) + 32,
+            U128_BYTE_LENGTH * 2 +
+                (U16_BYTE_LENGTH + provider.getBtcReceiver().length) +
+                U256_BYTE_LENGTH,
         );
         writer.writeU128(provider.getLiquidityAmount());
         writer.writeU128(provider.getReservedAmount());
-        writer.writeU256(provider.getLiquidityProvided());
+        writer.writeU256(provider.getLiquidityProvided()); //!!!!
         writer.writeStringWithLength(provider.getBtcReceiver());
 
         return writer;
@@ -388,7 +391,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private reserve(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
-        const maximumAmountIn: u256 = calldata.readU256();
+        const maximumAmountIn: u64 = calldata.readU64();
         const minimumAmountOut: u256 = calldata.readU256();
         const forLP: boolean = calldata.readBoolean();
         const activationDelay: u8 = calldata.readU8();
@@ -403,7 +406,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private _reserve(
         token: Address,
-        maximumAmountIn: u256,
+        maximumAmountIn: u64,
         minimumAmountOut: u256,
         forLP: boolean,
         activationDelay: u8,
@@ -505,10 +508,10 @@ export class NativeSwap extends ReentrancyGuard {
 
         this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
 
-        const result: BytesWriter = new BytesWriter(4 * U256_BYTE_LENGTH);
+        const result: BytesWriter = new BytesWriter(3 * U256_BYTE_LENGTH + U64_BYTE_LENGTH);
         result.writeU256(liquidityQueueResult.liquidityQueue.liquidity);
         result.writeU256(liquidityQueueResult.liquidityQueue.reservedLiquidity);
-        result.writeU256(liquidityQueueResult.liquidityQueue.virtualBTCReserve);
+        result.writeU64(liquidityQueueResult.liquidityQueue.virtualSatoshisReserve);
         result.writeU256(liquidityQueueResult.liquidityQueue.virtualTokenReserve);
 
         return result;
@@ -516,7 +519,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private getQuote(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
-        const satoshisIn: u256 = calldata.readU256();
+        const satoshisIn: u64 = calldata.readU64();
 
         return this._getQuote(token, satoshisIn);
     }
@@ -531,7 +534,7 @@ export class NativeSwap extends ReentrancyGuard {
      *   3) If tokensOut > availableLiquidity, cap it
      *   4) requiredSatoshis = min( satoshisIn, (tokensOut * SHIFT) / price )
      */
-    private _getQuote(token: Address, satoshisIn: u256): BytesWriter {
+    private _getQuote(token: Address, satoshisIn: u64): BytesWriter {
         this.ensureValidTokenAddress(token);
         this.ensureMaximumAmountInNotZero(satoshisIn);
 
@@ -553,21 +556,21 @@ export class NativeSwap extends ReentrancyGuard {
             liquidityQueueResult.liquidityQueue.reservedLiquidity,
         );
 
-        let requiredSatoshis: u256 = satoshisIn;
+        let requiredSatoshis: u64 = satoshisIn;
         if (u256.gt(tokensOut, availableLiquidity)) {
             tokensOut = availableLiquidity;
             requiredSatoshis = tokensToSatoshis(tokensOut, price);
 
             // If that is bigger than satoshisIn, clamp
-            if (u256.gt(requiredSatoshis, satoshisIn)) {
+            if (requiredSatoshis > satoshisIn) {
                 requiredSatoshis = satoshisIn;
             }
         }
 
         // Prepare output
-        const result: BytesWriter = new BytesWriter(3 * U256_BYTE_LENGTH + U64_BYTE_LENGTH);
+        const result: BytesWriter = new BytesWriter(2 * U256_BYTE_LENGTH + 2 * U64_BYTE_LENGTH);
         result.writeU256(tokensOut); // how many tokens
-        result.writeU256(requiredSatoshis); // how many sat needed
+        result.writeU64(requiredSatoshis); // how many sat needed
         result.writeU256(price); // final *scaled* price
         result.writeU64(QUOTE_SCALE.toU64());
         return result;
@@ -702,8 +705,8 @@ export class NativeSwap extends ReentrancyGuard {
         }
     }
 
-    private ensureMaximumAmountInNotZero(maximumAmountIn: u256): void {
-        if (maximumAmountIn.isZero()) {
+    private ensureMaximumAmountInNotZero(maximumAmountIn: u64): void {
+        if (maximumAmountIn === 0) {
             throw new Revert('NATIVE_SWAP: Maximum amount in cannot be zero');
         }
     }

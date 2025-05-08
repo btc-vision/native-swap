@@ -8,9 +8,15 @@ import {
     StoredBooleanArray,
     U64_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Provider } from '../models/Provider';
-import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
+import {
+    CappedTokensResult,
+    satoshisToTokens,
+    satoshisToTokens128,
+    tokensToSatoshis,
+    tokensToSatoshis128,
+} from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER } from '../constants/StoredPointers';
 import { ProviderTypes } from '../types/ProviderTypes';
@@ -23,19 +29,20 @@ import { ActivateProviderEvent } from '../events/ActivateProviderEvent';
 import { ITradeManager } from './interfaces/ITradeManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
+import { min128, min64 } from '../utils/MathUtils';
 
 export class TradeManager implements ITradeManager {
     private readonly providerManager: IProviderManager;
     private readonly quoteManager: IQuoteManager;
     private readonly tokenIdUint8Array: Uint8Array;
-    private readonly consumedOutputsFromUTXOs: Map<string, u256> = new Map<string, u256>();
+    private readonly consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
-    private totalTokensPurchased = u256.Zero;
-    private totalSatoshisSpent = u256.Zero;
-    private totalRefundedBTC = u256.Zero;
+    private totalTokensPurchased: u256 = u256.Zero;
     private totalTokensRefunded = u256.Zero;
-    private tokensReserved = u256.Zero;
-    private quoteAtReservation = u256.Zero;
+    private totalSatoshisSpent: u64 = 0;
+    private totalSatoshisRefunded: u64 = 0;
+    private tokensReserved: u256 = u256.Zero;
+    private quoteAtReservation: u256 = u256.Zero;
 
     constructor(
         tokenIdUint8Array: Uint8Array,
@@ -52,18 +59,18 @@ export class TradeManager implements ITradeManager {
     public executeTrade(reservation: Reservation): CompletedTrade {
         this.ensureReservationIsValid(reservation);
         this.ensurePurgeIndexIsValid(reservation.getPurgeIndex());
-        this.getValidQuote(reservation.getCreationBlock());
+        this.getValidBlockQuote(reservation.getCreationBlock());
         this.removeReservationFromActiveList(reservation);
         this.resetTotals();
 
-        const providerCount = reservation.getProviderCount();
+        const providerCount: u64 = reservation.getProviderCount();
 
         for (let index = 0; index < providerCount; index++) {
-            const providerData = reservation.getProviderAt(index);
+            const providerData: ReservationProviderData = reservation.getProviderAt(index);
             const provider: Provider = this.getProvider(providerData);
-            const satoshisSent = this.getSathosisSent(provider.getBtcReceiver());
+            const satoshisSent: u64 = this.getSatoshisSent(provider.getBtcReceiver());
 
-            if (!satoshisSent.isZero()) {
+            if (satoshisSent !== 0) {
                 if (providerData.providerType === ProviderTypes.LiquidityRemoval) {
                     this.executeLiquidityRemovalTrade(
                         provider,
@@ -89,20 +96,21 @@ export class TradeManager implements ITradeManager {
             this.tokensReserved,
             this.totalTokensPurchased,
             this.totalSatoshisSpent,
-            this.totalRefundedBTC,
+            this.totalSatoshisRefunded,
             this.totalTokensRefunded,
         );
     }
 
     private executeLiquidityRemovalTrade(
         provider: Provider,
-        satoshisSent: u256,
+        satoshisSent: u64,
         requestedTokens: u128,
     ): void {
         const providerId: u256 = provider.getId();
-        let owedReserved: u256 = this.providerManager.getBTCowedReserved(providerId);
-        const oldOwed: u256 = this.providerManager.getBTCowed(providerId);
+        let owedReserved: u64 = this.providerManager.getBTCowedReserved(providerId);
+        const oldOwed: u64 = this.providerManager.getBTCowed(providerId);
         let tokensDesiredRemoval: u256 = satoshisToTokens(satoshisSent, this.quoteAtReservation);
+        //!!!! On remove combien de token max????
 
         // Partial fill
         if (!tokensDesiredRemoval.isZero()) {
@@ -119,7 +127,7 @@ export class TradeManager implements ITradeManager {
             }
 
             // User paid too much
-            let actualSpent: u256 = satoshisSent;
+            let actualSpent: u64 = satoshisSent;
             if (u256.gt(tokensDesiredRemoval, requestedTokens)) {
                 tokensDesiredRemoval = requestedTokens;
                 actualSpent = tokensToSatoshis(tokensDesiredRemoval, this.quoteAtReservation);
@@ -128,11 +136,12 @@ export class TradeManager implements ITradeManager {
             const newOwedReserved: u256 = SafeMath.sub(owedReserved, actualSpent);
             this.providerManager.setBTCowedReserved(providerId, newOwedReserved);
 
-            this.setNewOwedValueCleanQueueIfNeeded(provider, oldOwed, newOwedReserved);
-            this.increaseTotalRefundedBTC(actualSpent);
+            this.setNewOwedValueAndRemoveIfNeeded(provider, oldOwed, newOwedReserved);
+            this.increaseTotalSatoshisRefunded(actualSpent);
             this.increaseTotalTokensRefunded(tokensDesiredRemoval);
             this.reportUTXOUsed(provider.getBtcReceiver(), satoshisSent);
         } else {
+            //!!! Ca marche pas.... c'est pas des owedReserved qu'on restore mais des tokens dans la function????
             this.restoreReservedLiquidityForRemovalProvider(
                 providerId,
                 requestedTokens,
@@ -144,10 +153,10 @@ export class TradeManager implements ITradeManager {
     private executeNormalOrPriorityTrade(
         provider: Provider,
         requestedTokens: u128,
-        satoshisSent: u256,
+        satoshisSent: u64,
         isForLiquidityPool: boolean,
     ): void {
-        const actualTokens: u256 = this.getTargetTokens(
+        const actualTokens: u128 = this.getTargetTokens(
             satoshisSent,
             requestedTokens,
             provider.getLiquidityAmount(),
@@ -157,7 +166,7 @@ export class TradeManager implements ITradeManager {
             this.ensureReservedAmountIsValid(provider, requestedTokens);
             this.ensureProviderHasEnoughLiquidity(provider, actualTokens);
 
-            const tokensDesiredSatoshis: u256 = tokensToSatoshis(
+            const actualTokensSatoshis: u64 = tokensToSatoshis128(
                 actualTokens,
                 this.quoteAtReservation,
             );
@@ -169,51 +178,51 @@ export class TradeManager implements ITradeManager {
                 provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX
             ) {
                 provider.allowLiquidityProvision();
-                this.liquidityQueueReserve.addToDeltaTokensAdd(provider.getLiquidityAmount());
+                this.liquidityQueueReserve.addToDeltaTokensAdd(
+                    provider.getLiquidityAmount().toU256(),
+                );
                 this.emitActivateProviderEvent(provider);
             }
 
             provider.subtractFromLiquidityAmount(actualTokens);
 
-            this.resetProviderOnDust(provider, this.quoteAtReservation);
+            this.resetProviderOnDust(provider);
             this.increaseTokenReserved(requestedTokens);
-            this.increaseTotalTokensPurchased(actualTokens);
-            this.increaseSatoshisSpent(tokensDesiredSatoshis);
-            this.reportUTXOUsed(provider.getBtcReceiver(), tokensDesiredSatoshis);
+            this.increaseTotalTokensPurchased(actualTokens.toU256());
+            this.increaseSatoshisSpent(actualTokensSatoshis);
+            this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
         } else {
             this.restoreReservedLiquidityForProvider(provider, requestedTokens);
         }
     }
 
-    private getTargetTokens(
-        satoshisSent: u256,
-        requestedTokens: u128,
-        providerLiquidity: u128,
-    ): u256 {
-        let targetTokens = satoshisToTokens(satoshisSent, this.quoteAtReservation);
-        targetTokens = SafeMath.min(targetTokens, requestedTokens);
-        targetTokens = SafeMath.min(targetTokens, providerLiquidity);
+    private getTargetTokens(satoshis: u64, requestedTokens: u128, providerLiquidity: u128): u128 {
+        const tokenResult: CappedTokensResult = satoshisToTokens128(
+            satoshis,
+            this.quoteAtReservation,
+        );
+
+        let targetTokens: u128 = min128(tokenResult.tokens, requestedTokens);
+        targetTokens = min128(targetTokens, providerLiquidity);
 
         return targetTokens;
     }
 
-    private restoreReservedLiquidityForRemovalProvider(
-        providerId: u256,
-        amount: u256,
-        owedReserved: u256,
-    ): void {
-        const originalCostInSats = tokensToSatoshis(amount, this.quoteAtReservation);
-        const costToRevertInSats = SafeMath.min(originalCostInSats, owedReserved);
-        const newReserved = SafeMath.sub(owedReserved, costToRevertInSats);
+    private restoreReservedLiquidityForRemovalProvider(providerId: u256, amount: u128): void {
+        const currentOwedReserved: u64 = this.providerManager.getBTCowedReserved(providerId);
+        const originalCostInSats: u64 = tokensToSatoshis128(amount, this.quoteAtReservation);
+        const revertCostInSats: u64 = min64(originalCostInSats, currentOwedReserved);
+        const newReserved = SafeMath.sub64(currentOwedReserved, revertCostInSats);
+
         this.providerManager.setBTCowedReserved(providerId, newReserved);
     }
 
     private resetTotals(): void {
         this.totalTokensPurchased = u256.Zero;
-        this.totalSatoshisSpent = u256.Zero;
-        this.totalRefundedBTC = u256.Zero;
         this.totalTokensRefunded = u256.Zero;
         this.tokensReserved = u256.Zero;
+        this.totalSatoshisSpent = 0;
+        this.totalSatoshisRefunded = 0;
     }
 
     private getProvider(providerData: ReservationProviderData): Provider {
@@ -244,82 +253,87 @@ export class TradeManager implements ITradeManager {
         reservationActiveList.save();
     }
 
-    private getSathosisSent(address: string): u256 {
-        let amount: u256 = u256.Zero;
+    private getSatoshisSent(address: string): u64 {
+        let totalSatoshis: u64 = 0;
         const outputs = Blockchain.tx.outputs;
 
         for (let i = 0; i < outputs.length; i++) {
             const output = outputs[i];
 
             if (output.to === address) {
-                amount = SafeMath.add(amount, u256.fromU64(output.value));
+                totalSatoshis = SafeMath.add64(totalSatoshis, output.value);
             }
         }
 
-        const consumed: u256 = this.consumedOutputsFromUTXOs.has(address)
+        const consumedSatoshis: u64 = this.consumedOutputsFromUTXOs.has(address)
             ? this.consumedOutputsFromUTXOs.get(address)
-            : u256.Zero;
+            : 0;
 
-        if (amount < consumed) {
-            throw new Revert('Impossible state: Double spend detected');
+        if (totalSatoshis < consumedSatoshis) {
+            throw new Revert('Impossible state: Double spend detected.');
         }
 
-        return u256.sub(amount, consumed);
+        return totalSatoshis - consumedSatoshis;
     }
 
     private noStatsSendToProvider(providerData: ReservationProviderData, provider: Provider): void {
         if (providerData.providerType === ProviderTypes.LiquidityRemoval) {
-            const owedReserved = this.providerManager.getBTCowedReserved(provider.getId());
             this.restoreReservedLiquidityForRemovalProvider(
                 provider.getId(),
                 providerData.providedAmount,
-                owedReserved,
             );
         } else {
             this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
         }
     }
 
-    private restoreReservedLiquidityForProvider(provider: Provider, amount: u128): void {
-        provider.subtractFromReservedAmount(amount);
-        this.liquidityQueueReserve.subFromTotalReserved(amount);
+    private restoreReservedLiquidityForProvider(provider: Provider, value: u128): void {
+        provider.subtractFromReservedAmount(value);
+        this.liquidityQueueReserve.subFromTotalReserved(value.toU256());
     }
 
-    private reportUTXOUsed(addy: string, amount: u256): void {
-        const consumedAlready = this.consumedOutputsFromUTXOs.has(addy)
-            ? this.consumedOutputsFromUTXOs.get(addy)
+    private reportUTXOUsed(address: string, value: u64): void {
+        const consumedAlready = this.consumedOutputsFromUTXOs.has(address)
+            ? this.consumedOutputsFromUTXOs.get(address)
             : 0;
 
         if (consumedAlready === 0) {
-            this.consumedOutputsFromUTXOs.set(addy, amount);
+            this.consumedOutputsFromUTXOs.set(address, value);
         } else {
-            this.consumedOutputsFromUTXOs.set(addy, SafeMath.add(amount, consumedAlready));
+            this.consumedOutputsFromUTXOs.set(address, SafeMath.add64(value, consumedAlready));
         }
     }
 
-    private resetProviderOnDust(provider: Provider, quoteAtReservation: u256): void {
-        const satLeftValue = tokensToSatoshis(provider.getLiquidityAmount(), quoteAtReservation);
+    private resetProviderOnDust(provider: Provider): void {
+        const satoshis = tokensToSatoshis128(
+            provider.getLiquidityAmount(),
+            this.quoteAtReservation,
+        );
 
-        if (u256.lt(satLeftValue, STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)) {
+        if (satoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
             this.providerManager.resetProvider(provider, false);
         }
     }
 
-    private setNewOwedValueCleanQueueIfNeeded(
+    private setNewOwedValueAndRemoveIfNeeded(
         provider: Provider,
-        oldValue: u256,
-        spent: u256,
+        currentOwed: u64,
+        spent: u64,
     ): void {
-        const newOwed = SafeMath.sub(oldValue, spent);
+        const newOwed = SafeMath.sub64(currentOwed, spent);
         this.providerManager.setBTCowed(provider.getId(), newOwed);
 
-        if (u256.lt(newOwed, STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)) {
+        if (newOwed < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
             this.providerManager.removePendingLiquidityProviderFromRemovalQueue(provider);
         }
     }
 
-    private increaseSatoshisSpent(value: u256): void {
-        this.totalSatoshisSpent = SafeMath.add(this.totalSatoshisSpent, value);
+    private increaseSatoshisSpent(value: u64): void {
+        this.totalSatoshisSpent = SafeMath.add64(this.totalSatoshisSpent, value);
+    }
+
+    private increaseTotalSatoshisRefunded(value: u64): void {
+        this.totalSatoshisRefunded = SafeMath.add64(this.totalSatoshisRefunded, value);
     }
 
     private increaseTotalTokensPurchased(value: u256): void {
@@ -330,15 +344,11 @@ export class TradeManager implements ITradeManager {
         this.tokensReserved = SafeMath.add(this.tokensReserved, value.toU256());
     }
 
-    private increaseTotalRefundedBTC(value: u256): void {
-        this.totalRefundedBTC = SafeMath.add(this.totalRefundedBTC, value);
-    }
-
     private increaseTotalTokensRefunded(value: u256): void {
         this.totalTokensRefunded = SafeMath.add(this.totalTokensRefunded, value);
     }
 
-    private getValidQuote(blockNumber: u64): void {
+    private getValidBlockQuote(blockNumber: u64): void {
         this.quoteAtReservation = this.quoteManager.getValidBlockQuote(blockNumber);
     }
 
@@ -358,7 +368,9 @@ export class TradeManager implements ITradeManager {
 
     private ensureReservationIsValid(reservation: Reservation): void {
         if (!reservation.isValid()) {
-            throw new Revert('Impossible state: Reservation is invalid but went thru executeTrade');
+            throw new Revert(
+                'Impossible state: Reservation is invalid but went thru executeTrade.',
+            );
         }
     }
 
@@ -385,7 +397,7 @@ export class TradeManager implements ITradeManager {
 
     private emitActivateProviderEvent(provider: Provider): void {
         Blockchain.emit(
-            new ActivateProviderEvent(provider.getId(), provider.getLiquidityAmount(), u256.Zero),
+            new ActivateProviderEvent(provider.getId(), provider.getLiquidityAmount(), 0),
         );
     }
 }

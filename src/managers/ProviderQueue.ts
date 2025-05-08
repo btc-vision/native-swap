@@ -1,4 +1,4 @@
-import { u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Address,
     Blockchain,
@@ -28,19 +28,43 @@ export class ProviderQueue {
         return this._currentIndex;
     }
 
-    public get startingIndex(): u64 {
-        return this.queue.startingIndex();
-    }
-
     public get length(): u64 {
         return this.queue.getLength();
+    }
+
+    public get startingIndex(): u64 {
+        return this.queue.startingIndex();
     }
 
     public add(provider: Provider): u64 {
         this.queue.push(provider.getId(), true);
 
-        const index = this.queue.getLength() - 1;
+        const index: u64 = this.queue.getLength() - 1;
         provider.setQueueIndex(index);
+
+        return index;
+    }
+
+    public cleanUp(previousStartingIndex: u64): u64 {
+        const length: u64 = this.length;
+        let index: u64 = previousStartingIndex;
+
+        while (index < length) {
+            const providerId: u256 = this.queue.get_physical(index);
+
+            if (!providerId.isZero()) {
+                const provider: Provider = getProvider(providerId);
+
+                if (provider.isActive()) {
+                    this.queue.setStartingIndex(index);
+                    break;
+                } else {
+                    this.queue.delete_physical(index);
+                }
+            }
+
+            index++;
+        }
 
         return index;
     }
@@ -49,12 +73,33 @@ export class ProviderQueue {
         return this.queue.get_physical(index);
     }
 
-    public removeAt(index: u64): void {
-        this.queue.delete_physical(index);
+    public getNextWithLiquidity(currentQuote: u256): Provider | null {
+        let result: Potential<Provider> = null;
+
+        //!!!! Revalidate overflow
+        this.ensureCurrentIndexNotOverflow();
+        this.ensureStartingIndexIsValid();
+        this.initializeCurrentIndex();
+
+        const length: u64 = this.length;
+        while (this._currentIndex < length && result === null) {
+            const candidate: Provider | null = this.tryNextCandidate(currentQuote);
+            this.advanceCurrentIndex();
+
+            if (candidate !== null) {
+                result = candidate;
+            }
+        }
+
+        return result;
     }
 
     public getQueue(): StoredU256Array {
         return this.queue;
+    }
+
+    public removeAt(index: u64): void {
+        this.queue.delete_physical(index);
     }
 
     public resetProvider(
@@ -87,63 +132,12 @@ export class ProviderQueue {
         this.queue.save();
     }
 
-    public getNextWithLiquidity(currentQuote: u256): Provider | null {
-        let result: Potential<Provider> = null;
-
-        //!!!! Revalidate overflow
-        this.ensureCurrentIndexNotOverflow();
-        this.ensureStartingIndexIsValid();
-        this.initializeCurrentIndex();
-
-        const length = this.length;
-        while (this._currentIndex < length && result === null) {
-            const candidate = this.tryNextCandidate(currentQuote);
-            this.advanceCurrentIndex();
-
-            if (candidate !== null) {
-                result = candidate;
-            }
+    protected advanceCurrentIndex(): void {
+        if (this._currentIndex === u64.MAX_VALUE) {
+            this.currentIndexOverflow = true;
+        } else {
+            this._currentIndex++;
         }
-
-        return result;
-    }
-
-    public cleanUp(previousStartingIndex: u64): u64 {
-        const length = this.length;
-        let index: u64 = previousStartingIndex;
-
-        while (index < length) {
-            const providerId = this.queue.get_physical(index);
-
-            if (!providerId.isZero()) {
-                const provider = getProvider(providerId);
-
-                if (provider.isActive()) {
-                    this.queue.setStartingIndex(index);
-                    break;
-                } else {
-                    this.queue.delete_physical(index);
-                }
-            }
-
-            index++;
-        }
-
-        return index;
-    }
-
-    protected isEligible(provider: Provider): boolean {
-        if (!provider.isActive()) {
-            return false;
-        }
-
-        if (provider.isPriority()) {
-            throw new Revert(
-                `Impossible state: priority provider in standard queue (${provider.getId()}).`,
-            );
-        }
-
-        return true;
     }
 
     protected ensureCurrentIndexNotOverflow(): void {
@@ -164,20 +158,26 @@ export class ProviderQueue {
         }
     }
 
-    protected advanceCurrentIndex(): void {
-        if (this._currentIndex === u64.MAX_VALUE) {
-            this.currentIndexOverflow = true;
-        } else {
-            this._currentIndex++;
+    protected isEligible(provider: Provider): boolean {
+        if (!provider.isActive()) {
+            return false;
         }
+
+        if (provider.isPriority()) {
+            throw new Revert(
+                `Impossible state: priority provider in normal queue (${provider.getId()}).`,
+            );
+        }
+
+        return true;
     }
 
     protected tryNextCandidate(currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
-        const providerId = this.queue.get_physical(this._currentIndex);
+        const providerId: u256 = this.queue.get_physical(this._currentIndex);
 
         if (!providerId.isZero()) {
-            const provider = getProvider(providerId);
+            const provider: Provider = getProvider(providerId);
 
             if (this.isEligible(provider)) {
                 result = this.returnProvider(provider, this._currentIndex, currentQuote);
@@ -187,10 +187,10 @@ export class ProviderQueue {
         return result;
     }
 
-    // TODO: we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
+    // TODO:!!! we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
     private returnProvider(provider: Provider, index: u64, currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
-        const availableLiquidity = provider.getAvailableLiquidityAmount();
+        const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
 
         if (!availableLiquidity.isZero()) {
             if (ENABLE_INDEX_VERIFICATION) {

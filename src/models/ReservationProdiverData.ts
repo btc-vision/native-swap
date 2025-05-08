@@ -1,5 +1,5 @@
 import { ProviderTypes } from '../types/ProviderTypes';
-import { u128 } from '@btc-vision/as-bignum';
+import { u128 } from '@btc-vision/as-bignum/assembly';
 
 export class ReservationProviderData {
     constructor(
@@ -7,4 +7,8 @@ export class ReservationProviderData {
         public readonly providedAmount: u128,
         public readonly providerType: ProviderTypes,
     ) {}
+
+    public isLiquidityRemoval(): boolean {
+        return this.providerType === ProviderTypes.LiquidityRemoval;
+    }
 }

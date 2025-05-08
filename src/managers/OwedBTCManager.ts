@@ -1,5 +1,5 @@
 import { SafeMath, StoredMapU256 } from '@btc-vision/btc-runtime/runtime';
-import { u256 } from '@btc-vision/as-bignum';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 import { BTC_OWED_POINTER, BTC_OWED_RESERVED_POINTER } from '../constants/StoredPointers';
 

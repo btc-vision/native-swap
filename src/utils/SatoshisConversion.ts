@@ -1,4 +1,4 @@
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { SafeMath } from '../../../btc-runtime/runtime';
 import { MAX_TOTAL_SATOSHIS, QUOTE_SCALE } from '../constants/Contract';
 import { Revert } from '@btc-vision/btc-runtime/runtime';

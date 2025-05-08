@@ -26,7 +26,7 @@ import {
     tokenIdUint8Array1,
     tokenIdUint8Array2,
 } from './test_helper';
-import { u128, u256 } from '@btc-vision/as-bignum';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../lib/FeeManager';
 import {
     LIQUIDITY_REMOVAL_TYPE,

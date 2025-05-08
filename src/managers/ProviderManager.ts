@@ -1,4 +1,4 @@
-import { u256 } from '@btc-vision/as-bignum';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Address,
     Blockchain,
@@ -9,9 +9,9 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import {
     INITIAL_LIQUIDITY_PROVIDER_POINTER,
+    NORMAL_QUEUE_POINTER,
     PRIORITY_QUEUE_POINTER,
     REMOVAL_QUEUE_POINTER,
-    STANDARD_QUEUE_POINTER,
     STARTING_INDEX_POINTER,
 } from '../constants/StoredPointers';
 import { getProvider, Provider } from '../models/Provider';
@@ -27,7 +27,7 @@ import { IProviderManager } from './interfaces/IProviderManager';
 export class ProviderManager implements IProviderManager {
     protected readonly token: Address;
     protected readonly tokenIdUint8Array: Uint8Array;
-    protected readonly standardQueue: ProviderQueue;
+    protected readonly normalQueue: ProviderQueue;
     protected readonly priorityQueue: PriorityProviderQueue;
     protected readonly removalQueue: RemovalProviderQueue;
     protected readonly owedBTCManager: IOwedBTCManager;
@@ -39,7 +39,7 @@ export class ProviderManager implements IProviderManager {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
         this.owedBTCManager = owedBTCManager;
-        this.standardQueue = new ProviderQueue(token, STANDARD_QUEUE_POINTER, tokenIdUint8Array);
+        this.normalQueue = new ProviderQueue(token, NORMAL_QUEUE_POINTER, tokenIdUint8Array);
         this.priorityQueue = new PriorityProviderQueue(
             token,
             PRIORITY_QUEUE_POINTER,
@@ -58,36 +58,24 @@ export class ProviderManager implements IProviderManager {
         this._startingIndex = new StoredU64(STARTING_INDEX_POINTER, tokenIdUint8Array);
     }
 
-    public get standardQueueLength(): u64 {
-        return this.standardQueue.length;
+    public get currentIndexPriority(): u64 {
+        return this.priorityQueue.currentIndex;
     }
 
-    public get standardQueueStartingIndex(): u64 {
-        return this.standardQueue.startingIndex;
+    public get currentIndexRemoval(): u64 {
+        return this.removalQueue.currentIndex;
     }
 
-    public get priorityQueueLength(): u64 {
-        return this.priorityQueue.length;
+    public get currentIndexNormal(): u64 {
+        return this.normalQueue.currentIndex;
     }
 
-    public get priorityQueueStartingIndex(): u64 {
-        return this.priorityQueue.startingIndex;
+    public get initialLiquidityProviderId(): u256 {
+        return this._initialLiquidityProviderId.value;
     }
 
-    public get removalQueueLength(): u64 {
-        return this.removalQueue.length;
-    }
-
-    public get removalQueueStartingIndex(): u64 {
-        return this.removalQueue.startingIndex;
-    }
-
-    public get previousStandardStartingIndex(): u64 {
-        return this._startingIndex.get(0);
-    }
-
-    public set previousStandardStartingIndex(value: u64) {
-        this._startingIndex.set(0, value);
+    public set initialLiquidityProviderId(value: u256) {
+        this._initialLiquidityProviderId.value = value;
     }
 
     public get previousPriorityStartingIndex(): u64 {
@@ -106,28 +94,40 @@ export class ProviderManager implements IProviderManager {
         this._startingIndex.set(2, value);
     }
 
-    public get initialLiquidityProviderId(): u256 {
-        return this._initialLiquidityProviderId.value;
+    public get previousNormalStartingIndex(): u64 {
+        return this._startingIndex.get(0);
     }
 
-    public set initialLiquidityProviderId(value: u256) {
-        this._initialLiquidityProviderId.value = value;
+    public set previousNormalStartingIndex(value: u64) {
+        this._startingIndex.set(0, value);
     }
 
-    public get currentIndexStandard(): u64 {
-        return this.standardQueue.currentIndex;
+    public get priorityQueueLength(): u64 {
+        return this.priorityQueue.length;
     }
 
-    public get currentIndexPriority(): u64 {
-        return this.priorityQueue.currentIndex;
+    public get priorityQueueStartingIndex(): u64 {
+        return this.priorityQueue.startingIndex;
     }
 
-    public get currentIndexRemoval(): u64 {
-        return this.removalQueue.currentIndex;
+    public get removalQueueLength(): u64 {
+        return this.removalQueue.length;
     }
 
-    public addToStandardQueue(provider: Provider): u64 {
-        return this.standardQueue.add(provider);
+    public get removalQueueStartingIndex(): u64 {
+        return this.removalQueue.startingIndex;
+    }
+
+    public get normalQueueLength(): u64 {
+        return this.normalQueue.length;
+    }
+
+    public get normalQueueStartingIndex(): u64 {
+        return this.normalQueue.startingIndex;
+    }
+
+    public addToNormalQueue(provider: Provider): u64 {
+        return this.normalQueue.add(provider);
     }
 
     public addToPriorityQueue(provider: Provider): u64 {
@@ -138,10 +138,34 @@ export class ProviderManager implements IProviderManager {
         return this.removalQueue.add(provider);
     }
 
+    public cleanUpQueues(): void {
+        this.previousNormalStartingIndex = this.normalQueue.cleanUp(
+            this.previousNormalStartingIndex,
+        );
+        this.previousPriorityStartingIndex = this.priorityQueue.cleanUp(
+            this.previousPriorityStartingIndex,
+        );
+        this.previousRemovalStartingIndex = this.removalQueue.cleanUp(
+            this.previousRemovalStartingIndex,
+        );
+    }
+
+    public getFromPriorityQueue(index: u64): u256 {
+        return this.priorityQueue.getAt(index);
+    }
+
+    public getFromRemovalQueue(index: u64): u256 {
+        return this.removalQueue.getAt(index);
+    }
+
+    public getFromNormalQueue(index: u64): u256 {
+        return this.normalQueue.getAt(index);
+    }
+
     public getIdFromQueue(index: u64, type: ProviderTypes): u256 {
         switch (type) {
             case ProviderTypes.Normal: {
-                return this.standardQueue.getAt(index);
+                return this.normalQueue.getAt(index);
             }
             case ProviderTypes.Priority: {
                 return this.priorityQueue.getAt(index);
@@ -155,8 +179,36 @@ export class ProviderManager implements IProviderManager {
         }
     }
 
+    public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
+        if (currentQuote.isZero()) {
+            return this.getInitialProvider(currentQuote);
+        }
+
+        const removalProvider: Provider | null =
+            this.removalQueue.getNextWithLiquidity(currentQuote);
+
+        if (removalProvider !== null) {
+            return removalProvider;
+        }
+
+        const priorityProvider: Provider | null =
+            this.priorityQueue.getNextWithLiquidity(currentQuote);
+
+        if (priorityProvider !== null) {
+            return priorityProvider;
+        }
+
+        const provider: Provider | null = this.normalQueue.getNextWithLiquidity(currentQuote);
+
+        if (provider !== null) {
+            return provider;
+        }
+
+        return this.getInitialProvider(currentQuote);
+    }
+
     public getProviderFromQueue(index: u64, type: ProviderTypes): Provider {
-        let providerId: u256 = u256.Zero;
+        let providerId: u256;
 
         if (index === INITIAL_LIQUIDITY_PROVIDER_INDEX) {
             providerId = this.initialLiquidityProviderId;
@@ -169,20 +221,8 @@ export class ProviderManager implements IProviderManager {
         return getProvider(providerId);
     }
 
-    public getFromStandardQueue(index: u64): u256 {
-        return this.standardQueue.getAt(index);
-    }
-
-    public getFromPriorityQueue(index: u64): u256 {
-        return this.priorityQueue.getAt(index);
-    }
-
-    public getFromRemovalQueue(index: u64): u256 {
-        return this.removalQueue.getAt(index);
-    }
-
-    public getStandardQueue(): ProviderQueue {
-        return this.standardQueue;
+    public getNormalQueue(): ProviderQueue {
+        return this.normalQueue;
     }
 
     public getBTCowed(providerId: u256): u64 {
@@ -203,41 +243,6 @@ export class ProviderManager implements IProviderManager {
 
     public setBTCowedReserved(providerId: u256, amount: u64): void {
         this.owedBTCManager.setBTCowedReserved(providerId, amount);
-    }
-
-    public cleanUpQueues(): void {
-        this.previousStandardStartingIndex = this.standardQueue.cleanUp(
-            this.previousStandardStartingIndex,
-        );
-        this.previousPriorityStartingIndex = this.priorityQueue.cleanUp(
-            this.previousPriorityStartingIndex,
-        );
-        this.previousRemovalStartingIndex = this.removalQueue.cleanUp(
-            this.previousRemovalStartingIndex,
-        );
-    }
-
-    public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
-        if (currentQuote.isZero()) {
-            return this.getInitialProvider(currentQuote);
-        }
-
-        const removalProvider = this.removalQueue.getNextWithLiquidity(currentQuote);
-        if (removalProvider !== null) {
-            return removalProvider;
-        }
-
-        const priorityProvider = this.priorityQueue.getNextWithLiquidity(currentQuote);
-        if (priorityProvider !== null) {
-            return priorityProvider;
-        }
-
-        const provider = this.standardQueue.getNextWithLiquidity(currentQuote);
-        if (provider !== null) {
-            return provider;
-        }
-
-        return this.getInitialProvider(currentQuote);
     }
 
     public removePendingLiquidityProviderFromRemovalQueue(provider: Provider): void {
@@ -263,7 +268,7 @@ export class ProviderManager implements IProviderManager {
             if (provider.isPriority()) {
                 this.priorityQueue.removeAt(provider.getQueueIndex());
             } else {
-                this.standardQueue.removeAt(provider.getQueueIndex());
+                this.normalQueue.removeAt(provider.getQueueIndex());
             }
         }
 
@@ -273,22 +278,20 @@ export class ProviderManager implements IProviderManager {
     }
 
     public resetStartingIndex(): void {
-        this.previousStandardStartingIndex = 0;
+        this.previousNormalStartingIndex = 0;
         this.previousPriorityStartingIndex = 0;
         this.previousRemovalStartingIndex = 0;
     }
 
     public restoreCurrentIndex(): void {
-        this.standardQueue.restoreCurrentIndex(this.previousStandardStartingIndex);
+        this.normalQueue.restoreCurrentIndex(this.previousNormalStartingIndex);
         this.priorityQueue.restoreCurrentIndex(this.previousPriorityStartingIndex);
         this.removalQueue.restoreCurrentIndex(this.previousRemovalStartingIndex);
     }
 
     public save(): void {
-        this.previousStandardStartingIndex =
-            this.currentIndexStandard === 0
-                ? this.currentIndexStandard
-                : this.currentIndexStandard - 1;
+        this.previousNormalStartingIndex =
+            this.currentIndexNormal === 0 ? this.currentIndexNormal : this.currentIndexNormal - 1;
 
         this.previousPriorityStartingIndex =
             this.currentIndexPriority === 0
@@ -301,7 +304,7 @@ export class ProviderManager implements IProviderManager {
                 : this.currentIndexRemoval - 1;
 
         this._startingIndex.save();
-        this.standardQueue.save();
+        this.normalQueue.save();
         this.priorityQueue.save();
         this.removalQueue.save();
     }
