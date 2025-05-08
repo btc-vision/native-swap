@@ -4,6 +4,7 @@ import {
     BytesReader,
     BytesWriter,
     encodePointer,
+    U128_BYTE_LENGTH,
     U256_BYTE_LENGTH,
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
@@ -259,10 +260,6 @@ export class ProviderData {
         this.ensureLiquidityProvided();
         return this._liquidityProvided;
     }
-
-    // !!!! How to manage liquidityProvided u128 vs u256.
-    // if u256, problem with remove as reservation can only hold u128
-    // if u128 problem with add liquidity, we cannot buy the whole pool
 
     /**
      * @method liquidityProvided
@@ -534,7 +531,7 @@ export class ProviderData {
      * @returns {Uint8Array} The packed Uint8Array value.
      */
     private packLiquidityProvided(): Uint8Array {
-        const writer: BytesWriter = new BytesWriter(U256_BYTE_LENGTH);
+        const writer: BytesWriter = new BytesWriter(U128_BYTE_LENGTH);
         writer.writeU128(this._liquidityProvided);
 
         return writer.getBuffer();

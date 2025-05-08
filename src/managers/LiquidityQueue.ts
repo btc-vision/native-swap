@@ -278,8 +278,8 @@ export class LiquidityQueue implements ILiquidityQueue {
         return availableScaled;
     }
 
-    public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
-        return this.providerManager.getNextProviderWithLiquidity(currentQuote);
+    public getNextProviderWithLiquidity(quote: u256): Provider | null {
+        return this.providerManager.getNextProviderWithLiquidity(quote);
     }
 
     public getReservationWithExpirationChecks(): Reservation {
@@ -343,16 +343,15 @@ export class LiquidityQueue implements ILiquidityQueue {
     public initializeInitialLiquidity(
         floorPrice: u256,
         providerId: u256,
-        initialLiquidity: u128, //!!!! Peut pas reserver plus qu'un u128, sinon break ou throw si meme provider
+        initialLiquidity: u128,
         maxReserves5BlockPercent: u64,
     ): void {
         this.initialLiquidityProviderId = providerId;
-
-        const initialLiquidity256 = initialLiquidity.toU256();
-        this.virtualSatoshisReserve = SafeMath.div(initialLiquidity256, floorPrice);
-        //!!!!
-        this.virtualTokenReserve = initialLiquidity256;
-
+        this.virtualTokenReserve = initialLiquidity.toU256();
+        this.virtualSatoshisReserve = this.computeInitialSatoshisReserve(
+            this.virtualTokenReserve,
+            floorPrice,
+        );
         this.maxReserves5BlockPercent = maxReserves5BlockPercent;
     }
 
@@ -452,6 +451,7 @@ export class LiquidityQueue implements ILiquidityQueue {
             T = u256.One;
         }
 
+        //!!!
         if (B > u256.fromU64(u64.MAX_VALUE)) {
             throw new Revert(`Impossible state: New virtual satoshis reserve out of range.`);
         }
@@ -468,10 +468,23 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.lastVirtualUpdateBlock = currentBlock;
     }
 
+    //!!!
+    private computeInitialSatoshisReserve(initialLiquidity: u256, floorPrice: u256): u64 {
+        const reserve: u256 = SafeMath.div(initialLiquidity, floorPrice);
+
+        if (u256.gt(reserve, u256.fromU64(u64.MAX_VALUE))) {
+            throw new Revert(
+                'Impossible state: Satoshis reserve out of range. Please adjust initial liquidity or floor price.',
+            );
+        }
+
+        return reserve.toU64();
+    }
+
     private resetAccumulators(): void {
         this.liquidityQueueReserve.deltaTokensAdd = u256.Zero;
-        this.liquidityQueueReserve.deltaSatoshisBuy = 0;
         this.liquidityQueueReserve.deltaTokensBuy = u256.Zero;
+        this.liquidityQueueReserve.deltaSatoshisBuy = 0;
     }
 
     private computeVolatility(

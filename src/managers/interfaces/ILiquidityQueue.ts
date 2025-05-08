@@ -54,7 +54,7 @@ export interface ILiquidityQueue {
 
     getMaximumTokensLeftBeforeCap(): u256;
 
-    getNextProviderWithLiquidity(currentQuote: u256): Provider | null;
+    getNextProviderWithLiquidity(quote: u256): Provider | null;
 
     getReservationWithExpirationChecks(): Reservation;
 
