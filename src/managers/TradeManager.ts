@@ -22,6 +22,7 @@ import { ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER } from '../constants/StoredPoin
 import { ProviderTypes } from '../types/ProviderTypes';
 import { IProviderManager } from './interfaces/IProviderManager';
 import {
+    INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
 } from '../constants/Contract';
@@ -67,9 +68,9 @@ export class TradeManager implements ITradeManager {
         this.removeReservationFromActiveList(reservation);
         this.resetTotals();
 
-        const providerCount: u64 = reservation.getProviderCount();
+        const providerCount: u64 = <u64>reservation.getProviderCount();
 
-        for (let index = 0; index < providerCount; index++) {
+        for (let index: u64 = 0; index < providerCount; index++) {
             const providerData: ReservationProviderData = reservation.getProviderAt(index);
             const provider: Provider = this.getProvider(providerData);
             const satoshisSent: u64 = this.getSatoshisSent(provider.getBtcReceiver());
@@ -385,9 +386,8 @@ export class TradeManager implements ITradeManager {
     }
 
     private ensurePurgeIndexIsValid(purgeIndex: u64): void {
-        //!!!! CHECK MAX_VALUE
-        if (purgeIndex === u64.MAX_VALUE) {
-            throw new Revert('Impossible state: purgeIndex is MAX_VALUE.');
+        if (purgeIndex === INDEX_NOT_SET_VALUE) {
+            throw new Revert('Impossible state: purgeIndex is not set.');
         }
     }
 

@@ -3,7 +3,10 @@ import { ProviderQueue } from './ProviderQueue';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, Blockchain, Potential, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
-import { STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT } from '../constants/Contract';
+import {
+    MAXIMUM_PROVIDER_COUNT,
+    STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
+} from '../constants/Contract';
 import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 
 export class RemovalProviderQueue extends ProviderQueue {
@@ -20,8 +23,11 @@ export class RemovalProviderQueue extends ProviderQueue {
     }
 
     public override add(provider: Provider): u64 {
-        this.queue.push(provider.getId(), true);
+        if (this.queue.getLength() === MAXIMUM_PROVIDER_COUNT) {
+            throw new Revert('Impossible state: Too many providers required for reservation.');
+        }
 
+        this.queue.push(provider.getId(), true);
         const index: u64 = this.queue.getLength() - 1;
         provider.setRemovalQueueIndex(index);
 

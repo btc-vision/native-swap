@@ -241,7 +241,7 @@ export class ReservationManager implements IReservationManager {
 
     private restoreReservation(reservation: Reservation): u256 {
         let restoredLiquidity: u256 = u256.Zero;
-        const providerCount: u64 = reservation.getProviderCount();
+        const providerCount: u64 = <u64>reservation.getProviderCount();
 
         for (let index: u64 = 0; index < providerCount; index++) {
             const providerReservationData: ReservationProviderData =

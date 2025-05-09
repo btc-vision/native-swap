@@ -15,6 +15,8 @@ import {
 } from '../utils/SatoshisConversion';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import {
+    INDEX_NOT_SET_VALUE,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAX_ACTIVATION_DELAY,
     MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
     MINIMUM_TRADE_SIZE_IN_SAT,
@@ -61,7 +63,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         const reservation: Reservation = this.createReservation();
 
-        let lastIndex: u64 = <u64>u32.MAX_VALUE + <u64>1; // Impossible value
+        let lastIndex: u64 = INDEX_NOT_SET_VALUE;
         let lastProviderId: u256 = u256.Zero;
 
         // Loop over providers while remainingTokens > 0
@@ -82,9 +84,11 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 break;
             }
 
-            //!!!
             // If we see repeated initial liquidity provider => break
-            if (provider.getQueueIndex() === u32.MAX_VALUE && lastIndex === u32.MAX_VALUE) {
+            if (
+                provider.getQueueIndex() === INITIAL_LIQUIDITY_PROVIDER_INDEX &&
+                lastIndex === INITIAL_LIQUIDITY_PROVIDER_INDEX
+            ) {
                 break;
             }
 

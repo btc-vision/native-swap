@@ -472,7 +472,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.lastVirtualUpdateBlock = currentBlock;
     }
 
-    //!!!
     private computeInitialSatoshisReserve(initialLiquidity: u256, floorPrice: u256): u64 {
         const reserve: u256 = SafeMath.div(initialLiquidity, floorPrice);
 

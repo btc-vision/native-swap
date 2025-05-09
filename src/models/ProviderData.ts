@@ -10,6 +10,7 @@ import {
     U8_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import { AMOUNT_POINTER, LIQUIDITY_PROVIDED_POINTER } from '../constants/StoredPointers';
+import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
 
 @final
 export class ProviderData {
@@ -39,7 +40,7 @@ export class ProviderData {
         this.amountPointer = encodePointer(AMOUNT_POINTER, subPointer);
     }
 
-    private _removalQueueIndex: u64 = 0;
+    private _removalQueueIndex: u64 = INDEX_NOT_SET_VALUE;
 
     /**
      * @method removalQueueIndex
@@ -221,9 +222,8 @@ export class ProviderData {
         }
     }
 
-    private _queueIndex: u64 = 0;
+    private _queueIndex: u64 = INDEX_NOT_SET_VALUE;
 
-    //!!!!
     /**
      * @method queueIndex
      * @description Gets the index of the provider in the normal/priority queue.

@@ -9,6 +9,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { getProvider, Provider } from '../models/Provider';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
+import { MAXIMUM_PROVIDER_COUNT, MAXIMUM_VALID_INDEX } from '../constants/Contract';
 
 const ENABLE_INDEX_VERIFICATION: bool = true;
 
@@ -37,8 +38,11 @@ export class ProviderQueue {
     }
 
     public add(provider: Provider): u64 {
-        this.queue.push(provider.getId(), true);
+        if (this.queue.getLength() === MAXIMUM_PROVIDER_COUNT) {
+            throw new Revert('Impossible state: Too many providers required for reservation.');
+        }
 
+        this.queue.push(provider.getId(), true);
         const index: u64 = this.queue.getLength() - 1;
         provider.setQueueIndex(index);
 
@@ -133,7 +137,7 @@ export class ProviderQueue {
     }
 
     protected advanceCurrentIndex(): void {
-        if (this._currentIndex === u64.MAX_VALUE) {
+        if (this._currentIndex === MAXIMUM_VALID_INDEX) {
             this.currentIndexOverflow = true;
         } else {
             this._currentIndex++;

@@ -18,6 +18,7 @@ import { u128 } from '@btc-vision/as-bignum/assembly';
 import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReservationData } from './ReservationData';
 import { ReservationProviderData } from './ReservationProdiverData';
+import { MAXIMUM_PROVIDER_COUNT } from '../constants/Contract';
 
 export class Reservation {
     private reservationData: ReservationData;
@@ -66,11 +67,11 @@ export class Reservation {
         this.reservationData.activationDelay = value;
     }
 
-    public getPurgeIndex(): u32 {
+    public getPurgeIndex(): u64 {
         return this.reservationData.purgeIndex;
     }
 
-    public setPurgeIndex(index: u32): void {
+    public setPurgeIndex(index: u64): void {
         this.reservationData.purgeIndex = index;
     }
 
@@ -153,14 +154,18 @@ export class Reservation {
     }
 
     public addProvider(providerData: ReservationProviderData): void {
+        if (this.reservedIndexes.getLength() === MAXIMUM_PROVIDER_COUNT) {
+            throw new Revert('Impossible state: Too many providers required for reservation.');
+        }
+
         this.reservedIndexes.push(providerData.providerIndex);
         this.reservedValues.push(providerData.providedAmount);
         this.reservedPriority.push(<u8>providerData.providerType);
     }
 
-    public getProviderAt(index: number): ReservationProviderData {
+    public getProviderAt(index: u64): ReservationProviderData {
         if (index > this.reservedIndexes.getLength() - 1) {
-            throw new Revert('Impossible state: requested provider index out of range');
+            throw new Revert('Impossible state: requested provider index out of range.');
         }
 
         return new ReservationProviderData(
@@ -170,7 +175,11 @@ export class Reservation {
         );
     }
 
-    public getProviderCount(): u64 {
-        return this.reservedIndexes.getLength();
+    public getProviderCount(): u32 {
+        if (this.reservedIndexes.getLength() > MAXIMUM_PROVIDER_COUNT) {
+            throw new Revert('Impossible state: reserved index corrupted.');
+        }
+
+        return <u32>this.reservedIndexes.getLength();
     }
 }
