@@ -5,7 +5,7 @@ import {
     BytesWriter,
     Revert,
     StoredU128Array,
-    StoredU64Array,
+    StoredU32Array,
     StoredU8Array,
 } from '@btc-vision/btc-runtime/runtime';
 import {
@@ -22,7 +22,7 @@ import { MAXIMUM_PROVIDER_COUNT } from '../constants/Contract';
 
 export class Reservation {
     private reservationData: ReservationData;
-    private reservedIndexes: StoredU64Array;
+    private reservedIndexes: StoredU32Array;
     private reservedValues: StoredU128Array;
     private reservedPriority: StoredU8Array;
     private readonly id: u128;
@@ -38,7 +38,7 @@ export class Reservation {
 
         this.reservationData = new ReservationData(RESERVATION_DATA_POINTER, reservationId);
         this.id = u128.fromBytes(reservationId, true);
-        this.reservedIndexes = new StoredU64Array(RESERVATION_INDEXES, reservationId);
+        this.reservedIndexes = new StoredU32Array(RESERVATION_INDEXES, reservationId);
         this.reservedValues = new StoredU128Array(RESERVATION_AMOUNTS, reservationId);
         this.reservedPriority = new StoredU8Array(RESERVATION_PRIORITY, reservationId);
     }
@@ -67,11 +67,11 @@ export class Reservation {
         this.reservationData.activationDelay = value;
     }
 
-    public getPurgeIndex(): u64 {
+    public getPurgeIndex(): u32 {
         return this.reservationData.purgeIndex;
     }
 
-    public setPurgeIndex(index: u64): void {
+    public setPurgeIndex(index: u32): void {
         this.reservationData.purgeIndex = index;
     }
 
@@ -163,21 +163,25 @@ export class Reservation {
         this.reservedPriority.push(<u8>providerData.providerType);
     }
 
-    public getProviderAt(index: u64): ReservationProviderData {
-        if (index > this.reservedIndexes.getLength() - 1) {
+    public getProviderAt(index: u32): ReservationProviderData {
+        if (this.reservedIndexes.getLength() > MAXIMUM_PROVIDER_COUNT) {
+            throw new Revert('Impossible state: reserved indexes count corrupted.');
+        }
+
+        if (index > <u32>(this.reservedIndexes.getLength() - 1)) {
             throw new Revert('Impossible state: requested provider index out of range.');
         }
 
         return new ReservationProviderData(
-            this.reservedIndexes.get(index),
-            this.reservedValues.get(index),
-            this.reservedPriority.get(index),
+            this.reservedIndexes.get(<u64>index),
+            this.reservedValues.get(<u64>index),
+            this.reservedPriority.get(<u64>index),
         );
     }
 
     public getProviderCount(): u32 {
         if (this.reservedIndexes.getLength() > MAXIMUM_PROVIDER_COUNT) {
-            throw new Revert('Impossible state: reserved index corrupted.');
+            throw new Revert('Impossible state: reserved indexes count corrupted.');
         }
 
         return <u32>this.reservedIndexes.getLength();

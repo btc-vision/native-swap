@@ -16,7 +16,6 @@ const ENABLE_INDEX_VERIFICATION: bool = true;
 export class ProviderQueue {
     protected readonly token: Address;
     protected readonly queue: StoredU256Array;
-    protected currentIndexOverflow: boolean = false;
 
     constructor(token: Address, pointer: u16, subPointer: Uint8Array) {
         this.queue = new StoredU256Array(pointer, subPointer);
@@ -80,18 +79,25 @@ export class ProviderQueue {
     public getNextWithLiquidity(currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
 
-        //!!!! Revalidate overflow
-        this.ensureCurrentIndexNotOverflow();
-        this.ensureStartingIndexIsValid();
         this.initializeCurrentIndex();
+        this.ensureStartingIndexIsValid();
 
         const length: u64 = this.length;
         while (this._currentIndex < length && result === null) {
             const candidate: Provider | null = this.tryNextCandidate(currentQuote);
-            this.advanceCurrentIndex();
 
             if (candidate !== null) {
                 result = candidate;
+            }
+
+            if (this._currentIndex === MAXIMUM_VALID_INDEX) {
+                if (result !== null) {
+                    break;
+                } else {
+                    throw new Revert('Impossible state: Index increment overflow.');
+                }
+            } else {
+                this._currentIndex++;
             }
         }
 
@@ -136,23 +142,9 @@ export class ProviderQueue {
         this.queue.save();
     }
 
-    protected advanceCurrentIndex(): void {
-        if (this._currentIndex === MAXIMUM_VALID_INDEX) {
-            this.currentIndexOverflow = true;
-        } else {
-            this._currentIndex++;
-        }
-    }
-
-    protected ensureCurrentIndexNotOverflow(): void {
-        if (this.currentIndexOverflow) {
-            throw new Revert('Impossible state: Index increment overflow');
-        }
-    }
-
     protected ensureStartingIndexIsValid(): void {
         if (this.startingIndex > this.length) {
-            throw new Revert('Impossible state: startingIndex exceeds queue length');
+            throw new Revert('Impossible state: startingIndex exceeds queue length.');
         }
     }
 

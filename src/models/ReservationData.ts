@@ -4,6 +4,7 @@ import {
     BytesWriter,
     EMPTY_BUFFER,
     encodePointer,
+    U32_BYTE_LENGTH,
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
@@ -89,15 +90,15 @@ export class ReservationData {
         }
     }
 
-    private _purgeIndex: u64 = INDEX_NOT_SET_VALUE;
+    private _purgeIndex: u32 = INDEX_NOT_SET_VALUE;
 
     /**
      * @method purgeIndex
      * @description Gets the purge index.
-     * @returns {u64}
+     * @returns {u32}
      */
     @inline
-    public get purgeIndex(): u64 {
+    public get purgeIndex(): u32 {
         this.ensureValues();
         return this._purgeIndex;
     }
@@ -105,9 +106,9 @@ export class ReservationData {
     /**
      * @method purgeIndex
      * @description Sets the purge index.
-     * @param {u64} value - The purge index.
+     * @param {u32} value - The purge index.
      */
-    public set purgeIndex(value: u64) {
+    public set purgeIndex(value: u32) {
         this.ensureValues();
         if (this._purgeIndex !== value) {
             this._purgeIndex = value;
@@ -291,7 +292,7 @@ export class ReservationData {
 
         this.unpackFlags(reader.readU8());
         this._creationBlock = reader.readU64();
-        this._purgeIndex = reader.readU64();
+        this._purgeIndex = reader.readU32();
         this._activationDelay = reader.readU8();
     }
 
@@ -302,11 +303,13 @@ export class ReservationData {
      * @returns The packed Uint8Array value.
      */
     private packValues(): Uint8Array {
-        const writer: BytesWriter = new BytesWriter(2 * U8_BYTE_LENGTH + 2 * U64_BYTE_LENGTH);
+        const writer: BytesWriter = new BytesWriter(
+            2 * U8_BYTE_LENGTH + U64_BYTE_LENGTH + U32_BYTE_LENGTH,
+        );
 
         writer.writeU8(this.packFlags());
         writer.writeU64(this.creationBlock);
-        writer.writeU64(this.purgeIndex);
+        writer.writeU32(this.purgeIndex);
         writer.writeU8(this.activationDelay);
 
         return writer.getBuffer();

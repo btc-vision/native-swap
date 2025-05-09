@@ -159,12 +159,14 @@ export class TradeManager implements ITradeManager {
             provider.getLiquidityAmount(),
         );
 
+        const actualTokens256: u256 = actualTokens.toU256();
+
         if (!actualTokens.isZero()) {
             this.ensureReservedAmountIsValid(provider, requestedTokens);
             this.ensureProviderHasEnoughLiquidity(provider, actualTokens);
 
-            const actualTokensSatoshis: u64 = tokensToSatoshis128(
-                actualTokens,
+            const actualTokensSatoshis: u64 = tokensToSatoshis(
+                actualTokens256,
                 this.quoteAtReservation,
             );
             provider.subtractFromReservedAmount(requestedTokens);
@@ -185,7 +187,7 @@ export class TradeManager implements ITradeManager {
 
             this.resetProviderOnDust(provider);
             this.increaseTokenReserved(requestedTokens);
-            this.increaseTotalTokensPurchased(actualTokens.toU256());
+            this.increaseTotalTokensPurchased(actualTokens256);
             this.increaseSatoshisSpent(actualTokensSatoshis);
             this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
         } else {

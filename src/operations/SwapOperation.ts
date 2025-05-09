@@ -68,6 +68,22 @@ export class SwapOperation extends BaseOperation {
         return newTotalTokensPurchased;
     }
 
+    private emitSwapExecutedEvent(
+        buyer: Address,
+        totalSatoshisSpent: u64,
+        totalTokensPurchased: u256,
+    ): void {
+        Blockchain.emit(new SwapExecutedEvent(buyer, totalSatoshisSpent, totalTokensPurchased));
+    }
+
+    private postProcessQueues(): void {
+        this.liquidityQueue.cleanUpQueues();
+    }
+
+    private sendToken(amount: u256): void {
+        TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
+    }
+
     private updateLiquidityQueue(
         totalTokensReserved: u256,
         totalTokensPurchased: u256,
@@ -78,25 +94,9 @@ export class SwapOperation extends BaseOperation {
         this.liquidityQueue.buyTokens(totalTokensPurchased, totalSatoshisSpent);
     }
 
-    private sendToken(amount: u256): void {
-        TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
-    }
-
-    private postProcessQueues(): void {
-        this.liquidityQueue.cleanUpQueues();
-    }
-
     private ensureReservationNotForLP(reservation: Reservation): void {
         if (reservation.isForLiquidityPool()) {
             throw new Revert('NATIVE_SWAP: Reserved for LP; cannot swap.');
         }
-    }
-
-    private emitSwapExecutedEvent(
-        buyer: Address,
-        totalSatoshisSpent: u64,
-        totalTokensPurchased: u256,
-    ): void {
-        Blockchain.emit(new SwapExecutedEvent(buyer, totalSatoshisSpent, totalTokensPurchased));
     }
 }

@@ -57,3 +57,24 @@ export function satoshisToTokens128(
 
     return result;
 }
+
+export function capTokensU256ToU128(
+    tokensIn: u256,
+    satoshisIn: u64,
+    scaledPrice: u256,
+): CappedTokensResult {
+    const result: CappedTokensResult = new CappedTokensResult();
+
+    if (!tokensIn.isZero()) {
+        const u128Max256: u256 = u128.Max.toU256();
+        if (u256.gt(tokensIn, u128Max256)) {
+            result.tokens = u128.Max;
+            result.satoshis = tokensToSatoshis(u128Max256, scaledPrice);
+        } else {
+            result.tokens = tokensIn.toU128();
+            result.satoshis = satoshisIn;
+        }
+    }
+
+    return result;
+}
