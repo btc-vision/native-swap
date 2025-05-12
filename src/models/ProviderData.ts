@@ -6,7 +6,7 @@ import {
     encodePointer,
     U128_BYTE_LENGTH,
     U256_BYTE_LENGTH,
-    U64_BYTE_LENGTH,
+    U32_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import { AMOUNT_POINTER, LIQUIDITY_PROVIDED_POINTER } from '../constants/StoredPointers';
@@ -40,15 +40,15 @@ export class ProviderData {
         this.amountPointer = encodePointer(AMOUNT_POINTER, subPointer);
     }
 
-    private _removalQueueIndex: u64 = INDEX_NOT_SET_VALUE;
+    private _removalQueueIndex: u32 = INDEX_NOT_SET_VALUE;
 
     /**
      * @method removalQueueIndex
      * @description Gets the index of the provider in the removal queue.
-     * @returns {u64} - The index of the provider in the removal queue.
+     * @returns {u32} - The index of the provider in the removal queue.
      */
     @inline
-    public get removalQueueIndex(): u64 {
+    public get removalQueueIndex(): u32 {
         this.ensureValues();
         return this._removalQueueIndex;
     }
@@ -56,9 +56,9 @@ export class ProviderData {
     /**
      * @method removalQueueIndex
      * @description Sets the index of the provider in the removal queue.
-     * @param {u64} value - The index of the provider in the removal queue.
+     * @param {u32} value - The index of the provider in the removal queue.
      */
-    public set removalQueueIndex(value: u64) {
+    public set removalQueueIndex(value: u32) {
         this.ensureValues();
         if (this._removalQueueIndex !== value) {
             this._removalQueueIndex = value;
@@ -222,15 +222,15 @@ export class ProviderData {
         }
     }
 
-    private _queueIndex: u64 = INDEX_NOT_SET_VALUE;
+    private _queueIndex: u32 = INDEX_NOT_SET_VALUE;
 
     /**
      * @method queueIndex
      * @description Gets the index of the provider in the normal/priority queue.
-     * @returns {u64} - The index of the provider in the normal/priority queue.
+     * @returns {u32} - The index of the provider in the normal/priority queue.
      */
     @inline
-    public get queueIndex(): u64 {
+    public get queueIndex(): u32 {
         this.ensureValues();
         return this._queueIndex;
     }
@@ -238,9 +238,9 @@ export class ProviderData {
     /**
      * @method queueIndex
      * @description Sets the index of the provider in the normal/priority queue.
-     * @param {u64} value - The index of the provider in the normal/priority queue.
+     * @param {u32} value - The index of the provider in the normal/priority queue.
      */
-    public set queueIndex(value: u64) {
+    public set queueIndex(value: u32) {
         this.ensureValues();
         if (this._queueIndex !== value) {
             this._queueIndex = value;
@@ -358,7 +358,7 @@ export class ProviderData {
         this.liquidityProvisionAllowed = false;
         this.liquidityAmount = u128.Zero;
         this.reservedAmount = u128.Zero;
-        this.queueIndex = 0;
+        this.queueIndex = INDEX_NOT_SET_VALUE;
     }
 
     /**
@@ -370,7 +370,7 @@ export class ProviderData {
         this.liquidityProvided = u128.Zero;
         this.pendingRemoval = false;
         this.liquidityProvider = false;
-        this.removalQueueIndex = 0;
+        this.removalQueueIndex = INDEX_NOT_SET_VALUE;
     }
 
     /**
@@ -472,8 +472,8 @@ export class ProviderData {
         this._liquidityProvider = ((flag >> 3) & 1) === 1;
         this._pendingRemoval = ((flag >> 4) & 1) === 1;
         this._initialLiquidityProvider = ((flag >> 5) & 1) === 1;
-        this._queueIndex = reader.readU64();
-        this._removalQueueIndex = reader.readU64();
+        this._queueIndex = reader.readU32();
+        this._removalQueueIndex = reader.readU32();
     }
 
     /**
@@ -508,8 +508,8 @@ export class ProviderData {
      * @returns {Uint8Array} The packed Uint8Array value.
      */
     private packValues(): Uint8Array {
-        const writer: BytesWriter = new BytesWriter(U8_BYTE_LENGTH + 2 * U64_BYTE_LENGTH);
-        const flag =
+        const writer: BytesWriter = new BytesWriter(U8_BYTE_LENGTH + 2 * U32_BYTE_LENGTH);
+        const flag: u8 =
             (this._active ? 1 : 0) |
             ((this._priority ? 1 : 0) << 1) |
             ((this._liquidityProvisionAllowed ? 1 : 0) << 2) |
@@ -518,8 +518,8 @@ export class ProviderData {
             ((this._initialLiquidityProvider ? 1 : 0) << 5);
 
         writer.writeU8(flag);
-        writer.writeU64(this._queueIndex);
-        writer.writeU64(this._removalQueueIndex);
+        writer.writeU32(this._queueIndex);
+        writer.writeU32(this._removalQueueIndex);
 
         return writer.getBuffer();
     }

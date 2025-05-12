@@ -22,35 +22,35 @@ export class ProviderQueue {
         this.token = token;
     }
 
-    protected _currentIndex: u64 = 0;
+    protected _currentIndex: u32 = 0;
 
-    public get currentIndex(): u64 {
+    public get currentIndex(): u32 {
         return this._currentIndex;
     }
 
-    public get length(): u64 {
+    public get length(): u32 {
         return this.queue.getLength();
     }
 
-    public get startingIndex(): u64 {
+    public get startingIndex(): u32 {
         return this.queue.startingIndex();
     }
 
-    public add(provider: Provider): u64 {
+    public add(provider: Provider): u32 {
         if (this.queue.getLength() === MAXIMUM_PROVIDER_COUNT) {
-            throw new Revert('Impossible state: Too many providers required for reservation.');
+            throw new Revert('Impossible state: Too many providers in the queue.');
         }
 
         this.queue.push(provider.getId(), true);
-        const index: u64 = this.queue.getLength() - 1;
+        const index: u32 = this.queue.getLength() - 1;
         provider.setQueueIndex(index);
 
         return index;
     }
 
-    public cleanUp(previousStartingIndex: u64): u64 {
-        const length: u64 = this.length;
-        let index: u64 = previousStartingIndex;
+    public cleanUp(previousStartingIndex: u32): u32 {
+        const length: u32 = this.length;
+        let index: u32 = previousStartingIndex;
 
         while (index < length) {
             const providerId: u256 = this.queue.get_physical(index);
@@ -72,7 +72,7 @@ export class ProviderQueue {
         return index;
     }
 
-    public getAt(index: u64): u256 {
+    public getAt(index: u32): u256 {
         return this.queue.get_physical(index);
     }
 
@@ -82,7 +82,7 @@ export class ProviderQueue {
         this.initializeCurrentIndex();
         this.ensureStartingIndexIsValid();
 
-        const length: u64 = this.length;
+        const length: u32 = this.length;
         while (this._currentIndex < length && result === null) {
             const candidate: Provider | null = this.tryNextCandidate(currentQuote);
 
@@ -108,7 +108,7 @@ export class ProviderQueue {
         return this.queue;
     }
 
-    public removeAt(index: u64): void {
+    public removeAt(index: u32): void {
         this.queue.delete_physical(index);
     }
 
@@ -134,7 +134,7 @@ export class ProviderQueue {
         Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
     }
 
-    public restoreCurrentIndex(previousStartingIndex: u64): void {
+    public restoreCurrentIndex(previousStartingIndex: u32): void {
         this._currentIndex = previousStartingIndex;
     }
 
@@ -184,7 +184,7 @@ export class ProviderQueue {
     }
 
     // TODO:!!! we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
-    private returnProvider(provider: Provider, index: u64, currentQuote: u256): Provider | null {
+    private returnProvider(provider: Provider, index: u32, currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
         const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
 

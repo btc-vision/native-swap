@@ -22,21 +22,21 @@ export class RemovalProviderQueue extends ProviderQueue {
         this.owedBTCManager = owedBTCManager;
     }
 
-    public override add(provider: Provider): u64 {
+    public override add(provider: Provider): u32 {
         if (this.queue.getLength() === MAXIMUM_PROVIDER_COUNT) {
             throw new Revert('Impossible state: Too many providers required for reservation.');
         }
 
         this.queue.push(provider.getId(), true);
-        const index: u64 = this.queue.getLength() - 1;
+        const index: u32 = this.queue.getLength() - 1;
         provider.setRemovalQueueIndex(index);
 
         return index;
     }
 
-    public override cleanUp(previousStartingIndex: u64): u64 {
-        const length: u64 = this.length;
-        let index: u64 = previousStartingIndex;
+    public override cleanUp(previousStartingIndex: u32): u32 {
+        const length: u32 = this.length;
+        let index: u32 = previousStartingIndex;
 
         while (index < length) {
             const providerId: u256 = this.queue.get_physical(index);

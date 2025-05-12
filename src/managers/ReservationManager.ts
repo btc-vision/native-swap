@@ -17,7 +17,10 @@ import {
     BLOCKS_WITH_RESERVATIONS_POINTER,
     RESERVATION_IDS_BY_BLOCK_POINTER,
 } from '../constants/StoredPointers';
-import { RESERVATION_EXPIRE_AFTER_IN_BLOCKS } from '../constants/Contract';
+import {
+    MAXIMUM_RESERVATION_COUNT,
+    RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+} from '../constants/Contract';
 import { Provider } from '../models/Provider';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { IProviderManager } from './interfaces/IProviderManager';
@@ -57,9 +60,9 @@ export class ReservationManager implements IReservationManager {
         );
     }
 
-    public addActiveReservation(blockNumber: u64, reservationId: u128): u64 {
-        const reservationIndex: u64 = this.addToList(blockNumber, reservationId);
-        const reservationActiveIndex: u64 = this.addToActiveList(blockNumber);
+    public addActiveReservation(blockNumber: u64, reservationId: u128): u32 {
+        const reservationIndex: u32 = this.addToList(blockNumber, reservationId);
+        const reservationActiveIndex: u32 = this.addToActiveList(blockNumber);
 
         this.ensureReservedIndexMatch(reservationIndex, reservationActiveIndex);
         this.pushBlockIfNotExists(blockNumber);
@@ -100,17 +103,27 @@ export class ReservationManager implements IReservationManager {
         return maxBlockToPurge;
     }
 
-    private addToList(blockNumber: u64, reservationId: u128): u64 {
+    private addToList(blockNumber: u64, reservationId: u128): u32 {
         const reservationList: StoredU128Array = this.getReservationListForBlock(blockNumber);
+
+        if (reservationList.getLength() === MAXIMUM_RESERVATION_COUNT) {
+            throw new Revert('Impossible state: Too many reservations for block.');
+        }
+
         reservationList.push(reservationId);
         reservationList.save();
 
         return reservationList.getLength() - 1;
     }
 
-    private addToActiveList(blockNumber: u64): u64 {
+    private addToActiveList(blockNumber: u64): u32 {
         const reservationActiveList: StoredBooleanArray =
             this.getActiveReservationListForBlock(blockNumber);
+
+        if (reservationActiveList.getLength() === MAXIMUM_RESERVATION_COUNT) {
+            throw new Revert('Impossible state: Too many reservations for block.');
+        }
+
         reservationActiveList.push(true);
         reservationActiveList.save();
 
@@ -150,7 +163,7 @@ export class ReservationManager implements IReservationManager {
             this.providerManager.resetProvider(provider, false);
         }*/
 
-        this.providerManager.resetProvider(provider, false);
+        this.providerManager.resetProvider(provider, false, false);
     }
 
     private purgeAndRestoreProviderRemovalQueue(
@@ -170,10 +183,10 @@ export class ReservationManager implements IReservationManager {
     private purgeBlock(blockNumber: u64): u256 {
         const reservationList: StoredU128Array = this.getReservationListForBlock(blockNumber);
         const activeIds: StoredBooleanArray = this.getActiveReservationListForBlock(blockNumber);
-        const length: u64 = reservationList.getLength();
+        const length: u32 = reservationList.getLength();
         let totalFreed: u256 = u256.Zero;
 
-        for (let index: u64 = 0; index < length; index++) {
+        for (let index: u32 = 0; index < length; index++) {
             if (activeIds.get(index)) {
                 const reservationId: u128 = reservationList.get(index);
                 const reservation: Reservation = Reservation.load(reservationId);
@@ -194,10 +207,10 @@ export class ReservationManager implements IReservationManager {
 
     private purgeBlocksWithReservations(maxBlockToPurge: u64): u256 {
         let totalFreed: u256 = u256.Zero;
-        const length = this.blocksWithReservations.getLength();
+        const length: u32 = this.blocksWithReservations.getLength();
 
-        let count: u64 = 0;
-        for (let index: u64 = 0; index < length; index++) {
+        let count: u32 = 0;
+        for (let index: u32 = 0; index < length; index++) {
             const blockNumber = this.blocksWithReservations.get(index);
 
             if (blockNumber >= maxBlockToPurge) {
@@ -214,7 +227,7 @@ export class ReservationManager implements IReservationManager {
         }
 
         for (
-            let index: u64 = 0;
+            let index: u32 = 0;
             index < count && this.blocksWithReservations.getLength() > 0;
             index++
         ) {
@@ -227,7 +240,7 @@ export class ReservationManager implements IReservationManager {
     }
 
     private pushBlockIfNotExists(blockNumber: u64): void {
-        const length: u64 = this.blocksWithReservations.getLength();
+        const length: u32 = this.blocksWithReservations.getLength();
 
         if (length > 0) {
             const lastBlock = this.blocksWithReservations.get(length - 1);
@@ -241,9 +254,9 @@ export class ReservationManager implements IReservationManager {
 
     private restoreReservation(reservation: Reservation): u256 {
         let restoredLiquidity: u256 = u256.Zero;
-        const providerCount: u64 = <u64>reservation.getProviderCount();
+        const providerCount: u32 = reservation.getProviderCount();
 
-        for (let index: u64 = 0; index < providerCount; index++) {
+        for (let index: u32 = 0; index < providerCount; index++) {
             const providerReservationData: ReservationProviderData =
                 reservation.getProviderAt(index);
 
@@ -279,7 +292,7 @@ export class ReservationManager implements IReservationManager {
     private ensureRemovalTypeIsValid(queueType: ProviderTypes, provider: Provider): void {
         if (queueType === ProviderTypes.LiquidityRemoval && !provider.isPendingRemoval()) {
             throw new Revert(
-                'Impossible state: provider is in removal queue but is not flagged pendingRemoval',
+                'Impossible state: provider is in removal queue but is not flagged pendingRemoval.',
             );
         }
 
@@ -292,12 +305,12 @@ export class ReservationManager implements IReservationManager {
 
     private ensureReservationIsExpired(reservation: Reservation): void {
         if (!reservation.isExpired()) {
-            throw new Revert(`Impossible state: Reservation still active during purge`);
+            throw new Revert(`Impossible state: Reservation still active during purge.`);
         }
     }
 
-    private ensureReservationPurgeIndexMatch(reservation: Reservation, currentIndex: u64): void {
-        const purgeIndex: u64 = reservation.getPurgeIndex();
+    private ensureReservationPurgeIndexMatch(reservation: Reservation, currentIndex: u32): void {
+        const purgeIndex: u32 = reservation.getPurgeIndex();
 
         if (purgeIndex !== currentIndex) {
             throw new Revert(
@@ -308,13 +321,13 @@ export class ReservationManager implements IReservationManager {
 
     private ensureReservedAmountValid(provider: Provider, reservedAmount: u128): void {
         if (u128.lt(provider.getReservedAmount(), reservedAmount)) {
-            throw new Revert('Impossible state: reserved amount bigger than provider reserved');
+            throw new Revert('Impossible state: reserved amount bigger than provider reserved.');
         }
     }
 
-    private ensureReservedIndexMatch(reservationIndex: u64, reservationActiveIndex: u64): void {
+    private ensureReservedIndexMatch(reservationIndex: u32, reservationActiveIndex: u32): void {
         if (reservationIndex !== reservationActiveIndex) {
-            throw new Revert('Impossible state: Reservation index mismatch');
+            throw new Revert('Impossible state: Reservation index mismatch.');
         }
     }
 }

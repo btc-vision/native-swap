@@ -184,7 +184,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         return this.timeoutEnabled;
     }
 
-    public addActiveReservation(reservation: Reservation): u64 {
+    public addActiveReservation(reservation: Reservation): u32 {
         return this.reservationManager.addActiveReservation(
             reservation.getCreationBlock(),
             reservation.getId(),
@@ -390,12 +390,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public setBlockQuote(): void {
-        if (<u64>u32.MAX_VALUE - 1 < Blockchain.block.number) {
-            throw new Revert('Impossible state: Block number too large, max array size.');
-        }
-
-        const blockNumberU32: u64 = Blockchain.block.number % <u64>(u32.MAX_VALUE - 1);
-        this.quoteManager.setBlockQuote(blockNumberU32, this.quote());
+        this.quoteManager.setBlockQuote(Blockchain.block.number, this.quote());
     }
 
     public setSatoshisOwed(providerId: u256, value: u64): void {

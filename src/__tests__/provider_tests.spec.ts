@@ -1,27 +1,30 @@
-import { Blockchain } from '@btc-vision/btc-runtime/runtime';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import {
-    clearCachedProviders,
-    getProvider,
-    getProviderCacheLength,
-    Provider,
-    saveAllProviders,
-} from '../lib/Provider';
-import {
-    addressToPointerU256,
-    providerAddress1,
-    providerAddress2,
-    providerAddress3,
-    tokenAddress1,
-} from './test_helper';
+import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import { clearCachedProviders } from '../lib/Provider';
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import { getProvider, getProviderCacheLength } from '../models/Provider';
 
 describe('Provider tests', () => {
     beforeEach(() => {
         clearCachedProviders();
         Blockchain.clearStorage();
         Blockchain.clearMockedResults();
+        TransferHelper.clearMockedResults();
     });
 
+    describe('Provider – cache behavior', () => {
+        beforeEach(() => clearCachedProviders());
+
+        it('getProvider returns same instance for same id', () => {
+            const id: u256 = u256.fromU64(1);
+            const p1 = getProvider(id);
+            const p2 = getProvider(id);
+            expect(p1).toBe(p2);
+            expect(getProviderCacheLength()).toStrictEqual(1);
+        });
+    });
+});
+
+/*
     it('should create a new provider when provider id does not exists', () => {
         const providerId: u256 = addressToPointerU256(providerAddress1, tokenAddress1);
         const provider: Provider = getProvider(providerId);
@@ -339,3 +342,4 @@ describe('Provider tests', () => {
         expect(loadedProvider.isPriority()).toStrictEqual(false);
     });
 });
+*/

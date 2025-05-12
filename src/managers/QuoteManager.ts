@@ -1,7 +1,8 @@
-import { Revert, StoredU256Array } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, Revert, StoredU256Array } from '@btc-vision/btc-runtime/runtime';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { LIQUIDITY_QUOTE_HISTORY_POINTER } from '../constants/StoredPointers';
 import { IQuoteManager } from './interfaces/IQuoteManager';
+import { MAXIMUM_VALID_INDEX } from '../constants/Contract';
 
 export class QuoteManager implements IQuoteManager {
     private readonly _quoteHistory: StoredU256Array;
@@ -14,18 +15,33 @@ export class QuoteManager implements IQuoteManager {
     }
 
     public getBlockQuote(blockNumber: u64): u256 {
-        return this._quoteHistory.get(blockNumber);
+        if (blockNumber > <u64>MAXIMUM_VALID_INDEX) {
+            throw new Revert('Impossible state: Block number too large for maximum array size.');
+        }
+
+        const blockNumberU32: u32 = <u32>Blockchain.block.number;
+        return this._quoteHistory.get(blockNumberU32);
     }
 
     public getValidBlockQuote(blockNumber: u64): u256 {
-        const quote: u256 = this._quoteHistory.get(blockNumber);
+        if (blockNumber > <u64>MAXIMUM_VALID_INDEX) {
+            throw new Revert('Impossible state: Block number too large for maximum array size.');
+        }
+
+        const blockNumberU32: u32 = <u32>Blockchain.block.number;
+        const quote: u256 = this._quoteHistory.get(blockNumberU32);
         this.ensureQuoteIsValid(quote, blockNumber);
 
         return quote;
     }
 
     public setBlockQuote(blockNumber: u64, value: u256): void {
-        this._quoteHistory.set(blockNumber, value);
+        if (blockNumber > <u64>MAXIMUM_VALID_INDEX) {
+            throw new Revert('Impossible state: Block number too large for maximum array size.');
+        }
+
+        const blockNumberU32: u32 = <u32>Blockchain.block.number;
+        this._quoteHistory.set(blockNumberU32, value);
     }
 
     public save(): void {

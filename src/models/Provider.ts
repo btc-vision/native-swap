@@ -403,38 +403,38 @@ export class Provider {
     /**
      * @method getQueueIndex
      * @description Gets the provider index in the normal/priority provider queue.
-     * @returns {u64} - The provider index in the normal/priority provider queue.
+     * @returns {u32} - The provider index in the normal/priority provider queue.
      */
-    public getQueueIndex(): u64 {
+    public getQueueIndex(): u32 {
         return this.providerData.queueIndex;
     }
 
     /**
      * @method setQueueIndex
      * @description Sets the provider index in the normal/priority provider queue.
-     * @param {u64} value - The provider index in the normal/priority provider queue.
+     * @param {u32} value - The provider index in the normal/priority provider queue.
      * @returns {void}
      */
-    public setQueueIndex(value: u64): void {
+    public setQueueIndex(value: u32): void {
         this.providerData.queueIndex = value;
     }
 
     /**
      * @method getRemovalQueueIndex
      * @description Gets the provider index in the removal provider queue.
-     * @returns {u64} - The provider index in the removal provider queue.
+     * @returns {u32} - The provider index in the removal provider queue.
      */
-    public getRemovalQueueIndex(): u64 {
+    public getRemovalQueueIndex(): u32 {
         return this.providerData.removalQueueIndex;
     }
 
     /**
      * @method setRemovalQueueIndex
      * @description Sets the provider index in the removal provider queue.
-     * @param {u64} value - The provider index in the removal provider queue.
+     * @param {u32} value - The provider index in the removal provider queue.
      * @returns {void}
      */
-    public setRemovalQueueIndex(value: u64): void {
+    public setRemovalQueueIndex(value: u32): void {
         this.providerData.removalQueueIndex = value;
     }
 

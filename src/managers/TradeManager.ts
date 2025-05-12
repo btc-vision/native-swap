@@ -41,7 +41,7 @@ export class TradeManager implements ITradeManager {
     private readonly consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
     private totalTokensPurchased: u256 = u256.Zero;
-    private totalTokensRefunded = u256.Zero;
+    private totalTokensRefunded: u256 = u256.Zero;
     private totalSatoshisSpent: u64 = 0;
     private totalSatoshisRefunded: u64 = 0;
     private tokensReserved: u256 = u256.Zero;
@@ -68,9 +68,9 @@ export class TradeManager implements ITradeManager {
         this.removeReservationFromActiveList(reservation);
         this.resetTotals();
 
-        const providerCount: u64 = <u64>reservation.getProviderCount();
+        const providerCount: u32 = reservation.getProviderCount();
 
-        for (let index: u64 = 0; index < providerCount; index++) {
+        for (let index: u32 = 0; index < providerCount; index++) {
             const providerData: ReservationProviderData = reservation.getProviderAt(index);
             const provider: Provider = this.getProvider(providerData);
             const satoshisSent: u64 = this.getSatoshisSent(provider.getBtcReceiver());
@@ -310,7 +310,7 @@ export class TradeManager implements ITradeManager {
         );
 
         if (satoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
-            this.providerManager.resetProvider(provider, false);
+            this.providerManager.resetProvider(provider, false, false);
         }
     }
 
@@ -387,7 +387,7 @@ export class TradeManager implements ITradeManager {
         }
     }
 
-    private ensurePurgeIndexIsValid(purgeIndex: u64): void {
+    private ensurePurgeIndexIsValid(purgeIndex: u32): void {
         if (purgeIndex === INDEX_NOT_SET_VALUE) {
             throw new Revert('Impossible state: purgeIndex is not set.');
         }

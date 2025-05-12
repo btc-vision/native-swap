@@ -4,7 +4,6 @@ import {
     Blockchain,
     Revert,
     StoredU256,
-    StoredU64,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
 import {
@@ -23,6 +22,7 @@ import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { IProviderManager } from './interfaces/IProviderManager';
+import { StoredU32 } from '../../../btc-runtime/runtime/storage/StoredU32';
 
 export class ProviderManager implements IProviderManager {
     protected readonly token: Address;
@@ -32,7 +32,7 @@ export class ProviderManager implements IProviderManager {
     protected readonly removalQueue: RemovalProviderQueue;
     protected readonly owedBTCManager: IOwedBTCManager;
 
-    private readonly _startingIndex: StoredU64;
+    private readonly _startingIndex: StoredU32;
     private readonly _initialLiquidityProviderId: StoredU256;
 
     constructor(token: Address, tokenIdUint8Array: Uint8Array, owedBTCManager: IOwedBTCManager) {
@@ -46,7 +46,7 @@ export class ProviderManager implements IProviderManager {
             tokenIdUint8Array,
         );
         this.removalQueue = new RemovalProviderQueue(
-            this.owedBTCManager,
+            owedBTCManager,
             token,
             REMOVAL_QUEUE_POINTER,
             tokenIdUint8Array,
@@ -55,18 +55,18 @@ export class ProviderManager implements IProviderManager {
             INITIAL_LIQUIDITY_PROVIDER_POINTER,
             tokenIdUint8Array,
         );
-        this._startingIndex = new StoredU64(STARTING_INDEX_POINTER, tokenIdUint8Array);
+        this._startingIndex = new StoredU32(STARTING_INDEX_POINTER, tokenIdUint8Array);
     }
 
-    public get currentIndexPriority(): u64 {
+    public get currentIndexPriority(): u32 {
         return this.priorityQueue.currentIndex;
     }
 
-    public get currentIndexRemoval(): u64 {
+    public get currentIndexRemoval(): u32 {
         return this.removalQueue.currentIndex;
     }
 
-    public get currentIndexNormal(): u64 {
+    public get currentIndexNormal(): u32 {
         return this.normalQueue.currentIndex;
     }
 
@@ -78,63 +78,63 @@ export class ProviderManager implements IProviderManager {
         this._initialLiquidityProviderId.value = value;
     }
 
-    public get previousPriorityStartingIndex(): u64 {
+    public get previousPriorityStartingIndex(): u32 {
         return this._startingIndex.get(1);
     }
 
-    public set previousPriorityStartingIndex(value: u64) {
+    public set previousPriorityStartingIndex(value: u32) {
         this._startingIndex.set(1, value);
     }
 
-    public get previousRemovalStartingIndex(): u64 {
+    public get previousRemovalStartingIndex(): u32 {
         return this._startingIndex.get(2);
     }
 
-    public set previousRemovalStartingIndex(value: u64) {
+    public set previousRemovalStartingIndex(value: u32) {
         this._startingIndex.set(2, value);
     }
 
-    public get previousNormalStartingIndex(): u64 {
+    public get previousNormalStartingIndex(): u32 {
         return this._startingIndex.get(0);
     }
 
-    public set previousNormalStartingIndex(value: u64) {
+    public set previousNormalStartingIndex(value: u32) {
         this._startingIndex.set(0, value);
     }
 
-    public get priorityQueueLength(): u64 {
+    public get priorityQueueLength(): u32 {
         return this.priorityQueue.length;
     }
 
-    public get priorityQueueStartingIndex(): u64 {
+    public get priorityQueueStartingIndex(): u32 {
         return this.priorityQueue.startingIndex;
     }
 
-    public get removalQueueLength(): u64 {
+    public get removalQueueLength(): u32 {
         return this.removalQueue.length;
     }
 
-    public get removalQueueStartingIndex(): u64 {
+    public get removalQueueStartingIndex(): u32 {
         return this.removalQueue.startingIndex;
     }
 
-    public get normalQueueLength(): u64 {
+    public get normalQueueLength(): u32 {
         return this.normalQueue.length;
     }
 
-    public get normalQueueStartingIndex(): u64 {
+    public get normalQueueStartingIndex(): u32 {
         return this.normalQueue.startingIndex;
     }
 
-    public addToNormalQueue(provider: Provider): u64 {
+    public addToNormalQueue(provider: Provider): u32 {
         return this.normalQueue.add(provider);
     }
 
-    public addToPriorityQueue(provider: Provider): u64 {
+    public addToPriorityQueue(provider: Provider): u32 {
         return this.priorityQueue.add(provider);
     }
 
-    public addToRemovalQueue(provider: Provider): u64 {
+    public addToRemovalQueue(provider: Provider): u32 {
         return this.removalQueue.add(provider);
     }
 
@@ -150,19 +150,19 @@ export class ProviderManager implements IProviderManager {
         );
     }
 
-    public getFromPriorityQueue(index: u64): u256 {
+    public getFromPriorityQueue(index: u32): u256 {
         return this.priorityQueue.getAt(index);
     }
 
-    public getFromRemovalQueue(index: u64): u256 {
+    public getFromRemovalQueue(index: u32): u256 {
         return this.removalQueue.getAt(index);
     }
 
-    public getFromNormalQueue(index: u64): u256 {
+    public getFromNormalQueue(index: u32): u256 {
         return this.normalQueue.getAt(index);
     }
 
-    public getIdFromQueue(index: u64, type: ProviderTypes): u256 {
+    public getIdFromQueue(index: u32, type: ProviderTypes): u256 {
         switch (type) {
             case ProviderTypes.Normal: {
                 return this.normalQueue.getAt(index);
@@ -207,7 +207,7 @@ export class ProviderManager implements IProviderManager {
         return this.getInitialProvider(currentQuote);
     }
 
-    public getProviderFromQueue(index: u64, type: ProviderTypes): Provider {
+    public getProviderFromQueue(index: u32, type: ProviderTypes): Provider {
         let providerId: u256;
 
         if (index === INITIAL_LIQUIDITY_PROVIDER_INDEX) {
@@ -321,7 +321,7 @@ export class ProviderManager implements IProviderManager {
         return initialProvider;
     }
 
-    private ensureProviderExists(providerId: u256, index: u64, type: ProviderTypes): void {
+    private ensureProviderExists(providerId: u256, index: u32, type: ProviderTypes): void {
         if (providerId.isZero()) {
             throw new Revert(
                 `Impossible state: Cannot load provider. Index: ${index} Type: ${type}. Pool corrupted.`,

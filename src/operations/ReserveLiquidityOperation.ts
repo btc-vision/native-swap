@@ -118,7 +118,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private reserve(reservation: Reservation): void {
-        let lastIndex: u64 = INDEX_NOT_SET_VALUE;
+        let lastIndex: u32 = INDEX_NOT_SET_VALUE;
         let lastProviderId: u256 = u256.Zero;
 
         while (!this.remainingTokens.isZero()) {
@@ -301,7 +301,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private finalizeReservation(reservation: Reservation): void {
-        const index: u64 = this.liquidityQueue.addActiveReservation(reservation);
+        const index: u32 = this.liquidityQueue.addActiveReservation(reservation);
         reservation.setPurgeIndex(index);
         reservation.save();
     }

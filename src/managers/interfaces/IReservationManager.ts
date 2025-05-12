@@ -5,7 +5,7 @@ import { u128 } from '@btc-vision/as-bignum/assembly';
 export interface IReservationManager {
     getReservationWithExpirationChecks(sender: Address): Reservation;
 
-    addActiveReservation(blockNumber: u64, reservationId: u128): u64;
+    addActiveReservation(blockNumber: u64, reservationId: u128): u32;
 
     purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64;
 }

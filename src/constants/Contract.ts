@@ -18,6 +18,7 @@ export const MAX_ACTIVATION_DELAY: u8 = 3;
 // By design, Array does not contain more than U32.MAX_VALUE - 1 elements.
 // And max index is U32.MAX_VALUE - 2.
 export const INDEX_NOT_SET_VALUE: u32 = U32.MAX_VALUE;
-export const INITIAL_LIQUIDITY_PROVIDER_INDEX: u64 = <u64>(u32.MAX_VALUE - 1);
-export const MAXIMUM_VALID_INDEX: u64 = <u64>(u32.MAX_VALUE - 2);
-export const MAXIMUM_PROVIDER_COUNT: u64 = <u64>(U32.MAX_VALUE - 1);
+export const INITIAL_LIQUIDITY_PROVIDER_INDEX: u32 = u32.MAX_VALUE - 1;
+export const MAXIMUM_VALID_INDEX: u32 = u32.MAX_VALUE - 2;
+export const MAXIMUM_PROVIDER_COUNT: u32 = U32.MAX_VALUE - 1;
+export const MAXIMUM_RESERVATION_COUNT: u32 = U32.MAX_VALUE - 1;

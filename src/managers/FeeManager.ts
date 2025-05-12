@@ -38,13 +38,13 @@ class FeeManagerBase {
         this.priorityQueueBaseFee = FeeManagerBase.DEFAULT_PRIORITY_QUEUE_BASE_FEE;
     }
 
-    private ensurePriorityQueueBaseFeeNotAboveCap(value: number): void {
+    private ensurePriorityQueueBaseFeeNotAboveCap(value: u64): void {
         if (value > FeeManagerBase.CAP_PRIORITY_QUEUE_BASE_FEE) {
             throw new Revert('Priority queue base fee cannot exceed the cap');
         }
     }
 
-    private ensureReservationBaseFeeNotAboveCap(value: number): void {
+    private ensureReservationBaseFeeNotAboveCap(value: u64): void {
         if (value > FeeManagerBase.CAP_RESERVATION_BASE_FEE) {
             throw new Revert('Reservation base fee cannot exceed the cap');
         }

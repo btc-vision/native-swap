@@ -22,7 +22,7 @@ export interface ILiquidityQueue {
     virtualSatoshisReserve: u64;
     virtualTokenReserve: u256;
 
-    addActiveReservation(reservation: Reservation): u64;
+    addActiveReservation(reservation: Reservation): u32;
 
     addToPriorityQueue(provider: Provider): void;
 

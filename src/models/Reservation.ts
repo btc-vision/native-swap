@@ -59,6 +59,74 @@ export class Reservation {
         return hash.slice(0, 16);
     }
 
+    public delete(isTimeout: boolean): void {
+        this.reservedIndexes.reset();
+        this.reservedValues.reset();
+        this.reservedPriority.reset();
+        this.reservationData.reset(isTimeout);
+
+        this.save();
+    }
+
+    public addProvider(providerData: ReservationProviderData): void {
+        if (this.reservedIndexes.getLength() === MAXIMUM_PROVIDER_COUNT) {
+            throw new Revert('Impossible state: Too many providers required for reservation.');
+        }
+
+        this.reservedIndexes.push(providerData.providerIndex);
+        this.reservedValues.push(providerData.providedAmount);
+        this.reservedPriority.push(<u8>providerData.providerType);
+    }
+
+    public getProviderAt(index: u32): ReservationProviderData {
+        if (this.reservedIndexes.getLength() > MAXIMUM_PROVIDER_COUNT) {
+            throw new Revert('Impossible state: reserved indexes count corrupted.');
+        }
+
+        if (index > this.reservedIndexes.getLength() - 1) {
+            throw new Revert('Impossible state: requested provider index out of range.');
+        }
+
+        return new ReservationProviderData(
+            this.reservedIndexes.get(index),
+            this.reservedValues.get(index),
+            this.reservedPriority.get(index),
+        );
+    }
+
+    public getProviderCount(): u32 {
+        if (this.reservedIndexes.getLength() > MAXIMUM_PROVIDER_COUNT) {
+            throw new Revert('Impossible state: reserved indexes count corrupted.');
+        }
+
+        return this.reservedIndexes.getLength();
+    }
+
+    public ensureCanBeConsumed(): void {
+        if (!this.isValid()) {
+            throw new Revert('No valid reservation for this address.');
+        }
+
+        if (this.getActivationDelay() === 0) {
+            if (this.getCreationBlock() === Blockchain.block.number) {
+                throw new Revert('Reservation cannot be consumed in the same block');
+            }
+        } else {
+            if (this.getCreationBlock() + this.getActivationDelay() > Blockchain.block.number) {
+                throw new Revert(
+                    `Too early to consume reservation: (${this.getCreationBlock()}, ${this.getActivationDelay()})`,
+                );
+            }
+        }
+    }
+
+    public save(): void {
+        this.reservationData.save();
+        this.reservedIndexes.save();
+        this.reservedValues.save();
+        this.reservedPriority.save();
+    }
+
     public getActivationDelay(): u8 {
         return this.reservationData.activationDelay;
     }
@@ -107,31 +175,6 @@ export class Reservation {
         this.reservationData.timeout = true;
     }
 
-    public ensureCanBeConsumed(): void {
-        if (!this.isValid()) {
-            throw new Revert('No valid reservation for this address.');
-        }
-
-        if (this.getActivationDelay() === 0) {
-            if (this.getCreationBlock() === Blockchain.block.number) {
-                throw new Revert('Reservation cannot be consumed in the same block');
-            }
-        } else {
-            if (this.getCreationBlock() + this.getActivationDelay() > Blockchain.block.number) {
-                throw new Revert(
-                    `Too early to consume reservation: (${this.getCreationBlock()}, ${this.getActivationDelay()})`,
-                );
-            }
-        }
-    }
-
-    public save(): void {
-        this.reservationData.save();
-        this.reservedIndexes.save();
-        this.reservedValues.save();
-        this.reservedPriority.save();
-    }
-
     public isExpired(): boolean {
         return Blockchain.block.number > this.reservationData.expirationBlock;
     }
@@ -142,48 +185,5 @@ export class Reservation {
 
     public getExpirationBlock(): u64 {
         return this.reservationData.expirationBlock;
-    }
-
-    public delete(isTimeout: boolean): void {
-        this.reservedIndexes.reset();
-        this.reservedValues.reset();
-        this.reservedPriority.reset();
-        this.reservationData.reset(isTimeout);
-
-        this.save();
-    }
-
-    public addProvider(providerData: ReservationProviderData): void {
-        if (this.reservedIndexes.getLength() === MAXIMUM_PROVIDER_COUNT) {
-            throw new Revert('Impossible state: Too many providers required for reservation.');
-        }
-
-        this.reservedIndexes.push(providerData.providerIndex);
-        this.reservedValues.push(providerData.providedAmount);
-        this.reservedPriority.push(<u8>providerData.providerType);
-    }
-
-    public getProviderAt(index: u32): ReservationProviderData {
-        if (this.reservedIndexes.getLength() > MAXIMUM_PROVIDER_COUNT) {
-            throw new Revert('Impossible state: reserved indexes count corrupted.');
-        }
-
-        if (index > <u32>(this.reservedIndexes.getLength() - 1)) {
-            throw new Revert('Impossible state: requested provider index out of range.');
-        }
-
-        return new ReservationProviderData(
-            this.reservedIndexes.get(<u64>index),
-            this.reservedValues.get(<u64>index),
-            this.reservedPriority.get(<u64>index),
-        );
-    }
-
-    public getProviderCount(): u32 {
-        if (this.reservedIndexes.getLength() > MAXIMUM_PROVIDER_COUNT) {
-            throw new Revert('Impossible state: reserved indexes count corrupted.');
-        }
-
-        return <u32>this.reservedIndexes.getLength();
     }
 }
