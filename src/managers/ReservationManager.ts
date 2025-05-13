@@ -103,6 +103,28 @@ export class ReservationManager implements IReservationManager {
         return maxBlockToPurge;
     }
 
+    public getActiveReservationListForBlock(blockNumber: u64): StoredBooleanArray {
+        const writer: BytesWriter = new BytesWriter(
+            U64_BYTE_LENGTH + this.tokenIdUint8Array.length,
+        );
+        writer.writeU64(blockNumber);
+        writer.writeBytes(this.tokenIdUint8Array);
+
+        const keyBytes: Uint8Array = writer.getBuffer();
+        return new StoredBooleanArray(ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER, keyBytes);
+    }
+
+    public getReservationListForBlock(blockNumber: u64): StoredU128Array {
+        const writer: BytesWriter = new BytesWriter(
+            U64_BYTE_LENGTH + this.tokenIdUint8Array.length,
+        );
+        writer.writeU64(blockNumber);
+        writer.writeBytes(this.tokenIdUint8Array);
+
+        const keyBytes: Uint8Array = writer.getBuffer();
+        return new StoredU128Array(RESERVATION_IDS_BY_BLOCK_POINTER, keyBytes);
+    }
+
     private addToList(blockNumber: u64, reservationId: u128): u32 {
         const reservationList: StoredU128Array = this.getReservationListForBlock(blockNumber);
 
@@ -128,28 +150,6 @@ export class ReservationManager implements IReservationManager {
         reservationActiveList.save();
 
         return reservationActiveList.getLength() - 1;
-    }
-
-    private getActiveReservationListForBlock(blockNumber: u64): StoredBooleanArray {
-        const writer: BytesWriter = new BytesWriter(
-            U64_BYTE_LENGTH + this.tokenIdUint8Array.length,
-        );
-        writer.writeU64(blockNumber);
-        writer.writeBytes(this.tokenIdUint8Array);
-
-        const keyBytes: Uint8Array = writer.getBuffer();
-        return new StoredBooleanArray(ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER, keyBytes);
-    }
-
-    private getReservationListForBlock(blockNumber: u64): StoredU128Array {
-        const writer: BytesWriter = new BytesWriter(
-            U64_BYTE_LENGTH + this.tokenIdUint8Array.length,
-        );
-        writer.writeU64(blockNumber);
-        writer.writeBytes(this.tokenIdUint8Array);
-
-        const keyBytes: Uint8Array = writer.getBuffer();
-        return new StoredU128Array(RESERVATION_IDS_BY_BLOCK_POINTER, keyBytes);
     }
 
     private purgeAndRestoreProvider(provider: Provider, reservedAmount: u128): void {

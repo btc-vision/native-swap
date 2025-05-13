@@ -4,6 +4,7 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, Blockchain, Potential, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
 import {
+    INDEX_NOT_SET_VALUE,
     MAXIMUM_PROVIDER_COUNT,
     STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
 } from '../constants/Contract';
@@ -44,11 +45,12 @@ export class RemovalProviderQueue extends ProviderQueue {
             if (!providerId.isZero()) {
                 const provider: Provider = getProvider(providerId);
 
+                //!!! When this will happen a non pending???
                 if (provider.isPendingRemoval()) {
                     this.queue.setStartingIndex(index);
                     break;
                 } else {
-                    this.queue.delete_physical(index);
+                    this.queue.delete_physical(index); //!!! WHY should never happen
                 }
             }
 
@@ -63,6 +65,9 @@ export class RemovalProviderQueue extends ProviderQueue {
 
         provider.clearPendingRemoval();
         provider.clearLiquidityProvider();
+        provider.setRemovalQueueIndex(INDEX_NOT_SET_VALUE); //!!!!
+        provider.clearFromRemovalQueue(); //!!!!
+        //!!!! what else to do
 
         Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, true));
     }
@@ -85,7 +90,7 @@ export class RemovalProviderQueue extends ProviderQueue {
             if (provider.isPendingRemoval() && provider.isLiquidityProvider()) {
                 result = this.getProviderIfOwedBTC(providerId, provider);
             } else {
-                this.removeFromQueue(provider);
+                this.removeFromQueue(provider); //!!! This should not happen???
             }
         }
 

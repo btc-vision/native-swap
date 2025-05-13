@@ -1,6 +1,7 @@
 import { Address, Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
-import { clearCachedProviders, getProvider } from '../lib/Provider';
+import { clearCachedProviders, getProvider } from '../models/Provider';
 import {
+    createLiquidityQueue,
     createProvider,
     createProviderId,
     msgSender1,
@@ -13,14 +14,12 @@ import {
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
-import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
-import { ReserveLiquidityOperation } from '../lib/Liquidity/operations/ReserveLiquidityOperation';
+import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { CreatePoolOperation } from '../lib/Liquidity/operations/CreatePoolOperation';
-import { FeeManager } from '../lib/FeeManager';
-import { ListTokensForSaleOperation } from '../lib/Liquidity/operations/ListTokensForSaleOperation';
-import { Reservation } from '../lib/Reservation';
-import { MAX_RESERVATION_AMOUNT_PROVIDER } from '../data-types/UserLiquidity';
+import { CreatePoolOperation } from '../operations/CreatePoolOperation';
+import { FeeManager } from '../managers/FeeManager';
+import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
+import { Reservation } from '../models/Reservation';
 
 describe('ReserveLiquidityOperation tests', () => {
     beforeEach(() => {
@@ -28,20 +27,20 @@ describe('ReserveLiquidityOperation tests', () => {
         Blockchain.clearStorage();
         Blockchain.clearMockedResults();
         TransferHelper.clearMockedResults();
-        FeeManager.RESERVATION_BASE_FEE = 0;
+        FeeManager.reservationBaseFee = 0;
     });
 
-    it("should revert if providerId= lq.initialLiquidityProvider => 'You may not reserve your own liquidity'", () => {
+    it("should revert if providerId= lq.initialLiquidityProviderId => 'You may not reserve your own liquidity'", () => {
         expect(() => {
             setBlockchainEnvironment(100);
 
             const provider = createProvider(providerAddress1, tokenAddress1, true, true, false);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            queue.initialLiquidityProvider = provider.providerId;
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.initialLiquidityProviderId = provider.getId();
 
             const operation = new ReserveLiquidityOperation(
                 queue,
-                provider.providerId,
+                provider.getId(),
                 msgSender1,
                 u256.fromU32(10000),
                 u256.Zero,
@@ -59,8 +58,8 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
             const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            queue.initialLiquidityProvider = providerId1;
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.initialLiquidityProviderId = providerId1;
 
             const operation = new ReserveLiquidityOperation(
                 queue,
@@ -82,8 +81,8 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
             const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            queue.initialLiquidityProvider = providerId1;
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.initialLiquidityProviderId = providerId1;
 
             const operation = new ReserveLiquidityOperation(
                 queue,
@@ -105,8 +104,8 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
             const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            queue.initialLiquidityProvider = providerId1;
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.initialLiquidityProviderId = providerId1;
 
             const operation = new ReserveLiquidityOperation(
                 queue,
@@ -128,8 +127,8 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
             const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            queue.initialLiquidityProvider = providerId1;
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.initialLiquidityProviderId = providerId1;
 
             const operation = new ReserveLiquidityOperation(
                 queue,
@@ -152,7 +151,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
             const initialProvider = getProvider(initialProviderId);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -184,7 +183,7 @@ describe('ReserveLiquidityOperation tests', () => {
             setBlockchainEnvironment(101, providerAddress1, providerAddress1);
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
             const provider1 = getProvider(providerId1);
-            const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const reserveOp = new ReserveLiquidityOperation(
                 queue2,
                 providerId1,
@@ -205,7 +204,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.mockValidateBitcoinAddressResult(true);
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -234,7 +233,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             setBlockchainEnvironment(101, providerAddress1, providerAddress1);
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-            const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const reserveOp = new ReserveLiquidityOperation(
                 queue2,
                 providerId1,
@@ -249,7 +248,7 @@ describe('ReserveLiquidityOperation tests', () => {
             queue2.save();
 
             setBlockchainEnvironment(102, providerAddress1, providerAddress1);
-            const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const reserveOp2 = new ReserveLiquidityOperation(
                 queue3,
                 providerId1,
@@ -270,7 +269,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.mockValidateBitcoinAddressResult(true);
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -299,7 +298,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             setBlockchainEnvironment(101, providerAddress1, providerAddress1);
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-            const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const reserveOp = new ReserveLiquidityOperation(
                 queue2,
                 providerId1,
@@ -314,7 +313,7 @@ describe('ReserveLiquidityOperation tests', () => {
             queue2.save();
 
             setBlockchainEnvironment(107, providerAddress1, providerAddress1);
-            const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true, true);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true, true);
             const reserveOp2 = new ReserveLiquidityOperation(
                 queue3,
                 providerId1,
@@ -335,7 +334,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.mockValidateBitcoinAddressResult(true);
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -364,7 +363,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             setBlockchainEnvironment(101, providerAddress1, providerAddress1);
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-            const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             // Force quote = 0
             queue2.virtualTokenReserve = u256.Zero;
@@ -390,7 +389,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.mockValidateBitcoinAddressResult(true);
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -419,7 +418,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             setBlockchainEnvironment(101, providerAddress1, providerAddress1);
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-            const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const reserveOp = new ReserveLiquidityOperation(
                 queue2,
                 providerId1,
@@ -440,7 +439,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.mockValidateBitcoinAddressResult(true);
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -469,7 +468,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             setBlockchainEnvironment(101, providerAddress1, providerAddress1);
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-            const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             // Make reservedliquidity > liquidity
             queue2.increaseTotalReserved(SafeMath.add(queue2.liquidity, u256.One));
@@ -494,7 +493,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.mockValidateBitcoinAddressResult(true);
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -523,7 +522,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             setBlockchainEnvironment(101, providerAddress1, providerAddress1);
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-            const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const reserveOp = new ReserveLiquidityOperation(
                 queue2,
@@ -548,7 +547,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.mockValidateBitcoinAddressResult(true);
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -577,7 +576,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             setBlockchainEnvironment(101, providerAddress1, providerAddress1);
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-            const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const reserveOp = new ReserveLiquidityOperation(
                 queue2,
@@ -601,7 +600,7 @@ describe('ReserveLiquidityOperation tests', () => {
         Blockchain.mockValidateBitcoinAddressResult(true);
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
             SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -629,7 +628,7 @@ describe('ReserveLiquidityOperation tests', () => {
         queue.save();
 
         setBlockchainEnvironment(102, providerAddress1, providerAddress1);
-        const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const providerId1 = createProviderId(providerAddress1, tokenAddress1);
         const listOp = new ListTokensForSaleOperation(
             queue2,
@@ -646,7 +645,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
         setBlockchainEnvironment(103, providerAddress2, providerAddress2);
         const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-        const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const reserveOp = new ReserveLiquidityOperation(
             queue3,
@@ -673,7 +672,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
         const initProvider = getProvider(initialProviderId);
-        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
             SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -701,7 +700,7 @@ describe('ReserveLiquidityOperation tests', () => {
         queue.save();
 
         setBlockchainEnvironment(102, providerAddress1, providerAddress1);
-        const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const providerId1 = createProviderId(providerAddress1, tokenAddress1);
         const listOp = new ListTokensForSaleOperation(
             queue2,
@@ -718,7 +717,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
         setBlockchainEnvironment(103, providerAddress2, providerAddress2);
         const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-        const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         // Fake the ip.reserved to max so it won't be used to get liquidity.
         // As ip is the last provider to be checked, if no liquidity is available to be reserved, null will be returned.
@@ -749,7 +748,7 @@ describe('ReserveLiquidityOperation tests', () => {
         Blockchain.mockValidateBitcoinAddressResult(true);
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
             SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -773,7 +772,7 @@ describe('ReserveLiquidityOperation tests', () => {
         queue.save();
 
         setBlockchainEnvironment(102, providerAddress1, providerAddress1);
-        const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const providerId1 = createProviderId(providerAddress1, tokenAddress1);
         const provider1 = getProvider(providerId1);
         const listOp = new ListTokensForSaleOperation(
@@ -791,7 +790,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
         setBlockchainEnvironment(103, providerAddress2, providerAddress2);
         const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-        const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const reserveOp = new ReserveLiquidityOperation(
             queue3,
@@ -822,7 +821,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.mockValidateBitcoinAddressResult(true);
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -850,7 +849,7 @@ describe('ReserveLiquidityOperation tests', () => {
             queue.save();
 
             setBlockchainEnvironment(102, providerAddress1, providerAddress1);
-            const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const providerId1 = createProviderId(providerAddress1, tokenAddress1);
             const listOp = new ListTokensForSaleOperation(
                 queue2,
@@ -867,7 +866,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             setBlockchainEnvironment(103, providerAddress2, providerAddress2);
             const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const reserveOp = new ReserveLiquidityOperation(
                 queue3,
@@ -889,7 +888,7 @@ describe('ReserveLiquidityOperation tests', () => {
         Blockchain.mockValidateBitcoinAddressResult(true);
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
             SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -917,7 +916,7 @@ describe('ReserveLiquidityOperation tests', () => {
         queue.save();
 
         setBlockchainEnvironment(102, providerAddress1, providerAddress1);
-        const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const providerId1 = createProviderId(providerAddress1, tokenAddress1);
         const listOp = new ListTokensForSaleOperation(
             queue2,
@@ -934,7 +933,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
         setBlockchainEnvironment(103, providerAddress2, providerAddress2);
         const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-        const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const reserveOp = new ReserveLiquidityOperation(
             queue3,
@@ -979,7 +978,7 @@ describe('ReserveLiquidityOperation tests', () => {
         Blockchain.mockValidateBitcoinAddressResult(true);
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
             SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -1007,7 +1006,7 @@ describe('ReserveLiquidityOperation tests', () => {
         queue.save();
 
         setBlockchainEnvironment(102, providerAddress1, providerAddress1);
-        const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const providerId1 = createProviderId(providerAddress1, tokenAddress1);
         const listOp = new ListTokensForSaleOperation(
             queue2,
@@ -1057,7 +1056,7 @@ describe('ReserveLiquidityOperation tests', () => {
         Blockchain.mockValidateBitcoinAddressResult(true);
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
             SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -1085,7 +1084,7 @@ describe('ReserveLiquidityOperation tests', () => {
         queue.save();
 
         setBlockchainEnvironment(102, providerAddress1, providerAddress1);
-        const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const providerId1 = createProviderId(providerAddress1, tokenAddress1);
 
         const listOp = new ListTokensForSaleOperation(
@@ -1102,7 +1101,7 @@ describe('ReserveLiquidityOperation tests', () => {
         queue2.save();
 
         setBlockchainEnvironment(103, providerAddress1, providerAddress1);
-        const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const reserveOp = new ReserveLiquidityOperation(
             queue3,
@@ -1124,7 +1123,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
         const initProvider = getProvider(initialProviderId);
-        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
             SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -1152,7 +1151,7 @@ describe('ReserveLiquidityOperation tests', () => {
         queue.save();
 
         setBlockchainEnvironment(102, providerAddress1, providerAddress1);
-        const queue2 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const providerId1 = createProviderId(providerAddress1, tokenAddress1);
 
         const listOp = new ListTokensForSaleOperation(
@@ -1170,7 +1169,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
         setBlockchainEnvironment(103, providerAddress2, providerAddress2);
         const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-        const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const reserveOp = new ReserveLiquidityOperation(
             queue3,
@@ -1209,12 +1208,12 @@ describe('ReserveLiquidityOperation tests', () => {
             setBlockchainEnvironment(100);
 
             const provider = createProvider(providerAddress1, tokenAddress1, true, true, false);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            queue.initialLiquidityProvider = u256.Zero;
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.initialLiquidityProviderId = u256.Zero;
 
             const operation = new ReserveLiquidityOperation(
                 queue,
-                provider.providerId,
+                provider.getId(),
                 msgSender1,
                 u256.fromU32(10000),
                 u256.Zero,
@@ -1267,7 +1266,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const reserveOp = new ReserveLiquidityOperation(
                 queue3,
-                provider.providerId,
+                provider.getId(),
                 providerAddress2,
                 u256.fromString(`10000`),
                 u256.Zero,
@@ -1323,7 +1322,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const reserveOp = new ReserveLiquidityOperation(
                 queue3,
-                provider.providerId,
+                provider.getId(),
                 providerAddress2,
                 u256.fromString(`10000`),
                 u256.Zero,
@@ -1336,7 +1335,7 @@ describe('ReserveLiquidityOperation tests', () => {
         }).toThrow();
     });
 
-    it('should revert if provider.providerId === lastProviderId', () => {
+    it('should revert if provider.getId() === lastProviderId', () => {
         expect(() => {
             setBlockchainEnvironment(100, msgSender1, msgSender1);
             Blockchain.mockValidateBitcoinAddressResult(true);
@@ -1377,7 +1376,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const reserveOp = new ReserveLiquidityOperation(
                 queue3,
-                provider.providerId,
+                provider.getId(),
                 providerAddress2,
                 u256.fromString(`10000`),
                 u256.Zero,

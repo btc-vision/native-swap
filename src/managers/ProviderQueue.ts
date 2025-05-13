@@ -48,6 +48,7 @@ export class ProviderQueue {
         return index;
     }
 
+    // !!! recheck previous.... if all already deleted, maybe loop cause starting index not set???
     public cleanUp(previousStartingIndex: u32): u32 {
         const length: u32 = this.length;
         let index: u32 = previousStartingIndex;

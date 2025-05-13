@@ -1,6 +1,6 @@
-import { clearCachedProviders } from '../lib/Provider';
+import { clearCachedProviders } from '../models/Provider';
 import { Blockchain } from '@btc-vision/btc-runtime/runtime';
-import { DynamicFee } from '../lib/DynamicFee';
+import { DynamicFee } from '../managers/DynamicFee';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
 describe('DynamicFee tests', () => {
@@ -37,7 +37,7 @@ describe('DynamicFee tests', () => {
         it('should fallback ratio to 1 if tradeSize<REF_TRADE_SIZE => ratio=0 => set ratio=1 => no alpha comp', () => {
             const df = new DynamicFee(u256.Zero.toUint8Array(true).slice(0, 30));
 
-            const fee = df.getDynamicFeeBP(u256.fromU64(100_000), u256.fromU64(10));
+            const fee = df.getDynamicFeeBP(100_000, u256.fromU64(10));
             expect(fee).toStrictEqual(23);
         });
 
@@ -45,7 +45,7 @@ describe('DynamicFee tests', () => {
             const df = new DynamicFee(u256.Zero.toUint8Array(true).slice(0, 30));
             df.volatility = u256.Zero;
 
-            const tradeSize = u256.fromU64(400_000);
+            const tradeSize = 400_000;
             const fee = df.getDynamicFeeBP(tradeSize, u256.Zero);
 
             expect<bool>(fee > 20).toBeTruthy();
@@ -54,7 +54,7 @@ describe('DynamicFee tests', () => {
 
         it('should incorporate volatility => beta*(vol)/10000', () => {
             const df = new DynamicFee(u256.Zero.toUint8Array(true).slice(0, 30));
-            const tradeSize = u256.fromU64(200_000);
+            const tradeSize = 200_000;
             const util = u256.Zero;
             df.volatility = u256.fromU64(2000);
 
@@ -65,7 +65,7 @@ describe('DynamicFee tests', () => {
         it('should incorporate gamma*(util)/10', () => {
             const df = new DynamicFee(u256.Zero.toUint8Array(true).slice(0, 30));
             const util = u256.fromU64(25);
-            const tradeSize = u256.fromU64(200_000);
+            const tradeSize = 200_000;
             df.volatility = u256.Zero;
 
             const fee = df.getDynamicFeeBP(tradeSize, util);
@@ -78,7 +78,7 @@ describe('DynamicFee tests', () => {
             df.minFeeBP = 15;
             df.maxFeeBP = 150;
 
-            const fee = df.getDynamicFeeBP(u256.fromU64(100_000), u256.fromU64(0));
+            const fee = df.getDynamicFeeBP(100_000, u256.fromU64(0));
             expect(fee).toStrictEqual(15);
         });
 
@@ -88,7 +88,7 @@ describe('DynamicFee tests', () => {
             df.minFeeBP = 15;
             df.maxFeeBP = 150;
 
-            const fee = df.getDynamicFeeBP(u256.fromU64(200_000), u256.Zero);
+            const fee = df.getDynamicFeeBP(200_000, u256.Zero);
             expect(fee).toStrictEqual(150);
         });
     });

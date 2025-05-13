@@ -1,14 +1,14 @@
-import { clearCachedProviders } from '../lib/Provider';
+import { clearCachedProviders } from '../models/Provider';
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import {
+    createLiquidityQueue,
     createProvider,
     providerAddress1,
     setBlockchainEnvironment,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
-import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
-import { CancelListingOperation } from '../lib/Liquidity/operations/CancelListingOperation';
+import { CancelListingOperation } from '..//operations/CancelListingOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 describe('CancelListTokenForSaleOperation tests', () => {
@@ -24,11 +24,12 @@ describe('CancelListTokenForSaleOperation tests', () => {
             setBlockchainEnvironment(100);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setActive(false, false);
+            provider.deactivate();
+            provider.clearPriority();
 
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            const operation = new CancelListingOperation(queue, provider.providerId);
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
         }).toThrow();
@@ -39,12 +40,13 @@ describe('CancelListTokenForSaleOperation tests', () => {
             setBlockchainEnvironment(100);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setActive(true, false);
-            provider.reserved = u128.fromU32(100000);
+            provider.activate();
+            provider.clearPriority();
+            provider.setReservedAmount(u128.fromU32(100000));
 
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            const operation = new CancelListingOperation(queue, provider.providerId);
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
         }).toThrow();
@@ -55,12 +57,13 @@ describe('CancelListTokenForSaleOperation tests', () => {
             setBlockchainEnvironment(100);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setActive(true, false);
-            provider.liquidity = u128.Zero;
+            provider.activate();
+            provider.clearPriority();
+            provider.setLiquidityAmount(u128.Zero);
 
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            const operation = new CancelListingOperation(queue, provider.providerId);
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
         }).toThrow();
@@ -71,13 +74,14 @@ describe('CancelListTokenForSaleOperation tests', () => {
             setBlockchainEnvironment(100);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setActive(true, false);
-            provider.liquidity = u128.fromU64(10000);
-            provider.enableLiquidityProvision();
+            provider.activate();
+            provider.clearPriority();
+            provider.setLiquidityAmount(u128.fromU64(10000));
+            provider.allowLiquidityProvision();
 
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            const operation = new CancelListingOperation(queue, provider.providerId);
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
         }).toThrow();
@@ -88,13 +92,14 @@ describe('CancelListTokenForSaleOperation tests', () => {
             setBlockchainEnvironment(100);
 
             const provider = createProvider(providerAddress1, tokenAddress1, false, true, false);
-            provider.setActive(true, false);
-            provider.liquidity = u128.fromU64(10000);
+            provider.activate();
+            provider.clearPriority();
+            provider.setLiquidityAmount(u128.fromU64(10000));
 
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-            queue.initialLiquidityProvider = provider.providerId;
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            queue.liquidityQueue.initialLiquidityProviderId = provider.getId();
 
-            const operation = new CancelListingOperation(queue, provider.providerId);
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
         }).toThrow();
@@ -104,21 +109,22 @@ describe('CancelListTokenForSaleOperation tests', () => {
         setBlockchainEnvironment(100);
 
         const provider = createProvider(providerAddress1, tokenAddress1, false, true, false);
-        provider.setActive(true, false);
-        provider.liquidity = u128.fromU64(10000);
+        provider.activate();
+        provider.clearPriority();
+        provider.setLiquidityAmount(u128.fromU64(10000));
 
-        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-        queue.increaseTotalReserve(u256.fromU64(1000000000));
+        const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        queue.liquidityQueue.increaseTotalReserve(u256.fromU64(1000000000));
 
-        const operation = new CancelListingOperation(queue, provider.providerId);
+        const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
         operation.execute();
 
-        expect(provider.liquidity).toStrictEqual(u128.Zero);
-        expect(provider.reserved).toStrictEqual(u128.Zero);
-        expect(provider.liquidityProvided).toStrictEqual(u256.fromU32(1000));
+        expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(provider.getLiquidityProvided()).toStrictEqual(u128.fromU32(1000));
         expect(TransferHelper.safeTransferCalled).toBeTruthy();
-        expect(queue.liquidity).toStrictEqual(u256.fromU64(1000000000));
+        expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(1000000000));
     });
 
     it("should revert if provider.pendingRemoval => 'cannot cancel listing'", () => {
@@ -126,13 +132,14 @@ describe('CancelListTokenForSaleOperation tests', () => {
             setBlockchainEnvironment(100);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setActive(true, false);
-            provider.liquidity = u128.fromU64(10000);
-            provider.pendingRemoval = true;
+            provider.activate();
+            provider.clearPriority();
+            provider.setLiquidityAmount(u128.fromU64(10000));
+            provider.markPendingRemoval();
 
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            const operation = new CancelListingOperation(queue, provider.providerId);
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
         }).toThrow();

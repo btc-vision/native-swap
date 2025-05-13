@@ -29,14 +29,14 @@ const ENABLE_FEES: bool = true;
 
 export class LiquidityQueue implements ILiquidityQueue {
     public readonly token: Address;
-    private readonly providerManager: IProviderManager;
-    private readonly liquidityQueueReserve: ILiquidityQueueReserve;
-    private readonly quoteManager: IQuoteManager;
-    private readonly reservationManager: IReservationManager;
-    private readonly owedBTCManager: IOwedBTCManager;
+    protected readonly providerManager: IProviderManager;
+    protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
+    protected readonly quoteManager: IQuoteManager;
+    protected readonly reservationManager: IReservationManager;
+    protected readonly owedBTCManager: IOwedBTCManager;
+    protected readonly dynamicFee: IDynamicFee;
     private readonly settings: StoredU64;
     private readonly _maxTokensPerReservation: StoredU256;
-    private readonly dynamicFee: IDynamicFee;
     private readonly timeoutEnabled: boolean;
 
     constructor(

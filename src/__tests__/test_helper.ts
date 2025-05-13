@@ -4,17 +4,30 @@ import {
     Blockchain,
     BytesWriter,
     StoredU256Array,
-    StoredU64,
-    u256To30Bytes,
     U64_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { getProvider, Provider } from '../lib/Provider';
-import { Reservation } from '../lib/Reservation';
-import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
-import { ProviderManager } from '../lib/Liquidity/ProviderManager';
+import { getProvider, Provider } from '../models/Provider';
+import { Reservation } from '../models/Reservation';
+import { LiquidityQueue } from '../managers/LiquidityQueue';
+import { ProviderManager } from '../managers/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import { INDEXED_PROVIDER_POINTER } from '../lib/StoredPointers';
+import { MAXIMUM_PROVIDER_COUNT } from '../constants/Contract';
+import { ProviderQueue } from '../managers/ProviderQueue';
+import { IOwedBTCManager } from '../managers/interfaces/IOwedBTCManager';
+import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
+import { ILiquidityQueueReserve } from '../managers/interfaces/ILiquidityQueueReserve';
+import { IProviderManager } from '../managers/interfaces/IProviderManager';
+import { IReservationManager } from '../managers/interfaces/IReservationManager';
+import { IDynamicFee } from '../managers/interfaces/IDynamicFee';
+import { TradeManager } from '../managers/TradeManager';
+import { QuoteManager } from '../managers/QuoteManager';
+import { OwedBTCManager } from '../managers/OwedBTCManager';
+import { LiquidityQueueReserve } from '../models/LiquidityQueueReserve';
+import { ReservationManager } from '../managers/ReservationManager';
+import { DynamicFee } from '../managers/DynamicFee';
+import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
+import { ITradeManager } from '../managers/interfaces/ITradeManager';
 
 export const testStackingContractAddress: Address = new Address([
     99, 103, 209, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
@@ -149,7 +162,7 @@ export function createProvider(
     isLP: boolean = true,
     canProvideLiquidity: boolean = false,
     btcReceiver: string = 'e123e2d23d233',
-    liquidityProvided: u256 = u256.fromU64(1000),
+    liquidityProvided: u128 = u128.fromU64(1000),
     liquidity: u128 = u128.fromU64(1000),
     reserved: u128 = u128.fromU64(0),
     isActive: bool = true,
@@ -158,16 +171,39 @@ export function createProvider(
     const providerId: u256 = addressToPointerU256(providerAddress, tokenAddress);
     const provider: Provider = getProvider(providerId);
 
-    provider.setActive(isActive, isPriority);
-    provider.pendingRemoval = pendingRemoval;
-    provider.isLp = isLP;
-    provider.liquidityProvided = liquidityProvided;
-    provider.liquidity = liquidity;
-    provider.reserved = reserved;
-    provider.btcReceiver = btcReceiver;
+    if (isActive) {
+        provider.activate();
+    } else {
+        provider.deactivate();
+    }
+
+    if (isPriority) {
+        provider.markPriority();
+    } else {
+        provider.clearPriority();
+    }
+
+    if (pendingRemoval) {
+        provider.markPendingRemoval();
+    } else {
+        provider.clearPendingRemoval();
+    }
+
+    if (isLP) {
+        provider.markLiquidityProvider();
+    } else {
+        provider.clearLiquidityProvider();
+    }
+
+    provider.setLiquidityProvided(liquidityProvided);
+    provider.setLiquidityAmount(liquidity);
+    provider.setReservedAmount(reserved);
+    provider.setBtcReceiver(btcReceiver);
 
     if (canProvideLiquidity) {
-        provider.enableLiquidityProvision();
+        provider.allowLiquidityProvision();
+    } else {
+        provider.disallowLiquidityProvision();
     }
 
     return provider;
@@ -180,7 +216,7 @@ export function createProviders(
     isLP: boolean = true,
     canProvideLiquidity: boolean = true,
     btcReceiver: string = 'e123e2d23d233',
-    liquidityProvided: u256 = u256.fromU64(1000),
+    liquidityProvided: u128 = u128.fromU64(1000),
     liquidity: u128 = u128.fromU64(1000),
     reserved: u128 = u128.fromU64(0),
     isActive: bool = true,
@@ -244,6 +280,85 @@ export function createProviders(
     return providers;
 }
 
+export function createMaxProviders(
+    pendingRemoval: boolean = false,
+    isLP: boolean = true,
+    canProvideLiquidity: boolean = true,
+    btcReceiver: string = 'e123e2d23d233',
+    liquidityProvided: u128 = u128.fromU64(1000),
+    liquidity: u128 = u128.fromU64(1000),
+    reserved: u128 = u128.fromU64(0),
+    isActive: bool = true,
+    isPriority: bool = false,
+): Provider[] {
+    const providers: Provider[] = [];
+
+    let i: u32 = 0;
+    while (i < MAXIMUM_PROVIDER_COUNT) {
+        for (let j: u16 = 0; j <= 255; j++) {
+            for (let k: u16 = 0; k <= 255; k++) {
+                const address: Address = new Address([
+                    68,
+                    153,
+                    66,
+                    199,
+                    127,
+                    168,
+                    221,
+                    199,
+                    156,
+                    120,
+                    43,
+                    34,
+                    88,
+                    0,
+                    29,
+                    93,
+                    123,
+                    133,
+                    101,
+                    220,
+                    185,
+                    192,
+                    64,
+                    105,
+                    97,
+                    112,
+                    200,
+                    3,
+                    234,
+                    133,
+                    j,
+                    k,
+                ]);
+                i++;
+
+                const provider = createProvider(
+                    address,
+                    tokenAddress1,
+                    pendingRemoval,
+                    isLP,
+                    canProvideLiquidity,
+                    btcReceiver,
+                    liquidityProvided,
+                    liquidity,
+                    reserved,
+                    isActive,
+                    isPriority,
+                );
+
+                providers.push(provider);
+
+                if (i == MAXIMUM_PROVIDER_COUNT) {
+                    break;
+                }
+            }
+        }
+    }
+
+    return providers;
+}
+
 export function createReservationId(tokenAddress: Address, providerAddress: Address): u128 {
     const reservationArrayId: Uint8Array = Reservation.generateId(tokenAddress, providerAddress);
 
@@ -285,31 +400,129 @@ export function generateReservationId(token: Address, owner: Address): Uint8Arra
     return hash.slice(0, 16);
 }
 
-export function createReservation(
-    token: Address,
-    owner: Address,
-    useExpirationBlock: boolean = false,
-    expirationBlock: u64 = 0,
-): Reservation {
+export function createReservation(token: Address, owner: Address): Reservation {
     const reservation: Reservation = new Reservation(token, owner);
 
-    if (useExpirationBlock) {
-        reservation.setExpirationBlock(expirationBlock);
-    } else {
-        reservation.setExpirationBlock(
-            Blockchain.block.number + LiquidityQueue.RESERVATION_EXPIRE_AFTER,
-        );
-    }
+    reservation.setCreationBlock(Blockchain.block.number);
 
     return reservation;
 }
 
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(600);
 
-export function saveIndexForProvider(providerId: u256, index: u64): void {
-    const store = new StoredU64(INDEXED_PROVIDER_POINTER, u256To30Bytes(providerId));
-    store.set(0, index);
-    store.save();
+export class CreateLiquidityQueueResult {
+    public liquidityQueue: ILiquidityQueue;
+    public tradeManager: ITradeManager;
+    public providerManager: IProviderManager;
+    public quoteManager: IQuoteManager;
+    public reservationManager: IReservationManager;
+
+    constructor(
+        liquidityQueue: ILiquidityQueue,
+        tradeManager: ITradeManager,
+        providerManager: IProviderManager,
+        quoteManager: IQuoteManager,
+        reservationManager: IReservationManager,
+    ) {
+        this.liquidityQueue = liquidityQueue;
+        this.tradeManager = tradeManager;
+        this.providerManager = providerManager;
+        this.quoteManager = quoteManager;
+        this.reservationManager = reservationManager;
+    }
+}
+
+export function createLiquidityQueue(
+    token: Address,
+    tokenId: Uint8Array,
+    purgeOldReservations: boolean,
+): CreateLiquidityQueueResult {
+    const owedBtcManager: IOwedBTCManager = getOwedBtcManager();
+    const quoteManager: IQuoteManager = getQuoteManager(tokenId);
+    const liquidityQueueReserve: ILiquidityQueueReserve = getLiquidityQueueReserve(token, tokenId);
+    const providerManager: IProviderManager = getProviderManager(token, tokenId, owedBtcManager);
+    const reservationManager: IReservationManager = getReservationManager(
+        token,
+        tokenId,
+        providerManager,
+        quoteManager,
+        liquidityQueueReserve,
+        owedBtcManager,
+    );
+    const dynamicFee: IDynamicFee = getDynamicFee(tokenId);
+
+    const liquidityQueue: LiquidityQueue = new LiquidityQueue(
+        token,
+        tokenId,
+        providerManager,
+        liquidityQueueReserve,
+        quoteManager,
+        reservationManager,
+        dynamicFee,
+        owedBtcManager,
+        purgeOldReservations,
+    );
+
+    const tradeManager: TradeManager = new TradeManager(
+        tokenId,
+        quoteManager,
+        providerManager,
+        liquidityQueueReserve,
+        owedBtcManager,
+    );
+
+    return new CreateLiquidityQueueResult(
+        liquidityQueue,
+        tradeManager,
+        providerManager,
+        quoteManager,
+        reservationManager,
+    );
+}
+
+export function getQuoteManager(tokenId: Uint8Array): IQuoteManager {
+    return new QuoteManager(tokenId);
+}
+
+export function getProviderManager(
+    token: Address,
+    tokenId: Uint8Array,
+    owedBtcManager: IOwedBTCManager,
+): IProviderManager {
+    return new ProviderManager(token, tokenId, owedBtcManager);
+}
+
+export function getOwedBtcManager(): IOwedBTCManager {
+    return new OwedBTCManager();
+}
+
+export function getLiquidityQueueReserve(
+    token: Address,
+    tokenId: Uint8Array,
+): ILiquidityQueueReserve {
+    return new LiquidityQueueReserve(token, tokenId);
+}
+
+export function getReservationManager(
+    token: Address,
+    tokenId: Uint8Array,
+    providerManager: IProviderManager,
+    quoteManager: IQuoteManager,
+    liquidityQueueReserve: ILiquidityQueueReserve,
+    owedBTCManager: IOwedBTCManager,
+): IReservationManager {
+    return new ReservationManager(
+        token,
+        tokenId,
+        providerManager,
+        quoteManager,
+        liquidityQueueReserve,
+        owedBTCManager,
+    );
+}
+
+export function getDynamicFee(tokenId: Uint8Array): IDynamicFee {
+    return new DynamicFee(tokenId);
 }
 
 export class TestLiquidityQueue extends LiquidityQueue {
@@ -328,51 +541,47 @@ export class TestLiquidityQueue extends LiquidityQueue {
     }
 
     public setPreviousReservationStartingIndex(value: u64): void {
-        this._providerManager.previousReservationStartingIndex = value;
+        this.setPreviousReservationStartingIndex(value);
     }
 
     public setPreviousReservationStandardStartingIndex(value: u64): void {
-        this._providerManager.previousReservationStandardStartingIndex = value;
+        this.setPreviousReservationStandardStartingIndex(value);
     }
 
     public setPreviousRemovalStartingIndex(value: u64): void {
-        this._providerManager.previousRemovalStartingIndex = value;
+        this.setPreviousRemovalStartingIndex(value);
     }
 
     public getPreviousReservationStartingIndex(): u64 {
-        return this._providerManager.previousReservationStartingIndex;
+        return this.getPreviousReservationStartingIndex();
     }
 
     public getPreviousReservationStandardStartingIndex(): u64 {
-        return this._providerManager.previousReservationStandardStartingIndex;
+        return this.getPreviousReservationStandardStartingIndex();
     }
 
     public getPreviousRemovalStartingIndex(): u64 {
-        return this._providerManager.previousRemovalStartingIndex;
+        return this.getPreviousRemovalStartingIndex();
     }
 
     public getCurrentIndex(): u64 {
-        return this._providerManager.getCurrentIndex();
+        return this.getCurrentIndex();
     }
 
     public getCurrentIndexPriority(): u64 {
-        return this._providerManager.getCurrentIndexPriority();
+        return this.getCurrentIndexPriority();
     }
 
     public getCurrentIndexRemoval(): u64 {
-        return this._providerManager.getCurrentIndexRemoval();
+        return this.getCurrentIndexRemoval();
     }
 
-    public callPurgeReservationsAndRestoreProviders(): void {
-        this.purgeReservationsAndRestoreProviders();
-    }
+    //public callPurgeReservationsAndRestoreProviders(): void {
+    //    this.purgeReservationsAndRestoreProviders();
+    //}
 
     public getFromStandardQueue(index: u64): u256 {
-        return this._providerManager.getFromStandardQueue(index);
-    }
-
-    public getProviderManager(): ProviderManager {
-        return this._providerManager;
+        return this.getFromStandardQueue(index);
     }
 }
 
@@ -383,5 +592,15 @@ export class TestProviderManager extends ProviderManager {
 
     public get getPriorityQueue(): StoredU256Array {
         return this._priorityQueue;
+    }
+}
+
+export class TestProviderQueue extends ProviderQueue {
+    public callInitializeCurrentIndex(): void {
+        this.initializeCurrentIndex();
+    }
+
+    public callEnsureStartingIndexIsValid(): void {
+        this.ensureStartingIndexIsValid();
     }
 }

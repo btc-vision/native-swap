@@ -3,6 +3,8 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, Blockchain, Revert } from '@btc-vision/btc-runtime/runtime';
 import { ListTokensForSaleOperation } from './ListTokensForSaleOperation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
+import { getProvider, Provider } from '../models/Provider';
+import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 
 export class CreatePoolOperation extends BaseOperation {
     private readonly floorPrice: u256;
@@ -52,6 +54,12 @@ export class CreatePoolOperation extends BaseOperation {
     }
 
     private initializeLiquidity(): void {
+        const initialProvider: Provider = getProvider(this.providerId);
+
+        initialProvider.markInitialLiquidityProvider();
+        initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+        initialProvider.save();
+
         this.liquidityQueue.initializeInitialLiquidity(
             this.floorPrice,
             this.providerId,

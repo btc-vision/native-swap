@@ -316,7 +316,8 @@ export class ProviderManager implements IProviderManager {
             return null;
         }
 
-        initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+        //!!!initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+        //!!!initialProvider.markInitialProvider();
 
         return initialProvider;
     }

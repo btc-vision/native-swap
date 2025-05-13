@@ -1,4 +1,4 @@
-import { clearCachedProviders, getProvider } from '../lib/Provider';
+import { clearCachedProviders, getProvider } from '../models/Provider';
 import {
     Address,
     Blockchain,
@@ -7,6 +7,7 @@ import {
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
 import {
+    createLiquidityQueue,
     createProvider,
     createProviderId,
     msgSender1,
@@ -15,17 +16,15 @@ import {
     receiverAddress1,
     receiverAddress2,
     setBlockchainEnvironment,
-    TestLiquidityQueue,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
-import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
-import { RemoveLiquidityOperation } from '../lib/Liquidity/operations/RemoveLiquidityOperation';
+import { RemoveLiquidityOperation } from '../operations/RemoveLiquidityOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { CreatePoolOperation } from '../lib/Liquidity/operations/CreatePoolOperation';
-import { FEE_COLLECT_SCRIPT_PUBKEY } from '../utils/NativeSwapUtils';
-import { ReserveLiquidityOperation } from '../lib/Liquidity/operations/ReserveLiquidityOperation';
-import { AddLiquidityOperation } from '../lib/Liquidity/operations/AddLiquidityOperation';
+import { CreatePoolOperation } from '../operations/CreatePoolOperation';
+import { FEE_COLLECT_SCRIPT_PUBKEY } from '../constants/Contract';
+import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
+import { AddLiquidityOperation } from '../operations/AddLiquidityOperation';
 
 describe('RemoveLiquidityOperation tests', () => {
     beforeEach(() => {
@@ -40,9 +39,9 @@ describe('RemoveLiquidityOperation tests', () => {
             setBlockchainEnvironment(100);
 
             const provider = createProvider(providerAddress1, tokenAddress1, false, false, false);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            const operation = new RemoveLiquidityOperation(queue, provider.providerId);
+            const operation = new RemoveLiquidityOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
         }).toThrow();
@@ -53,10 +52,10 @@ describe('RemoveLiquidityOperation tests', () => {
             setBlockchainEnvironment(100);
 
             const provider = createProvider(providerAddress1, tokenAddress1, false, true, true);
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-            queue.initialLiquidityProvider = provider.providerId;
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            queue.liquidityQueue.initialLiquidityProviderId = provider.getId();
 
-            const operation = new RemoveLiquidityOperation(queue, provider.providerId);
+            const operation = new RemoveLiquidityOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
         }).toThrow();
@@ -67,11 +66,11 @@ describe('RemoveLiquidityOperation tests', () => {
             setBlockchainEnvironment(100);
 
             const provider = createProvider(providerAddress1, tokenAddress1, false, true, true);
-            provider.liquidity = u128.fromU32(1000);
+            provider.setLiquidityAmount(u128.fromU32(1000));
 
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            const operation = new RemoveLiquidityOperation(queue, provider.providerId);
+            const operation = new RemoveLiquidityOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
         }).toThrow();
@@ -84,7 +83,7 @@ describe('RemoveLiquidityOperation tests', () => {
         expect(() => {
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
 
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -96,7 +95,7 @@ describe('RemoveLiquidityOperation tests', () => {
             );
 
             const createPoolOp = new CreatePoolOperation(
-                queue,
+                queue.liquidityQueue,
                 floorPrice,
                 initialProviderId,
                 initialLiquidity,
@@ -108,8 +107,8 @@ describe('RemoveLiquidityOperation tests', () => {
             );
 
             createPoolOp.execute();
-            queue.setBlockQuote();
-            queue.save();
+            queue.liquidityQueue.setBlockQuote();
+            queue.liquidityQueue.save();
 
             setBlockchainEnvironment(101, providerAddress2, providerAddress2);
             const initialProvider = getProvider(initialProviderId);
@@ -117,38 +116,45 @@ describe('RemoveLiquidityOperation tests', () => {
 
             transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
             transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-            transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 12000));
+            transactionOutput.push(
+                new TransactionOutput(2, initialProvider.getBtcReceiver(), 12000),
+            );
 
             Blockchain.mockTransactionOutput(transactionOutput);
 
             const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const reserveOp = new ReserveLiquidityOperation(
-                queue3,
+                queue3.liquidityQueue,
                 providerId2,
                 providerAddress2,
-                u256.fromU64(12000),
+                12000,
                 u256.Zero,
                 true,
                 0,
             );
 
             reserveOp.execute();
-            queue3.save();
+            queue3.liquidityQueue.save();
 
             setBlockchainEnvironment(102, providerAddress2, providerAddress2);
-            const queue4 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const addOp = new AddLiquidityOperation(queue4, providerId2, receiverAddress2);
+            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            const addOp = new AddLiquidityOperation(
+                queue4.liquidityQueue,
+                queue4.tradeManager,
+                providerId2,
+                receiverAddress2,
+            );
             addOp.execute();
-            queue4.save();
+            queue4.liquidityQueue.save();
 
             setBlockchainEnvironment(103, providerAddress2, providerAddress2);
-            const queue5 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            queue5.setSatoshisOwed(providerId2, u256.Zero);
-            const removeOp = new RemoveLiquidityOperation(queue5, providerId2);
+            queue5.liquidityQueue.setSatoshisOwed(providerId2, 0);
+            const removeOp = new RemoveLiquidityOperation(queue5.liquidityQueue, providerId2);
             removeOp.execute();
-            queue5.save();
+            queue5.liquidityQueue.save();
         }).toThrow();
     });
 
@@ -159,7 +165,7 @@ describe('RemoveLiquidityOperation tests', () => {
         expect(() => {
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
 
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -171,7 +177,7 @@ describe('RemoveLiquidityOperation tests', () => {
             );
 
             const createPoolOp = new CreatePoolOperation(
-                queue,
+                queue.liquidityQueue,
                 floorPrice,
                 initialProviderId,
                 initialLiquidity,
@@ -183,8 +189,8 @@ describe('RemoveLiquidityOperation tests', () => {
             );
 
             createPoolOp.execute();
-            queue.setBlockQuote();
-            queue.save();
+            queue.liquidityQueue.setBlockQuote();
+            queue.liquidityQueue.save();
 
             setBlockchainEnvironment(101, providerAddress2, providerAddress2);
             const initialProvider = getProvider(initialProviderId);
@@ -192,37 +198,44 @@ describe('RemoveLiquidityOperation tests', () => {
 
             transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
             transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-            transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 12000));
+            transactionOutput.push(
+                new TransactionOutput(2, initialProvider.getBtcReceiver(), 12000),
+            );
 
             Blockchain.mockTransactionOutput(transactionOutput);
 
             const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const reserveOp = new ReserveLiquidityOperation(
-                queue3,
+                queue3.liquidityQueue,
                 providerId2,
                 providerAddress2,
-                u256.fromU64(12000),
+                12000,
                 u256.Zero,
                 true,
                 0,
             );
 
             reserveOp.execute();
-            queue3.save();
+            queue3.liquidityQueue.save();
 
             setBlockchainEnvironment(102, providerAddress2, providerAddress2);
-            const queue4 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const addOp = new AddLiquidityOperation(queue4, providerId2, receiverAddress2);
+            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            const addOp = new AddLiquidityOperation(
+                queue4.liquidityQueue,
+                queue4.tradeManager,
+                providerId2,
+                receiverAddress2,
+            );
             addOp.execute();
-            queue4.save();
+            queue4.liquidityQueue.save();
 
             setBlockchainEnvironment(103, providerAddress2, providerAddress2);
-            const queue5 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-            const removeOp = new RemoveLiquidityOperation(queue5, providerId2);
+            const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const removeOp = new RemoveLiquidityOperation(queue5.liquidityQueue, providerId2);
             removeOp.execute();
-            queue5.save();
-            const removeOp2 = new RemoveLiquidityOperation(queue5, providerId2);
+            queue5.liquidityQueue.save();
+            const removeOp2 = new RemoveLiquidityOperation(queue5.liquidityQueue, providerId2);
             removeOp2.execute();
         }).toThrow();
     });
@@ -234,7 +247,7 @@ describe('RemoveLiquidityOperation tests', () => {
         expect(() => {
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
 
-            const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
                 SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -246,7 +259,7 @@ describe('RemoveLiquidityOperation tests', () => {
             );
 
             const createPoolOp = new CreatePoolOperation(
-                queue,
+                queue.liquidityQueue,
                 floorPrice,
                 initialProviderId,
                 initialLiquidity,
@@ -258,8 +271,8 @@ describe('RemoveLiquidityOperation tests', () => {
             );
 
             createPoolOp.execute();
-            queue.setBlockQuote();
-            queue.save();
+            queue.liquidityQueue.setBlockQuote();
+            queue.liquidityQueue.save();
 
             setBlockchainEnvironment(101, providerAddress2, providerAddress2);
             const initialProvider = getProvider(initialProviderId);
@@ -267,40 +280,47 @@ describe('RemoveLiquidityOperation tests', () => {
 
             transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
             transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-            transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 12000));
+            transactionOutput.push(
+                new TransactionOutput(2, initialProvider.getBtcReceiver(), 12000),
+            );
 
             Blockchain.mockTransactionOutput(transactionOutput);
 
             const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const reserveOp = new ReserveLiquidityOperation(
-                queue3,
+                queue3.liquidityQueue,
                 providerId2,
                 providerAddress2,
-                u256.fromU64(12000),
+                12000,
                 u256.Zero,
                 true,
                 0,
             );
 
             reserveOp.execute();
-            queue3.save();
+            queue3.liquidityQueue.save();
 
             setBlockchainEnvironment(102, providerAddress2, providerAddress2);
-            const queue4 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const addOp = new AddLiquidityOperation(queue4, providerId2, receiverAddress2);
+            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            const addOp = new AddLiquidityOperation(
+                queue4.liquidityQueue,
+                queue4.tradeManager,
+                providerId2,
+                receiverAddress2,
+            );
             addOp.execute();
-            queue4.save();
+            queue4.liquidityQueue.save();
 
             setBlockchainEnvironment(103, providerAddress2, providerAddress2);
             const provider2 = getProvider(providerId2);
-            expect(provider2.liquidityProvided).not.toStrictEqual(u256.Zero);
+            expect(provider2.getLiquidityProvided()).not.toStrictEqual(u128.Zero);
 
-            provider2.liquidityProvided = u256.Zero;
-            const queue5 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-            const removeOp = new RemoveLiquidityOperation(queue5, providerId2);
+            provider2.setLiquidityProvided(u128.Zero);
+            const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const removeOp = new RemoveLiquidityOperation(queue5.liquidityQueue, providerId2);
             removeOp.execute();
-            queue5.save();
+            queue5.liquidityQueue.save();
         }).toThrow();
     });
 
@@ -310,7 +330,7 @@ describe('RemoveLiquidityOperation tests', () => {
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
 
-        const queue = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const floorPrice: u256 = SafeMath.div(
             SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
@@ -322,7 +342,7 @@ describe('RemoveLiquidityOperation tests', () => {
         );
 
         const createPoolOp = new CreatePoolOperation(
-            queue,
+            queue.liquidityQueue,
             floorPrice,
             initialProviderId,
             initialLiquidity,
@@ -334,8 +354,8 @@ describe('RemoveLiquidityOperation tests', () => {
         );
 
         createPoolOp.execute();
-        queue.setBlockQuote();
-        queue.save();
+        queue.liquidityQueue.setBlockQuote();
+        queue.liquidityQueue.save();
 
         setBlockchainEnvironment(101, providerAddress2, providerAddress2);
         const initialProvider = getProvider(initialProviderId);
@@ -343,58 +363,65 @@ describe('RemoveLiquidityOperation tests', () => {
 
         transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
         transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-        transactionOutput.push(new TransactionOutput(2, initialProvider.btcReceiver, 10000));
+        transactionOutput.push(new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000));
 
         Blockchain.mockTransactionOutput(transactionOutput);
 
         const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-        const queue3 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         const reserveOp = new ReserveLiquidityOperation(
-            queue3,
+            queue3.liquidityQueue,
             providerId2,
             providerAddress2,
-            u256.fromU64(10000),
+            10000,
             u256.Zero,
             true,
             0,
         );
 
         reserveOp.execute();
-        queue3.save();
+        queue3.liquidityQueue.save();
 
         setBlockchainEnvironment(102, providerAddress2, providerAddress2);
-        const queue4 = new LiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        const addOp = new AddLiquidityOperation(queue4, providerId2, receiverAddress2);
+        const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+        const addOp = new AddLiquidityOperation(
+            queue4.liquidityQueue,
+            queue4.tradeManager,
+            providerId2,
+            receiverAddress2,
+        );
         addOp.execute();
-        queue4.save();
+        queue4.liquidityQueue.save();
 
         setBlockchainEnvironment(103, providerAddress2, providerAddress2);
         const provider2 = getProvider(providerId2);
 
-        expect(provider2.pendingRemoval).toBeFalsy();
-        expect(provider2.liquidityProvided).not.toStrictEqual(u256.Zero);
+        expect(provider2.isPendingRemoval()).toBeFalsy();
+        expect(provider2.getLiquidityProvided()).not.toStrictEqual(u128.Zero);
 
-        const liquidityProvided = provider2.liquidityProvided;
-        const liquidity = queue4.liquidity;
-        const virtualTokenReserve = queue4.virtualTokenReserve;
-        const virtualBTCReserve = queue4.virtualBTCReserve;
-        const SatoshisOwed = queue4.getSatoshisOwed(providerId2);
+        const liquidityProvided = provider2.getLiquidityProvided();
+        const liquidity = queue4.liquidityQueue.liquidity;
+        const virtualTokenReserve = queue4.liquidityQueue.virtualTokenReserve;
+        const virtualSatoshisReserve = queue4.liquidityQueue.virtualSatoshisReserve;
+        const SatoshisOwed = queue4.liquidityQueue.getSatoshisOwed(providerId2);
 
-        const queue5 = new TestLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-        const removeOp = new RemoveLiquidityOperation(queue5, providerId2);
+        const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+        const removeOp = new RemoveLiquidityOperation(queue5.liquidityQueue, providerId2);
         removeOp.execute();
-        queue5.save();
+        queue5.liquidityQueue.save();
 
         expect(TransferHelper.safeTransferFromCalled).toBeTruthy();
-        expect(queue5.getProviderManager().getFromRemovalQueue(0)).toStrictEqual(providerId2);
-        expect(provider2.pendingRemoval).toBeTruthy();
-        expect(provider2.liquidityProvided).toStrictEqual(u256.Zero);
-        expect(queue5.liquidity).toStrictEqual(SafeMath.sub(liquidity, liquidityProvided));
-        expect(queue5.virtualTokenReserve).toStrictEqual(
-            SafeMath.sub(virtualTokenReserve, liquidityProvided),
+        expect(queue5.providerManager.getFromRemovalQueue(0)).toStrictEqual(providerId2);
+        expect(provider2.isPendingRemoval()).toBeTruthy();
+        expect(provider2.getLiquidityProvided()).toStrictEqual(u128.Zero);
+        expect(queue5.liquidityQueue.liquidity).toStrictEqual(
+            SafeMath.sub(liquidity, liquidityProvided.toU256()),
         );
-        expect(queue5.virtualBTCReserve).toStrictEqual(
-            SafeMath.sub(virtualBTCReserve, SatoshisOwed),
+        expect(queue5.liquidityQueue.virtualTokenReserve).toStrictEqual(
+            SafeMath.sub(virtualTokenReserve, liquidityProvided.toU256()),
+        );
+        expect(queue5.liquidityQueue.virtualSatoshisReserve).toStrictEqual(
+            SafeMath.sub64(virtualSatoshisReserve, SatoshisOwed),
         );
     });
 });
