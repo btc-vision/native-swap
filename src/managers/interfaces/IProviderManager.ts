@@ -1,7 +1,6 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Provider } from '../../models/Provider';
 import { ProviderTypes } from '../../types/ProviderTypes';
-import { ProviderQueue } from '../ProviderQueue';
 
 export interface IProviderManager {
     readonly normalQueueLength: u32;
@@ -33,8 +32,6 @@ export interface IProviderManager {
     getFromPriorityQueue(index: u32): u256;
 
     getFromRemovalQueue(index: u32): u256;
-
-    getNormalQueue(): ProviderQueue;
 
     cleanUpQueues(): void;
 

@@ -410,15 +410,19 @@ export function createReservation(token: Address, owner: Address): Reservation {
 
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(600);
 
+export interface ITestLiquidityQueue extends ILiquidityQueue {
+    mockgetNextProviderWithLiquidity(mockedNextProvider: Provider | null): void;
+}
+
 export class CreateLiquidityQueueResult {
-    public liquidityQueue: ILiquidityQueue;
+    public liquidityQueue: ITestLiquidityQueue;
     public tradeManager: ITradeManager;
     public providerManager: IProviderManager;
     public quoteManager: IQuoteManager;
     public reservationManager: IReservationManager;
 
     constructor(
-        liquidityQueue: ILiquidityQueue,
+        liquidityQueue: ITestLiquidityQueue,
         tradeManager: ITradeManager,
         providerManager: IProviderManager,
         quoteManager: IQuoteManager,
@@ -436,6 +440,7 @@ export function createLiquidityQueue(
     token: Address,
     tokenId: Uint8Array,
     purgeOldReservations: boolean,
+    timeoutEnabled: boolean = false,
 ): CreateLiquidityQueueResult {
     const owedBtcManager: IOwedBTCManager = getOwedBtcManager();
     const quoteManager: IQuoteManager = getQuoteManager(tokenId);
@@ -451,7 +456,7 @@ export function createLiquidityQueue(
     );
     const dynamicFee: IDynamicFee = getDynamicFee(tokenId);
 
-    const liquidityQueue: LiquidityQueue = new LiquidityQueue(
+    const liquidityQueue: ITestLiquidityQueue = new TestLiquidityQueue(
         token,
         tokenId,
         providerManager,
@@ -461,9 +466,10 @@ export function createLiquidityQueue(
         dynamicFee,
         owedBtcManager,
         purgeOldReservations,
+        timeoutEnabled,
     );
 
-    const tradeManager: TradeManager = new TradeManager(
+    const tradeManager: ITradeManager = new TradeManager(
         tokenId,
         quoteManager,
         providerManager,
@@ -539,59 +545,19 @@ export class TestLiquidityQueue extends LiquidityQueue {
             return super.getNextProviderWithLiquidity(currentQuote);
         }
     }
-
-    public setPreviousReservationStartingIndex(value: u64): void {
-        this.setPreviousReservationStartingIndex(value);
-    }
-
-    public setPreviousReservationStandardStartingIndex(value: u64): void {
-        this.setPreviousReservationStandardStartingIndex(value);
-    }
-
-    public setPreviousRemovalStartingIndex(value: u64): void {
-        this.setPreviousRemovalStartingIndex(value);
-    }
-
-    public getPreviousReservationStartingIndex(): u64 {
-        return this.getPreviousReservationStartingIndex();
-    }
-
-    public getPreviousReservationStandardStartingIndex(): u64 {
-        return this.getPreviousReservationStandardStartingIndex();
-    }
-
-    public getPreviousRemovalStartingIndex(): u64 {
-        return this.getPreviousRemovalStartingIndex();
-    }
-
-    public getCurrentIndex(): u64 {
-        return this.getCurrentIndex();
-    }
-
-    public getCurrentIndexPriority(): u64 {
-        return this.getCurrentIndexPriority();
-    }
-
-    public getCurrentIndexRemoval(): u64 {
-        return this.getCurrentIndexRemoval();
-    }
-
-    //public callPurgeReservationsAndRestoreProviders(): void {
-    //    this.purgeReservationsAndRestoreProviders();
-    //}
-
-    public getFromStandardQueue(index: u64): u256 {
-        return this.getFromStandardQueue(index);
-    }
 }
 
 export class TestProviderManager extends ProviderManager {
     public get getRemovalQueue(): StoredU256Array {
-        return this._removalQueue;
+        return this.removalQueue.getQueue();
     }
 
     public get getPriorityQueue(): StoredU256Array {
-        return this._priorityQueue;
+        return this.priorityQueue.getQueue();
+    }
+
+    public get getNormalQueue(): StoredU256Array {
+        return this.normalQueue.getQueue();
     }
 }
 

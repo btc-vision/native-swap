@@ -1,5 +1,6 @@
-import { clearCachedProviders } from '../lib/Provider';
-import { FEE_COLLECT_SCRIPT_PUBKEY, getTotalFeeCollected } from '../utils/NativeSwapUtils';
+import { clearCachedProviders } from '../models/Provider';
+import { getTotalFeeCollected } from '../utils/BlockchainUtils';
+import { FEE_COLLECT_SCRIPT_PUBKEY } from '../constants/Contract';
 import { Blockchain, TransactionOutput } from '@btc-vision/btc-runtime/runtime';
 import { setBlockchainEnvironment } from './test_helper';
 

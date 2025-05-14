@@ -221,10 +221,6 @@ export class ProviderManager implements IProviderManager {
         return getProvider(providerId);
     }
 
-    public getNormalQueue(): ProviderQueue {
-        return this.normalQueue;
-    }
-
     public removePendingLiquidityProviderFromRemovalQueue(provider: Provider): void {
         this.removalQueue.removeFromQueue(provider);
     }
