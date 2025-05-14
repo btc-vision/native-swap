@@ -104,6 +104,10 @@ export class Reservation {
         this.userReservation.timeout();
     }
 
+    public isDirty(): bool {
+        return this.reservedIndexes.getLength() > 0;
+    }
+
     public save(): void {
         this.userReservation.save();
         this.reservedIndexes.save();

@@ -7,6 +7,7 @@ import {
     SafeMath,
     StoredU256,
     StoredU256Array,
+    StoredU32Array,
     StoredU64,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
@@ -16,6 +17,9 @@ import {
     LIQUIDITY_QUEUE_POINTER,
     LP_BTC_OWED_POINTER,
     LP_BTC_OWED_RESERVED_POINTER,
+    QUEUE_PURGED_RESERVATION_PRIORITY,
+    QUEUE_PURGED_RESERVATION_REMOVAL,
+    QUEUE_PURGED_RESERVATION_STANDARD,
     REMOVAL_QUEUE_POINTER,
     STARTING_INDEX_POINTER,
 } from '../StoredPointers';
@@ -24,6 +28,13 @@ import { StoredMapU256 } from '../../stored/StoredMapU256';
 import { tokensToSatoshis } from '../../utils/NativeSwapUtils';
 import { LiquidityQueue } from './LiquidityQueue';
 import { FulfilledProviderEvent } from '../../events/FulfilledProviderEvent';
+import { LIQUIDITY_REMOVAL_TYPE, NORMAL_TYPE, PRIORITY_TYPE } from '../Reservation';
+import {
+    ALLOW_DIRTY,
+    IMPOSSIBLE_PURGE_INDEX,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    NOT_DEFINED_PROVIDER_INDEX,
+} from '../../data-types/Constants';
 
 const ENABLE_INDEX_VERIFICATION: bool = true;
 
@@ -37,6 +48,10 @@ export class ProviderManager {
     private readonly _lpBTCowed: StoredMapU256;
     private readonly _lpBTCowedReserved: StoredMapU256;
 
+    private readonly _purgedProviderQueueStandard: StoredU32Array;
+    private readonly _purgedProviderQueuePriority: StoredU32Array;
+    private readonly _purgedProviderQueueRemoval: StoredU32Array;
+
     private currentIndex: u64 = 0;
     private currentIndexPriority: u64 = 0;
     private currentIndexRemoval: u64 = 0;
@@ -46,14 +61,45 @@ export class ProviderManager {
         public readonly tokenIdUint8Array: Uint8Array,
         public readonly strictMinimumProviderReservationAmount: u256,
     ) {
-        this._queue = new StoredU256Array(LIQUIDITY_QUEUE_POINTER, tokenIdUint8Array);
+        // A provider can not have the same id as the initial liquidity provider.
+        const maxQueueDepth: u64 = INITIAL_LIQUIDITY_PROVIDER_INDEX - 1;
+        const maxPurgeQueueDepth: u64 = <u64>IMPOSSIBLE_PURGE_INDEX - 1;
+
+        this._queue = new StoredU256Array(
+            LIQUIDITY_QUEUE_POINTER,
+            tokenIdUint8Array,
+            maxQueueDepth,
+        );
 
         this._priorityQueue = new StoredU256Array(
             LIQUIDITY_PRIORITY_QUEUE_POINTER,
             tokenIdUint8Array,
+            maxQueueDepth,
         );
 
-        this._removalQueue = new StoredU256Array(REMOVAL_QUEUE_POINTER, tokenIdUint8Array);
+        this._removalQueue = new StoredU256Array(
+            REMOVAL_QUEUE_POINTER,
+            tokenIdUint8Array,
+            maxQueueDepth,
+        );
+
+        this._purgedProviderQueueStandard = new StoredU32Array(
+            QUEUE_PURGED_RESERVATION_STANDARD,
+            tokenIdUint8Array,
+            maxPurgeQueueDepth,
+        );
+
+        this._purgedProviderQueuePriority = new StoredU32Array(
+            QUEUE_PURGED_RESERVATION_PRIORITY,
+            tokenIdUint8Array,
+            maxPurgeQueueDepth,
+        );
+
+        this._purgedProviderQueueRemoval = new StoredU32Array(
+            QUEUE_PURGED_RESERVATION_REMOVAL,
+            tokenIdUint8Array,
+            maxPurgeQueueDepth,
+        );
 
         this._initialLiquidityProvider = new StoredU256(INITIAL_LIQUIDITY, tokenIdUint8Array);
         this._lpBTCowed = new StoredMapU256(LP_BTC_OWED_POINTER);
@@ -183,26 +229,139 @@ export class ProviderManager {
         this.cleanUpRemovalQueue();
     }
 
+    public pushToPurgeRemovalQueue(provider: Provider): void {
+        // DO NOT PUSH THE INITIAL LIQUIDITY PROVIDER TO THE PURGE QUEUE
+        /*if (provider.indexedAt === INITIAL_LIQUIDITY_PROVIDER_INDEX) {
+            return;
+        }
+
+        if (!provider.pendingRemoval) {
+            throw new Revert('OP_NET: Impossible state. Provider is not pending removal.');
+        }
+
+        this.onProviderPurge(provider);
+
+        // TODO: Verify if indexedAt is valid for removal queue?
+        const index = this._purgedProviderQueueRemoval.push(<u32>provider.indexedAt, false);
+        Blockchain.log(
+            `Pushing to removal purge queue: ${index} - ${provider.indexedAt} - ${provider.providerId}`,
+        );*/
+    }
+
+    public pushToPurgeStandardQueue(provider: Provider): void {
+        // DO NOT PUSH THE INITIAL LIQUIDITY PROVIDER TO THE PURGE QUEUE
+        if (provider.indexedAt === INITIAL_LIQUIDITY_PROVIDER_INDEX) {
+            return;
+        }
+
+        this.onProviderPurge(provider);
+
+        provider.purgedAt = <u32>(
+            this._purgedProviderQueueStandard.push(<u32>provider.indexedAt, false)
+        );
+
+        /*Blockchain.log(
+            `Pushing to purge standard queue: ${provider.purgedAt} - ${provider.indexedAt}`,
+        );*/
+    }
+
+    public pushToPurgePriorityQueue(provider: Provider): void {
+        // DO NOT PUSH THE INITIAL LIQUIDITY PROVIDER TO THE PURGE QUEUE
+        if (provider.indexedAt === INITIAL_LIQUIDITY_PROVIDER_INDEX) {
+            return;
+        }
+
+        this.onProviderPurge(provider);
+
+        provider.purgedAt = <u32>(
+            this._purgedProviderQueuePriority.push(<u32>provider.indexedAt, false)
+        );
+
+        /*Blockchain.log(
+            `Pushing to purge priority queue: ${provider.purgedAt} - ${provider.indexedAt}`,
+        );*/
+    }
+
+    public getFromPurgedProvider(currentQuote: u256): Provider | null {
+        const lengthRemovalQueue = this._purgedProviderQueueRemoval.getLength();
+        const lengthStandardQueue = this._purgedProviderQueueStandard.getLength();
+        const lengthPriorityQueue = this._purgedProviderQueuePriority.getLength();
+
+        if (lengthRemovalQueue > 0) {
+            return this.getProviderFromPurgedQueue(
+                this._purgedProviderQueueRemoval,
+                this._removalQueue,
+                currentQuote,
+                LIQUIDITY_REMOVAL_TYPE,
+            );
+        }
+
+        if (lengthPriorityQueue > 0) {
+            return this.getProviderFromPurgedQueue(
+                this._purgedProviderQueuePriority,
+                this._priorityQueue,
+                currentQuote,
+                PRIORITY_TYPE,
+            );
+        }
+
+        if (lengthStandardQueue > 0) {
+            return this.getProviderFromPurgedQueue(
+                this._purgedProviderQueueStandard,
+                this._queue,
+                currentQuote,
+                NORMAL_TYPE,
+            );
+        }
+
+        return null;
+    }
+
     public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
         if (currentQuote.isZero()) {
             return this.getInitialProvider(currentQuote);
         }
 
+        // Look in the purged provide queue first
+        const purgedProvider = this.getFromPurgedProvider(currentQuote);
+        if (purgedProvider !== null) {
+            return purgedProvider;
+        }
+
         // 1. Removal queue first
         const removalProvider = this.getNextRemovalQueueProvider();
         if (removalProvider !== null) {
+            this.ensureNotInPurgeQueue(removalProvider);
+
+            this.previousRemovalStartingIndex =
+                this.currentIndexRemoval === 0
+                    ? this.currentIndexRemoval
+                    : this.currentIndexRemoval - 1;
+
             return removalProvider;
         }
 
         // 2. Then priority queue
         const priorityProvider = this.getNextPriorityListProvider(currentQuote);
         if (priorityProvider !== null) {
+            this.ensureNotInPurgeQueue(priorityProvider);
+
+            this.previousReservationStartingIndex =
+                this.currentIndexPriority === 0
+                    ? this.currentIndexPriority
+                    : this.currentIndexPriority - 1;
+
             return priorityProvider;
         }
 
         // 3. Then normal queue
         const provider = this.getNextStandardQueueProvider(currentQuote);
         if (provider !== null) {
+            this.ensureNotInPurgeQueue(provider);
+
+            this.previousReservationStandardStartingIndex =
+                this.currentIndex === 0 ? this.currentIndex : this.currentIndex - 1;
+
             return provider;
         }
 
@@ -211,6 +370,7 @@ export class ProviderManager {
     }
 
     public removePendingLiquidityProviderFromRemovalQueue(provider: Provider, i: u64): void {
+        this.purgeSafetyCheck(provider);
         this._removalQueue.delete_physical(i);
 
         provider.pendingRemoval = false;
@@ -224,6 +384,8 @@ export class ProviderManager {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
+        this.purgeSafetyCheck(provider);
+
         if (burnRemainingFunds && provider.haveLiquidity()) {
             TransferHelper.safeTransfer(this.token, Address.dead(), provider.liquidity.toU256());
         }
@@ -242,9 +404,23 @@ export class ProviderManager {
     }
 
     public resetStartingIndex(): void {
-        this.previousReservationStartingIndex = 0;
-        this.previousReservationStandardStartingIndex = 0;
-        this.previousRemovalStartingIndex = 0;
+        /*const startIndexStandard: u64 = this.binarySearchFirstLive(this._queue, 0);
+        const startIndexPriority: u64 = this.binarySearchFirstLive(this._priorityQueue, 0);
+        const startIndexRemoval: u64 = this.binarySearchFirstLive(this._removalQueue, 0);*/
+
+        const startIndexStandard: u64 = this._queue.startingIndex();
+        const startIndexPriority: u64 = this._priorityQueue.startingIndex();
+        const startIndexRemoval: u64 = this._removalQueue.startingIndex();
+
+        // Always 1 index behind to be 100% sure we didn't miss a provider
+
+        this.previousReservationStartingIndex =
+            startIndexPriority === 0 ? 0 : startIndexPriority - 1;
+
+        this.previousReservationStandardStartingIndex =
+            startIndexStandard === 0 ? 0 : startIndexStandard - 1;
+
+        this.previousRemovalStartingIndex = startIndexRemoval === 0 ? 0 : startIndexRemoval - 1;
     }
 
     public restoreCurrentIndex(): void {
@@ -254,23 +430,129 @@ export class ProviderManager {
     }
 
     public save(): void {
-        this.previousReservationStandardStartingIndex =
-            this.currentIndex === 0 ? this.currentIndex : this.currentIndex - 1;
-
-        this.previousReservationStartingIndex =
-            this.currentIndexPriority === 0
-                ? this.currentIndexPriority
-                : this.currentIndexPriority - 1;
-
-        this.previousRemovalStartingIndex =
-            this.currentIndexRemoval === 0
-                ? this.currentIndexRemoval
-                : this.currentIndexRemoval - 1;
-
         this._startingIndex.save();
         this._queue.save();
         this._priorityQueue.save();
         this._removalQueue.save();
+
+        this._purgedProviderQueuePriority.save();
+        this._purgedProviderQueueStandard.save();
+        this._purgedProviderQueueRemoval.save();
+    }
+
+    public hasEnoughLiquidityLeftProvider(provider: Provider, currentQuote: u256): bool {
+        const availableLiquidity: u128 = SafeMath.sub128(provider.liquidity, provider.reserved);
+        if (availableLiquidity.isZero()) {
+            return false;
+        }
+
+        return this.verifyProviderRemainingLiquidity(
+            provider,
+            availableLiquidity.toU256(),
+            currentQuote,
+        );
+    }
+
+    public removeFromPurgeQueue(provider: Provider): void {
+        if (provider.purgedAt === IMPOSSIBLE_PURGE_INDEX) {
+            throw new Revert(
+                'Impossible state: provider.purgedAt cannot be IMPOSSIBLE_PURGE_INDEX',
+            );
+        }
+
+        const queue: StoredU32Array = this.getPurgeQueueByType(provider.queueType);
+
+        // TODO: Technically, we don't need to remove the provider from the queue because we should theoretically process
+        // TODO: "dirty" states correctly due to wrap around.
+        if (!ALLOW_DIRTY) {
+            queue.delete_physical(provider.purgedAt); // provider.purgedAt already include the start index of the array.
+        }
+
+        queue.removeItemFromLength();
+        queue.applyNextOffsetToStartingIndex();
+
+        /*Blockchain.log(
+            `Removed from purge queue: ${provider.indexedAt} - ${provider.purgedAt} - ${queue.getLength()}`,
+        );*/
+
+        provider.setPurged(false);
+        provider.purgedAt = IMPOSSIBLE_PURGE_INDEX;
+    }
+
+    @inline
+    private purgeSafetyCheck(provider: Provider): void {
+        if (provider.hasBeenPurged()) {
+            throw new Error(
+                `Impossible state: Provider is still in the reservation purge queue and is getting deleted.`,
+            );
+        }
+    }
+
+    private getPurgeQueueByType(type: u8): StoredU32Array {
+        if (type === LIQUIDITY_REMOVAL_TYPE) {
+            return this._purgedProviderQueueRemoval;
+        } else if (type === PRIORITY_TYPE) {
+            return this._purgedProviderQueuePriority;
+        } else if (type === NORMAL_TYPE) {
+            return this._purgedProviderQueueStandard;
+        }
+
+        throw new Revert('Impossible state: queue type is not valid');
+    }
+
+    private getProviderFromPurgedQueue(
+        queue: StoredU32Array,
+        realQueue: StoredU256Array,
+        currentQuote: u256,
+        queueId: u8,
+    ): Provider | null {
+        /*Blockchain.log(
+            `Getting provider from purged queue: ${queue.getLength()} - ${queue.startingIndex()} - ${queue.previousOffset}`,
+        );*/
+
+        const providerIndex = queue.next();
+        if (providerIndex === IMPOSSIBLE_PURGE_INDEX) {
+            throw new Revert(
+                'Impossible state: Purge providerIndex cannot be IMPOSSIBLE_PURGE_INDEX',
+            );
+        }
+
+        const id = realQueue.get_physical(providerIndex);
+        if (id.isZero()) {
+            throw new Revert(
+                `Impossible state: providerId cannot be zero (purged queue #${providerIndex} - ${queue.previousOffset})`,
+            );
+        }
+
+        const provider = getProvider(id);
+        if (!provider.hasBeenPurged()) {
+            throw new Revert(
+                `Impossible state: provider has not been purged (attempted to load provider at index ${providerIndex} - ${id})`,
+            );
+        }
+
+        //const availableLiquidity = SafeMath.sub128(provider.liquidity, provider.reserved);
+        /*Blockchain.log(
+            `Loading purged provider at index ${providerIndex} - ${queue.getLength()} - ${queue.startingIndex()} - ${availableLiquidity} - ${queue.previousOffset})`,
+        );*/
+
+        // previous element
+        provider.purgedAt = <u32>queue.previousOffset; // we need to include the index of the array so we can purge the right element later.
+        provider.queueType = queueId;
+
+        return this.returnProvider(provider, providerIndex, currentQuote);
+    }
+
+    private onProviderPurge(provider: Provider): void {
+        if (provider.hasBeenPurged()) {
+            throw new Revert('Impossible state: provider has already been purged');
+        }
+
+        provider.setPurged(true);
+
+        if (provider.indexedAt === NOT_DEFINED_PROVIDER_INDEX) {
+            throw new Revert('Impossible state: provider.indexedAt is not defined.');
+        }
     }
 
     private cleanUpRemovalQueue(): void {
@@ -280,6 +562,7 @@ export class ProviderManager {
         while (removalIndex < removalLength) {
             const providerId = this._removalQueue.get_physical(removalIndex);
             if (providerId === u256.Zero) {
+                this._removalQueue.setStartingIndex(removalIndex);
                 removalIndex++;
                 continue;
             }
@@ -289,6 +572,7 @@ export class ProviderManager {
                 this._removalQueue.setStartingIndex(removalIndex);
                 break;
             } else {
+                this.purgeSafetyCheck(provider);
                 this._removalQueue.delete_physical(removalIndex);
             }
             removalIndex++;
@@ -303,6 +587,7 @@ export class ProviderManager {
         while (priorityIndex < priorityLength) {
             const providerId = this._priorityQueue.get_physical(priorityIndex);
             if (providerId === u256.Zero) {
+                this._priorityQueue.setStartingIndex(priorityIndex);
                 priorityIndex++;
                 continue;
             }
@@ -312,6 +597,7 @@ export class ProviderManager {
                 this._priorityQueue.setStartingIndex(priorityIndex);
                 break;
             } else {
+                this.purgeSafetyCheck(provider);
                 this._priorityQueue.delete_physical(priorityIndex);
             }
             priorityIndex++;
@@ -327,6 +613,7 @@ export class ProviderManager {
         while (index < length) {
             const providerId = this._queue.get_physical(index);
             if (providerId === u256.Zero) {
+                this._queue.setStartingIndex(index);
                 index++;
                 continue;
             }
@@ -336,12 +623,23 @@ export class ProviderManager {
                 this._queue.setStartingIndex(index);
                 break;
             } else {
+                this.purgeSafetyCheck(provider);
                 this._queue.delete_physical(index);
             }
             index++;
         }
 
-        this.previousReservationStandardStartingIndex = index;
+        //Blockchain.log(`Standard queue clean up completed. New starting index: ${index}`);
+
+        this.previousReservationStandardStartingIndex = index === 0 ? index : index - 1;
+    }
+
+    private ensureNotInPurgeQueue(provider: Provider): void {
+        if (provider.hasBeenPurged()) {
+            throw new Revert(
+                `Impossible state: provider ${provider.providerId} (indexed at ${provider.indexedAt}, purgedAt: ${provider.purgedAt}) is in purge queue but purge queue is empty.`,
+            );
+        }
     }
 
     private getNextRemovalQueueProvider(): Provider | null {
@@ -532,6 +830,26 @@ export class ProviderManager {
         return null;
     }
 
+    /*private binarySearchFirstLive(queue: StoredU256Array, start: u64 = queue.startingIndex()): u64 {
+        let lo: u64 = start;
+        let hi: u64 = queue.getLength();
+
+        while (lo < hi) {
+            const mid: u64 = lo + ((hi - lo) >> 1);
+
+            const pid: u256 = queue.get_physical(mid);
+            const live: bool = !pid.isZero() && getProvider(pid).isActive();
+
+            if (live) {
+                hi = mid;
+            } else {
+                lo = mid + 1;
+            }
+        }
+
+        return lo;
+    }*/
+
     // TODO: we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
     private returnProvider(provider: Provider, i: u64, currentQuote: u256): Provider | null {
         const availableLiquidity: u128 = SafeMath.sub128(provider.liquidity, provider.reserved);
@@ -594,6 +912,12 @@ export class ProviderManager {
             return null;
         }
 
+        if (initProvider.hasBeenPurged()) {
+            throw new Revert(
+                `Impossible state: Initial liquidity provider is present in purge queue.`,
+            );
+        }
+
         if (initProvider.reserved > initProvider.liquidity) {
             throw new Revert(`Impossible state: reserved cannot be > liquidity.`);
         }
@@ -619,7 +943,7 @@ export class ProviderManager {
             }
         }
 
-        initProvider.indexedAt = u32.MAX_VALUE;
+        initProvider.indexedAt = INITIAL_LIQUIDITY_PROVIDER_INDEX;
         return initProvider;
     }
 }

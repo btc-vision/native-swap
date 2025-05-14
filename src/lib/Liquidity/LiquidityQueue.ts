@@ -41,6 +41,11 @@ import { DynamicFee } from '../DynamicFee';
 import { ProviderManager } from './ProviderManager';
 import { QUOTE_SCALE, satoshisToTokens, tokensToSatoshis } from '../../utils/NativeSwapUtils';
 import { ActivateProviderEvent } from '../../events/ActivateProviderEvent';
+import {
+    ALLOW_DIRTY,
+    IMPOSSIBLE_PURGE_INDEX,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+} from '../../data-types/Constants';
 
 const ENABLE_FEES: bool = true;
 
@@ -263,6 +268,14 @@ export class LiquidityQueue {
         return this._providerManager.getNextProviderWithLiquidity(currentQuote);
     }
 
+    public hasEnoughLiquidityLeftProvider(provider: Provider, currentQuote: u256): bool {
+        return this._providerManager.hasEnoughLiquidityLeftProvider(provider, currentQuote);
+    }
+
+    public removeFromPurgeQueue(provider: Provider): void {
+        this._providerManager.removeFromPurgeQueue(provider);
+    }
+
     public getTokensAfterTax(amountIn: u128): u128 {
         const tokensForPriorityQueue: u128 = SafeMath.div128(
             SafeMath.mul128(amountIn, LiquidityQueue.PERCENT_TOKENS_FOR_PRIORITY_QUEUE),
@@ -388,7 +401,7 @@ export class LiquidityQueue {
         this.lastVirtualUpdateBlock = currentBlock;
 
         // Clean up queues once per block, always the first tx.
-        // this._providerManager.cleanUpQueues();
+        this._providerManager.cleanUpQueues();
     }
 
     public getUtilizationRatio(): u256 {
@@ -403,7 +416,7 @@ export class LiquidityQueue {
     }
 
     public executeTrade(reservation: Reservation): CompletedTrade {
-        if (reservation.valid() === false) {
+        if (!reservation.valid()) {
             throw new Revert('Impossible state: Reservation is invalid but went thru executeTrade');
         }
 
@@ -427,7 +440,7 @@ export class LiquidityQueue {
 
         // Mark the reservation as used.
         const purgeIndex = <u64>reservation.getPurgeIndex();
-        if (purgeIndex === <u64>u32.MAX_VALUE) {
+        if (purgeIndex === <u64>IMPOSSIBLE_PURGE_INDEX) {
             throw new Revert('Impossible state: purgeIndex is MAX_VALUE');
         }
 
@@ -571,7 +584,7 @@ export class LiquidityQueue {
                 if (
                     !reservationForLP &&
                     !provider.canProvideLiquidity() &&
-                    provider.indexedAt !== u32.MAX_VALUE
+                    provider.indexedAt !== INITIAL_LIQUIDITY_PROVIDER_INDEX
                 ) {
                     provider.enableLiquidityProvision();
 
@@ -920,22 +933,29 @@ export class LiquidityQueue {
             const queueType: u8 = queueTypes[j];
 
             const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
-
             if (provider.pendingRemoval && queueType === LIQUIDITY_REMOVAL_TYPE) {
                 this.purgeAndRestoreProviderRemovalQueue(
-                    provider.providerId,
+                    provider,
                     reservedAmount,
                     reservation.createdAt,
                 );
             } else {
                 this.ensureValidReservedAmount(provider, reservedAmount);
-                this.purgeAndRestoreProvider(provider, reservedAmount);
+                this.purgeAndRestoreProvider(provider, reservedAmount, queueType);
             }
 
             restoredLiquidity = SafeMath.add(restoredLiquidity, reservedAmount.toU256());
         }
 
-        reservation.delete(true);
+        // TODO: VERY IMPORTANT: Make sure that removing the delete does not cause critical issues.
+
+        if (!ALLOW_DIRTY) {
+            reservation.delete(true);
+        } else {
+            // TODO: Check if we can omit reset and just timeout the user, then, once
+            //  a new reservation is made, if dirty, we reset it before setting the new values.
+            reservation.timeout();
+        }
 
         return restoredLiquidity;
     }
@@ -1014,7 +1034,7 @@ export class LiquidityQueue {
     }
 
     private getProviderFromQueue(providerIndex: u64, type: u8): Provider {
-        const isInitialLiquidity = providerIndex === u32.MAX_VALUE;
+        const isInitialLiquidity = providerIndex === INITIAL_LIQUIDITY_PROVIDER_INDEX;
         const providerId: u256 = isInitialLiquidity
             ? this._providerManager.initialLiquidityProvider
             : this.getProviderIfFromQueue(providerIndex, type);
@@ -1089,7 +1109,7 @@ export class LiquidityQueue {
     }
 
     private purgeAndRestoreProviderRemovalQueue(
-        providerId: u256,
+        provider: Provider,
         reservedAmount: u128,
         createdAt: u64,
     ): void {
@@ -1104,19 +1124,23 @@ export class LiquidityQueue {
         const costInSats = tokensToSatoshis(reservedAmount.toU256(), currentQuoteAtThatTime);
 
         // clamp by actual `_lpBTCowedReserved`
-        const wasReservedSats = this.getBTCowedReserved(providerId);
+        const wasReservedSats = this.getBTCowedReserved(provider.providerId);
         const revertSats = SafeMath.min(costInSats, wasReservedSats);
 
         // remove from owedReserved
         const newOwedReserved = SafeMath.sub(wasReservedSats, revertSats);
-        this.setBTCowedReserved(providerId, newOwedReserved);
+        this.setBTCowedReserved(provider.providerId, newOwedReserved);
+
+        // This is very important that a provider with active liquidity CAN NOT BE A REMOVAL PROVIDER AT THE SAME TIME. OR THIS CHECK WILL FAIL.
+        if (!provider.hasBeenPurged()) {
+            this._providerManager.pushToPurgeRemovalQueue(provider);
+        }
     }
 
-    private purgeAndRestoreProvider(provider: Provider, reservedAmount: u128): void {
+    private purgeAndRestoreProvider(provider: Provider, reservedAmount: u128, queueType: u8): void {
         provider.decreaseReserved(reservedAmount);
 
         const availableLiquidity = SafeMath.sub128(provider.liquidity, provider.reserved);
-
         if (
             u128.lt(
                 availableLiquidity,
@@ -1124,6 +1148,12 @@ export class LiquidityQueue {
             )
         ) {
             this._providerManager.resetProvider(provider, false);
+        } else if (!provider.hasBeenPurged()) {
+            if (queueType === NORMAL_TYPE) {
+                this._providerManager.pushToPurgeStandardQueue(provider);
+            } else {
+                this._providerManager.pushToPurgePriorityQueue(provider);
+            }
         }
     }
 

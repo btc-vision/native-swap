@@ -12,6 +12,11 @@ import {
     satoshisToTokens,
     tokensToSatoshis,
 } from '../../../utils/NativeSwapUtils';
+import { Provider } from '../../Provider';
+import {
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    NOT_DEFINED_PROVIDER_INDEX,
+} from '../../../data-types/Constants';
 
 export class ReserveLiquidityOperation extends BaseOperation {
     public static MaxActivationDelay: u8 = 3;
@@ -52,8 +57,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.ensureSufficientFeesCollected(totalFee);
 
         const reservation = new Reservation(this.liquidityQueue.token, this.buyer);
-        this.ensureReservationValid(reservation);
         this.ensureUserNotTimedOut(reservation);
+        this.ensureReservationNotValid(reservation);
 
         const currentQuote = this.liquidityQueue.quote();
         this.ensureCurrentQuoteIsValid(currentQuote);
@@ -64,7 +69,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         let tokensRemaining: u256 = this.computeTokenRemaining(currentQuote);
         let tokensReserved: u256 = u256.Zero;
         let satSpent: u256 = u256.Zero;
-        let lastIndex: u64 = <u64>u32.MAX_VALUE + <u64>1; // Impossible value
+        let lastIndex: u64 = <u64>NOT_DEFINED_PROVIDER_INDEX;
         let lastProviderId: u256 = u256.Zero;
 
         // Loop over providers while tokensRemaining > 0
@@ -86,8 +91,17 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 break;
             }
 
+            if (provider.indexedAt === NOT_DEFINED_PROVIDER_INDEX) {
+                throw new Revert(
+                    `Impossible state: provider ${provider.providerId} has NOT_DEFINED_PROVIDER_INDEX index`,
+                );
+            }
+
             // If we see repeated MAX_VALUE => break
-            if (provider.indexedAt === u32.MAX_VALUE && lastIndex === u32.MAX_VALUE) {
+            if (
+                provider.indexedAt === INITIAL_LIQUIDITY_PROVIDER_INDEX &&
+                lastIndex === INITIAL_LIQUIDITY_PROVIDER_INDEX
+            ) {
                 break;
             }
 
@@ -148,6 +162,9 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     LIQUIDITY_REMOVAL_TYPE,
                 );
 
+                // Handle purge queue
+                this.handleProviderPurgeQueues(provider, currentQuote, LIQUIDITY_REMOVAL_TYPE);
+
                 this.emitLiquidityReservedEvent(
                     provider.providerId,
                     provider.btcReceiver,
@@ -193,11 +210,11 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     tokensRemaining = u256.Zero;
                 }
 
-                reservation.reserveAtIndex(
-                    <u32>provider.indexedAt,
-                    reserveAmountU128,
-                    provider.isPriority() ? PRIORITY_TYPE : NORMAL_TYPE,
-                );
+                const type = provider.isPriority() ? PRIORITY_TYPE : NORMAL_TYPE;
+                reservation.reserveAtIndex(<u32>provider.indexedAt, reserveAmountU128, type);
+
+                // Handle purge queue
+                this.handleProviderPurgeQueues(provider, currentQuote, type);
 
                 this.emitLiquidityReservedEvent(
                     provider.providerId,
@@ -234,6 +251,28 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.emitReservationCreatedEvent(tokensReserved, satSpent);
     }
 
+    private handleProviderPurgeQueues(provider: Provider, currentQuote: u256, type: u8): void {
+        if (!provider.hasBeenPurged()) {
+            return;
+        }
+
+        let hasEnoughLiquidityLeft: bool = false;
+        if (type === LIQUIDITY_REMOVAL_TYPE) {
+            // TODO: Verify if there is enough owed BTC left to refund, the fixed version is in the refactor version. Will be empty for now
+        } else {
+            hasEnoughLiquidityLeft = this.liquidityQueue.hasEnoughLiquidityLeftProvider(
+                provider,
+                currentQuote,
+            );
+        }
+
+        if (!hasEnoughLiquidityLeft) {
+            this.liquidityQueue.removeFromPurgeQueue(provider);
+        }
+
+        return;
+    }
+
     private emitReservationCreatedEvent(tokensReserved: u256, satSpent: u256): void {
         Blockchain.emit(new ReservationCreatedEvent(tokensReserved, satSpent));
     }
@@ -246,8 +285,12 @@ export class ReserveLiquidityOperation extends BaseOperation {
         Blockchain.emit(new LiquidityReservedEvent(btcReceiver, costInSatoshis, providerId));
     }
 
-    private ensureReservationValid(reservation: Reservation): void {
-        if (reservation.valid()) {
+    private ensureReservationNotValid(reservation: Reservation): void {
+        if (reservation.expired()) {
+            if (reservation.isDirty()) {
+                reservation.delete(false); // Ensure this is always before a timeout check.
+            }
+        } else {
             throw new Revert(
                 'NATIVE_SWAP: You already have an active reservation. Swap or wait for expiration before creating another',
             );
