@@ -15,6 +15,7 @@ import {
 import { Provider } from '../../Provider';
 import {
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAXIMUM_PROVIDER_PER_RESERVATIONS,
     NOT_DEFINED_PROVIDER_INDEX,
 } from '../../../data-types/Constants';
 
@@ -71,6 +72,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         let satSpent: u256 = u256.Zero;
         let lastIndex: u64 = <u64>NOT_DEFINED_PROVIDER_INDEX;
         let lastProviderId: u256 = u256.Zero;
+        let reservedProviders: u8 = 0;
 
         // Loop over providers while tokensRemaining > 0
         let i: u32 = 0;
@@ -140,7 +142,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 );
 
                 let reserveAmount = satoshisToTokens(tokensRemainingInSatoshis, currentQuote);
-
                 if (reserveAmount.isZero()) {
                     continue;
                 }
@@ -221,6 +222,12 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     provider.btcReceiver,
                     costInSatoshis.toU128(),
                 );
+            }
+
+            // Verify hard constraint of maximum providers per reservation
+            reservedProviders++;
+            if (MAXIMUM_PROVIDER_PER_RESERVATIONS === reservedProviders) {
+                break;
             }
         }
 
