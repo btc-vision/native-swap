@@ -27,6 +27,7 @@ export class SwapOperation extends BaseOperation {
 
     public execute(): void {
         const reservation: Reservation = this.liquidityQueue.getReservationWithExpirationChecks();
+
         this.ensureReservationNotForLP(reservation);
 
         const trade: CompletedTrade = this.tradeManager.executeTrade(reservation);

@@ -74,6 +74,10 @@ export class LiquidityQueueReserve implements ILiquidityQueueReserve {
         return this._totalReserves.get(this.tokenId) || u256.Zero;
     }
 
+    public set liquidity(value: u256) {
+        this._totalReserves.set(this.tokenId, value);
+    }
+
     public get reservedLiquidity(): u256 {
         return this._totalReserved.get(this.tokenId) || u256.Zero;
     }

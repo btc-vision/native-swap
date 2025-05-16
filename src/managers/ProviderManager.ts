@@ -4,6 +4,7 @@ import {
     Blockchain,
     Revert,
     StoredU256,
+    StoredU32,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
 import {
@@ -22,7 +23,6 @@ import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { IProviderManager } from './interfaces/IProviderManager';
-import { StoredU32 } from '../../../btc-runtime/runtime/storage/StoredU32';
 
 export class ProviderManager implements IProviderManager {
     protected readonly token: Address;

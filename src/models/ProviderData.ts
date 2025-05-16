@@ -3,14 +3,16 @@ import {
     Blockchain,
     BytesReader,
     BytesWriter,
+    EMPTY_BUFFER,
     encodePointer,
     U128_BYTE_LENGTH,
     U256_BYTE_LENGTH,
     U32_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
+import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 import { AMOUNT_POINTER, LIQUIDITY_PROVIDED_POINTER } from '../constants/StoredPointers';
-import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 
 @final
 export class ProviderData {
@@ -358,7 +360,10 @@ export class ProviderData {
         this.liquidityProvisionAllowed = false;
         this.liquidityAmount = u128.Zero;
         this.reservedAmount = u128.Zero;
-        this.queueIndex = INDEX_NOT_SET_VALUE;
+
+        if (this.queueIndex !== INITIAL_LIQUIDITY_PROVIDER_INDEX) {
+            this.queueIndex = INDEX_NOT_SET_VALUE;
+        }
     }
 
     /**
@@ -449,7 +454,11 @@ export class ProviderData {
     private ensureValues(): void {
         if (!this.valueLoaded) {
             const storedData: Uint8Array = Blockchain.getStorageAt(this.pointerBuffer);
-            this.unpackValues(storedData);
+
+            if (!eqUint(storedData, EMPTY_BUFFER)) {
+                this.unpackValues(storedData);
+            }
+
             this.valueLoaded = true;
         }
     }

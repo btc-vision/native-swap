@@ -164,6 +164,7 @@ export class ReservationData {
      */
     public set creationBlock(value: u64) {
         this.ensureValues();
+
         if (this._creationBlock !== value) {
             this._creationBlock = value;
             this._timeout = false;
@@ -270,9 +271,7 @@ export class ReservationData {
         if (!this.valueLoaded) {
             const storedData: Uint8Array = Blockchain.getStorageAt(this.pointerBuffer);
 
-            if (eqUint(storedData, EMPTY_BUFFER)) {
-                this.reset(false);
-            } else {
+            if (!eqUint(storedData, EMPTY_BUFFER)) {
                 this.unpackValues(storedData);
             }
 

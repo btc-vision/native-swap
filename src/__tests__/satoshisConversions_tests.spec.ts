@@ -1,5 +1,5 @@
 import { clearCachedProviders } from '../models/Provider';
-import { Blockchain, SafeMath, TransferHelper } from '../../../btc-runtime/runtime';
+import { Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { QUOTE_SCALE } from '../constants/Contract';
 import {
@@ -34,9 +34,10 @@ describe('SatoshisConversions tests', () => {
         });
 
         it('throws if result exceeds MAX_TOTAL_SATOSHIS', () => {
-            const big: u256 = u256.Max;
-            const scaledPrice: u256 = u256.fromU64(1);
-            expect<() => void>(() => {
+            expect(() => {
+                const big: u256 = u256.Max;
+                const scaledPrice: u256 = u256.fromU64(1);
+
                 tokensToSatoshis(big, scaledPrice);
             }).toThrow();
         });
@@ -97,12 +98,13 @@ describe('SatoshisConversions tests', () => {
         });
 
         it('throws when overflow and throwOnOverflow=true', () => {
-            const oneSat: u64 = 1;
-            const overflowPrice: u256 = SafeMath.mul(
-                SafeMath.add(u128.Max.toU256(), u256.One),
-                QUOTE_SCALE,
-            );
-            expect<() => void>(() => {
+            expect(() => {
+                const oneSat: u64 = 1;
+                const overflowPrice: u256 = SafeMath.mul(
+                    SafeMath.add(u128.Max.toU256(), u256.One),
+                    QUOTE_SCALE,
+                );
+
                 satoshisToTokens128(oneSat, overflowPrice, true);
             }).toThrow();
         });
@@ -132,7 +134,10 @@ describe('SatoshisConversions tests', () => {
         it('caps tokensIn above u128 range and recalculates satoshis', () => {
             const tokensIn: u256 = SafeMath.add(u128.Max.toU256(), u256.One);
             const satsIn: u64 = 9;
-            const scaledPrice: u256 = SafeMath.mul(QUOTE_SCALE, u256.fromU64(2));
+            const scaledPrice: u256 = SafeMath.mul(
+                QUOTE_SCALE,
+                u256.fromString('99999999999999999999999999999'),
+            );
             const res: CappedTokensResult = capTokensU256ToU128(tokensIn, satsIn, scaledPrice);
             expect(res.tokens).toStrictEqual(u128.Max);
             const expectedSats: u64 = tokensToSatoshis128(u128.Max, scaledPrice);

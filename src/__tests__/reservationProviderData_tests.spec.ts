@@ -1,5 +1,5 @@
 import { clearCachedProviders } from '../models/Provider';
-import { Blockchain, TransferHelper } from '../../../btc-runtime/runtime';
+import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { u128 } from '@btc-vision/as-bignum/assembly';
 import { ReservationProviderData } from '../models/ReservationProdiverData';

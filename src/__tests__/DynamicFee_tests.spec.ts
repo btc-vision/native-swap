@@ -48,8 +48,8 @@ describe('DynamicFee tests', () => {
             const tradeSize = 400_000;
             const fee = df.getDynamicFeeBP(tradeSize, u256.Zero);
 
-            expect<bool>(fee > 20).toBeTruthy();
-            expect<bool>(fee <= df.maxFeeBP).toBeTruthy();
+            expect(fee > 20).toBeTruthy();
+            expect(fee <= df.maxFeeBP).toBeTruthy();
         });
 
         it('should incorporate volatility => beta*(vol)/10000', () => {

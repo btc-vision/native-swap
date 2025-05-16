@@ -209,6 +209,22 @@ export function createProvider(
     return provider;
 }
 
+export function createPriorityProvider(providerAddress: Address, tokenAddress: Address): Provider {
+    return createProvider(
+        providerAddress,
+        tokenAddress,
+        false,
+        false,
+        false,
+        '33333333',
+        u128.Zero,
+        u128.Zero,
+        u128.Zero,
+        true,
+        true,
+    );
+}
+
 export function createProviders(
     nbProviderToAdd: u8,
     startIndex: u8 = 0,
@@ -295,8 +311,8 @@ export function createMaxProviders(
 
     let i: u32 = 0;
     while (i < MAXIMUM_PROVIDER_COUNT) {
-        for (let j: u16 = 0; j <= 255; j++) {
-            for (let k: u16 = 0; k <= 255; k++) {
+        for (let j: u8 = 0; j <= 255; j++) {
+            for (let k: u8 = 0; k <= 255; k++) {
                 const address: Address = new Address([
                     68,
                     153,
@@ -411,7 +427,11 @@ export function createReservation(token: Address, owner: Address): Reservation {
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(600);
 
 export interface ITestLiquidityQueue extends ILiquidityQueue {
+    readonly volatility: u256;
+
     mockgetNextProviderWithLiquidity(mockedNextProvider: Provider | null): void;
+
+    setLiquidity(value: u256): void;
 }
 
 export class CreateLiquidityQueueResult {
@@ -531,8 +551,12 @@ export function getDynamicFee(tokenId: Uint8Array): IDynamicFee {
     return new DynamicFee(tokenId);
 }
 
-export class TestLiquidityQueue extends LiquidityQueue {
+export class TestLiquidityQueue extends LiquidityQueue implements ITestLiquidityQueue {
     private _mockedNextProvider: Provider | null = null;
+
+    public get volatility(): u256 {
+        return this.dynamicFee.volatility;
+    }
 
     public mockgetNextProviderWithLiquidity(mockedNextProvider: Provider | null): void {
         this._mockedNextProvider = mockedNextProvider;
@@ -544,6 +568,10 @@ export class TestLiquidityQueue extends LiquidityQueue {
         } else {
             return super.getNextProviderWithLiquidity(currentQuote);
         }
+    }
+
+    public setLiquidity(value: u256): void {
+        this.liquidityQueueReserve.liquidity = value;
     }
 }
 

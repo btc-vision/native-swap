@@ -313,7 +313,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     public increaseSatoshisOwedReserved(providerId: u256, value: u64): void {
         const owedReservedBefore: u64 = this.getSatoshisOwedReserved(providerId);
         const owedReservedAfter: u64 = SafeMath.add64(owedReservedBefore, value);
-        this.setSatoshisOwed(providerId, owedReservedAfter);
+        this.setSatoshisOwedReserved(providerId, owedReservedAfter);
     }
 
     public increaseDeltaSatoshisBuy(value: u64): void {

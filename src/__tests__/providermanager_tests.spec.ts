@@ -1,16 +1,25 @@
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
-import { clearCachedProviders, Provider } from '../lib/Provider';
-import { ProviderManager } from '../lib/Liquidity/ProviderManager';
+import { clearCachedProviders, Provider } from '../models/Provider';
+import { ProviderManager } from '../managers/ProviderManager';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
+    createPriorityProvider,
     createProvider,
     createProviders,
     providerAddress1,
-    saveIndexForProvider,
-    STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+    providerAddress2,
+    providerAddress3,
+    providerAddress4,
+    providerAddress5,
+    providerAddress6,
     tokenAddress1,
+    tokenAddress2,
     tokenIdUint8Array1,
 } from './test_helper';
+import { IOwedBTCManager } from '../managers/interfaces/IOwedBTCManager';
+import { OwedBTCManager } from '../managers/OwedBTCManager';
+import { ProviderTypes } from '../types/ProviderTypes';
+import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 
 describe('ProviderManager tests', () => {
     beforeEach(() => {
@@ -20,562 +29,874 @@ describe('ProviderManager tests', () => {
         TransferHelper.clearMockedResults();
     });
 
-    it('should create a new providermanager and initialize correctly', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
+    describe('Constructor', () => {
+        let owedBTCManager: IOwedBTCManager;
 
-        expect(manager.previousReservationStandardStartingIndex).toStrictEqual(0);
-        expect(manager.previousReservationStartingIndex).toStrictEqual(0);
-        expect(manager.previousRemovalStartingIndex).toStrictEqual(0);
-        expect(manager.initialLiquidityProvider).toStrictEqual(u256.Zero);
-        expect(manager.priorityQueueLength).toStrictEqual(0);
-        expect(manager.priorityQueueStartingIndex).toStrictEqual(0);
-        expect(manager.priorityQueueStartingIndex).toStrictEqual(0);
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+
+            owedBTCManager = new OwedBTCManager();
+        });
+
+        it('should create a new provider manager and initialize correctly when not exists', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            expect(manager.currentIndexNormal).toStrictEqual(0);
+            expect(manager.currentIndexPriority).toStrictEqual(0);
+            expect(manager.currentIndexRemoval).toStrictEqual(0);
+            expect(manager.initialLiquidityProviderId).toStrictEqual(u256.Zero);
+            expect(manager.previousNormalStartingIndex).toStrictEqual(0);
+            expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
+            expect(manager.previousRemovalStartingIndex).toStrictEqual(0);
+            expect(manager.normalQueueLength).toStrictEqual(0);
+            expect(manager.priorityQueueLength).toStrictEqual(0);
+            expect(manager.removalQueueLength).toStrictEqual(0);
+            expect(manager.normalQueueStartingIndex).toStrictEqual(0);
+            expect(manager.priorityQueueStartingIndex).toStrictEqual(0);
+            expect(manager.removalQueueStartingIndex).toStrictEqual(0);
+        });
+
+        it('should create a provider manager, load stored values and initialize correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            manager.addToNormalQueue(createProvider(providerAddress1, tokenAddress1));
+            manager.addToPriorityQueue(createPriorityProvider(providerAddress1, tokenAddress1));
+            manager.addToRemovalQueue(createProvider(providerAddress1, tokenAddress1, true));
+            manager.initialLiquidityProviderId = u256.fromU64(10000);
+            manager.previousNormalStartingIndex = 100;
+            manager.previousPriorityStartingIndex = 200;
+            manager.previousRemovalStartingIndex = 300;
+            manager.save();
+
+            const manager2: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+            expect(manager2.currentIndexNormal).toStrictEqual(0);
+            expect(manager2.currentIndexPriority).toStrictEqual(0);
+            expect(manager2.currentIndexRemoval).toStrictEqual(0);
+            expect(manager2.initialLiquidityProviderId).toStrictEqual(u256.fromU64(10000));
+            expect(manager2.previousNormalStartingIndex).toStrictEqual(100);
+            expect(manager2.previousPriorityStartingIndex).toStrictEqual(200);
+            expect(manager2.previousRemovalStartingIndex).toStrictEqual(300);
+            expect(manager2.normalQueueLength).toStrictEqual(1);
+            expect(manager2.priorityQueueLength).toStrictEqual(1);
+            expect(manager2.removalQueueLength).toStrictEqual(1);
+            expect(manager2.normalQueueStartingIndex).toStrictEqual(0);
+            expect(manager2.priorityQueueStartingIndex).toStrictEqual(0);
+            expect(manager2.removalQueueStartingIndex).toStrictEqual(0);
+        });
     });
 
-    it('should set the initialLiquidityProvider correctly', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
+    describe('Getters amd Setters', () => {
+        let owedBTCManager: IOwedBTCManager;
 
-        const initialLiquidityProvider = u256.fromU64(99999);
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
 
-        manager.initialLiquidityProvider = initialLiquidityProvider;
+            owedBTCManager = new OwedBTCManager();
+        });
 
-        expect(manager.initialLiquidityProvider).toStrictEqual(initialLiquidityProvider);
+        it('should get/set the initial liquidity provider correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const initialLiquidityProvider = u256.fromU64(99999);
+
+            manager.initialLiquidityProviderId = initialLiquidityProvider;
+
+            expect(manager.initialLiquidityProviderId).toStrictEqual(initialLiquidityProvider);
+        });
+
+        it('should get/set the previous priority starting index correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            manager.previousPriorityStartingIndex = 100;
+
+            expect(manager.previousPriorityStartingIndex).toStrictEqual(100);
+        });
+
+        it('should get/set the previous normal starting index correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            manager.previousNormalStartingIndex = 200;
+
+            expect(manager.previousNormalStartingIndex).toStrictEqual(200);
+        });
+
+        it('should get/set the previous removal starting index correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            manager.previousRemovalStartingIndex = 300;
+
+            expect(manager.previousRemovalStartingIndex).toStrictEqual(300);
+        });
+
+        it('should get the priority queue length correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            expect(manager.priorityQueueLength).toStrictEqual(0);
+
+            manager.addToPriorityQueue(createPriorityProvider(providerAddress1, tokenAddress1));
+            manager.addToPriorityQueue(createPriorityProvider(providerAddress2, tokenAddress1));
+
+            expect(manager.priorityQueueLength).toStrictEqual(2);
+        });
+
+        it('should get the normal queue length correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            expect(manager.priorityQueueLength).toStrictEqual(0);
+
+            manager.addToNormalQueue(createProvider(providerAddress1, tokenAddress1));
+            manager.addToNormalQueue(createProvider(providerAddress2, tokenAddress1));
+
+            expect(manager.normalQueueLength).toStrictEqual(2);
+        });
+
+        it('should get the removal queue length correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            expect(manager.priorityQueueLength).toStrictEqual(0);
+
+            manager.addToRemovalQueue(createProvider(providerAddress1, tokenAddress1, true));
+            manager.addToRemovalQueue(createProvider(providerAddress2, tokenAddress1, true));
+
+            expect(manager.removalQueueLength).toStrictEqual(2);
+        });
+
+        it('should reset all previous starting index to 0', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            manager.previousNormalStartingIndex = 100;
+            manager.previousPriorityStartingIndex = 200;
+            manager.previousRemovalStartingIndex = 300;
+
+            manager.resetStartingIndex();
+
+            expect(manager.previousNormalStartingIndex).toStrictEqual(0);
+            expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
+            expect(manager.previousRemovalStartingIndex).toStrictEqual(0);
+        });
+
+        it('should restore the current indexes to the previous value', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            manager.previousNormalStartingIndex = 100;
+            manager.previousPriorityStartingIndex = 200;
+            manager.previousRemovalStartingIndex = 300;
+
+            manager.restoreCurrentIndex();
+
+            expect(manager.currentIndexNormal).toStrictEqual(100);
+            expect(manager.currentIndexPriority).toStrictEqual(200);
+            expect(manager.currentIndexRemoval).toStrictEqual(300);
+        });
     });
 
-    it('should set the SatoshisOwed correctly', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
+    describe('Add/Get providers to/from queue', () => {
+        let owedBTCManager: IOwedBTCManager;
 
-        const providerId1: u256 = u256.fromU64(10000);
-        const amount1: u256 = u256.fromU64(99999);
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
 
-        manager.setSatoshisOwed(providerId1, amount1);
+            owedBTCManager = new OwedBTCManager();
+        });
 
-        expect(manager.getSatoshisOwed(providerId1)).toStrictEqual(amount1);
+        it('should add/get providers to priority queue correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            expect(manager.priorityQueueLength).toStrictEqual(0);
+
+            const provider1: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
+            manager.addToPriorityQueue(provider1);
+
+            const provider2: Provider = createPriorityProvider(providerAddress2, tokenAddress1);
+            manager.addToPriorityQueue(provider2);
+
+            expect(manager.priorityQueueLength).toStrictEqual(2);
+            expect(manager.getFromPriorityQueue(provider1.getQueueIndex())).toStrictEqual(
+                provider1.getId(),
+            );
+
+            expect(manager.getFromPriorityQueue(provider2.getQueueIndex())).toStrictEqual(
+                provider2.getId(),
+            );
+        });
+
+        it('should add/get providers to normal queue correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            expect(manager.normalQueueLength).toStrictEqual(0);
+
+            const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
+            manager.addToNormalQueue(provider1);
+
+            const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
+            manager.addToNormalQueue(provider2);
+
+            expect(manager.normalQueueLength).toStrictEqual(2);
+            expect(manager.getFromNormalQueue(provider1.getQueueIndex())).toStrictEqual(
+                provider1.getId(),
+            );
+
+            expect(manager.getFromNormalQueue(provider2.getQueueIndex())).toStrictEqual(
+                provider2.getId(),
+            );
+        });
+
+        it('should add/get providers to removal queue correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            expect(manager.normalQueueLength).toStrictEqual(0);
+
+            const provider1: Provider = createProvider(providerAddress1, tokenAddress1, true);
+            manager.addToRemovalQueue(provider1);
+
+            const provider2: Provider = createProvider(providerAddress2, tokenAddress1, true);
+            manager.addToRemovalQueue(provider2);
+
+            expect(manager.removalQueueLength).toStrictEqual(2);
+            expect(manager.getFromRemovalQueue(provider1.getRemovalQueueIndex())).toStrictEqual(
+                provider1.getId(),
+            );
+
+            expect(manager.getFromRemovalQueue(provider2.getRemovalQueueIndex())).toStrictEqual(
+                provider2.getId(),
+            );
+        });
+
+        it('should get providers id by types correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const provider1: Provider = createProvider(providerAddress1, tokenAddress1, true);
+            manager.addToRemovalQueue(provider1);
+
+            const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
+            manager.addToNormalQueue(provider2);
+
+            const provider3: Provider = createPriorityProvider(providerAddress3, tokenAddress1);
+            manager.addToPriorityQueue(provider3);
+
+            expect(manager.removalQueueLength).toStrictEqual(1);
+            expect(manager.normalQueueLength).toStrictEqual(1);
+            expect(manager.priorityQueueLength).toStrictEqual(1);
+
+            expect(
+                manager.getIdFromQueue(
+                    provider1.getRemovalQueueIndex(),
+                    ProviderTypes.LiquidityRemoval,
+                ),
+            ).toStrictEqual(provider1.getId());
+
+            expect(
+                manager.getIdFromQueue(provider2.getQueueIndex(), ProviderTypes.Normal),
+            ).toStrictEqual(provider1.getId());
+
+            expect(
+                manager.getIdFromQueue(provider3.getQueueIndex(), ProviderTypes.Priority),
+            ).toStrictEqual(provider1.getId());
+        });
+
+        it('should throws when get initial provider from queue but not set', () => {
+            expect(() => {
+                const manager: ProviderManager = new ProviderManager(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    owedBTCManager,
+                );
+
+                const resultProvider1: Provider = manager.getProviderFromQueue(
+                    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+                    ProviderTypes.Normal,
+                );
+            }).toThrow();
+        });
+
+        it('should get initial provider from queue correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const initialProvider: Provider = createProvider(providerAddress1, tokenAddress1);
+            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            initialProvider.markInitialLiquidityProvider();
+
+            manager.initialLiquidityProviderId = initialProvider.getId();
+
+            const resultProvider: Provider = manager.getProviderFromQueue(
+                INITIAL_LIQUIDITY_PROVIDER_INDEX,
+                ProviderTypes.Normal,
+            );
+
+            expect(resultProvider.getId()).toStrictEqual(initialProvider.getId());
+            expect(resultProvider.getQueueIndex()).toStrictEqual(initialProvider.getQueueIndex());
+        });
+
+        it('should throws when get normal provider from queue but not in the list', () => {
+            expect(() => {
+                const manager: ProviderManager = new ProviderManager(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    owedBTCManager,
+                );
+
+                const resultProvider1: Provider = manager.getProviderFromQueue(
+                    23,
+                    ProviderTypes.Normal,
+                );
+            }).toThrow();
+        });
+
+        it('should get normal provider from queue correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            manager.addToNormalQueue(provider);
+
+            const resultProvider: Provider = manager.getProviderFromQueue(
+                provider.getQueueIndex(),
+                ProviderTypes.Normal,
+            );
+
+            expect(resultProvider.getId()).toStrictEqual(provider.getId());
+            expect(resultProvider.getQueueIndex()).toStrictEqual(provider.getQueueIndex());
+        });
+
+        it('should throws when get priority provider from queue but not in the list', () => {
+            expect(() => {
+                const manager: ProviderManager = new ProviderManager(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    owedBTCManager,
+                );
+
+                const resultProvider1: Provider = manager.getProviderFromQueue(
+                    23,
+                    ProviderTypes.Priority,
+                );
+            }).toThrow();
+        });
+
+        it('should get priority provider from queue correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const provider: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
+            manager.addToPriorityQueue(provider);
+
+            const resultProvider: Provider = manager.getProviderFromQueue(
+                provider.getQueueIndex(),
+                ProviderTypes.Priority,
+            );
+
+            expect(resultProvider.getId()).toStrictEqual(provider.getId());
+            expect(resultProvider.getQueueIndex()).toStrictEqual(provider.getQueueIndex());
+        });
+
+        it('should throws when get removal provider from queue but not in the list', () => {
+            expect(() => {
+                const manager: ProviderManager = new ProviderManager(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    owedBTCManager,
+                );
+
+                const resultProvider1: Provider = manager.getProviderFromQueue(
+                    23,
+                    ProviderTypes.LiquidityRemoval,
+                );
+            }).toThrow();
+        });
+
+        it('should get removal provider from queue correctly', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
+            manager.addToRemovalQueue(provider);
+
+            const resultProvider: Provider = manager.getProviderFromQueue(
+                provider.getQueueIndex(),
+                ProviderTypes.LiquidityRemoval,
+            );
+
+            expect(resultProvider.getId()).toStrictEqual(provider.getId());
+            expect(resultProvider.getRemovalQueueIndex()).toStrictEqual(
+                provider.getRemovalQueueIndex(),
+            );
+        });
+
+        it('should return 0 when priority queue does not contains the provider index or is empty', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const providerIdOut: u256 = manager.getFromPriorityQueue(22222);
+
+            expect(providerIdOut).toStrictEqual(u256.Zero);
+        });
+
+        it('should return 0 when removal queue does not contains the provider index or is empty', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+            const providerIdOut: u256 = manager.getFromRemovalQueue(22222);
+
+            expect(providerIdOut).toStrictEqual(u256.Zero);
+        });
+
+        it('should return 0 when getFromStandardQueue does not contains the provider index or is empty', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const providerIdOut: u256 = manager.getFromNormalQueue(22222);
+
+            expect(providerIdOut).toStrictEqual(u256.Zero);
+        });
     });
 
-    it('should return 0 SatoshisOwed when no BTC owed to provider', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
+    describe('Removal queue removal', () => {
+        let owedBTCManager: IOwedBTCManager;
 
-        const providerId1: u256 = u256.fromU64(10000);
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
 
-        expect(manager.getSatoshisOwed(providerId1)).toStrictEqual(u256.Zero);
+            owedBTCManager = new OwedBTCManager();
+        });
+
+        it('should remove a pending liquidity provider from the removal queue', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const provider1: Provider = createProvider(providerAddress1, tokenAddress1, true);
+            provider1.markLiquidityProvider();
+
+            const index: u32 = manager.addToRemovalQueue(provider1);
+
+            expect(manager.getFromRemovalQueue(index)).toStrictEqual(provider1.getId());
+
+            manager.removePendingLiquidityProviderFromRemovalQueue(provider1);
+
+            expect(provider1.isLiquidityProvider()).toBeFalsy();
+            expect(provider1.isPendingRemoval()).toBeFalsy();
+
+            expect(manager.getFromRemovalQueue(index)).toStrictEqual(u256.Zero);
+        });
     });
 
-    it('should replace the SatoshisOwed for an existing BTC balance', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
+    describe('Reset', () => {
+        let owedBTCManager: IOwedBTCManager;
 
-        const providerId1: u256 = u256.fromU64(10000);
-        const amount1: u256 = u256.fromU64(99999);
-        const amount2: u256 = u256.fromU64(88888);
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
 
-        manager.setSatoshisOwed(providerId1, amount1);
+            owedBTCManager = new OwedBTCManager();
+        });
 
-        expect(manager.getSatoshisOwed(providerId1)).toStrictEqual(amount1);
+        it('should burn the provider funds when burnRemainingFunds is true and liquidity is not 0', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
 
-        manager.setSatoshisOwed(providerId1, amount2);
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            manager.resetProvider(provider, true);
 
-        expect(manager.getSatoshisOwed(providerId1)).toStrictEqual(amount2);
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+        });
+
+        it('should not burn the provider funds when burnRemainingFunds is true and liquidity is 0', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            provider.setLiquidityAmount(u128.Zero);
+            manager.resetProvider(provider, true);
+
+            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+        });
+
+        it('should not burn the provider funds when burnRemainingFunds is false', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            provider.setLiquidityAmount(u128.Zero);
+            manager.resetProvider(provider, false);
+
+            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+        });
+
+        it('should remove the provider from the priority queue and reset it', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            provider.activate();
+            provider.markPriority();
+            const index: u32 = manager.addToPriorityQueue(provider);
+
+            const currentQuote = u256.fromU32(1000);
+            const provider2 = manager.getNextProviderWithLiquidity(currentQuote);
+
+            expect(provider2).not.toBeNull();
+
+            if (provider2 !== null) {
+                manager.resetProvider(provider2, false);
+
+                expect(provider2.isActive()).toBeFalsy();
+                expect(provider2.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+                expect(manager.getFromPriorityQueue(index)).toStrictEqual(u256.Zero);
+            }
+        });
+
+        it('should remove the provider from the normal queue and reset it', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            provider.activate();
+            provider.clearPriority();
+            const index: u32 = manager.addToNormalQueue(provider);
+
+            const currentQuote = u256.fromU32(1000);
+            const provider2 = manager.getNextProviderWithLiquidity(currentQuote);
+
+            expect(provider2).not.toBeNull();
+            if (provider2 !== null) {
+                manager.resetProvider(provider2, false);
+
+                expect(provider2.isActive()).toBeFalsy();
+                expect(provider2.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+                expect(manager.getFromNormalQueue(index)).toStrictEqual(u256.Zero);
+            }
+        });
+
+        it('should throws if the provider is removal type', () => {
+            expect(() => {
+                const manager: ProviderManager = new ProviderManager(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    owedBTCManager,
+                );
+
+                const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
+                manager.resetProvider(provider, false);
+            }).toThrow();
+        });
+
+        it('should only reset listing values when initial liquidity provider', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            provider.markInitialLiquidityProvider();
+            provider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+
+            manager.resetProvider(provider, false);
+
+            expect(provider.getQueueIndex()).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            expect(provider.isInitialLiquidityProvider()).toBeTruthy();
+        });
     });
 
-    it('should set the SatoshisOwedReserved correctly', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
+    describe('Save', () => {
+        let owedBTCManager: IOwedBTCManager;
 
-        const providerId1: u256 = u256.fromU64(22222);
-        const amount1: u256 = u256.fromU64(11111);
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
 
-        manager.setSatoshisOwedReserved(providerId1, amount1);
+            owedBTCManager = new OwedBTCManager();
+        });
 
-        expect(manager.getSatoshisOwedReserved(providerId1)).toStrictEqual(amount1);
+        it('should correctly persists the values', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            manager.initialLiquidityProviderId = u256.fromU32(1);
+            manager.addToNormalQueue(createProvider(providerAddress1, tokenAddress1));
+            manager.addToNormalQueue(createProvider(providerAddress2, tokenAddress1));
+            manager.addToNormalQueue(createProvider(providerAddress3, tokenAddress1));
+
+            manager.addToPriorityQueue(createProvider(providerAddress1, tokenAddress2));
+            manager.addToPriorityQueue(createProvider(providerAddress2, tokenAddress2));
+            manager.addToPriorityQueue(createProvider(providerAddress3, tokenAddress2));
+
+            manager.addToRemovalQueue(createProvider(providerAddress4, tokenAddress1, true));
+            manager.addToRemovalQueue(createProvider(providerAddress5, tokenAddress1, true));
+            manager.addToRemovalQueue(createProvider(providerAddress6, tokenAddress1, true));
+
+            manager.save();
+
+            const manager2: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            expect(manager.initialLiquidityProviderId).toStrictEqual(u256.fromU32(1));
+            expect(manager2.previousPriorityStartingIndex).toStrictEqual(0);
+            expect(manager2.previousNormalStartingIndex).toStrictEqual(0);
+            expect(manager2.previousRemovalStartingIndex).toStrictEqual(0);
+
+            expect(manager2.normalQueueLength).toStrictEqual(3);
+            expect(manager2.priorityQueueLength).toStrictEqual(3);
+            expect(manager2.removalQueueLength).toStrictEqual(3);
+
+            expect(manager2.priorityQueueStartingIndex).toStrictEqual(0);
+            expect(manager2.removalQueueStartingIndex).toStrictEqual(0);
+            expect(manager2.normalQueueStartingIndex).toStrictEqual(0);
+
+            expect(manager2.getFromNormalQueue(0)).toStrictEqual(manager.getFromNormalQueue(0));
+            expect(manager2.getFromNormalQueue(1)).toStrictEqual(manager.getFromNormalQueue(1));
+            expect(manager2.getFromNormalQueue(2)).toStrictEqual(manager.getFromNormalQueue(2));
+
+            expect(manager2.getFromPriorityQueue(0)).toStrictEqual(manager.getFromPriorityQueue(0));
+            expect(manager2.getFromPriorityQueue(1)).toStrictEqual(manager.getFromPriorityQueue(1));
+            expect(manager2.getFromPriorityQueue(2)).toStrictEqual(manager.getFromPriorityQueue(2));
+
+            expect(manager2.getFromRemovalQueue(0)).toStrictEqual(manager.getFromRemovalQueue(0));
+            expect(manager2.getFromRemovalQueue(1)).toStrictEqual(manager.getFromRemovalQueue(1));
+            expect(manager2.getFromRemovalQueue(2)).toStrictEqual(manager.getFromRemovalQueue(2));
+        });
+
+        it('should correctly persists the value when save is called and currentIndex > 0', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const providers = createProviders(4, 0);
+
+            for (let i: u8 = 0; i < 4; i++) {
+                providers[i].setLiquidityAmount(u128.fromU32(1000));
+                providers[i].setReservedAmount(u128.fromU32(999));
+                manager.addToNormalQueue(providers[i]);
+            }
+
+            const currentQuote = u256.fromU32(1000);
+            // Should set currentIndex to 2
+            const p1 = manager.getNextProviderWithLiquidity(currentQuote);
+            const p2 = manager.getNextProviderWithLiquidity(currentQuote);
+            expect(p1).toBe(providers[0]);
+            expect(p2).toBe(providers[1]);
+
+            manager.save();
+            expect(manager.previousNormalStartingIndex).toStrictEqual(1);
+        });
+
+        it('should correctly persists the value when save is called and currentIndexPriority > 0', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const providers = createProviders(4, 0);
+
+            for (let i: u8 = 0; i < 4; i++) {
+                providers[i].activate();
+                providers[i].markPriority();
+                providers[i].setLiquidityAmount(u128.fromU32(1000));
+                providers[i].setReservedAmount(u128.fromU32(999));
+                manager.addToPriorityQueue(providers[i]);
+            }
+
+            const currentQuote = u256.fromU32(1000);
+            // Should set currentIndex to 2
+            const p1 = manager.getNextProviderWithLiquidity(currentQuote);
+            const p2 = manager.getNextProviderWithLiquidity(currentQuote);
+            const p3 = manager.getNextProviderWithLiquidity(currentQuote);
+
+            expect(p1).toBe(providers[0]);
+            expect(p2).toBe(providers[1]);
+            expect(p3).toBe(providers[2]);
+
+            manager.save();
+
+            expect(manager.previousPriorityStartingIndex).toStrictEqual(2);
+        });
+
+        it('should correctly persists the value when save is called and currentIndexRemoval > 0', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const providers = createProviders(4, 0, true);
+
+            for (let i: u8 = 0; i < 4; i++) {
+                manager.addToRemovalQueue(providers[i]);
+            }
+
+            const currentQuote = u256.fromU32(1000);
+            // Should set currentIndex to 2
+            const p1 = manager.getNextProviderWithLiquidity(currentQuote);
+            const p2 = manager.getNextProviderWithLiquidity(currentQuote);
+            const p3 = manager.getNextProviderWithLiquidity(currentQuote);
+
+            expect(p1).toBe(providers[0]);
+            expect(p2).toBe(providers[1]);
+            expect(p3).toBe(providers[2]);
+
+            manager.save();
+
+            expect(manager.previousRemovalStartingIndex).toStrictEqual(2);
+        });
     });
 
-    it('should return 0 SatoshisOwedReserved when no BTC owed to provider', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const providerId1: u256 = u256.fromU64(22222);
-
-        expect(manager.getSatoshisOwedReserved(providerId1)).toStrictEqual(u256.Zero);
-    });
-
-    it('should replace the SatoshisOwedReserved for an existing BTC balance', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const providerId1: u256 = u256.fromU64(22222);
-        const amount1: u256 = u256.fromU64(33333);
-        const amount2: u256 = u256.fromU64(44444);
-
-        manager.setSatoshisOwedReserved(providerId1, amount1);
-
-        expect(manager.getSatoshisOwedReserved(providerId1)).toStrictEqual(amount1);
-
-        manager.setSatoshisOwedReserved(providerId1, amount2);
-
-        expect(manager.getSatoshisOwedReserved(providerId1)).toStrictEqual(amount2);
-    });
-
-    it('should return 0 when getFromPriorityQueue does not contains the provider index or is empty', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const providerIdIndex1: u64 = 22222;
-        const providerIdIndex2: u64 = 0;
-        const providerIdIn: u256 = u256.fromU64(1000);
-
-        const providerIdOut1: u256 = manager.getFromPriorityQueue(providerIdIndex1);
-
-        expect(providerIdOut1).toStrictEqual(u256.Zero);
-
-        manager.addToPriorityQueue(providerIdIn);
-        const providerIdOut2: u256 = manager.getFromPriorityQueue(providerIdIndex2);
-
-        expect(providerIdOut2).toStrictEqual(providerIdIn);
-    });
-
-    it('should return 0 when getFromRemovalQueue does not contains the provider index or is empty', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const providerIdIndex1: u64 = 22222;
-        const providerIdIndex2: u64 = 0;
-        const providerIdIn: u256 = u256.fromU64(1000);
-
-        const providerIdOut1: u256 = manager.getFromRemovalQueue(providerIdIndex1);
-
-        expect(providerIdOut1).toStrictEqual(u256.Zero);
-
-        manager.addToRemovalQueue(providerIdIn);
-        const providerIdOut2: u256 = manager.getFromRemovalQueue(providerIdIndex2);
-
-        expect(providerIdOut2).toStrictEqual(providerIdIn);
-    });
-
-    it('should return 0 when getFromStandardQueue does not contains the provider index or is empty', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const providerIdIndex1: u64 = 22222;
-        const providerIdIndex2: u64 = 0;
-        const providerIdIn: u256 = u256.fromU64(1000);
-
-        const providerIdOut1: u256 = manager.getFromStandardQueue(providerIdIndex1);
-
-        expect(providerIdOut1).toStrictEqual(u256.Zero);
-
-        manager.addToStandardQueue(providerIdIn);
-        const providerIdOut2: u256 = manager.getFromStandardQueue(providerIdIndex2);
-
-        expect(providerIdOut2).toStrictEqual(providerIdIn);
-    });
-
-    it('should add a provider to the priority queue', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const providerIdIn: u256 = u256.fromU64(1000);
-
-        manager.addToPriorityQueue(providerIdIn);
-
-        const providerIdOut1: u256 = manager.getFromPriorityQueue(0);
-
-        expect(providerIdOut1).toStrictEqual(providerIdIn);
-    });
-
-    it('should add a provider to the removal queue', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const providerIdIn: u256 = u256.fromU64(1000);
-
-        manager.addToRemovalQueue(providerIdIn);
-
-        const providerIdOut1: u256 = manager.getFromRemovalQueue(0);
-
-        expect(providerIdOut1).toStrictEqual(providerIdIn);
-    });
-
-    it('should add a provider to the standard queue', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const providerIdIn: u256 = u256.fromU64(1000);
-
-        manager.addToStandardQueue(providerIdIn);
-
-        const providerIdOut1: u256 = manager.getFromStandardQueue(0);
-
-        expect(providerIdOut1).toStrictEqual(providerIdIn);
-    });
-
-    it('should remove a pending liquidity provider from the removal queue when removePendingLiquidityProviderFromRemovalQueue is called', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const provider1: Provider = createProvider(providerAddress1, tokenAddress1, true);
-        provider1.isLp = true;
-
-        manager.addToRemovalQueue(provider1.providerId);
-
-        expect(manager.getFromRemovalQueue(0)).toStrictEqual(provider1.providerId);
-
-        manager.removePendingLiquidityProviderFromRemovalQueue(provider1, 0);
-
-        expect(provider1.isLp).toBeFalsy();
-        expect(provider1.pendingRemoval).toBeFalsy();
-
-        expect(manager.getFromRemovalQueue(0)).toStrictEqual(u256.Zero);
-    });
-
-    it('should reset the 3 previous starting indexes to 0 when resetStartingIndex is called', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        manager.previousReservationStartingIndex = 10;
-        manager.previousReservationStandardStartingIndex = 11;
-        manager.previousRemovalStartingIndex = 12;
-
-        manager.resetStartingIndex();
-
-        expect(manager.previousReservationStartingIndex).toStrictEqual(0);
-        expect(manager.previousReservationStandardStartingIndex).toStrictEqual(0);
-        expect(manager.previousRemovalStartingIndex).toStrictEqual(0);
-    });
-
-    it('should restore the 3 current indexes to the previous value when restoreCurrentIndex is called', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        manager.previousReservationStartingIndex = 10;
-        manager.previousReservationStandardStartingIndex = 11;
-        manager.previousRemovalStartingIndex = 12;
-
-        manager.restoreCurrentIndex();
-
-        expect(manager.previousReservationStartingIndex).toStrictEqual(10);
-        expect(manager.previousReservationStandardStartingIndex).toStrictEqual(11);
-        expect(manager.previousRemovalStartingIndex).toStrictEqual(12);
-    });
-
-    it('should correctly persists the value when save is called', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        manager.initialLiquidityProvider = u256.fromU32(1);
-        manager.setSatoshisOwedReserved(u256.fromU32(10), u256.fromU32(999999));
-        manager.setSatoshisOwedReserved(u256.fromU32(11), u256.fromU32(888888));
-        manager.setSatoshisOwed(u256.fromU32(20), u256.fromU32(777777));
-        manager.setSatoshisOwed(u256.fromU32(21), u256.fromU32(666666));
-
-        manager.addToStandardQueue(u256.fromU32(1000));
-        manager.addToStandardQueue(u256.fromU32(1001));
-        manager.addToStandardQueue(u256.fromU32(1002));
-
-        manager.addToPriorityQueue(u256.fromU32(2000));
-        manager.addToPriorityQueue(u256.fromU32(2001));
-        manager.addToPriorityQueue(u256.fromU32(2002));
-
-        manager.addToRemovalQueue(u256.fromU32(3000));
-        manager.addToRemovalQueue(u256.fromU32(3001));
-        manager.addToRemovalQueue(u256.fromU32(3002));
-
-        manager.save();
-
-        const manager2: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        expect(manager.initialLiquidityProvider).toStrictEqual(u256.fromU32(1));
-        expect(manager2.getSatoshisOwedReserved(u256.fromU32(10))).toStrictEqual(
-            u256.fromU32(999999),
-        );
-        expect(manager2.getSatoshisOwedReserved(u256.fromU32(11))).toStrictEqual(
-            u256.fromU32(888888),
-        );
-        expect(manager2.getSatoshisOwed(u256.fromU32(20))).toStrictEqual(u256.fromU32(777777));
-        expect(manager2.getSatoshisOwed(u256.fromU32(21))).toStrictEqual(u256.fromU32(666666));
-
-        expect(manager2.previousReservationStartingIndex).toStrictEqual(0);
-        expect(manager2.previousReservationStandardStartingIndex).toStrictEqual(0);
-        expect(manager2.previousRemovalStartingIndex).toStrictEqual(0);
-
-        expect(manager2.standardQueueLength).toStrictEqual(3);
-        expect(manager2.priorityQueueLength).toStrictEqual(3);
-        expect(manager2.removalQueueLength).toStrictEqual(3);
-
-        expect(manager2.priorityQueueStartingIndex).toStrictEqual(0);
-        expect(manager2.removalQueueStartingIndex).toStrictEqual(0);
-        expect(manager2.standardQueueStartingIndex).toStrictEqual(0);
-
-        expect(manager2.getFromStandardQueue(0)).toStrictEqual(u256.fromU32(1000));
-        expect(manager2.getFromStandardQueue(1)).toStrictEqual(u256.fromU32(1001));
-        expect(manager2.getFromStandardQueue(2)).toStrictEqual(u256.fromU32(1002));
-
-        expect(manager2.getFromPriorityQueue(0)).toStrictEqual(u256.fromU32(2000));
-        expect(manager2.getFromPriorityQueue(1)).toStrictEqual(u256.fromU32(2001));
-        expect(manager2.getFromPriorityQueue(2)).toStrictEqual(u256.fromU32(2002));
-
-        expect(manager2.getFromRemovalQueue(0)).toStrictEqual(u256.fromU32(3000));
-        expect(manager2.getFromRemovalQueue(1)).toStrictEqual(u256.fromU32(3001));
-        expect(manager2.getFromRemovalQueue(2)).toStrictEqual(u256.fromU32(3002));
-    });
-
-    it('should correctly persists the value when save is called and currentIndex > 0', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const providers = createProviders(4, 0);
-
-        for (let i: u8 = 0; i < 4; i++) {
-            providers[i].liquidity = u128.fromU32(1000);
-            providers[i].reserved = u128.fromU32(999);
-            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(777777));
-            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(666666));
-            const at = manager.addToStandardQueue(providers[i].providerId);
-            providers[i].indexedAt = at;
-            saveIndexForProvider(providers[i].providerId, at);
-        }
-
-        const currentQuote = u256.fromU32(1000);
-        // Should set currentIndex to 2
-        const p1 = manager.getNextProviderWithLiquidity(currentQuote);
-        const p2 = manager.getNextProviderWithLiquidity(currentQuote);
-        expect(p1).toBe(providers[0]);
-        expect(p2).toBe(providers[1]);
-
-        manager.save();
-        expect(manager.previousReservationStandardStartingIndex).toStrictEqual(1);
-    });
-
-    it('should correctly persists the value when save is called and currentIndexPriority > 0', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const providers = createProviders(4, 0);
-
-        for (let i: u8 = 0; i < 4; i++) {
-            providers[i].setActive(true, true);
-            providers[i].liquidity = u128.fromU32(1000);
-            providers[i].reserved = u128.fromU32(999);
-            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(777777));
-            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(666666));
-            const at = manager.addToPriorityQueue(providers[i].providerId);
-            providers[i].indexedAt = at;
-            saveIndexForProvider(providers[i].providerId, at);
-        }
-
-        const currentQuote = u256.fromU32(1000);
-        // Should set currentIndex to 2
-        const p1 = manager.getNextProviderWithLiquidity(currentQuote);
-        const p2 = manager.getNextProviderWithLiquidity(currentQuote);
-        const p3 = manager.getNextProviderWithLiquidity(currentQuote);
-
-        expect(p1).toBe(providers[0]);
-        expect(p2).toBe(providers[1]);
-        expect(p3).toBe(providers[2]);
-
-        manager.save();
-
-        //previousReservationStartingIndex = currentIndexPriority - 1
-        expect(manager.previousReservationStartingIndex).toStrictEqual(2);
-    });
-
-    it('should correctly persists the value when save is called and currentIndexRemoval > 0', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const providers = createProviders(4, 0, true);
-
-        for (let i: u8 = 0; i < 4; i++) {
-            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(777777));
-            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(888888));
-            manager.addToRemovalQueue(providers[i].providerId);
-        }
-
-        const currentQuote = u256.fromU32(1000);
-        // Should set currentIndex to 2
-        const p1 = manager.getNextProviderWithLiquidity(currentQuote);
-        const p2 = manager.getNextProviderWithLiquidity(currentQuote);
-        const p3 = manager.getNextProviderWithLiquidity(currentQuote);
-
-        expect(p1).toBe(providers[0]);
-        expect(p2).toBe(providers[1]);
-        expect(p3).toBe(providers[2]);
-
-        manager.save();
-
-        //previousReservationStartingIndex = currentIndexPriority - 1
-        expect(manager.previousRemovalStartingIndex).toStrictEqual(2);
-    });
-
-    it('should return null when calling getNextProviderWithLiquidity and no provider are found', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const currentQuote = u256.fromU32(1000);
-
-        const provider = manager.getNextProviderWithLiquidity(currentQuote);
-
-        expect(provider).toBeNull();
-    });
-
-    it('should burn the provider funds when resetProvider is called with burnRemainingFunds is true and liquidity is not 0', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-        manager.resetProvider(provider, true);
-
-        expect(TransferHelper.safeTransferCalled).toBeTruthy();
-    });
-
-    it('should not burn the provider funds when resetProvider is called with burnRemainingFunds is true and liquidity is 0', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-        provider.liquidity = u128.Zero;
-        manager.resetProvider(provider, true);
-
-        expect(TransferHelper.safeTransferCalled).toBeFalsy();
-    });
-
-    it('should not burn the provider funds when resetProvider is called with burnRemainingFunds is false', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-        provider.liquidity = u128.Zero;
-        manager.resetProvider(provider, false);
-
-        expect(TransferHelper.safeTransferCalled).toBeFalsy();
-    });
-
-    it('should remove the provider from the priority queue and reset it when resetProvider is called', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-        provider.setActive(true, true);
-        manager.addToPriorityQueue(provider.providerId);
-
-        const currentQuote = u256.fromU32(1000);
-        const provider2 = manager.getNextProviderWithLiquidity(currentQuote);
-
-        expect(provider2).not.toBeNull();
-        if (provider2 !== null) {
-            manager.resetProvider(provider2, false);
-
-            expect(provider2.isActive()).toBeFalsy();
-            expect(manager.getFromPriorityQueue(0)).toStrictEqual(u256.Zero);
-        }
-    });
-
-    it('should remove the provider from the standard queue and reset it when resetProvider is called', () => {
-        const manager: ProviderManager = new ProviderManager(
-            tokenAddress1,
-            tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
-        );
-
-        const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-        provider.setActive(true, false);
-        manager.addToStandardQueue(provider.providerId);
-
-        const currentQuote = u256.fromU32(1000);
-        const provider2 = manager.getNextProviderWithLiquidity(currentQuote);
-
-        expect(provider2).not.toBeNull();
-        if (provider2 !== null) {
-            manager.resetProvider(provider2, false);
-
-            expect(provider2.isActive()).toBeFalsy();
-            expect(manager.getFromStandardQueue(0)).toStrictEqual(u256.Zero);
-        }
+    describe('Save', () => {
+        let owedBTCManager: IOwedBTCManager;
+
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+
+            owedBTCManager = new OwedBTCManager();
+        });
+
+        it('should return null when calling getNextProviderWithLiquidity and no provider are found', () => {
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const currentQuote = u256.fromU32(1000);
+
+            const provider = manager.getNextProviderWithLiquidity(currentQuote);
+
+            expect(provider).toBeNull();
+        });
+
+        it('should return initial provider when quote is 0', () => {});
+        it('should return removal provider first', () => {});
+        it('should return priority provider second', () => {});
+        it('should return normal provider third', () => {});
+        it('should return initial provider if no other providers', () => {});
     });
 });

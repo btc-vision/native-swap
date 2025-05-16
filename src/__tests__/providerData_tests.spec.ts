@@ -1,13 +1,12 @@
 import { clearCachedProviders } from '../models/Provider';
-import { Blockchain, TransferHelper, u256To30Bytes } from '../../../btc-runtime/runtime';
+import { Blockchain, TransferHelper, u256To30Bytes } from '@btc-vision/btc-runtime/runtime';
 import { ProviderData } from '../models/ProviderData';
 import { PROVIDER_DATA_POINTER } from '../constants/StoredPointers';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 
+const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
 describe('ProviderData tests', () => {
-    const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
-
     beforeEach(() => {
         clearCachedProviders();
         Blockchain.clearStorage();
@@ -16,9 +15,10 @@ describe('ProviderData tests', () => {
     });
 
     it('throws if subPointer length > 30', () => {
-        const ptr: u16 = 1;
-        const bad = new Uint8Array(31);
-        expect<() => void>(() => {
+        expect(() => {
+            const ptr: u16 = 1;
+            const bad = new Uint8Array(31);
+
             new ProviderData(ptr, bad);
         }).toThrow();
     });
@@ -52,9 +52,9 @@ describe('ProviderData tests', () => {
 
     it('setter/getter for active', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
-        expect<bool>(providerData.active).toBeFalsy();
+        expect(providerData.active).toBeFalsy();
         providerData.active = true;
-        expect<bool>(providerData.active).toBeTruthy();
+        expect(providerData.active).toBeTruthy();
     });
 
     it('setter/getter for priority', () => {
@@ -132,6 +132,27 @@ describe('ProviderData tests', () => {
         expect(providerData.liquidityAmount).toStrictEqual(u128.Zero);
         expect(providerData.reservedAmount).toStrictEqual(u128.Zero);
         expect(providerData.queueIndex).toBe(INDEX_NOT_SET_VALUE);
+    });
+
+    it('resetListingValues clears listing fields except queueIndex when initial provider', () => {
+        const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
+        providerData.active = true;
+        providerData.priority = true;
+        providerData.liquidityProvisionAllowed = true;
+        providerData.liquidityAmount = u128.fromU64(20);
+        providerData.reservedAmount = u128.fromU64(10);
+        providerData.queueIndex = INITIAL_LIQUIDITY_PROVIDER_INDEX;
+        providerData.initialLiquidityProvider = true;
+
+        providerData.resetListingValues();
+
+        expect(providerData.active).toBeFalsy();
+        expect(providerData.priority).toBeFalsy();
+        expect(providerData.liquidityProvisionAllowed).toBeFalsy();
+        expect(providerData.liquidityAmount).toStrictEqual(u128.Zero);
+        expect(providerData.reservedAmount).toStrictEqual(u128.Zero);
+        expect(providerData.queueIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+        expect(providerData.initialLiquidityProvider).toBeTruthy();
     });
 
     it('resetLiquidityProviderValues clears provider fields', () => {

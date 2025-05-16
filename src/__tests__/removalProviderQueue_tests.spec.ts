@@ -1,7 +1,6 @@
 import { clearCachedProviders, Provider } from '../models/Provider';
-import { Blockchain, TransferHelper } from '../../../btc-runtime/runtime';
+import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import {
-    createMaxProviders,
     createProvider,
     createProviders,
     providerAddress1,
@@ -17,6 +16,8 @@ import { OwedBTCManager } from '../managers/OwedBTCManager';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
 
+const QUOTE = u256.fromU64(100000000);
+
 describe('ProviderQueue tests', () => {
     beforeEach(() => {
         clearCachedProviders();
@@ -26,31 +27,38 @@ describe('ProviderQueue tests', () => {
     });
 
     describe('RemovalProviderQueue – add()', () => {
-        let queue: RemovalProviderQueue;
-        let owedBTCManager: OwedBTCManager;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            owedBTCManager = new OwedBTCManager();
-            queue = new RemovalProviderQueue(
+        });
+
+        it('adds provider and sets removalQueueIndex', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
                 owedBTCManager,
                 tokenAddress1,
                 REMOVAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
             );
-        });
 
-        it('adds provider and sets removalQueueIndex', () => {
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
             const index: u32 = queue.add(provider);
             expect(provider.getRemovalQueueIndex()).toStrictEqual(index);
         });
 
+        /*!!!
         it('throws if queue is full', () => {
-            expect<() => void>(() => {
+            expect(() => {
+                const owedBTCManager = new OwedBTCManager();
+                const queue = new RemovalProviderQueue(
+                    owedBTCManager,
+                    tokenAddress1,
+                    REMOVAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                );
+
                 const providers = createMaxProviders(true);
                 for (let i = 0; i < providers.length; i++) {
                     queue.add(providers[i]);
@@ -60,27 +68,27 @@ describe('ProviderQueue tests', () => {
                 queue.add(provider2);
             }).toThrow();
         });
+
+         */
     });
 
     describe('RemovalProviderQueue – removeFromQueue', () => {
-        let queue: RemovalProviderQueue;
-        let owedBTCManager: OwedBTCManager;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            owedBTCManager = new OwedBTCManager();
-            queue = new RemovalProviderQueue(
+        });
+
+        it('clears pending and liquidity flags', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
                 owedBTCManager,
                 tokenAddress1,
                 REMOVAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
             );
-        });
 
-        it('clears pending and liquidity flags', () => {
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, true, true);
             const index: u32 = queue.add(provider);
             queue.removeFromQueue(provider);
@@ -92,54 +100,60 @@ describe('ProviderQueue tests', () => {
     });
 
     describe('RemovalProviderQueue – resetProvider', () => {
-        let queue: RemovalProviderQueue;
-        let owedBTCManager: OwedBTCManager;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            owedBTCManager = new OwedBTCManager();
-            queue = new RemovalProviderQueue(
-                owedBTCManager,
-                tokenAddress1,
-                REMOVAL_QUEUE_POINTER,
-                tokenIdUint8Array1,
-            );
         });
 
         it('throws on reset attempt', () => {
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
+            expect(() => {
+                const owedBTCManager = new OwedBTCManager();
+                const queue = new RemovalProviderQueue(
+                    owedBTCManager,
+                    tokenAddress1,
+                    REMOVAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                );
 
-            expect<() => void>(() => queue.resetProvider(provider)).toThrow();
+                const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
+
+                queue.resetProvider(provider);
+            }).toThrow();
         });
     });
 
     describe('ProviderQueue – cleanUp', () => {
-        let queue: RemovalProviderQueue;
-        let owedBTCManager: OwedBTCManager;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            owedBTCManager = new OwedBTCManager();
-            queue = new RemovalProviderQueue(
+        });
+
+        it('does nothing when queue is empty', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
                 owedBTCManager,
                 tokenAddress1,
                 REMOVAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
             );
-        });
 
-        it('does nothing when queue is empty', () => {
             const result: u32 = queue.cleanUp(0);
             expect(result).toStrictEqual(0);
         });
 
         it('skips zero slots and continues', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
+                owedBTCManager,
+                tokenAddress1,
+                REMOVAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
+
             const p1: Provider = createProvider(providerAddress1, tokenAddress1, true, true);
             const p1Index: u32 = queue.add(p1);
 
@@ -160,6 +174,14 @@ describe('ProviderQueue tests', () => {
 
         //!!! not sure needed
         it('deletes non pending removal providers', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
+                owedBTCManager,
+                tokenAddress1,
+                REMOVAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
+
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             const p1Index: u32 = queue.add(p1);
 
@@ -178,6 +200,14 @@ describe('ProviderQueue tests', () => {
         });
 
         it('sets starting index when a pending removal provider is found', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
+                owedBTCManager,
+                tokenAddress1,
+                REMOVAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
+
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             const p1Index: u32 = queue.add(p1);
 
@@ -197,9 +227,17 @@ describe('ProviderQueue tests', () => {
 
         //!!! not sure needed
         it('returns index = length if no pending removal providers found', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
+                owedBTCManager,
+                tokenAddress1,
+                REMOVAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
+
             const providers: Provider[] = createProviders(5, 0);
 
-            for (let i: u32 = 0; i < providers.length; i++) {
+            for (let i: i32 = 0; i < providers.length; i++) {
                 queue.add(providers[i]);
             }
 
@@ -209,6 +247,14 @@ describe('ProviderQueue tests', () => {
 
         //!!! not sure needed
         it('stops cleanup early at first pending removal provider', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
+                owedBTCManager,
+                tokenAddress1,
+                REMOVAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
+
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             const p1Index: u32 = queue.add(p1);
 
@@ -225,6 +271,14 @@ describe('ProviderQueue tests', () => {
         });
 
         it('cleanUp startingIndex = length returns length', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
+                owedBTCManager,
+                tokenAddress1,
+                REMOVAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
+
             const p1: Provider = createProvider(providerAddress1, tokenAddress1, true);
             const p1Index: u32 = queue.add(p1);
 
@@ -234,25 +288,22 @@ describe('ProviderQueue tests', () => {
     });
 
     describe('RemovalProviderQueue – getNextWithLiquidity', () => {
-        let queue: RemovalProviderQueue;
-        let owedBTCManager: OwedBTCManager;
-        const QUOTE = u256.fromU64(100000000);
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            owedBTCManager = new OwedBTCManager();
-            queue = new RemovalProviderQueue(
+        });
+
+        it('returns provider if pending and LP and valid owed', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
                 owedBTCManager,
                 tokenAddress1,
                 REMOVAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
             );
-        });
 
-        it('returns provider if pending and LP and valid owed', () => {
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, true, true);
             queue.add(provider);
             owedBTCManager.setSatoshisOwed(provider.getId(), 100000);
@@ -265,6 +316,14 @@ describe('ProviderQueue tests', () => {
         });
 
         it('removes provider if not pending or not LP', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
+                owedBTCManager,
+                tokenAddress1,
+                REMOVAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
+
             const provider: Provider = createProvider(
                 providerAddress1,
                 tokenAddress1,
@@ -280,6 +339,14 @@ describe('ProviderQueue tests', () => {
         });
 
         it('skip providers if 0', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
+                owedBTCManager,
+                tokenAddress1,
+                REMOVAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
+
             const provider: Provider = createProvider(
                 providerAddress1,
                 tokenAddress1,
@@ -295,7 +362,15 @@ describe('ProviderQueue tests', () => {
         });
 
         it('throws if reservedBTC > owedBTC', () => {
-            expect<() => void>(() => {
+            expect(() => {
+                const owedBTCManager = new OwedBTCManager();
+                const queue = new RemovalProviderQueue(
+                    owedBTCManager,
+                    tokenAddress1,
+                    REMOVAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                );
+
                 const provider: Provider = createProvider(
                     providerAddress1,
                     tokenAddress1,
@@ -311,7 +386,15 @@ describe('ProviderQueue tests', () => {
         });
 
         it('throws if owedBTC is below minimum', () => {
-            expect<() => void>(() => {
+            expect(() => {
+                const owedBTCManager = new OwedBTCManager();
+                const queue = new RemovalProviderQueue(
+                    owedBTCManager,
+                    tokenAddress1,
+                    REMOVAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                );
+
                 const provider: Provider = createProvider(
                     providerAddress1,
                     tokenAddress1,

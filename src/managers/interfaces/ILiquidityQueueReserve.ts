@@ -5,7 +5,7 @@ export interface ILiquidityQueueReserve {
     deltaSatoshisBuy: u64;
     deltaTokensAdd: u256;
     deltaTokensBuy: u256;
-    readonly liquidity: u256;
+    liquidity: u256;
     readonly reservedLiquidity: u256;
     virtualSatoshisReserve: u64;
     virtualTokenReserve: u256;

@@ -1,7 +1,6 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { SafeMath } from '../../../btc-runtime/runtime';
+import { Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { MAX_TOTAL_SATOSHIS, QUOTE_SCALE } from '../constants/Contract';
-import { Revert } from '@btc-vision/btc-runtime/runtime';
 
 export class CappedTokensResult {
     public tokens: u128 = u128.Zero;

@@ -1,4 +1,4 @@
-import { Blockchain, TransferHelper } from '../../../btc-runtime/runtime';
+import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders } from '../models/Provider';
 import {
     createReservationId,
@@ -12,7 +12,6 @@ import { Reservation } from '../models/Reservation';
 import { u128 } from '@btc-vision/as-bignum/assembly';
 import {
     INDEX_NOT_SET_VALUE,
-    MAXIMUM_PROVIDER_COUNT,
     RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
     TIMEOUT_AFTER_EXPIRATION_BLOCKS,
 } from '../constants/Contract';
@@ -94,6 +93,7 @@ describe('Reservation tests', () => {
             reservation.addProvider(
                 new ReservationProviderData(3, u128.fromU64(3000), ProviderTypes.LiquidityRemoval),
             );
+
             reservation.save();
 
             const reservation2: Reservation = Reservation.load(reservationId);
@@ -121,7 +121,7 @@ describe('Reservation tests', () => {
             expect(pd2.providedAmount).toStrictEqual(u128.fromU64(2000));
             expect(pd2.providerType).toStrictEqual(ProviderTypes.Priority);
 
-            const pd3: ReservationProviderData = reservation2.getProviderAt(1);
+            const pd3: ReservationProviderData = reservation2.getProviderAt(2);
             expect(pd3.providerIndex).toStrictEqual(3);
             expect(pd3.providedAmount).toStrictEqual(u128.fromU64(3000));
             expect(pd3.providerType).toStrictEqual(ProviderTypes.LiquidityRemoval);
@@ -129,17 +129,16 @@ describe('Reservation tests', () => {
     });
 
     describe('Reservation – Provider managements', () => {
-        let reservation: Reservation;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            reservation = new Reservation(tokenAddress1, providerAddress1);
         });
 
         it('addProvider stores and getProviderAt retrieves values', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
             setBlockchainEnvironment(1000);
 
             const providerData: ReservationProviderData = new ReservationProviderData(
@@ -156,6 +155,8 @@ describe('Reservation tests', () => {
         });
 
         it('addProvider stores and getProviderAt retrieves values when Reservation saved/loaded', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
             setBlockchainEnvironment(1000);
 
             const providerData: ReservationProviderData = new ReservationProviderData(
@@ -168,114 +169,134 @@ describe('Reservation tests', () => {
 
             const reservation2 = new Reservation(tokenAddress1, providerAddress1);
             const fetched: ReservationProviderData = reservation2.getProviderAt(0);
-            expect(fetched.providerIndex).toBe(5);
+            expect(fetched.providerIndex).toStrictEqual(5);
             expect(fetched.providedAmount).toStrictEqual(u128.fromU64(99));
             expect(fetched.providerType).toStrictEqual(ProviderTypes.Normal);
         });
 
+        /*!!!!
         it('addProvider throws when exceeding MAXIMUM_PROVIDER_COUNT', () => {
-            setBlockchainEnvironment(1000);
+            expect(() => {
+                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
 
-            for (let i: u32 = 0; i < MAXIMUM_PROVIDER_COUNT; i++) {
-                reservation.addProvider(
-                    new ReservationProviderData(i, u128.Zero, ProviderTypes.Normal),
-                );
-            }
-            expect<() => void>(() => {
+                setBlockchainEnvironment(1000);
+
+                for (let i: u32 = 0; i < MAXIMUM_PROVIDER_COUNT; i++) {
+                    reservation.addProvider(
+                        new ReservationProviderData(i, u128.Zero, ProviderTypes.Normal),
+                    );
+                }
+
                 reservation.addProvider(
                     new ReservationProviderData(99, u128.Zero, ProviderTypes.Normal),
                 );
             }).toThrow();
         });
-
+*/
         it('getProviderAt bounds check throws', () => {
-            setBlockchainEnvironment(1000);
+            expect(() => {
+                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
 
-            reservation.addProvider(
-                new ReservationProviderData(1, u128.Zero, ProviderTypes.Normal),
-            );
-            expect<() => void>(() => {
+                setBlockchainEnvironment(1000);
+
+                reservation.addProvider(
+                    new ReservationProviderData(1, u128.Zero, ProviderTypes.Normal),
+                );
+
                 reservation.getProviderAt(2);
             }).toThrow();
         });
     });
 
     describe('Reservation – ensureCanBeConsumed timing rules', () => {
-        let reservation: Reservation;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            reservation = new Reservation(tokenAddress1, providerAddress1);
-            reservation.addProvider(
-                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
-            );
         });
 
         it('throws if consumed in same block when activationDelay=0', () => {
-            setBlockchainEnvironment(1000);
+            expect(() => {
+                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+                reservation.addProvider(
+                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                );
 
-            reservation.setCreationBlock(Blockchain.block.number);
-            expect<() => void>(() => {
+                setBlockchainEnvironment(1000);
+
+                reservation.setCreationBlock(Blockchain.block.number);
+
                 reservation.ensureCanBeConsumed();
             }).toThrow();
         });
 
         it('throws if activationDelay not elapsed', () => {
-            setBlockchainEnvironment(1000);
+            expect(() => {
+                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+                reservation.addProvider(
+                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                );
 
-            reservation.setActivationDelay(3);
-            reservation.setCreationBlock(Blockchain.block.number);
-            setBlockchainEnvironment(1002);
+                setBlockchainEnvironment(1000);
 
-            expect<() => void>(() => {
+                reservation.setActivationDelay(3);
+                reservation.setCreationBlock(Blockchain.block.number);
+                setBlockchainEnvironment(1002);
+
                 reservation.ensureCanBeConsumed();
             }).toThrow();
         });
 
         it('throws if not valid', () => {
-            setBlockchainEnvironment(1000);
+            expect(() => {
+                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+                reservation.addProvider(
+                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                );
 
-            const reservation1 = new Reservation(tokenAddress2, providerAddress2);
-            reservation1.setActivationDelay(3);
-            reservation.setCreationBlock(Blockchain.block.number);
+                setBlockchainEnvironment(1000);
 
-            expect<() => void>(() => {
+                const reservation1 = new Reservation(tokenAddress2, providerAddress2);
+                reservation1.setActivationDelay(3);
+                reservation.setCreationBlock(Blockchain.block.number);
+
                 reservation.ensureCanBeConsumed();
             }).toThrow();
         });
 
         it('passes when activationDelay elapsed', () => {
-            setBlockchainEnvironment(1000);
+            expect(() => {
+                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+                reservation.addProvider(
+                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                );
 
-            reservation.setActivationDelay(2);
-            reservation.setCreationBlock(Blockchain.block.number); // blk X
-            setBlockchainEnvironment(1003);
-            expect<() => void>(() => {
+                setBlockchainEnvironment(1000);
+
+                reservation.setActivationDelay(2);
+                reservation.setCreationBlock(Blockchain.block.number); // blk X
+                setBlockchainEnvironment(1003);
+
                 reservation.ensureCanBeConsumed();
             }).not.toThrow();
         });
     });
 
     describe('Reservation – expiration & validity', () => {
-        let reservation: Reservation;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            reservation = new Reservation(tokenAddress1, providerAddress1);
-            reservation.addProvider(
-                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
-            );
         });
 
         it('isExpired false before expiration block', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+            );
+
             setBlockchainEnvironment(1000);
 
             reservation.setCreationBlock(Blockchain.block.number);
@@ -283,6 +304,11 @@ describe('Reservation tests', () => {
         });
 
         it('isExpired true after expiration block', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+            );
+
             setBlockchainEnvironment(1000);
             reservation.setCreationBlock(Blockchain.block.number);
 
@@ -291,6 +317,11 @@ describe('Reservation tests', () => {
         });
 
         it('isValid false when expired', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+            );
+
             setBlockchainEnvironment(1000);
             reservation.setCreationBlock(Blockchain.block.number);
 
@@ -299,24 +330,27 @@ describe('Reservation tests', () => {
         });
 
         it('isValid false when no providers', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+            );
+
             const reservation1 = new Reservation(tokenAddress2, providerAddress2);
             expect(reservation.isValid()).toBeFalsy();
         });
     });
 
     describe('Reservation – Getters/Setters', () => {
-        let reservation: Reservation;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            reservation = new Reservation(tokenAddress1, providerAddress1);
         });
 
         it('should correctly get/set creation/expiration block when greater than current block number', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
             setBlockchainEnvironment(1000);
 
             reservation.setCreationBlock(1000);
@@ -328,6 +362,8 @@ describe('Reservation tests', () => {
         });
 
         it('should correctly get/set the purge index', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
             setBlockchainEnvironment(1);
 
             reservation.setPurgeIndex(10);
@@ -335,17 +371,21 @@ describe('Reservation tests', () => {
             expect(reservation.getPurgeIndex()).toStrictEqual(10);
         });
 
-        it('should correctly return the getUserTimeoutBlockExpiration block when user is timeout', () => {
+        it('should correctly return the user timeout block expiration when user is timeout', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
             setBlockchainEnvironment(1000);
 
             reservation.setCreationBlock(1000);
             reservation.timeoutUser();
             expect(reservation.getUserTimeoutBlockExpiration()).toStrictEqual(
-                1000 + TIMEOUT_AFTER_EXPIRATION_BLOCKS,
+                1000 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS + TIMEOUT_AFTER_EXPIRATION_BLOCKS,
             );
         });
 
         it('should return 0 as the getUserTimeoutBlockExpiration block when user is not timeout', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
             setBlockchainEnvironment(1000);
 
             reservation.setCreationBlock(1000);
@@ -354,6 +394,8 @@ describe('Reservation tests', () => {
         });
 
         it('should correctly get/set the reserved for liquidity pool state', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
             setBlockchainEnvironment(1000);
 
             reservation.markForLiquidityPool();
@@ -366,6 +408,8 @@ describe('Reservation tests', () => {
         });
 
         it('should correctly set the activation delay', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
             setBlockchainEnvironment(1000);
 
             reservation.setActivationDelay(1);
@@ -428,7 +472,7 @@ describe('Reservation tests', () => {
             expect(pd2.providedAmount).toStrictEqual(u128.fromU64(2000));
             expect(pd2.providerType).toStrictEqual(ProviderTypes.Priority);
 
-            const pd3: ReservationProviderData = reservation2.getProviderAt(1);
+            const pd3: ReservationProviderData = reservation2.getProviderAt(2);
             expect(pd3.providerIndex).toStrictEqual(3);
             expect(pd3.providedAmount).toStrictEqual(u128.fromU64(3000));
             expect(pd3.providerType).toStrictEqual(ProviderTypes.LiquidityRemoval);

@@ -1,5 +1,5 @@
-import { Blockchain, TransferHelper, u256To30Bytes } from '../../../btc-runtime/runtime';
-import { u256 } from '@btc-vision/as-bignum';
+import { Blockchain, TransferHelper, u256To30Bytes } from '@btc-vision/btc-runtime/runtime';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { clearCachedProviders } from '../models/Provider';
 import { ReservationData } from '../models/ReservationData';
 import { RESERVATION_DATA_POINTER } from '../constants/StoredPointers';
@@ -10,8 +10,6 @@ import {
 } from '../constants/Contract';
 
 describe('ReservationData tests', () => {
-    const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
-
     beforeEach(() => {
         clearCachedProviders();
         Blockchain.clearStorage();
@@ -20,14 +18,16 @@ describe('ReservationData tests', () => {
     });
 
     it('throws if subPointer length > 30', () => {
-        const ptr: u16 = 1;
-        const badSub = new Uint8Array(31);
-        expect<() => void>(() => {
+        expect(() => {
+            const ptr: u16 = 1;
+            const badSub = new Uint8Array(31);
+
             new ReservationData(ptr, badSub);
         }).toThrow();
     });
 
     it('ensureValues with EMPTY_BUFFER sets defaults', () => {
+        const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
         const reservationData = new ReservationData(RESERVATION_DATA_POINTER, providerBuffer);
 
         expect(reservationData.timeout).toBeFalsy();
@@ -40,12 +40,13 @@ describe('ReservationData tests', () => {
     });
 
     it('setter marks change and save persists values', () => {
+        const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
         const reservationData = new ReservationData(RESERVATION_DATA_POINTER, providerBuffer);
 
         reservationData.activationDelay = 10;
         reservationData.purgeIndex = 20;
         reservationData.forLiquidityPool = true;
-        reservationData.creationBlock = 100;
+        reservationData.creationBlock = 101;
         reservationData.timeout = true;
         reservationData.save();
 
@@ -54,16 +55,17 @@ describe('ReservationData tests', () => {
         expect(reservationData2.activationDelay).toStrictEqual(10);
         expect(reservationData2.purgeIndex).toStrictEqual(20);
         expect(reservationData2.forLiquidityPool).toBeTruthy();
-        expect(reservationData2.creationBlock).toStrictEqual(100);
+        expect(reservationData2.creationBlock).toStrictEqual(101);
         expect(reservationData2.expirationBlock).toStrictEqual(
-            100 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+            101 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
         );
         expect(reservationData2.userTimeoutExpirationBlock).toStrictEqual(
-            100 + TIMEOUT_AFTER_EXPIRATION_BLOCKS + RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+            101 + TIMEOUT_AFTER_EXPIRATION_BLOCKS + RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
         );
     });
 
     it('setter creationBlock resets timeout', () => {
+        const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
         const reservationData = new ReservationData(RESERVATION_DATA_POINTER, providerBuffer);
 
         reservationData.timeout = true;
@@ -74,6 +76,7 @@ describe('ReservationData tests', () => {
     });
 
     it('userTimeoutExpirationBlock returns extended expiration when timed out', () => {
+        const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
         const reservationData = new ReservationData(RESERVATION_DATA_POINTER, providerBuffer);
 
         reservationData.creationBlock = 50;
@@ -84,6 +87,7 @@ describe('ReservationData tests', () => {
     });
 
     it('userTimeoutExpirationBlock returns 0 when not timed out', () => {
+        const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
         const reservationData = new ReservationData(RESERVATION_DATA_POINTER, providerBuffer);
 
         reservationData.creationBlock = 50;
@@ -93,6 +97,7 @@ describe('ReservationData tests', () => {
     });
 
     it('reset(false) clears fields and sets creationBlock to 0', () => {
+        const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
         const reservationData = new ReservationData(RESERVATION_DATA_POINTER, providerBuffer);
         reservationData.timeout = true;
         reservationData.forLiquidityPool = true;
@@ -110,6 +115,7 @@ describe('ReservationData tests', () => {
     });
 
     it('reset(true) sets timeout but leaves creationBlock unchanged', () => {
+        const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
         const reservationData = new ReservationData(RESERVATION_DATA_POINTER, providerBuffer);
         reservationData.creationBlock = 30;
         reservationData.reset(true);

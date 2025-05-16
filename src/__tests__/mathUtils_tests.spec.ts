@@ -1,5 +1,5 @@
 import { clearCachedProviders } from '../models/Provider';
-import { Blockchain, TransferHelper } from '../../../btc-runtime/runtime';
+import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { min128, min64 } from '../utils/MathUtils';
 import { u128 } from '@btc-vision/as-bignum/assembly';
 

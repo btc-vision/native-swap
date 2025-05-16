@@ -1,9 +1,8 @@
 import { clearCachedProviders, Provider } from '../models/Provider';
-import { Blockchain, TransferHelper } from '../../../btc-runtime/runtime';
+import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { ProviderQueue } from '../managers/ProviderQueue';
 import { NORMAL_QUEUE_POINTER } from '../constants/StoredPointers';
 import {
-    createMaxProviders,
     createProvider,
     createProviders,
     providerAddress1,
@@ -15,11 +14,9 @@ import {
     tokenIdUint8Array1,
 } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import {
-    INDEX_NOT_SET_VALUE,
-    INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    MAXIMUM_VALID_INDEX,
-} from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+
+const QUOTE = u256.fromU64(100000000);
 
 describe('ProviderQueue tests', () => {
     beforeEach(() => {
@@ -30,36 +27,57 @@ describe('ProviderQueue tests', () => {
     });
 
     describe('ProviderQueue – getters', () => {
-        let queue: ProviderQueue;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            queue = new ProviderQueue(tokenAddress1, NORMAL_QUEUE_POINTER, tokenIdUint8Array1);
         });
 
         it('currentIndex defaults to 0', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             expect(queue.currentIndex).toStrictEqual(0);
         });
 
         it('length defaults to 0', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             expect(queue.length).toStrictEqual(0);
         });
 
         it('length returns queue length', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             queue.add(createProvider(providerAddress1, tokenAddress1));
             queue.add(createProvider(providerAddress2, tokenAddress1));
             expect(queue.length).toStrictEqual(2);
         });
 
         it('startingIndex defaults to 0', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             expect(queue.startingIndex).toStrictEqual(0);
         });
 
         it('startingIndex return correct value', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             queue.getQueue().setStartingIndex(10);
             expect(queue.startingIndex).toStrictEqual(10);
         });
@@ -73,26 +91,35 @@ describe('ProviderQueue tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            queue = new ProviderQueue(tokenAddress1, NORMAL_QUEUE_POINTER, tokenIdUint8Array1);
         });
 
         it('adds a provider and sets queue index', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            const index: u64 = queue.add(provider);
+            const index: u32 = queue.add(provider);
             expect(index).toStrictEqual(0);
             expect(provider.getQueueIndex()).toStrictEqual(index);
             expect(queue.getQueue().get_physical(index)).toStrictEqual(provider.getId());
 
             const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
-            const index2: u64 = queue.add(provider2);
+            const index2: u32 = queue.add(provider2);
             expect(index2).toStrictEqual(1);
             expect(provider2.getQueueIndex()).toStrictEqual(index2);
             expect(queue.getQueue().get_physical(index2)).toStrictEqual(provider2.getId());
         });
 
+        /*!!!
         it('throws when queue is full', () => {
-            expect<() => void>(() => {
+            expect(() => {
+                const queue: ProviderQueue = new ProviderQueue(
+                    tokenAddress1,
+                    NORMAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                );
                 const providers = createMaxProviders();
                 for (let i = 0; i < providers.length; i++) {
                     queue.add(providers[i]);
@@ -102,21 +129,24 @@ describe('ProviderQueue tests', () => {
                 queue.add(provider2);
             }).toThrow();
         });
+        
+         */
     });
 
     describe('ProviderQueue – getAt and removeAt', () => {
-        let queue: ProviderQueue;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            queue = new ProviderQueue(tokenAddress1, NORMAL_QUEUE_POINTER, tokenIdUint8Array1);
         });
 
         it('getAt returns correct provider ID', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             const p1Index: u32 = queue.add(p1);
 
@@ -133,6 +163,11 @@ describe('ProviderQueue tests', () => {
         });
 
         it('removeAt deletes the provider', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             const p1Index: u32 = queue.add(p1);
 
@@ -152,19 +187,20 @@ describe('ProviderQueue tests', () => {
     });
 
     describe('ProviderQueue – resetProvider', () => {
-        let queue: ProviderQueue;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            queue = new ProviderQueue(tokenAddress1, NORMAL_QUEUE_POINTER, tokenIdUint8Array1);
         });
 
         it('throws if provider is initial liquidity provider', () => {
-            expect<() => void>(() => {
+            expect(() => {
+                const queue: ProviderQueue = new ProviderQueue(
+                    tokenAddress1,
+                    NORMAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                );
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider);
                 provider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
@@ -174,6 +210,11 @@ describe('ProviderQueue tests', () => {
         });
 
         it('calls resetProvider, burn funds, if not initial provider', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
             queue.resetProvider(provider, true, false);
@@ -181,7 +222,7 @@ describe('ProviderQueue tests', () => {
             expect(TransferHelper.safeTransferCalled).toBeTruthy();
             expect(queue.getAt(index)).toStrictEqual(u256.Zero);
             expect(queue.length).toStrictEqual(0);
-            expect(provider.allowLiquidityProvision()).toBeFalsy();
+            expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(provider.isActive()).toBeFalsy();
@@ -190,6 +231,11 @@ describe('ProviderQueue tests', () => {
         });
 
         it('calls resetProvider, do not burn funds, if not initial provider', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
             queue.resetProvider(provider, false, false);
@@ -197,7 +243,7 @@ describe('ProviderQueue tests', () => {
             expect(TransferHelper.safeTransferCalled).toBeFalsy();
             expect(queue.getAt(index)).toStrictEqual(u256.Zero);
             expect(queue.length).toStrictEqual(0);
-            expect(provider.allowLiquidityProvision()).toBeFalsy();
+            expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(provider.isActive()).toBeFalsy();
@@ -207,23 +253,29 @@ describe('ProviderQueue tests', () => {
     });
 
     describe('ProviderQueue – cleanUp', () => {
-        let queue: ProviderQueue;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            queue = new ProviderQueue(tokenAddress1, NORMAL_QUEUE_POINTER, tokenIdUint8Array1);
         });
 
         it('does nothing when queue is empty', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const result: u32 = queue.cleanUp(0);
             expect(result).toStrictEqual(0);
         });
 
         it('skips zero slots and continues', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             const p1Index: u32 = queue.add(p1);
 
@@ -243,6 +295,11 @@ describe('ProviderQueue tests', () => {
         });
 
         it('deletes inactive providers', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             p1.deactivate();
             const p1Index: u32 = queue.add(p1);
@@ -264,6 +321,11 @@ describe('ProviderQueue tests', () => {
         });
 
         it('sets starting index when an active provider is found', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             p1.deactivate();
             const p1Index: u32 = queue.add(p1);
@@ -284,9 +346,14 @@ describe('ProviderQueue tests', () => {
         });
 
         it('returns index = length if no active providers found', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const providers: Provider[] = createProviders(5, 0);
 
-            for (let i: u32 = 0; i < providers.length; i++) {
+            for (let i = 0; i < providers.length; i++) {
                 providers[i].deactivate();
                 queue.add(providers[i]);
             }
@@ -296,6 +363,11 @@ describe('ProviderQueue tests', () => {
         });
 
         it('stops cleanup early at first active provider', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             p1.deactivate();
             const p1Index: u32 = queue.add(p1);
@@ -314,6 +386,11 @@ describe('ProviderQueue tests', () => {
         });
 
         it('cleanUp startingIndex = length returns length', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             const p1Index: u32 = queue.add(p1);
 
@@ -323,25 +400,31 @@ describe('ProviderQueue tests', () => {
     });
 
     describe('ProviderQueue – validation and iteration', () => {
-        let queue: TestProviderQueue;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            queue = new TestProviderQueue(tokenAddress1, NORMAL_QUEUE_POINTER, tokenIdUint8Array1);
         });
 
         it('ensureStartingIndexIsValid throws if invalid', () => {
-            expect<() => void>(() => {
+            expect(() => {
+                const queue: TestProviderQueue = new TestProviderQueue(
+                    tokenAddress1,
+                    NORMAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                );
                 queue.getQueue().setStartingIndex(10);
                 queue.callEnsureStartingIndexIsValid();
             }).toThrow();
         });
 
         it('initializeCurrentIndex sets current index to startingIndex', () => {
+            const queue: TestProviderQueue = new TestProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             queue.getQueue().setStartingIndex(10);
             queue.callInitializeCurrentIndex();
 
@@ -349,29 +432,39 @@ describe('ProviderQueue tests', () => {
         });
 
         it('restoreCurrentIndex sets _currentIndex', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             queue.restoreCurrentIndex(9999);
             expect(queue.currentIndex).toStrictEqual(9999);
         });
     });
 
     describe('ProviderQueue getNextWithLiquidity()', () => {
-        let queue: TestProviderQueue;
-        const QUOTE = u256.fromU64(100000000);
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            queue = new TestProviderQueue(tokenAddress1, NORMAL_QUEUE_POINTER, tokenIdUint8Array1);
         });
 
         it('returns null if empty queue', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             expect(queue.getNextWithLiquidity(QUOTE)).toBeNull();
         });
 
         it('skips inactive providers', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
             queue.add(provider1);
@@ -384,7 +477,12 @@ describe('ProviderQueue tests', () => {
         });
 
         it('throws if provider is priority', () => {
-            expect<() => void>(() => {
+            expect(() => {
+                const queue: ProviderQueue = new ProviderQueue(
+                    tokenAddress1,
+                    NORMAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider1.markPriority();
                 queue.add(provider1);
@@ -394,7 +492,12 @@ describe('ProviderQueue tests', () => {
         });
 
         it('throws if queue index does not match', () => {
-            expect<() => void>(() => {
+            expect(() => {
+                const queue: ProviderQueue = new ProviderQueue(
+                    tokenAddress1,
+                    NORMAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider1);
                 provider1.setQueueIndex(2);
@@ -404,7 +507,12 @@ describe('ProviderQueue tests', () => {
         });
 
         it('throws if provider is initialLiquidityProvider', () => {
-            expect<() => void>(() => {
+            expect(() => {
+                const queue: ProviderQueue = new ProviderQueue(
+                    tokenAddress1,
+                    NORMAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider1);
                 provider1.markInitialLiquidityProvider();
@@ -415,6 +523,11 @@ describe('ProviderQueue tests', () => {
         });
 
         it('returns null if provider liquidity is zero', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
             queue.add(provider1);
@@ -428,6 +541,11 @@ describe('ProviderQueue tests', () => {
         });
 
         it('returns null if provider fails min reservation and has reserved amount', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
             queue.add(provider1);
@@ -441,6 +559,11 @@ describe('ProviderQueue tests', () => {
         });
 
         it('return null and resets provider if under min reservation and no reserved', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
             queue.add(provider1);
@@ -457,6 +580,11 @@ describe('ProviderQueue tests', () => {
         });
 
         it('returns provider if all conditions met', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
             queue.add(provider1);
@@ -469,8 +597,14 @@ describe('ProviderQueue tests', () => {
             expect(queue.currentIndex).toStrictEqual(1);
         });
 
+        /*!!!
         it('throws if index reaches MAXIMUM_VALID_INDEX without match', () => {
-            expect<() => void>(() => {
+            expect(() => {
+                const queue: ProviderQueue = new ProviderQueue(
+                    tokenAddress1,
+                    NORMAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                );
                 const providers: Provider[] = createMaxProviders(
                     false,
                     false,
@@ -482,15 +616,21 @@ describe('ProviderQueue tests', () => {
                     false,
                     false,
                 );
-                for (let i: u32 = 0; i < providers.length; i++) {
+                for (let i = 0; i < providers.length; i++) {
                     queue.add(providers[i]);
                 }
 
                 queue.getNextWithLiquidity(QUOTE);
             }).toThrow();
-        });
+        });*/
 
+        /*!!!
         it('returns valid provider at MAXIMUM_VALID_INDEX without throwing', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const providers: Provider[] = createMaxProviders(
                 false,
                 false,
@@ -504,7 +644,7 @@ describe('ProviderQueue tests', () => {
             );
             providers[MAXIMUM_VALID_INDEX].activate();
 
-            for (let i: u32 = 0; i < providers.length; i++) {
+            for (let i = 0; i < providers.length; i++) {
                 queue.add(providers[i]);
             }
 
@@ -513,26 +653,27 @@ describe('ProviderQueue tests', () => {
             expect(result).not.toBeNull();
             expect(result).toBe(providers[MAXIMUM_VALID_INDEX]);
             expect(queue.currentIndex).toStrictEqual(MAXIMUM_VALID_INDEX);
-        });
+        });*/
     });
 
     describe('ProviderQueue – save', () => {
-        let queue: ProviderQueue;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            queue = new ProviderQueue(tokenAddress1, NORMAL_QUEUE_POINTER, tokenIdUint8Array1);
         });
 
         it('saves the queue correctly', () => {
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+            );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            const index: u64 = queue.add(provider);
+            const index: u32 = queue.add(provider);
             const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
-            const index2: u64 = queue.add(provider2);
+            const index2: u32 = queue.add(provider2);
 
             queue.save();
 

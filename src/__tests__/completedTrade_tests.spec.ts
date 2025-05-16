@@ -1,4 +1,4 @@
-import { Blockchain, TransferHelper } from '../../../btc-runtime/runtime';
+import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders } from '../models/Provider';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { CompletedTrade } from '../models/CompletedTrade';

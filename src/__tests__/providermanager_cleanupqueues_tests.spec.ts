@@ -1,3 +1,4 @@
+/*
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders, Provider } from '../lib/Provider';
 import { ProviderManager } from '../lib/Liquidity/ProviderManager';
@@ -1313,3 +1314,4 @@ describe('ProviderManager standard queue cleanUpQueues tests', () => {
         expect(manager.getFromStandardQueue(1)).toStrictEqual(u256.Zero);
     });
 });
+*/

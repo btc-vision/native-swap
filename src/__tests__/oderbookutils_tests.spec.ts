@@ -77,7 +77,7 @@ describe('OrderBookUtils tests', () => {
         Blockchain.mockTransactionOutput(tx);
 
         const sum = largeVal1 + val2;
-        expect<bool>(sum < u64.MAX_VALUE).toBeTruthy();
+        expect(sum < u64.MAX_VALUE).toBeTruthy();
 
         const fee = getTotalFeeCollected();
         expect(fee).toStrictEqual(sum);

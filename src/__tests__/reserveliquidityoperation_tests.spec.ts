@@ -822,7 +822,7 @@ describe('ReserveLiquidityOperation tests', () => {
         ); //!!!
     });
 
-    it("should revert final if tokensReserved< minAmountOut => 'Not enough liquidity reserved...'", () => {
+    it("should revert if tokensReserved< minAmountOut => 'Not enough liquidity reserved...'", () => {
         expect(() => {
             setBlockchainEnvironment(100, msgSender1, msgSender1);
             Blockchain.mockValidateBitcoinAddressResult(true);
@@ -879,7 +879,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 queue3.liquidityQueue,
                 providerId2,
                 providerAddress2,
-                9000000000000000000000000, //!!!!
+                900000000000, //!!!
                 u256.fromString(`9000000000000000000000000`),
                 false,
                 0,
