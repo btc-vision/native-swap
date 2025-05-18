@@ -16,7 +16,6 @@
             "nontrapping-f2i",
             "bulk-memory",
             "simd",
-            "threads",
             "reference-types",
             "multi-value",
             "relaxed-simd"
