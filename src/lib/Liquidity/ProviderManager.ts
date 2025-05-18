@@ -31,12 +31,11 @@ import { FulfilledProviderEvent } from '../../events/FulfilledProviderEvent';
 import { LIQUIDITY_REMOVAL_TYPE, NORMAL_TYPE, PRIORITY_TYPE } from '../Reservation';
 import {
     ALLOW_DIRTY,
+    ENABLE_INDEX_VERIFICATION,
     IMPOSSIBLE_PURGE_INDEX,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     NOT_DEFINED_PROVIDER_INDEX,
 } from '../../data-types/Constants';
-
-const ENABLE_INDEX_VERIFICATION: bool = true;
 
 export class ProviderManager {
     protected readonly _queue: StoredU256Array;
@@ -229,7 +228,7 @@ export class ProviderManager {
         this.cleanUpRemovalQueue();
     }
 
-    public pushToPurgeRemovalQueue(provider: Provider): void {
+    public pushToPurgeRemovalQueue(_provider: Provider): void {
         // DO NOT PUSH THE INITIAL LIQUIDITY PROVIDER TO THE PURGE QUEUE
         /*if (provider.indexedAt === INITIAL_LIQUIDITY_PROVIDER_INDEX) {
             return;
@@ -732,8 +731,7 @@ export class ProviderManager {
             const i: u64 = this.currentIndexPriority;
             providerId = this._priorityQueue.get_physical(i);
             if (providerId === u256.Zero) {
-                this.currentIndexPriority++;
-                continue;
+                throw new Error(`Impossible state. A providerId cannot be zero.`);
             }
 
             provider = getProvider(providerId);
@@ -789,8 +787,7 @@ export class ProviderManager {
             providerId = this._queue.get_physical(i);
 
             if (providerId === u256.Zero) {
-                this.currentIndex++;
-                continue;
+                throw new Error(`Impossible state. A providerId cannot be zero.`);
             }
 
             provider = getProvider(providerId);
@@ -813,14 +810,13 @@ export class ProviderManager {
             }
 
             const providerToReturn = this.returnProvider(provider, i, currentQuote);
-
             if (providerToReturn) {
                 this.currentIndex++;
 
                 return providerToReturn;
             }
 
-            if (this.currentIndex == u64.MAX_VALUE) {
+            if (this.currentIndex == <u64>u32.MAX_VALUE) {
                 throw new Revert('Index increment overflow');
             }
 

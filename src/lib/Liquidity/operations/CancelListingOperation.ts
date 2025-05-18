@@ -1,9 +1,11 @@
 import { BaseOperation } from './BaseOperation';
 import { LiquidityQueue } from '../LiquidityQueue';
 import { getProvider, Provider } from '../../Provider';
-import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ListingCanceledEvent } from '../../../events/ListingCanceledEvent';
+import { slash } from '../Slashing';
+import { SLASH_GRACE_WINDOW, SLASH_RAMP_UP_BLOCKS } from '../../../data-types/Constants';
 
 export class CancelListingOperation extends BaseOperation {
     private readonly providerId: u256;
@@ -29,11 +31,26 @@ export class CancelListingOperation extends BaseOperation {
         // Load the index of the provider
         this.provider.loadIndexedAt();
 
-        // Reset the provider
+        const listedAt: u64 = this.provider.listedTokenAtBlock();
+        if (listedAt === 0) {
+            throw new Revert('NATIVE_SWAP: Provider is not listed.');
+        }
+
+        const delta: u64 = SafeMath.sub64(Blockchain.block.number, listedAt);
+        const penalty: u256 = slash(amount, delta, SLASH_GRACE_WINDOW, SLASH_RAMP_UP_BLOCKS);
+        const refund: u256 = SafeMath.sub(amount, penalty);
+
+        // reset provider state before any transfers
         this.liquidityQueue.resetProvider(this.provider, false, true);
 
         // Transfer tokens back to the provider
-        TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
+        if (!refund.isZero()) {
+            TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, refund);
+        }
+
+        if (!penalty.isZero()) {
+            this.liquidityQueue.accruePenalty(penalty);
+        }
 
         this.emitListingCanceledEvent(amount.toU128());
     }

@@ -28,6 +28,7 @@ import {
     LIQUIDITY_RESERVED_POINTER,
     LIQUIDITY_VIRTUAL_BTC_POINTER,
     LIQUIDITY_VIRTUAL_T_POINTER,
+    PURGE_RESERVATION_INDEX_POINTER,
     RESERVATION_IDS_BY_BLOCK_POINTER,
     RESERVATION_SETTINGS_POINTER,
     TOTAL_RESERVES_POINTER,
@@ -45,9 +46,18 @@ import {
     ALLOW_DIRTY,
     IMPOSSIBLE_PURGE_INDEX,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    PURGE_AT_LEAST_X_PROVIDERS,
 } from '../../data-types/Constants';
 
 const ENABLE_FEES: bool = true;
+
+class PurgedResult {
+    constructor(
+        public readonly freed: u256,
+        public readonly providersPurged: u32,
+        public readonly finished: bool,
+    ) {}
+}
 
 export class LiquidityQueue {
     // Reservation settings
@@ -258,6 +268,14 @@ export class LiquidityQueue {
         this._providerManager.resetProvider(provider, burnRemainingFunds, canceled);
     }
 
+    public accruePenalty(penality: u256): void {
+        if (penality.isZero()) return;
+
+        // slashed tokens instantly become pool inventory
+        this.increaseVirtualTokenReserve(penality);
+        this.increaseTotalReserve(penality);
+    }
+
     public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u256): u256 {
         const utilizationRatio = this.getUtilizationRatio();
         const feeBP = this._dynamicFee.getDynamicFeeBP(totalSatoshisSpent, utilizationRatio);
@@ -281,6 +299,7 @@ export class LiquidityQueue {
             SafeMath.mul128(amountIn, LiquidityQueue.PERCENT_TOKENS_FOR_PRIORITY_QUEUE),
             LiquidityQueue.PERCENT_TOKENS_FOR_PRIORITY_FACTOR,
         );
+
         return SafeMath.sub128(amountIn, tokensForPriorityQueue);
     }
 
@@ -401,7 +420,7 @@ export class LiquidityQueue {
         this.lastVirtualUpdateBlock = currentBlock;
 
         // Clean up queues once per block, always the first tx.
-        this._providerManager.cleanUpQueues();
+        //this._providerManager.cleanUpQueues();
     }
 
     public getUtilizationRatio(): u256 {
@@ -617,8 +636,6 @@ export class LiquidityQueue {
 
     public getReservationWithExpirationChecks(): Reservation {
         const reservation = new Reservation(this.token, Blockchain.tx.sender);
-        //Blockchain.log(reservation.toString());
-
         if (!reservation.valid()) {
             throw new Revert('No valid reservation for this address.');
         }
@@ -815,7 +832,7 @@ export class LiquidityQueue {
         }
     }
 
-    protected purgeReservationsAndRestoreProviders(): void {
+    /*protected purgeReservationsAndRestoreProviders(): void {
         const currentBlockNumber: u64 = Blockchain.block.number;
         if (LiquidityQueue.RESERVATION_EXPIRE_AFTER > currentBlockNumber) {
             return;
@@ -876,6 +893,132 @@ export class LiquidityQueue {
 
         // Mark that we've processed up to (but not including) maxBlockToPurge
         this.lastPurgedBlock = maxBlockToPurge;
+    }*/
+
+    protected purgeReservationsAndRestoreProviders(): void {
+        const now: u64 = Blockchain.block.number;
+        if (LiquidityQueue.RESERVATION_EXPIRE_AFTER > now) return;
+
+        const maxBlock: u64 = now - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+        if (maxBlock <= this.lastPurgedBlock) {
+            this._providerManager.restoreCurrentIndex();
+            return;
+        }
+
+        let freed: u256 = u256.Zero;
+        let providersPurged: u32 = 0;
+        let touched = false;
+
+        while (
+            this._blocksWithReservations.getLength() > 0 &&
+            providersPurged < PURGE_AT_LEAST_X_PROVIDERS
+        ) {
+            const blkNum = this._blocksWithReservations.get(0);
+            if (blkNum >= maxBlock) break;
+
+            const remaining = PURGE_AT_LEAST_X_PROVIDERS - providersPurged;
+            const res = this.purgeBlockIncremental(blkNum, remaining);
+
+            providersPurged += res.providersPurged;
+            freed = SafeMath.add(freed, res.freed);
+
+            if (res.providersPurged > 0) touched = true;
+            if (!res.finished) {
+                break;
+            }
+
+            this._blocksWithReservations.shift();
+        }
+
+        this._blocksWithReservations.save();
+        this._providerManager.cleanUpQueues();
+
+        if (touched) {
+            this.decreaseTotalReserved(freed);
+            this._providerManager.resetStartingIndex();
+        } else {
+            this._providerManager.restoreCurrentIndex();
+        }
+
+        this.lastPurgedBlock =
+            this._blocksWithReservations.getLength() > 0
+                ? this._blocksWithReservations.get(0) - 1
+                : maxBlock;
+    }
+
+    private getPurgeIndexStore(blockNumber: u64): StoredU64 {
+        const w = new BytesWriter(8 + this.tokenIdUint8Array.length);
+        w.writeU64(blockNumber);
+        w.writeBytes(this.tokenIdUint8Array);
+
+        return new StoredU64(PURGE_RESERVATION_INDEX_POINTER, w.getBuffer());
+    }
+
+    private readPurgeCursor(blockNumber: u64): u64 {
+        return this.getPurgeIndexStore(blockNumber).get(0);
+    }
+
+    private writePurgeCursor(blockNumber: u64, idx: u64): void {
+        const s = this.getPurgeIndexStore(blockNumber);
+        s.set(0, idx);
+        s.save();
+    }
+
+    private purgeBlockIncremental(blockNumber: u64, budgetProviders: u32): PurgedResult {
+        const reservations = this.getReservationListForBlock(blockNumber);
+        const active = this.getActiveReservationListForBlock(blockNumber);
+
+        const len: u64 = reservations.getLength();
+
+        let idx: u64 = this.readPurgeCursor(blockNumber);
+        let providersPurged: u32 = 0;
+        let freed: u256 = u256.Zero;
+
+        while (idx < len && providersPurged < budgetProviders) {
+            if (!active.get(idx)) {
+                idx++;
+                continue;
+            }
+
+            const resId = reservations.get(idx);
+            const reservation = Reservation.load(resId);
+            assert(
+                reservation.expired(),
+                `Impossible state: Reservation still active during purge.`,
+            );
+
+            // TODO: We need to track if a reservation was purged in the reservation itself
+            //  so someone can not reserve again if his reservation was not purged yet.
+
+            this.ensureReservationPurgeIndexMatch(
+                reservation.reservationId,
+                reservation.getPurgeIndex(),
+                <u32>idx,
+            );
+
+            // full reservation purge
+            const freedHere = this.restoreReservation(reservation);
+            freed = SafeMath.add(freed, freedHere);
+
+            const provCnt: u32 = <u32>reservation.getReservedIndexes().length;
+            providersPurged += provCnt;
+
+            active.set(idx, false);
+            idx++;
+        }
+
+        active.save();
+
+        const finished = idx >= len;
+        if (finished) {
+            reservations.reset();
+            active.reset();
+            this.writePurgeCursor(blockNumber, 0);
+        } else {
+            this.writePurgeCursor(blockNumber, idx);
+        }
+
+        return new PurgedResult(freed, providersPurged, finished);
     }
 
     private emitActivateProviderEvent(provider: Provider): void {
@@ -884,7 +1027,7 @@ export class LiquidityQueue {
         );
     }
 
-    private purgeBlock(blockNumber: u64): u256 {
+    /*private purgeBlock(blockNumber: u64): u256 {
         const reservationList = this.getReservationListForBlock(blockNumber);
         const activeIds: StoredBooleanArray = this.getActiveReservationListForBlock(blockNumber);
 
@@ -918,7 +1061,7 @@ export class LiquidityQueue {
         activeIds.reset();
 
         return totalFreed;
-    }
+    }*/
 
     private restoreReservation(reservation: Reservation): u256 {
         const reservedIndexes: u32[] = reservation.getReservedIndexes();

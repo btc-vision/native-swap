@@ -5,6 +5,7 @@ import { UserLiquidity } from '../data-types/UserLiquidity';
 import {
     INDEXED_PROVIDER_POINTER,
     LIQUIDITY_PROVIDER_POINTER,
+    LISTED_TOKENS_AT_BLOCK_POINTER,
     PROVIDER_ADDRESS_POINTER,
     PROVIDER_LIQUIDITY_POINTER,
 } from './StoredPointers';
@@ -125,6 +126,16 @@ export class Provider {
     public loadIndexedAt(): void {
         const store = new StoredU64(INDEXED_PROVIDER_POINTER, this.providerBuffer);
         this._indexedAt = store.get(0);
+    }
+
+    public listedTokenAtBlock(): u64 {
+        const store = new StoredU64(LISTED_TOKENS_AT_BLOCK_POINTER, this.providerBuffer);
+        return store.get(0);
+    }
+
+    public setListedTokenAtBlock(block: u64): void {
+        const store = new StoredU64(LISTED_TOKENS_AT_BLOCK_POINTER, this.providerBuffer);
+        store.set(0, block);
     }
 
     public increaseLiquidityProvided(amount: u256): void {
