@@ -10,11 +10,16 @@
         "shrinkLevel": 1,
         "converge": true,
         "noAssert": false,
-        "disable": [
-            "mutable-globals",
+        "enable": [
             "sign-extension",
+            "mutable-globals",
             "nontrapping-f2i",
-            "bulk-memory"
+            "bulk-memory",
+            "simd",
+            "threads",
+            "reference-types",
+            "multi-value",
+            "relaxed-simd"
         ],
         "runtime": "stub",
         "memoryBase": 0,
