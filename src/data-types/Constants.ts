@@ -6,9 +6,9 @@ export const ALLOW_DIRTY: bool = true;
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10.
  */
-export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 240;
+export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 150;
 
-export const PURGE_AT_LEAST_X_PROVIDERS: u32 = 100;
+export const PURGE_AT_LEAST_X_PROVIDERS: u32 = 150;
 
 // 4 block grace period
 export const SLASH_GRACE_WINDOW: u64 = 4;
