@@ -17,8 +17,7 @@
             "bulk-memory",
             "simd",
             "reference-types",
-            "multi-value",
-            "relaxed-simd"
+            "multi-value"
         ],
         "runtime": "stub",
         "memoryBase": 0,
