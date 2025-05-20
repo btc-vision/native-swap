@@ -8,7 +8,7 @@ import {
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
-import { CancelListingOperation } from '..//operations/CancelListingOperation';
+import { CancelListingOperation } from '../operations/CancelListingOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 describe('CancelListTokenForSaleOperation tests', () => {

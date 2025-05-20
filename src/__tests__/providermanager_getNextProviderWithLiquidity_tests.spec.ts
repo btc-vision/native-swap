@@ -1,18 +1,16 @@
-/*
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
-import { clearCachedProviders, Provider } from '../lib/Provider';
-import { ProviderManager } from '../lib/Liquidity/ProviderManager';
+import { clearCachedProviders, Provider } from '../models/Provider';
+import { ProviderManager } from '../managers/ProviderManager';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     createProvider,
     createProviders,
     providerAddress1,
-    saveIndexForProvider,
-    STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
     TestProviderManager,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
+import { OwedBTCManager } from '../managers/OwedBTCManager';
 
 describe('ProviderManager getNextProviderWithLiquidity with only providers in removal queue tests', () => {
     beforeEach(() => {
@@ -23,16 +21,17 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
     });
 
     it('should set currentIndexRemoval to removalQueue startingIndex when currentIndexRemoval = 0 and provider valid for the test ', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         // Add 3 providers that will be deleted. This will move the removalQueue starting index to 3.
         const providersToDelete = createProviders(3, 0);
         for (let i: u8 = 0; i < 3; i++) {
-            manager.addToRemovalQueue(providersToDelete[i].providerId);
+            manager.addToRemovalQueue(providersToDelete[i]);
         }
 
         const provider: Provider = createProvider(
@@ -42,16 +41,16 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
             true,
             true,
             'wdewed23rdwewe',
-            u256.fromU32(10000000),
+            u128.fromU32(10000000),
             u128.fromU32(10000),
             u128.fromU32(10000),
             true,
             false,
         );
 
-        manager.addToRemovalQueue(provider.providerId);
-        manager.setSatoshisOwed(provider.providerId, u256.fromU32(100000));
-        manager.setSatoshisOwedReserved(provider.providerId, u256.fromU32(10000));
+        manager.addToRemovalQueue(provider);
+        owedBTCManager.setSatoshisOwed(provider.getId(), 100000);
+        owedBTCManager.setSatoshisOwedReserved(provider.getId(), 10000);
 
         manager.cleanUpQueues();
 
@@ -65,32 +64,30 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
     });
 
     it('should use currentIndexRemoval when currentIndexRemoval <> 0 and provider valid for the test', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         // Add 3 providers that will be deleted. This will move the removalQueue starting index to 3.
         const providersToDelete = createProviders(3, 0);
         for (let i: u8 = 0; i < 3; i++) {
-            manager.addToRemovalQueue(providersToDelete[i].providerId);
+            manager.addToRemovalQueue(providersToDelete[i]);
         }
 
         // Add 2 more providers that are pendingRemoval.
         const providersPendingRemoval = createProviders(2, 3, true);
         for (let i: u8 = 0; i < 2; i++) {
-            manager.addToRemovalQueue(providersPendingRemoval[i].providerId);
-            manager.setSatoshisOwed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
-            manager.setSatoshisOwedReserved(
-                providersPendingRemoval[i].providerId,
-                u256.fromU32(10000),
-            );
+            manager.addToRemovalQueue(providersPendingRemoval[i]);
+            owedBTCManager.setSatoshisOwed(providersPendingRemoval[i].getId(), 100000);
+            owedBTCManager.setSatoshisOwedReserved(providersPendingRemoval[i].getId(), 10000);
         }
 
         // Move removalQueue starting index to 4
         manager.cleanUpQueues();
-        manager.removePendingLiquidityProviderFromRemovalQueue(providersPendingRemoval[0], 3);
+        manager.removePendingLiquidityProviderFromRemovalQueue(providersPendingRemoval[0]);
         manager.cleanUpQueues();
 
         expect(manager.removalQueueStartingIndex).toStrictEqual(4);
@@ -103,23 +100,21 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
     });
 
     it('should skip deleted providers when there are some in the removal queue before the valid provider for the test', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const providersPendingRemoval = createProviders(4, 0, true);
         for (let i: u8 = 0; i < 4; i++) {
-            manager.addToRemovalQueue(providersPendingRemoval[i].providerId);
-            manager.setSatoshisOwed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
-            manager.setSatoshisOwedReserved(
-                providersPendingRemoval[i].providerId,
-                u256.fromU32(10000),
-            );
+            manager.addToRemovalQueue(providersPendingRemoval[i]);
+            owedBTCManager.setSatoshisOwed(providersPendingRemoval[i].getId(), 100000);
+            owedBTCManager.setSatoshisOwedReserved(providersPendingRemoval[i].getId(), 10000);
         }
 
-        manager.removePendingLiquidityProviderFromRemovalQueue(providersPendingRemoval[0], 0);
+        manager.removePendingLiquidityProviderFromRemovalQueue(providersPendingRemoval[0]);
 
         const currentQuote = u256.fromU32(1000);
         const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
@@ -129,23 +124,21 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
     });
 
     it('should remove provider from the removal queue when the provider is not in pendingRemoval and is a LP', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const providersPendingRemoval = createProviders(4, 0, true);
         for (let i: u8 = 0; i < 4; i++) {
-            manager.addToRemovalQueue(providersPendingRemoval[i].providerId);
-            manager.setSatoshisOwed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
-            manager.setSatoshisOwedReserved(
-                providersPendingRemoval[i].providerId,
-                u256.fromU32(10000),
-            );
+            manager.addToRemovalQueue(providersPendingRemoval[i]);
+            owedBTCManager.setSatoshisOwed(providersPendingRemoval[i].getId(), 100000);
+            owedBTCManager.setSatoshisOwedReserved(providersPendingRemoval[i].getId(), 10000);
         }
 
-        providersPendingRemoval[0].pendingRemoval = false;
+        providersPendingRemoval[0].clearPendingRemoval();
 
         const currentQuote = u256.fromU32(1000);
         const provider = manager.getNextProviderWithLiquidity(currentQuote);
@@ -156,24 +149,22 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
     });
 
     it('should remove provider from the removal queue when the provider is not in pendingRemoval and is not a LP', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const providersPendingRemoval = createProviders(4, 0, true);
         for (let i: u8 = 0; i < 4; i++) {
-            manager.addToRemovalQueue(providersPendingRemoval[i].providerId);
-            manager.setSatoshisOwed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
-            manager.setSatoshisOwedReserved(
-                providersPendingRemoval[i].providerId,
-                u256.fromU32(10000),
-            );
+            manager.addToRemovalQueue(providersPendingRemoval[i]);
+            owedBTCManager.setSatoshisOwed(providersPendingRemoval[i].getId(), 100000);
+            owedBTCManager.setSatoshisOwedReserved(providersPendingRemoval[i].getId(), 10000);
         }
 
-        providersPendingRemoval[0].isLp = false;
-        providersPendingRemoval[0].pendingRemoval = false;
+        providersPendingRemoval[0].clearLiquidityProvider();
+        providersPendingRemoval[0].clearPendingRemoval();
 
         const currentQuote = u256.fromU32(1000);
         const provider = manager.getNextProviderWithLiquidity(currentQuote);
@@ -184,23 +175,21 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
     });
 
     it('should remove provider from the removal queue when the provider is in pendingRemoval and is not a LP', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const providersPendingRemoval = createProviders(4, 0, true);
         for (let i: u8 = 0; i < 4; i++) {
-            manager.addToRemovalQueue(providersPendingRemoval[i].providerId);
-            manager.setSatoshisOwed(providersPendingRemoval[i].providerId, u256.fromU32(100000));
-            manager.setSatoshisOwedReserved(
-                providersPendingRemoval[i].providerId,
-                u256.fromU32(10000),
-            );
+            manager.addToRemovalQueue(providersPendingRemoval[i]);
+            owedBTCManager.setSatoshisOwed(providersPendingRemoval[i].getId(), 100000);
+            owedBTCManager.setSatoshisOwedReserved(providersPendingRemoval[i].getId(), 10000);
         }
 
-        providersPendingRemoval[0].isLp = false;
+        providersPendingRemoval[0].clearLiquidityProvider();
 
         const currentQuote = u256.fromU32(1000);
         const provider = manager.getNextProviderWithLiquidity(currentQuote);
@@ -211,16 +200,17 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
     });
 
     it('should return the provider when the provider states are valid and (owedBTC - reservedBTC) > strictMinimumProviderReservationAmount', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
-        manager.addToRemovalQueue(provider.providerId);
-        manager.setSatoshisOwedReserved(provider.providerId, u256.fromU32(10000));
-        manager.setSatoshisOwed(provider.providerId, u256.fromU32(1000000));
+        manager.addToRemovalQueue(provider);
+        owedBTCManager.setSatoshisOwedReserved(provider.getId(), 10000);
+        owedBTCManager.setSatoshisOwed(provider.getId(), 1000000);
 
         const currentQuote = u256.fromU32(1000);
         const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
@@ -231,16 +221,17 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
 
     it('should be removed from the removal queue when the provider states are valid but (owedBTC - reservedBTC) < strictMinimumProviderReservationAmount and owedBTC < strictMinimumProviderReservationAmount', () => {
         expect(() => {
+            const owedBTCManager: OwedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+                owedBTCManager,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
-            manager.addToRemovalQueue(provider.providerId);
-            manager.setSatoshisOwedReserved(provider.providerId, u256.fromU32(450));
-            manager.setSatoshisOwed(provider.providerId, u256.fromU32(550));
+            manager.addToRemovalQueue(provider);
+            owedBTCManager.setSatoshisOwedReserved(provider.getId(), 450);
+            owedBTCManager.setSatoshisOwed(provider.getId(), 550);
 
             const currentQuote = u256.fromU32(1000);
             manager.getNextProviderWithLiquidity(currentQuote);
@@ -249,14 +240,15 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
 
     it('should return null when startingIndex() > getLength()', () => {
         expect(() => {
+            const owedBTCManager: OwedBTCManager = new OwedBTCManager();
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+                owedBTCManager,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
-            manager.addToRemovalQueue(provider.providerId);
+            manager.addToRemovalQueue(provider);
 
             manager.getRemovalQueue.setStartingIndex(2);
 
@@ -275,10 +267,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
     });
 
     it('should set currentIndexPriority to priorityQueue startingIndex when currentIndexPriority = 0 and provider valid for the test ', () => {
-        const manager: ProviderManager = new ProviderManager(
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const manager: TestProviderManager = new TestProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         // Add 3 providers that will be deleted. This will move the priorityQueue starting index to 3.
@@ -289,16 +282,14 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(1600),
             u128.fromU32(1600),
             false,
             true,
         );
         for (let i: u8 = 0; i < 3; i++) {
-            const at = manager.addToPriorityQueue(providersToDelete[i].providerId);
-            providersToDelete[i].indexedAt = at;
-            saveIndexForProvider(providersToDelete[i].providerId, at);
+            manager.addToPriorityQueue(providersToDelete[i]);
         }
 
         const provider: Provider = createProvider(
@@ -308,25 +299,23 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
             true,
             'wdewed23rdwewe',
-            u256.fromU32(10000000),
-            u128.fromU32(20000),
+            u128.fromU32(10000000),
+            u128.fromU32(200000000),
             u128.fromU32(10000),
             true,
             true,
         );
 
-        const at2 = manager.addToPriorityQueue(provider.providerId);
-        provider.indexedAt = at2;
-        saveIndexForProvider(provider.providerId, at2);
+        manager.addToPriorityQueue(provider);
 
-        manager.setSatoshisOwed(provider.providerId, u256.fromU32(100000));
-        manager.setSatoshisOwedReserved(provider.providerId, u256.fromU32(10000));
+        //owedBTCManager.setSatoshisOwed(provider.getId(), 100000);
+        //owedBTCManager.setSatoshisOwedReserved(provider.getId(), 10000);
 
         manager.cleanUpQueues();
 
         expect(manager.priorityQueueStartingIndex).toStrictEqual(3);
 
-        const currentQuote = u256.fromU32(1000);
+        const currentQuote: u256 = u256.fromU32(1000);
         const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
 
         expect(nextProvider).not.toBeNull();
@@ -334,10 +323,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
     });
 
     it('should use currentIndexPriority when currentIndexPriority <> 0 and provider valid for the test', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         // Add 3 providers that will be deleted. This will move the priorityQueue starting index to 3.
@@ -348,16 +338,14 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(1600),
             u128.fromU32(1600),
             false,
             true,
         );
         for (let i: u8 = 0; i < 3; i++) {
-            const at = manager.addToPriorityQueue(providersToDelete[i].providerId);
-            providersToDelete[i].indexedAt = at;
-            saveIndexForProvider(providersToDelete[i].providerId, at);
+            manager.addToPriorityQueue(providersToDelete[i]);
         }
 
         // Add 2 more providers that are priority.
@@ -368,19 +356,16 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(2600),
             u128.fromU32(1600),
             true,
             true,
         );
         for (let i: u8 = 0; i < 2; i++) {
-            const at = manager.addToPriorityQueue(providersPriority[i].providerId);
-            providersPriority[i].indexedAt = at;
-            saveIndexForProvider(providersPriority[i].providerId, at);
-
-            manager.setSatoshisOwed(providersPriority[i].providerId, u256.fromU32(100000));
-            manager.setSatoshisOwedReserved(providersPriority[i].providerId, u256.fromU32(10000));
+            manager.addToPriorityQueue(providersPriority[i]);
+            owedBTCManager.setSatoshisOwed(providersPriority[i].getId(), 100000);
+            owedBTCManager.setSatoshisOwedReserved(providersPriority[i].getId(), 10000);
         }
 
         // Move priorityQueue starting index to 4
@@ -398,10 +383,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
     });
 
     it('should skip deleted providers when there are some in the priority queue before the valid provider for the test', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const providersPriority = createProviders(
@@ -411,19 +397,17 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(2600),
             u128.fromU32(1600),
             true,
             true,
         );
         for (let i: u8 = 0; i < 4; i++) {
-            const at = manager.addToPriorityQueue(providersPriority[i].providerId);
-            providersPriority[i].indexedAt = at;
-            saveIndexForProvider(providersPriority[i].providerId, at);
+            const at = manager.addToPriorityQueue(providersPriority[i]);
 
-            manager.setSatoshisOwed(providersPriority[i].providerId, u256.fromU32(100000));
-            manager.setSatoshisOwedReserved(providersPriority[i].providerId, u256.fromU32(10000));
+            owedBTCManager.setSatoshisOwed(providersPriority[i].getId(), 100000);
+            owedBTCManager.setSatoshisOwedReserved(providersPriority[i].getId(), 10000);
         }
 
         manager.resetProvider(providersPriority[0], false);
@@ -436,10 +420,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
     });
 
     it('should skip provider when the provider is not active', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const providersPriority = createProviders(
@@ -449,23 +434,21 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(2600),
             u128.fromU32(1600),
             true,
             true,
         );
         for (let i: u8 = 0; i < 4; i++) {
-            const at = manager.addToPriorityQueue(providersPriority[i].providerId);
-            providersPriority[i].indexedAt = at;
-            saveIndexForProvider(providersPriority[i].providerId, at);
+            const at = manager.addToPriorityQueue(providersPriority[i]);
 
-            manager.setSatoshisOwed(providersPriority[i].providerId, u256.fromU32(100000));
-            manager.setSatoshisOwedReserved(providersPriority[i].providerId, u256.fromU32(10000));
+            owedBTCManager.setSatoshisOwed(providersPriority[i].getId(), 100000);
+            owedBTCManager.setSatoshisOwedReserved(providersPriority[i].getId(), 10000);
         }
 
-        providersPriority[0].setActive(false, true);
-
+        providersPriority[0].deactivate();
+        providersPriority[0].markPriority();
         const currentQuote = u256.fromU32(1000);
         const provider = manager.getNextProviderWithLiquidity(currentQuote);
 
@@ -475,10 +458,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
 
     it('should revert when the provider is not a priority provider', () => {
         expect(() => {
+            const owedBTCManager: OwedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+                owedBTCManager,
             );
 
             const providersPriority = createProviders(
@@ -488,25 +472,21 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
                 true,
                 true,
                 '232332d2d3',
-                u256.fromU32(10000),
+                u128.fromU32(10000),
                 u128.fromU32(2600),
                 u128.fromU32(1600),
                 true,
                 true,
             );
             for (let i: u8 = 0; i < 4; i++) {
-                const at = manager.addToPriorityQueue(providersPriority[i].providerId);
-                providersPriority[i].indexedAt = at;
-                saveIndexForProvider(providersPriority[i].providerId, at);
+                const at = manager.addToPriorityQueue(providersPriority[i]);
 
-                manager.setSatoshisOwed(providersPriority[i].providerId, u256.fromU32(100000));
-                manager.setSatoshisOwedReserved(
-                    providersPriority[i].providerId,
-                    u256.fromU32(10000),
-                );
+                owedBTCManager.setSatoshisOwed(providersPriority[i].getId(), 100000);
+                owedBTCManager.setSatoshisOwedReserved(providersPriority[i].getId(), 10000);
             }
 
-            providersPriority[0].setActive(true, false);
+            providersPriority[0].activate();
+            providersPriority[0].clearPriority();
 
             const currentQuote = u256.fromU32(1000);
             manager.getNextProviderWithLiquidity(currentQuote);
@@ -515,10 +495,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
 
     it('should revert when liquidity < reserved', () => {
         expect(() => {
+            const owedBTCManager: OwedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+                owedBTCManager,
             );
 
             const provider = createProvider(
@@ -528,16 +509,14 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
                 true,
                 true,
                 '232332d2d3',
-                u256.fromU32(10000),
+                u128.fromU32(10000),
                 u128.fromU32(1000),
                 u128.fromU32(1600),
                 true,
                 true,
             );
 
-            const at = manager.addToPriorityQueue(provider.providerId);
-            provider.indexedAt = at;
-            saveIndexForProvider(provider.providerId, at);
+            const at = manager.addToPriorityQueue(provider);
 
             const currentQuote = u256.fromU32(1000);
             manager.getNextProviderWithLiquidity(currentQuote);
@@ -545,10 +524,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
     });
 
     it('should return null when liquidity = reserved', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const provider = createProvider(
@@ -558,16 +538,14 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(1000),
             u128.fromU32(1000),
             true,
             true,
         );
 
-        const at = manager.addToPriorityQueue(provider.providerId);
-        provider.indexedAt = at;
-        saveIndexForProvider(provider.providerId, at);
+        const at = manager.addToPriorityQueue(provider);
 
         const currentQuote = u256.fromU32(1000);
         const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
@@ -576,18 +554,17 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
 
     it('should revert when startingIndex() > getLength()', () => {
         expect(() => {
+            const owedBTCManager: OwedBTCManager = new OwedBTCManager();
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+                owedBTCManager,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, false);
-            provider.setActive(true, true);
-            const at = manager.addToPriorityQueue(provider.providerId);
-            provider.indexedAt = at;
-            saveIndexForProvider(provider.providerId, at);
-
+            provider.activate();
+            provider.markPriority();
+            manager.addToPriorityQueue(provider);
             manager.getPriorityQueue.setStartingIndex(2);
 
             const currentQuote = u256.fromU32(1000);
@@ -604,10 +581,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
         TransferHelper.clearMockedResults();
     });
     it('should set currentIndex to standard queue startingIndex when currentIndex = 0 and provider valid for the test ', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         // Add 3 providers that will be deleted. This will move the queue starting index to 3.
@@ -618,16 +596,14 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(1600),
             u128.fromU32(1600),
             false,
             false,
         );
         for (let i: u8 = 0; i < 3; i++) {
-            const at = manager.addToStandardQueue(providersToDelete[i].providerId);
-            providersToDelete[i].indexedAt = at;
-            saveIndexForProvider(providersToDelete[i].providerId, at);
+            manager.addToNormalQueue(providersToDelete[i]);
         }
 
         const provider: Provider = createProvider(
@@ -637,23 +613,21 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             true,
             true,
             'wdewed23rdwewe',
-            u256.fromU32(10000000),
+            u128.fromU32(10000000),
             u128.fromU32(20000),
             u128.fromU32(10000),
             true,
             false,
         );
 
-        const at2 = manager.addToStandardQueue(provider.providerId);
-        provider.indexedAt = at2;
-        saveIndexForProvider(provider.providerId, at2);
+        manager.addToNormalQueue(provider);
 
-        manager.setSatoshisOwed(provider.providerId, u256.fromU32(100000));
-        manager.setSatoshisOwedReserved(provider.providerId, u256.fromU32(10000));
+        owedBTCManager.setSatoshisOwed(provider.getId(), 100000);
+        owedBTCManager.setSatoshisOwedReserved(provider.getId(), 10000);
 
         manager.cleanUpQueues();
 
-        expect(manager.standardQueueStartingIndex).toStrictEqual(3);
+        expect(manager.normalQueueStartingIndex).toStrictEqual(3);
 
         const currentQuote = u256.fromU32(1000);
         const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
@@ -663,10 +637,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
     });
 
     it('should use currentIndex when currentIndex <> 0 and provider valid for the test', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         // Add 3 providers that will be deleted. This will move the standard queue starting index to 3.
@@ -677,16 +652,14 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(1600),
             u128.fromU32(1600),
             false,
             false,
         );
         for (let i: u8 = 0; i < 3; i++) {
-            const at = manager.addToStandardQueue(providersToDelete[i].providerId);
-            providersToDelete[i].indexedAt = at;
-            saveIndexForProvider(providersToDelete[i].providerId, at);
+            const at = manager.addToNormalQueue(providersToDelete[i]);
         }
 
         // Add 2 more providers that are priority.
@@ -697,19 +670,16 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(2600),
             u128.fromU32(1600),
             true,
             false,
         );
         for (let i: u8 = 0; i < 2; i++) {
-            const at = manager.addToStandardQueue(providers[i].providerId);
-            providers[i].indexedAt = at;
-            saveIndexForProvider(providers[i].providerId, at);
-
-            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(100000));
-            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(10000));
+            manager.addToNormalQueue(providers[i]);
+            owedBTCManager.setSatoshisOwed(providers[i].getId(), 100000);
+            owedBTCManager.setSatoshisOwedReserved(providers[i].getId(), 10000);
         }
 
         // Move standard queue starting index to 4
@@ -717,7 +687,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
         manager.resetProvider(providers[0], false);
         manager.cleanUpQueues();
 
-        expect(manager.standardQueueStartingIndex).toStrictEqual(4);
+        expect(manager.normalQueueStartingIndex).toStrictEqual(4);
 
         const currentQuote = u256.fromU32(1000);
         const nextProvider: Provider | null = manager.getNextProviderWithLiquidity(currentQuote);
@@ -727,10 +697,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
     });
 
     it('should skip deleted providers when there are some in the standard queue before the valid provider for the test', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const providers = createProviders(
@@ -740,19 +711,16 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(2600),
             u128.fromU32(1600),
             true,
             false,
         );
         for (let i: u8 = 0; i < 4; i++) {
-            const at = manager.addToStandardQueue(providers[i].providerId);
-            providers[i].indexedAt = at;
-            saveIndexForProvider(providers[i].providerId, at);
-
-            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(100000));
-            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(10000));
+            manager.addToNormalQueue(providers[i]);
+            owedBTCManager.setSatoshisOwed(providers[i].getId(), 100000);
+            owedBTCManager.setSatoshisOwedReserved(providers[i].getId(), 10000);
         }
 
         manager.resetProvider(providers[0], false);
@@ -765,10 +733,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
     });
 
     it('should skip provider when the provider is not active', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const providers = createProviders(
@@ -778,23 +747,21 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(2600),
             u128.fromU32(1600),
             true,
             false,
         );
         for (let i: u8 = 0; i < 4; i++) {
-            const at = manager.addToStandardQueue(providers[i].providerId);
-            providers[i].indexedAt = at;
-            saveIndexForProvider(providers[i].providerId, at);
+            manager.addToNormalQueue(providers[i]);
 
-            manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(100000));
-            manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(10000));
+            owedBTCManager.setSatoshisOwed(providers[i].getId(), 100000);
+            owedBTCManager.setSatoshisOwedReserved(providers[i].getId(), 10000);
         }
 
-        providers[0].setActive(false, false);
-
+        providers[0].deactivate();
+        providers[0].clearPriority();
         const currentQuote = u256.fromU32(1000);
         const provider = manager.getNextProviderWithLiquidity(currentQuote);
 
@@ -804,10 +771,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
 
     it('should revert when the provider is a priority provider', () => {
         expect(() => {
+            const owedBTCManager: OwedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+                owedBTCManager,
             );
 
             const providers = createProviders(
@@ -817,22 +785,20 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
                 true,
                 true,
                 '232332d2d3',
-                u256.fromU32(10000),
+                u128.fromU32(10000),
                 u128.fromU32(2600),
                 u128.fromU32(1600),
                 true,
                 false,
             );
             for (let i: u8 = 0; i < 4; i++) {
-                const at = manager.addToStandardQueue(providers[i].providerId);
-                providers[i].indexedAt = at;
-                saveIndexForProvider(providers[i].providerId, at);
-
-                manager.setSatoshisOwed(providers[i].providerId, u256.fromU32(100000));
-                manager.setSatoshisOwedReserved(providers[i].providerId, u256.fromU32(10000));
+                manager.addToNormalQueue(providers[i]);
+                owedBTCManager.setSatoshisOwed(providers[i].getId(), 100000);
+                owedBTCManager.setSatoshisOwedReserved(providers[i].getId(), 10000);
             }
 
-            providers[0].setActive(true, true);
+            providers[0].activate();
+            providers[0].markPriority();
 
             const currentQuote = u256.fromU32(1000);
             manager.getNextProviderWithLiquidity(currentQuote);
@@ -841,10 +807,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
 
     it('should revert when liquidity < reserved', () => {
         expect(() => {
+            const owedBTCManager: OwedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+                owedBTCManager,
             );
 
             const provider = createProvider(
@@ -854,16 +821,14 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
                 true,
                 true,
                 '232332d2d3',
-                u256.fromU32(10000),
+                u128.fromU32(10000),
                 u128.fromU32(1000),
                 u128.fromU32(1600),
                 true,
                 false,
             );
 
-            const at = manager.addToStandardQueue(provider.providerId);
-            provider.indexedAt = at;
-            saveIndexForProvider(provider.providerId, at);
+            manager.addToNormalQueue(provider);
 
             const currentQuote = u256.fromU32(1000);
             manager.getNextProviderWithLiquidity(currentQuote);
@@ -871,10 +836,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
     });
 
     it('should return null when liquidity = reserved', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const provider = createProvider(
@@ -884,16 +850,14 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(1000),
             u128.fromU32(1000),
             true,
             false,
         );
 
-        const at = manager.addToStandardQueue(provider.providerId);
-        provider.indexedAt = at;
-        saveIndexForProvider(provider.providerId, at);
+        manager.addToNormalQueue(provider);
 
         const currentQuote = u256.fromU32(1000);
         const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
@@ -902,21 +866,22 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in st
 
     it('should revert when startingIndex() > getLength()', () => {
         expect(() => {
+            const owedBTCManager: OwedBTCManager = new OwedBTCManager();
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+                owedBTCManager,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, false);
-            provider.setActive(true, false);
-            const at = manager.addToStandardQueue(provider.providerId);
-            provider.indexedAt = at;
-            saveIndexForProvider(provider.providerId, at);
+            provider.activate();
+            provider.clearPriority();
 
-            manager.getStandardQueue().setStartingIndex(2);
+            manager.addToNormalQueue(provider);
 
-            const currentQuote = u256.fromU32(1000);
+            manager.getNormalQueue.setStartingIndex(2);
+
+            const currentQuote = u256.fromU32(41000);
             manager.getNextProviderWithLiquidity(currentQuote);
         }).toThrow();
     });
@@ -931,10 +896,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
     });
 
     it('should return initialprovider when current quote is 0', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const provider = createProvider(
@@ -944,24 +910,25 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(1000),
             u128.fromU32(0),
             true,
             false,
         );
 
-        manager.initialLiquidityProvider = provider.providerId;
+        manager.initialLiquidityProviderId = provider.getId();
 
         const provider1 = manager.getNextProviderWithLiquidity(u256.Zero);
         expect(provider1).toBe(provider);
     });
 
     it('should return null when no initial liquidity provider', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const provider = createProvider(
@@ -971,14 +938,14 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(1000),
             u128.fromU32(1600),
             true,
             false,
         );
 
-        manager.initialLiquidityProvider = u256.Zero;
+        manager.initialLiquidityProviderId = u256.Zero;
 
         const currentQuote = u256.fromU32(1000);
         const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
@@ -987,10 +954,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
 
     it('should revert when liquidity < reserved', () => {
         expect(() => {
+            const owedBTCManager: OwedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
-                STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+                owedBTCManager,
             );
 
             const provider = createProvider(
@@ -1000,14 +968,14 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
                 true,
                 true,
                 '232332d2d3',
-                u256.fromU32(10000),
+                u128.fromU32(10000),
                 u128.fromU32(1000),
                 u128.fromU32(1600),
                 true,
                 false,
             );
 
-            manager.initialLiquidityProvider = provider.providerId;
+            manager.initialLiquidityProviderId = provider.getId();
 
             const currentQuote = u256.fromU32(1000);
             manager.getNextProviderWithLiquidity(currentQuote);
@@ -1015,10 +983,11 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
     });
 
     it('should return the initial liquidity provider when liquidity > reserved', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const provider = createProvider(
@@ -1028,14 +997,14 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(1600),
             u128.fromU32(1000),
             true,
             false,
         );
 
-        manager.initialLiquidityProvider = provider.providerId;
+        manager.initialLiquidityProviderId = provider.getId();
 
         const currentQuote = u256.fromU32(1000);
         const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
@@ -1043,15 +1012,16 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
         expect(provider1).toBe(provider);
 
         if (provider1 !== null) {
-            expect(provider1.indexedAt).toStrictEqual(u32.MAX_VALUE);
+            expect(provider1.getQueueIndex()).toStrictEqual(u32.MAX_VALUE);
         }
     });
 
     it('should return null when liquidity = reserved', () => {
+        const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
-            STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT,
+            owedBTCManager,
         );
 
         const provider = createProvider(
@@ -1061,18 +1031,17 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             true,
             true,
             '232332d2d3',
-            u256.fromU32(10000),
+            u128.fromU32(10000),
             u128.fromU32(1600),
             u128.fromU32(1600),
             true,
             false,
         );
 
-        manager.initialLiquidityProvider = provider.providerId;
+        manager.initialLiquidityProviderId = provider.getId();
 
         const currentQuote = u256.fromU32(1000);
         const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
         expect(provider1).toBeNull();
     });
 });
-*/

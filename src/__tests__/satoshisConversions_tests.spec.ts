@@ -35,7 +35,7 @@ describe('SatoshisConversions tests', () => {
 
         it('throws if result exceeds MAX_TOTAL_SATOSHIS', () => {
             expect(() => {
-                const big: u256 = u256.Max;
+                const big: u256 = u256.fromString('99999999999999999999');
                 const scaledPrice: u256 = u256.fromU64(1);
 
                 tokensToSatoshis(big, scaledPrice);

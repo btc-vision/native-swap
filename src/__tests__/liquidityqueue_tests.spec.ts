@@ -25,6 +25,9 @@ import { FeeManager } from '../managers/FeeManager';
 import { Reservation } from '../models/Reservation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
+import { ReservationProviderData } from '../models/ReservationProdiverData';
+import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import { ProviderTypes } from '../types/ProviderTypes';
 
 describe('Liquidity queue tests', () => {
     beforeEach(() => {
@@ -172,7 +175,7 @@ describe('Liquidity queue tests', () => {
         });
 
         it('should create a new liquidity queue and load the values when it exists and virtual pool is updated', () => {
-            setBlockchainEnvironment(1);
+            setBlockchainEnvironment(100);
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -185,7 +188,7 @@ describe('Liquidity queue tests', () => {
             queue.virtualTokenReserve = u256.fromU32(100000);
             queue.setBlockQuote();
 
-            setBlockchainEnvironment(2);
+            setBlockchainEnvironment(102);
             queue.virtualSatoshisReserve = 10000;
             queue.virtualTokenReserve = u256.fromU32(200000);
             queue.setBlockQuote();
@@ -222,9 +225,7 @@ describe('Liquidity queue tests', () => {
 
             queue.save();
 
-            expect(queue.lastVirtualUpdateBlock).toStrictEqual(1);
-
-            setBlockchainEnvironment(2);
+            expect(queue.lastVirtualUpdateBlock).toStrictEqual(100);
 
             // The goal is only to check if updateVirtualPoolIfNeeded has been called.
             const createQueueResult2 = createLiquidityQueue(
@@ -232,8 +233,8 @@ describe('Liquidity queue tests', () => {
                 tokenIdUint8Array1,
                 false,
             );
-            const queue2: ILiquidityQueue = createQueueResult.liquidityQueue;
-            expect(queue2.lastVirtualUpdateBlock).toStrictEqual(2);
+            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
+            expect(queue2.lastVirtualUpdateBlock).toStrictEqual(102);
         });
 
         it('should correctly initialize the initial liquidity', () => {
@@ -257,6 +258,32 @@ describe('Liquidity queue tests', () => {
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(888888));
             expect(queue.maxReserves5BlockPercent).toStrictEqual(10);
             expect(queue.virtualSatoshisReserve).toStrictEqual(virtualSatoshisReserve, `1`);
+        });
+
+        it('should purge reservation when flag is set', () => {
+            const createQueueResult = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            expect(
+                createQueueResult.reservationManager.purgeReservationsAndRestoreProvidersCalled,
+            ).toBeTruthy();
+        });
+
+        it('should revert if the initial satoshis reserve > MAX_TOTAL_SATOSHIS', () => {
+            expect(() => {
+                const createQueueResult = createLiquidityQueue(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    false,
+                );
+                const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+
+                queue.initializeInitialLiquidity(
+                    u256.fromU32(1),
+                    u256.fromU32(10000),
+                    u128.fromString('88888888888888888'),
+                    10,
+                );
+            }).toThrow();
         });
     });
 
@@ -331,6 +358,21 @@ describe('Liquidity queue tests', () => {
 
             queue.deltaSatoshisBuy = 1000;
             expect(queue.deltaSatoshisBuy).toStrictEqual(1000);
+        });
+
+        it('should correctly get available liquidity', () => {
+            setBlockchainEnvironment(1);
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+
+            queue.increaseTotalReserve(u256.fromU32(100));
+            queue.increaseTotalReserved(u256.fromU32(10));
+
+            expect(queue.availableLiquidity).toStrictEqual(u256.fromU32(90));
         });
 
         it('should correctly get/set lastVirtualUpdateBlock value', () => {
@@ -477,7 +519,7 @@ describe('Liquidity queue tests', () => {
                 true,
             );
             const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
-            expect(queue.timeOutEnabled).toBeTruthy();
+            expect(queue2.timeOutEnabled).toBeTruthy();
         });
     });
 
@@ -712,7 +754,7 @@ describe('Liquidity queue tests', () => {
 
                 const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
                 queue.virtualTokenReserve = u256.fromU32(100);
-                queue.increaseVirtualTokenReserve(u256.fromU32(u64.MAX_VALUE));
+                queue.increaseVirtualTokenReserve(u256.Max);
             }).toThrow();
         });
 
@@ -1364,6 +1406,64 @@ describe('Liquidity queue tests', () => {
                 createQueueResult2.reservationManager.getReservationListForBlock(1001);
             expect(list3.getLength()).toStrictEqual(0);
         });
+
+        it('should correctly get a non expired reservation', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const reservation: Reservation = createReservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(
+                    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+                    u128.fromU32(10000),
+                    ProviderTypes.Normal,
+                ),
+            );
+            reservation.save();
+            queue.addActiveReservation(reservation);
+            queue.save();
+
+            setBlockchainEnvironment(1001, providerAddress1, providerAddress1);
+            const reservation2: Reservation = queue.getReservationWithExpirationChecks();
+
+            expect(reservation2).not.toBeNull();
+        });
+
+        it('should revert on expired reservation', () => {
+            expect(() => {
+                setBlockchainEnvironment(1000);
+
+                const createQueueResult = createLiquidityQueue(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    false,
+                );
+                const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+                const reservation: Reservation = createReservation(tokenAddress1, providerAddress1);
+                reservation.addProvider(
+                    new ReservationProviderData(
+                        INITIAL_LIQUIDITY_PROVIDER_INDEX,
+                        u128.fromU32(10000),
+                        ProviderTypes.Normal,
+                    ),
+                );
+                reservation.save();
+                queue.addActiveReservation(reservation);
+                queue.save();
+
+                setBlockchainEnvironment(1006, providerAddress1, providerAddress1);
+                const reservation2: Reservation = queue.getReservationWithExpirationChecks();
+
+                expect(reservation2).not.toBeNull();
+            }).toThrow();
+        });
     });
 
     describe('Provider', () => {
@@ -1386,6 +1486,7 @@ describe('Liquidity queue tests', () => {
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             provider.markPriority();
             queue.addToPriorityQueue(provider);
+            queue.save();
 
             const createQueueResult2 = createLiquidityQueue(
                 tokenAddress1,
@@ -1413,6 +1514,7 @@ describe('Liquidity queue tests', () => {
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             provider.clearPriority();
             queue.addToNormalQueue(provider);
+            queue.save();
 
             const createQueueResult2 = createLiquidityQueue(
                 tokenAddress1,
@@ -1439,6 +1541,7 @@ describe('Liquidity queue tests', () => {
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
             queue.addToRemovalQueue(provider);
+            queue.save();
 
             const createQueueResult2 = createLiquidityQueue(
                 tokenAddress1,
@@ -1449,8 +1552,59 @@ describe('Liquidity queue tests', () => {
 
             expect(createQueueResult2.providerManager.removalQueueLength).toStrictEqual(1);
             expect(
-                createQueueResult2.providerManager.getFromRemovalQueue(provider.getQueueIndex()),
+                createQueueResult2.providerManager.getFromRemovalQueue(
+                    provider.getRemovalQueueIndex(),
+                ),
             ).toStrictEqual(provider.getId());
+        });
+
+        it('should call cleanUpQueues', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+            queue.cleanUpQueues();
+
+            expect(createQueueResult.providerManager.cleanUpQueuesCalled).toBeTruthy();
+        });
+
+        it('should call getNextProviderWithLiquidity', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+            queue.getNextProviderWithLiquidity(u256.fromU32(1000));
+
+            expect(
+                createQueueResult.providerManager.getNextProviderWithLiquidityCalled,
+            ).toBeTruthy();
+        });
+
+        it('should call resetProvider', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            queue.addToNormalQueue(provider);
+
+            queue.resetProvider(provider);
+
+            expect(createQueueResult.providerManager.resetProviderCalled).toBeTruthy();
         });
     });
 
@@ -1698,35 +1852,46 @@ describe('Liquidity queue tests', () => {
             const result = queue.quote();
             expect(result).toStrictEqual(u256.fromU64(10000000000));
         });
-    });
 
-    it('should correctly get/set block quote', () => {
-        setBlockchainEnvironment(0);
+        it('should correctly get/set block quote', () => {
+            setBlockchainEnvironment(0);
 
-        const createQueueResult = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-        queue.virtualTokenReserve = u256.fromU32(10000);
-        queue.virtualSatoshisReserve = 100;
-        queue.setBlockQuote();
-
-        const createQueueResult2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
-        const blockQuote = createQueueResult2.quoteManager.getBlockQuote(Blockchain.block.number);
-
-        expect(blockQuote).toStrictEqual(u256.fromU64(10000000000));
-    });
-
-    it('should revert when calling setBlockQuote and Block number >= u32.MAX_VALUE', () => {
-        setBlockchainEnvironment(u32.MAX_VALUE);
-
-        expect(() => {
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 false,
             );
             const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+            queue.virtualTokenReserve = u256.fromU32(10000);
+            queue.virtualSatoshisReserve = 100;
             queue.setBlockQuote();
-        }).toThrow();
+            queue.save();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
+            const blockQuote = createQueueResult2.quoteManager.getBlockQuote(
+                Blockchain.block.number,
+            );
+
+            expect(blockQuote).toStrictEqual(u256.fromU64(10000000000));
+        });
+
+        it('should revert when calling setBlockQuote and Block number >= u32.MAX_VALUE', () => {
+            setBlockchainEnvironment(u32.MAX_VALUE);
+
+            expect(() => {
+                const createQueueResult = createLiquidityQueue(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    false,
+                );
+                const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+                queue.setBlockQuote();
+            }).toThrow();
+        });
     });
 });

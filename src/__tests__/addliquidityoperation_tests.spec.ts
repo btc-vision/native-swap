@@ -24,7 +24,7 @@ import { AddLiquidityOperation } from '../operations/AddLiquidityOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
-import { FEE_COLLECT_SCRIPT_PUBKEY } from '../constants/Contract';
+import { FEE_COLLECT_SCRIPT_PUBKEY, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 
@@ -290,6 +290,9 @@ describe('AddLiquidityOperation tests', () => {
         Blockchain.mockValidateBitcoinAddressResult(true);
 
         const initialProviderId = createProviderId(msgSender1, tokenAddress1);
+        const initialProvider = getProvider(initialProviderId);
+        initialProvider.markInitialLiquidityProvider();
+        initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
 
         const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
@@ -319,7 +322,6 @@ describe('AddLiquidityOperation tests', () => {
         queue.liquidityQueue.save();
 
         setBlockchainEnvironment(101, providerAddress2, providerAddress2);
-        const initialProvider = getProvider(initialProviderId);
         const transactionOutput: TransactionOutput[] = [];
 
         transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));

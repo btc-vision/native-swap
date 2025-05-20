@@ -41,8 +41,7 @@ export class ProviderQueue {
             throw new Revert('Impossible state: Too many providers in the queue.');
         }
 
-        this.queue.push(provider.getId(), true);
-        const index: u32 = this.queue.getLength() - 1;
+        const index: u32 = this.queue.push(provider.getId(), true);
         provider.setQueueIndex(index);
 
         return index;
@@ -197,10 +196,11 @@ export class ProviderQueue {
                     );
                 }
 
-                assert(
-                    provider.isInitialLiquidityProvider(),
-                    'Impossible state: Initial liquidity provider cannot be returned here.',
-                );
+                if (provider.isInitialLiquidityProvider()) {
+                    throw new Revert(
+                        'Impossible state: Initial liquidity provider cannot be returned here.',
+                    );
+                }
             }
 
             if (Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)) {

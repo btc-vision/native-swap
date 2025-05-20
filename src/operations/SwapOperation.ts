@@ -46,6 +46,7 @@ export class SwapOperation extends BaseOperation {
                 totalTokensPurchased,
                 totalSatoshisSpent,
             );
+
             this.sendToken(totalTokensPurchased);
         }
 

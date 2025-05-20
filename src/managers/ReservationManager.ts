@@ -132,10 +132,10 @@ export class ReservationManager implements IReservationManager {
             throw new Revert('Impossible state: Too many reservations for block.');
         }
 
-        reservationList.push(reservationId);
+        const index: u32 = reservationList.push(reservationId);
         reservationList.save();
 
-        return reservationList.getLength() - 1;
+        return index;
     }
 
     private addToActiveList(blockNumber: u64): u32 {
@@ -146,10 +146,10 @@ export class ReservationManager implements IReservationManager {
             throw new Revert('Impossible state: Too many reservations for block.');
         }
 
-        reservationActiveList.push(true);
+        const index: u32 = reservationActiveList.push(true);
         reservationActiveList.save();
 
-        return reservationActiveList.getLength() - 1;
+        return index;
     }
 
     private purgeAndRestoreProvider(provider: Provider, reservedAmount: u128): void {
@@ -240,15 +240,16 @@ export class ReservationManager implements IReservationManager {
     }
 
     private pushBlockIfNotExists(blockNumber: u64): void {
+        let addBlock: boolean = true;
         const length: u32 = this.blocksWithReservations.getLength();
 
         if (length > 0) {
-            const lastBlock = this.blocksWithReservations.get(length - 1);
+            addBlock = this.blocksWithReservations.get(length - 1) !== blockNumber;
+        }
 
-            if (lastBlock !== blockNumber) {
-                this.blocksWithReservations.push(blockNumber);
-                this.blocksWithReservations.save();
-            }
+        if (addBlock) {
+            this.blocksWithReservations.push(blockNumber);
+            this.blocksWithReservations.save();
         }
     }
 

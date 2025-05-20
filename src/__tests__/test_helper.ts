@@ -424,7 +424,15 @@ export function createReservation(token: Address, owner: Address): Reservation {
     return reservation;
 }
 
-export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(600);
+export interface ITestProviderManager extends IProviderManager {
+    readonly cleanUpQueuesCalled: boolean;
+    readonly getNextProviderWithLiquidityCalled: boolean;
+    readonly resetProviderCalled: boolean;
+}
+
+export interface ITestReservationManager extends IReservationManager {
+    readonly purgeReservationsAndRestoreProvidersCalled: boolean;
+}
 
 export interface ITestLiquidityQueue extends ILiquidityQueue {
     readonly volatility: u256;
@@ -437,16 +445,16 @@ export interface ITestLiquidityQueue extends ILiquidityQueue {
 export class CreateLiquidityQueueResult {
     public liquidityQueue: ITestLiquidityQueue;
     public tradeManager: ITradeManager;
-    public providerManager: IProviderManager;
+    public providerManager: ITestProviderManager;
     public quoteManager: IQuoteManager;
-    public reservationManager: IReservationManager;
+    public reservationManager: ITestReservationManager;
 
     constructor(
         liquidityQueue: ITestLiquidityQueue,
         tradeManager: ITradeManager,
-        providerManager: IProviderManager,
+        providerManager: ITestProviderManager,
         quoteManager: IQuoteManager,
-        reservationManager: IReservationManager,
+        reservationManager: ITestReservationManager,
     ) {
         this.liquidityQueue = liquidityQueue;
         this.tradeManager = tradeManager;
@@ -465,8 +473,12 @@ export function createLiquidityQueue(
     const owedBtcManager: IOwedBTCManager = getOwedBtcManager();
     const quoteManager: IQuoteManager = getQuoteManager(tokenId);
     const liquidityQueueReserve: ILiquidityQueueReserve = getLiquidityQueueReserve(token, tokenId);
-    const providerManager: IProviderManager = getProviderManager(token, tokenId, owedBtcManager);
-    const reservationManager: IReservationManager = getReservationManager(
+    const providerManager: ITestProviderManager = getProviderManager(
+        token,
+        tokenId,
+        owedBtcManager,
+    );
+    const reservationManager: ITestReservationManager = getReservationManager(
         token,
         tokenId,
         providerManager,
@@ -514,8 +526,8 @@ export function getProviderManager(
     token: Address,
     tokenId: Uint8Array,
     owedBtcManager: IOwedBTCManager,
-): IProviderManager {
-    return new ProviderManager(token, tokenId, owedBtcManager);
+): ITestProviderManager {
+    return new TestProviderManager(token, tokenId, owedBtcManager);
 }
 
 export function getOwedBtcManager(): IOwedBTCManager {
@@ -536,8 +548,8 @@ export function getReservationManager(
     quoteManager: IQuoteManager,
     liquidityQueueReserve: ILiquidityQueueReserve,
     owedBTCManager: IOwedBTCManager,
-): IReservationManager {
-    return new ReservationManager(
+): ITestReservationManager {
+    return new TestReservationManager(
         token,
         tokenId,
         providerManager,
@@ -558,6 +570,10 @@ export class TestLiquidityQueue extends LiquidityQueue implements ITestLiquidity
         return this.dynamicFee.volatility;
     }
 
+    public clearMockedResults(): void {
+        this._mockedNextProvider = null;
+    }
+
     public mockgetNextProviderWithLiquidity(mockedNextProvider: Provider | null): void {
         this._mockedNextProvider = mockedNextProvider;
     }
@@ -575,7 +591,25 @@ export class TestLiquidityQueue extends LiquidityQueue implements ITestLiquidity
     }
 }
 
-export class TestProviderManager extends ProviderManager {
+export class TestProviderManager extends ProviderManager implements ITestProviderManager {
+    private _getNextProviderWithLiquidityCalled: boolean = false;
+
+    public get getNextProviderWithLiquidityCalled(): boolean {
+        return this._getNextProviderWithLiquidityCalled;
+    }
+
+    private _cleanUpQueuesCalled: boolean = false;
+
+    public get cleanUpQueuesCalled(): boolean {
+        return this._cleanUpQueuesCalled;
+    }
+
+    private _resetProviderCalled: boolean = false;
+
+    public get resetProviderCalled(): boolean {
+        return this._resetProviderCalled;
+    }
+
     public get getRemovalQueue(): StoredU256Array {
         return this.removalQueue.getQueue();
     }
@@ -587,6 +621,31 @@ export class TestProviderManager extends ProviderManager {
     public get getNormalQueue(): StoredU256Array {
         return this.normalQueue.getQueue();
     }
+
+    public clearMockedResults(): void {
+        this._cleanUpQueuesCalled = false;
+        this._getNextProviderWithLiquidityCalled = false;
+        this._resetProviderCalled = false;
+    }
+
+    public cleanUpQueues(): void {
+        this._cleanUpQueuesCalled = true;
+        super.cleanUpQueues();
+    }
+
+    public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
+        this._getNextProviderWithLiquidityCalled = true;
+        return super.getNextProviderWithLiquidity(currentQuote);
+    }
+
+    public resetProvider(
+        provider: Provider,
+        burnRemainingFunds: boolean = true,
+        canceled: boolean = false,
+    ): void {
+        this._resetProviderCalled = true;
+        super.resetProvider(provider, burnRemainingFunds, canceled);
+    }
 }
 
 export class TestProviderQueue extends ProviderQueue {
@@ -596,5 +655,23 @@ export class TestProviderQueue extends ProviderQueue {
 
     public callEnsureStartingIndexIsValid(): void {
         this.ensureStartingIndexIsValid();
+    }
+}
+
+export class TestReservationManager extends ReservationManager implements ITestReservationManager {
+    private _purgeReservationsAndRestoreProvidersCalled: boolean = false;
+
+    public get purgeReservationsAndRestoreProvidersCalled(): boolean {
+        return this._purgeReservationsAndRestoreProvidersCalled;
+    }
+
+    public clearMockedResults(): void {
+        this._purgeReservationsAndRestoreProvidersCalled = false;
+    }
+
+    public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
+        this._purgeReservationsAndRestoreProvidersCalled = true;
+
+        return super.purgeReservationsAndRestoreProviders(lastPurgedBlock);
     }
 }

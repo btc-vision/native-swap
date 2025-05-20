@@ -85,7 +85,7 @@ describe('ProviderData tests', () => {
         expect(providerData.queueIndex).toStrictEqual(7);
     });
 
-    it('liquidityProvided loads from storage and setter saves', () => {
+    it('saves and loads from storage when all flag true', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
 
         providerData.initialLiquidityProvider = true;
@@ -112,6 +112,36 @@ describe('ProviderData tests', () => {
         expect(providerData2.active).toBeTruthy();
         expect(providerData2.reservedAmount).toStrictEqual(u128.fromU64(100));
         expect(providerData2.liquidityProvider).toBeTruthy();
+        expect(providerData2.liquidityProvided).toStrictEqual(u128.fromU64(80));
+    });
+
+    it('saves and loads from storage when all flag false', () => {
+        const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
+
+        providerData.initialLiquidityProvider = false;
+        providerData.removalQueueIndex = 7;
+        providerData.liquidityProvisionAllowed = false;
+        providerData.queueIndex = 1;
+        providerData.liquidityAmount = u128.fromU64(90);
+        providerData.pendingRemoval = false;
+        providerData.priority = false;
+        providerData.active = false;
+        providerData.reservedAmount = u128.fromU64(100);
+        providerData.liquidityProvider = false;
+        providerData.liquidityProvided = u128.fromU64(80);
+        providerData.save();
+
+        const providerData2 = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
+        expect(providerData2.initialLiquidityProvider).toBeFalsy();
+        expect(providerData2.removalQueueIndex).toStrictEqual(7);
+        expect(providerData2.liquidityProvisionAllowed).toBeFalsy();
+        expect(providerData2.queueIndex).toStrictEqual(1);
+        expect(providerData2.liquidityAmount).toStrictEqual(u128.fromU64(90));
+        expect(providerData2.pendingRemoval).toBeFalsy();
+        expect(providerData2.priority).toBeFalsy();
+        expect(providerData2.active).toBeFalsy();
+        expect(providerData2.reservedAmount).toStrictEqual(u128.fromU64(100));
+        expect(providerData2.liquidityProvider).toBeFalsy();
         expect(providerData2.liquidityProvided).toStrictEqual(u128.fromU64(80));
     });
 

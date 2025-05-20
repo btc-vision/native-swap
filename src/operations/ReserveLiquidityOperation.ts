@@ -69,9 +69,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.finalizeReservation(reservation);
         this.liquidityQueue.setBlockQuote();
         this.emitReservationCreatedEvent();
-
-        console.log('reservation:');
-        console.log('count:' + reservation.getProviderCount().toString());
     }
 
     private checkPreConditions(): void {
@@ -125,14 +122,10 @@ export class ReserveLiquidityOperation extends BaseOperation {
         let lastProviderId: u256 = u256.Zero;
 
         while (!this.remainingTokens.isZero()) {
-            console.log('remainingTokens:' + this.remainingTokens.toString());
-
             const remainingSatoshis: u64 = tokensToSatoshis(
                 this.remainingTokens,
                 this.currentQuote,
             );
-
-            console.log('remainingSatoshis:' + remainingSatoshis.toString());
 
             if (this.isSmallerThanMinimumReservationAmount(remainingSatoshis)) {
                 break;
@@ -143,11 +136,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
             );
 
             if (provider === null) {
-                console.log('no provider');
                 break;
             }
-
-            console.log('provider:' + provider.getId().toString());
 
             // If we see repeated initial liquidity provider => break
             if (

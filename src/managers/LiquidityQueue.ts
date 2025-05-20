@@ -16,7 +16,11 @@ import {
 
 import { Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
-import { QUOTE_SCALE, VOLATILITY_WINDOW_IN_BLOCKS } from '../constants/Contract';
+import {
+    MAX_TOTAL_SATOSHIS,
+    QUOTE_SCALE,
+    VOLATILITY_WINDOW_IN_BLOCKS,
+} from '../constants/Contract';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
@@ -470,7 +474,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     private computeInitialSatoshisReserve(initialLiquidity: u256, floorPrice: u256): u64 {
         const reserve: u256 = SafeMath.div(initialLiquidity, floorPrice);
 
-        if (u256.gt(reserve, u256.fromU64(u64.MAX_VALUE))) {
+        if (u256.gt(reserve, MAX_TOTAL_SATOSHIS)) {
             throw new Revert(
                 'Impossible state: Satoshis reserve out of range. Please adjust initial liquidity or floor price.',
             );

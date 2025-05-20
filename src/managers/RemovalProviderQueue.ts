@@ -28,8 +28,7 @@ export class RemovalProviderQueue extends ProviderQueue {
             throw new Revert('Impossible state: Too many providers required for reservation.');
         }
 
-        this.queue.push(provider.getId(), true);
-        const index: u32 = this.queue.getLength() - 1;
+        const index: u32 = this.queue.push(provider.getId(), true);
         provider.setRemovalQueueIndex(index);
 
         return index;

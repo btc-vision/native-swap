@@ -54,7 +54,7 @@ export class Provider {
     public static meetsMinimumReservationAmount(tokenAmount: u128, currentQuote: u256): boolean {
         const maxCostInSatoshis: u64 = tokensToSatoshis(tokenAmount.toU256(), currentQuote);
 
-        return maxCostInSatoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT;
+        return maxCostInSatoshis >= STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT;
     }
 
     /**

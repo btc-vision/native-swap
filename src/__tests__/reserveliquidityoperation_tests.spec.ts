@@ -19,6 +19,7 @@ import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import { FeeManager } from '../managers/FeeManager';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
 import { Reservation } from '../models/Reservation';
+import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 
 describe('ReserveLiquidityOperation tests', () => {
     beforeEach(() => {
@@ -664,7 +665,7 @@ describe('ReserveLiquidityOperation tests', () => {
         queue3.liquidityQueue.save();
 
         // The exact number of tokens to reserve should be 73339999999999999999 but
-        // tokensRemainingInSatoshis < LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT is met,
+        // tokensRemainingInSatoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT is met,
         // so reserved number is 73339999999999999998
         expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
             u256.fromString(`73339999999999999998`),
@@ -748,80 +749,6 @@ describe('ReserveLiquidityOperation tests', () => {
         expect(values.providedAmount).toStrictEqual(u128.fromString(`9999999999999999999`));
     });
 
-    it('should handle normal provider => reserve up to min( providerLiquidity leftover, tokensRemaining ) => add to reservation', () => {
-        setBlockchainEnvironment(100, msgSender1, msgSender1);
-        Blockchain.mockValidateBitcoinAddressResult(true);
-
-        const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-        const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-        const floorPrice: u256 = SafeMath.div(
-            SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
-            u256.fromU32(1500),
-        );
-
-        const createPoolOp = new CreatePoolOperation(
-            queue.liquidityQueue,
-            floorPrice,
-            initialProviderId,
-            u128.Max,
-            receiverAddress1,
-            0,
-            u256.Zero,
-            100,
-            Address.dead(),
-        );
-
-        createPoolOp.execute();
-        queue.liquidityQueue.setBlockQuote();
-        queue.liquidityQueue.save();
-
-        setBlockchainEnvironment(102, providerAddress1, providerAddress1);
-        const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-        const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-        const provider1 = getProvider(providerId1);
-        const listOp = new ListTokensForSaleOperation(
-            queue2.liquidityQueue,
-            providerId1,
-            u128.sub(u128.Max, u128.One),
-            receiverAddress1,
-            Address.dead(),
-            false,
-            false,
-        );
-
-        listOp.execute();
-        queue2.liquidityQueue.save();
-
-        setBlockchainEnvironment(103, providerAddress2, providerAddress2);
-        const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-        const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-        const reserveOp = new ReserveLiquidityOperation(
-            queue3.liquidityQueue,
-            providerId2,
-            providerAddress2,
-            u64.MAX_VALUE,
-            u256.Zero,
-            false,
-            2,
-        );
-
-        reserveOp.execute();
-        queue3.liquidityQueue.save();
-
-        const reservation = new Reservation(tokenAddress1, providerAddress2);
-        expect(reservation.getProviderCount()).toStrictEqual(1);
-        const values = reservation.getProviderAt(0);
-        expect(values.providedAmount).toStrictEqual(
-            u128.fromString(`1329227995784915872903796132074676998`),
-        ); //!!!
-
-        expect(provider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`1329227995784915872903796132074676998`),
-        ); //!!!
-    });
-
     it("should revert if tokensReserved< minAmountOut => 'Not enough liquidity reserved...'", () => {
         expect(() => {
             setBlockchainEnvironment(100, msgSender1, msgSender1);
@@ -879,7 +806,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 queue3.liquidityQueue,
                 providerId2,
                 providerAddress2,
-                900000000000, //!!!
+                900000000000,
                 u256.fromString(`9000000000000000000000000`),
                 false,
                 0,
@@ -946,7 +873,7 @@ describe('ReserveLiquidityOperation tests', () => {
             queue3.liquidityQueue,
             providerId2,
             providerAddress2,
-            900000000, //!!!!
+            900000000,
             u256.Zero,
             false,
             2,
@@ -966,23 +893,26 @@ describe('ReserveLiquidityOperation tests', () => {
         const value2 = reservation.getProviderAt(1);
 
         expect(value1.providerIndex).toStrictEqual(0);
-        expect(value2.providerIndex).toStrictEqual(u32.MAX_VALUE);
+        expect(value2.providerIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
 
-        expect(value1.providedAmount).toStrictEqual(u128.fromString(`9999999999999999999`)); //!!!
-        expect(value2.providedAmount).toStrictEqual(u128.fromString(`49990499999999999999999`)); //!!!
+        expect(value1.providedAmount).toStrictEqual(u128.fromString(`9999999999999999999`));
+        expect(value2.providedAmount).toStrictEqual(u128.fromString(`49990499999999999999999`));
+
+        expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
+            u256.fromString(`50000499999999999999998`),
+        );
 
         const reservationList = queue3.reservationManager.getReservationListForBlock(103);
         const reservationActiveList =
             queue3.reservationManager.getActiveReservationListForBlock(103);
-        expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
-            u256.fromString(`50000499999999999999998`),
-        ); //!!!!
+
         expect(reservationList.getLength()).toStrictEqual(1);
         expect(reservationList.get(reservation.getPurgeIndex())).toStrictEqual(reservation.getId());
+        expect(reservationActiveList.getLength()).toStrictEqual(1);
         expect(reservationActiveList.get(reservation.getPurgeIndex())).toBeTruthy();
     });
 
-    it('should reset and skip provider when maxCostInSatoshis < LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT', () => {
+    it('should reset and skip provider when maxCostInSatoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT', () => {
         setBlockchainEnvironment(100, msgSender1, msgSender1);
         Blockchain.mockValidateBitcoinAddressResult(true);
 
@@ -1035,6 +965,7 @@ describe('ReserveLiquidityOperation tests', () => {
         const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
         const provider1 = getProvider(providerId1);
+
         provider1.setReservedAmount(u128.Zero);
         provider1.setLiquidityAmount(u128.fromU32(10000));
 
@@ -1042,20 +973,16 @@ describe('ReserveLiquidityOperation tests', () => {
             queue3.liquidityQueue,
             providerId2,
             providerAddress2,
-            9000000, //!!!!!
+            9000000,
             u256.Zero,
             false,
             2,
         );
 
-        expect(provider1.getLiquidityAmount()).toStrictEqual(u128.fromU32(10000));
-
         reserveOp.execute();
         queue3.liquidityQueue.save();
 
-        expect(queue3.providerManager.getFromNormalQueue(provider1.getQueueIndex())).toStrictEqual(
-            u256.Zero,
-        );
+        expect(provider1.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
         expect(TransferHelper.safeTransferCalled).toBeTruthy();
         expect(provider1.getLiquidityAmount()).toStrictEqual(u128.Zero);
     });

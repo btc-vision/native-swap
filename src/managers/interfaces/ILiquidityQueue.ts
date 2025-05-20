@@ -85,7 +85,11 @@ export interface ILiquidityQueue {
         maxReserves5BlockPercent: u64,
     ): void;
 
-    resetProvider(provider: Provider, burnRemainingFunds?: boolean, canceled?: boolean): void;
+    resetProvider(
+        provider: Provider,
+        burnRemainingFunds: boolean = true,
+        canceled: boolean = false,
+    ): void;
 
     quote(): u256;
 

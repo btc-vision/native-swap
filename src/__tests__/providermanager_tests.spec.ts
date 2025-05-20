@@ -16,7 +16,6 @@ import {
     tokenAddress2,
     tokenIdUint8Array1,
 } from './test_helper';
-import { IOwedBTCManager } from '../managers/interfaces/IOwedBTCManager';
 import { OwedBTCManager } from '../managers/OwedBTCManager';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
@@ -30,18 +29,15 @@ describe('ProviderManager tests', () => {
     });
 
     describe('Constructor', () => {
-        let owedBTCManager: IOwedBTCManager;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            owedBTCManager = new OwedBTCManager();
         });
 
         it('should create a new provider manager and initialize correctly when not exists', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -64,6 +60,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should create a provider manager, load stored values and initialize correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -101,18 +98,15 @@ describe('ProviderManager tests', () => {
     });
 
     describe('Getters amd Setters', () => {
-        let owedBTCManager: IOwedBTCManager;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            owedBTCManager = new OwedBTCManager();
         });
 
         it('should get/set the initial liquidity provider correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -127,6 +121,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should get/set the previous priority starting index correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -139,6 +134,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should get/set the previous normal starting index correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -151,6 +147,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should get/set the previous removal starting index correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -163,6 +160,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should get the priority queue length correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -178,6 +176,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should get the normal queue length correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -193,6 +192,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should get the removal queue length correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -208,6 +208,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should reset all previous starting index to 0', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -226,6 +227,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should restore the current indexes to the previous value', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -245,18 +247,15 @@ describe('ProviderManager tests', () => {
     });
 
     describe('Add/Get providers to/from queue', () => {
-        let owedBTCManager: IOwedBTCManager;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            owedBTCManager = new OwedBTCManager();
         });
 
         it('should add/get providers to priority queue correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -282,6 +281,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should add/get providers to normal queue correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -307,6 +307,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should add/get providers to removal queue correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -332,6 +333,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should get providers id by types correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -369,13 +371,14 @@ describe('ProviderManager tests', () => {
 
         it('should throws when get initial provider from queue but not set', () => {
             expect(() => {
+                const owedBTCManager = new OwedBTCManager();
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
                 );
 
-                const resultProvider1: Provider = manager.getProviderFromQueue(
+                manager.getProviderFromQueue(
                     INITIAL_LIQUIDITY_PROVIDER_INDEX,
                     ProviderTypes.Normal,
                 );
@@ -383,6 +386,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should get initial provider from queue correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -406,20 +410,19 @@ describe('ProviderManager tests', () => {
 
         it('should throws when get normal provider from queue but not in the list', () => {
             expect(() => {
+                const owedBTCManager = new OwedBTCManager();
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
                 );
 
-                const resultProvider1: Provider = manager.getProviderFromQueue(
-                    23,
-                    ProviderTypes.Normal,
-                );
+                manager.getProviderFromQueue(23, ProviderTypes.Normal);
             }).toThrow();
         });
 
         it('should get normal provider from queue correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -440,20 +443,19 @@ describe('ProviderManager tests', () => {
 
         it('should throws when get priority provider from queue but not in the list', () => {
             expect(() => {
+                const owedBTCManager = new OwedBTCManager();
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
                 );
 
-                const resultProvider1: Provider = manager.getProviderFromQueue(
-                    23,
-                    ProviderTypes.Priority,
-                );
+                manager.getProviderFromQueue(23, ProviderTypes.Priority);
             }).toThrow();
         });
 
         it('should get priority provider from queue correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -474,20 +476,19 @@ describe('ProviderManager tests', () => {
 
         it('should throws when get removal provider from queue but not in the list', () => {
             expect(() => {
+                const owedBTCManager = new OwedBTCManager();
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
                 );
 
-                const resultProvider1: Provider = manager.getProviderFromQueue(
-                    23,
-                    ProviderTypes.LiquidityRemoval,
-                );
+                manager.getProviderFromQueue(23, ProviderTypes.LiquidityRemoval);
             }).toThrow();
         });
 
         it('should get removal provider from queue correctly', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -509,6 +510,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should return 0 when priority queue does not contains the provider index or is empty', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -521,6 +523,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should return 0 when removal queue does not contains the provider index or is empty', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -532,6 +535,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should return 0 when getFromStandardQueue does not contains the provider index or is empty', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -545,18 +549,15 @@ describe('ProviderManager tests', () => {
     });
 
     describe('Removal queue removal', () => {
-        let owedBTCManager: IOwedBTCManager;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            owedBTCManager = new OwedBTCManager();
         });
 
         it('should remove a pending liquidity provider from the removal queue', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -580,18 +581,15 @@ describe('ProviderManager tests', () => {
     });
 
     describe('Reset', () => {
-        let owedBTCManager: IOwedBTCManager;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            owedBTCManager = new OwedBTCManager();
         });
 
         it('should burn the provider funds when burnRemainingFunds is true and liquidity is not 0', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -605,6 +603,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should not burn the provider funds when burnRemainingFunds is true and liquidity is 0', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -619,6 +618,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should not burn the provider funds when burnRemainingFunds is false', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -633,6 +633,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should remove the provider from the priority queue and reset it', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -659,6 +660,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should remove the provider from the normal queue and reset it', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -685,6 +687,7 @@ describe('ProviderManager tests', () => {
 
         it('should throws if the provider is removal type', () => {
             expect(() => {
+                const owedBTCManager = new OwedBTCManager();
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
@@ -697,6 +700,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should only reset listing values when initial liquidity provider', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -715,18 +719,15 @@ describe('ProviderManager tests', () => {
     });
 
     describe('Save', () => {
-        let owedBTCManager: IOwedBTCManager;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            owedBTCManager = new OwedBTCManager();
         });
 
         it('should correctly persists the values', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -781,6 +782,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should correctly persists the value when save is called and currentIndex > 0', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -807,6 +809,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should correctly persists the value when save is called and currentIndexPriority > 0', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -839,6 +842,7 @@ describe('ProviderManager tests', () => {
         });
 
         it('should correctly persists the value when save is called and currentIndexRemoval > 0', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -868,18 +872,15 @@ describe('ProviderManager tests', () => {
     });
 
     describe('Save', () => {
-        let owedBTCManager: IOwedBTCManager;
-
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-
-            owedBTCManager = new OwedBTCManager();
         });
 
         it('should return null when calling getNextProviderWithLiquidity and no provider are found', () => {
+            const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
