@@ -241,6 +241,9 @@ export class NativeSwap extends ReentrancyGuard {
             this.addressToPointer(token),
             false,
         );
+
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
         const operation: AddLiquidityOperation = new AddLiquidityOperation(
             liquidityQueueResult.liquidityQueue,
             liquidityQueueResult.tradeManager,
@@ -265,6 +268,9 @@ export class NativeSwap extends ReentrancyGuard {
             this.addressToPointer(token),
             true,
         );
+
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
         const operation: RemoveLiquidityOperation = new RemoveLiquidityOperation(
             liquidityQueueResult.liquidityQueue,
             providerId,
@@ -373,6 +379,9 @@ export class NativeSwap extends ReentrancyGuard {
             tokenId,
             true,
         );
+
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
         const operation: ListTokensForSaleOperation = new ListTokensForSaleOperation(
             liquidityQueueResult.liquidityQueue,
             providerId,
@@ -417,6 +426,9 @@ export class NativeSwap extends ReentrancyGuard {
             this.addressToPointer(token),
             true,
         );
+
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
         const operation: ReserveLiquidityOperation = new ReserveLiquidityOperation(
             liquidityQueueResult.liquidityQueue,
             providerId,
@@ -451,6 +463,9 @@ export class NativeSwap extends ReentrancyGuard {
             tokenId,
             true,
         );
+
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
         const operation: CancelListingOperation = new CancelListingOperation(
             liquidityQueueResult.liquidityQueue,
             providerId,
@@ -478,6 +493,8 @@ export class NativeSwap extends ReentrancyGuard {
             this.addressToPointer(token),
             false,
         );
+
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
 
         const operation: SwapOperation = new SwapOperation(
             liquidityQueueResult.liquidityQueue,
@@ -578,6 +595,7 @@ export class NativeSwap extends ReentrancyGuard {
         token: Address,
         tokenId: Uint8Array,
         purgeOldReservations: boolean,
+        timeoutEnabled: boolean = false,
     ): GetLiquidityQueueResult {
         const owedBtcManager: IOwedBTCManager = this.getOwedBtcManager();
         const quoteManager: IQuoteManager = this.getQuoteManager(tokenId);
@@ -610,6 +628,7 @@ export class NativeSwap extends ReentrancyGuard {
             dynamicFee,
             owedBtcManager,
             purgeOldReservations,
+            timeoutEnabled,
         );
 
         const tradeManager: TradeManager = new TradeManager(
