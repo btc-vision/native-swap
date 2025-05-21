@@ -432,6 +432,12 @@ export interface ITestProviderManager extends IProviderManager {
 
 export interface ITestReservationManager extends IReservationManager {
     readonly purgeReservationsAndRestoreProvidersCalled: boolean;
+
+    lastBlockReservation(): u64;
+
+    mockAddToListReturn(index: u32): void;
+
+    mockAddToActiveListReturn(index: u32): void;
 }
 
 export interface ITestLiquidityQueue extends ILiquidityQueue {
@@ -659,6 +665,9 @@ export class TestProviderQueue extends ProviderQueue {
 }
 
 export class TestReservationManager extends ReservationManager implements ITestReservationManager {
+    private _mockedAddToListReturn: u32 = u32.MAX_VALUE;
+    private _mockedAddToActiveListReturn: u32 = u32.MAX_VALUE;
+
     private _purgeReservationsAndRestoreProvidersCalled: boolean = false;
 
     public get purgeReservationsAndRestoreProvidersCalled(): boolean {
@@ -667,11 +676,49 @@ export class TestReservationManager extends ReservationManager implements ITestR
 
     public clearMockedResults(): void {
         this._purgeReservationsAndRestoreProvidersCalled = false;
+        this._mockedAddToListReturn = u32.MAX_VALUE;
+        this._mockedAddToActiveListReturn = u32.MAX_VALUE;
+    }
+
+    public mockAddToListReturn(index: u32): void {
+        this._mockedAddToListReturn = index;
+    }
+
+    public mockAddToActiveListReturn(index: u32): void {
+        this._mockedAddToActiveListReturn = index;
     }
 
     public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
         this._purgeReservationsAndRestoreProvidersCalled = true;
 
         return super.purgeReservationsAndRestoreProviders(lastPurgedBlock);
+    }
+
+    public lastBlockReservation(): u64 {
+        const length: u32 = this.blocksWithReservations.getLength();
+
+        if (length > 0) {
+            return this.blocksWithReservations.get(length - 1);
+        }
+
+        return u64.MAX_VALUE;
+    }
+
+    protected addToList(blockNumber: u64, reservationId: u128): u32 {
+        if (this._mockedAddToListReturn !== u32.MAX_VALUE) {
+            super.addToList(blockNumber, reservationId);
+            return this._mockedAddToListReturn;
+        } else {
+            return super.addToList(blockNumber, reservationId);
+        }
+    }
+
+    protected addToActiveList(blockNumber: u64): u32 {
+        if (this._mockedAddToActiveListReturn !== u32.MAX_VALUE) {
+            super.addToActiveList(blockNumber);
+            return this._mockedAddToActiveListReturn;
+        } else {
+            return super.addToActiveList(blockNumber);
+        }
     }
 }

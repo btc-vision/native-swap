@@ -17,10 +17,7 @@ import {
     BLOCKS_WITH_RESERVATIONS_POINTER,
     RESERVATION_IDS_BY_BLOCK_POINTER,
 } from '../constants/StoredPointers';
-import {
-    MAXIMUM_RESERVATION_COUNT,
-    RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
-} from '../constants/Contract';
+import { RESERVATION_EXPIRE_AFTER_IN_BLOCKS } from '../constants/Contract';
 import { Provider } from '../models/Provider';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { IProviderManager } from './interfaces/IProviderManager';
@@ -32,9 +29,9 @@ import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 
 export class ReservationManager implements IReservationManager {
+    protected readonly blocksWithReservations: StoredU64Array;
+    protected readonly tokenIdUint8Array: Uint8Array;
     private readonly token: Address;
-    private readonly tokenIdUint8Array: Uint8Array;
-    private readonly blocksWithReservations: StoredU64Array;
     private readonly providerManager: IProviderManager;
     private readonly quoteManager: IQuoteManager;
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
@@ -125,12 +122,8 @@ export class ReservationManager implements IReservationManager {
         return new StoredU128Array(RESERVATION_IDS_BY_BLOCK_POINTER, keyBytes);
     }
 
-    private addToList(blockNumber: u64, reservationId: u128): u32 {
+    protected addToList(blockNumber: u64, reservationId: u128): u32 {
         const reservationList: StoredU128Array = this.getReservationListForBlock(blockNumber);
-
-        if (reservationList.getLength() === MAXIMUM_RESERVATION_COUNT) {
-            throw new Revert('Impossible state: Too many reservations for block.');
-        }
 
         const index: u32 = reservationList.push(reservationId);
         reservationList.save();
@@ -138,13 +131,9 @@ export class ReservationManager implements IReservationManager {
         return index;
     }
 
-    private addToActiveList(blockNumber: u64): u32 {
+    protected addToActiveList(blockNumber: u64): u32 {
         const reservationActiveList: StoredBooleanArray =
             this.getActiveReservationListForBlock(blockNumber);
-
-        if (reservationActiveList.getLength() === MAXIMUM_RESERVATION_COUNT) {
-            throw new Revert('Impossible state: Too many reservations for block.');
-        }
 
         const index: u32 = reservationActiveList.push(true);
         reservationActiveList.save();

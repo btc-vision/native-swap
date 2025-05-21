@@ -547,10 +547,10 @@ describe('Provider tests', () => {
             TransferHelper.clearMockedResults();
         });
 
-        it('returns false when cost ≥ strict minimum', () => {
+        it('returns false when cost < strict minimum', () => {
             const res: boolean = Provider.meetsMinimumReservationAmount(
-                u128.fromU64(1000),
-                u256.fromU64(800),
+                u128.fromU64(10),
+                u256.fromU64(8000000),
             );
             expect(res).toBeFalsy();
         });

@@ -30,6 +30,8 @@ export class SwapOperation extends BaseOperation {
 
         this.ensureReservationNotForLP(reservation);
 
+        const p = reservation.getProviderAt(0);
+
         const trade: CompletedTrade = this.tradeManager.executeTrade(reservation);
 
         let totalTokensPurchased: u256 = trade.getTotalTokensPurchased();

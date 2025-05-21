@@ -59,7 +59,7 @@ describe('ProviderManager tests', () => {
             expect(manager.removalQueueStartingIndex).toStrictEqual(0);
         });
 
-        it('should create a provider manager, load stored values and initialize correctly', () => {
+        it('should create a provider manager, load stored values and initialize correctly when currentIndex = 0', () => {
             const owedBTCManager = new OwedBTCManager();
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
@@ -71,9 +71,6 @@ describe('ProviderManager tests', () => {
             manager.addToPriorityQueue(createPriorityProvider(providerAddress1, tokenAddress1));
             manager.addToRemovalQueue(createProvider(providerAddress1, tokenAddress1, true));
             manager.initialLiquidityProviderId = u256.fromU64(10000);
-            manager.previousNormalStartingIndex = 100;
-            manager.previousPriorityStartingIndex = 200;
-            manager.previousRemovalStartingIndex = 300;
             manager.save();
 
             const manager2: ProviderManager = new ProviderManager(
@@ -85,12 +82,138 @@ describe('ProviderManager tests', () => {
             expect(manager2.currentIndexPriority).toStrictEqual(0);
             expect(manager2.currentIndexRemoval).toStrictEqual(0);
             expect(manager2.initialLiquidityProviderId).toStrictEqual(u256.fromU64(10000));
-            expect(manager2.previousNormalStartingIndex).toStrictEqual(100);
-            expect(manager2.previousPriorityStartingIndex).toStrictEqual(200);
-            expect(manager2.previousRemovalStartingIndex).toStrictEqual(300);
+            expect(manager2.previousNormalStartingIndex).toStrictEqual(0);
+            expect(manager2.previousPriorityStartingIndex).toStrictEqual(0);
+            expect(manager2.previousRemovalStartingIndex).toStrictEqual(0);
             expect(manager2.normalQueueLength).toStrictEqual(1);
             expect(manager2.priorityQueueLength).toStrictEqual(1);
             expect(manager2.removalQueueLength).toStrictEqual(1);
+            expect(manager2.normalQueueStartingIndex).toStrictEqual(0);
+            expect(manager2.priorityQueueStartingIndex).toStrictEqual(0);
+            expect(manager2.removalQueueStartingIndex).toStrictEqual(0);
+        });
+
+        it('should create a provider manager, load stored values and initialize correctly when currentIndex > 1', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+
+            const normalProvider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'eeee',
+                u128.fromU32(200000),
+                u128.fromU32(200000),
+                u128.Zero,
+                true,
+            );
+
+            const normalProvider2 = createProvider(
+                providerAddress2,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'eeee',
+                u128.fromU32(200000),
+                u128.fromU32(200000),
+                u128.Zero,
+                true,
+            );
+
+            const priorityProvider = createProvider(
+                providerAddress3,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'eeee',
+                u128.fromU32(200000),
+                u128.fromU32(200000),
+                u128.Zero,
+                true,
+                true,
+            );
+
+            const priorityProvider2 = createProvider(
+                providerAddress4,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'eeee',
+                u128.fromU32(200000),
+                u128.fromU32(200000),
+                u128.Zero,
+                true,
+                true,
+            );
+
+            const removalProvider = createProvider(
+                providerAddress5,
+                tokenAddress1,
+                true,
+                true,
+                true,
+                'eeee',
+                u128.fromU32(200000),
+                u128.fromU32(200000),
+                u128.Zero,
+            );
+
+            const removalProvider2 = createProvider(
+                providerAddress6,
+                tokenAddress1,
+                true,
+                true,
+                true,
+                'eeee',
+                u128.fromU32(200000),
+                u128.fromU32(200000),
+                u128.Zero,
+            );
+
+            manager.addToNormalQueue(normalProvider);
+            manager.addToNormalQueue(normalProvider2);
+            manager.addToPriorityQueue(priorityProvider);
+            manager.addToPriorityQueue(priorityProvider2);
+            manager.addToRemovalQueue(removalProvider);
+            manager.addToRemovalQueue(removalProvider2);
+
+            owedBTCManager.setSatoshisOwed(removalProvider.getId(), 20000);
+            owedBTCManager.setSatoshisOwed(removalProvider2.getId(), 20000);
+
+            manager.getNextProviderWithLiquidity(u256.fromU32(1000));
+            manager.getNextProviderWithLiquidity(u256.fromU32(1000));
+            manager.getNextProviderWithLiquidity(u256.fromU32(1000));
+            manager.getNextProviderWithLiquidity(u256.fromU32(1000));
+            manager.getNextProviderWithLiquidity(u256.fromU32(1000));
+            manager.getNextProviderWithLiquidity(u256.fromU32(1000));
+
+            manager.initialLiquidityProviderId = u256.fromU64(10000);
+            manager.save();
+
+            const manager2: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+            );
+            expect(manager2.currentIndexNormal).toStrictEqual(0);
+            expect(manager2.currentIndexPriority).toStrictEqual(0);
+            expect(manager2.currentIndexRemoval).toStrictEqual(0);
+            expect(manager2.initialLiquidityProviderId).toStrictEqual(u256.fromU64(10000));
+            expect(manager2.previousNormalStartingIndex).toStrictEqual(1);
+            expect(manager2.previousPriorityStartingIndex).toStrictEqual(1);
+            expect(manager2.previousRemovalStartingIndex).toStrictEqual(1);
+            expect(manager2.normalQueueLength).toStrictEqual(2);
+            expect(manager2.priorityQueueLength).toStrictEqual(2);
+            expect(manager2.removalQueueLength).toStrictEqual(2);
             expect(manager2.normalQueueStartingIndex).toStrictEqual(0);
             expect(manager2.priorityQueueStartingIndex).toStrictEqual(0);
             expect(manager2.removalQueueStartingIndex).toStrictEqual(0);
@@ -362,11 +485,11 @@ describe('ProviderManager tests', () => {
 
             expect(
                 manager.getIdFromQueue(provider2.getQueueIndex(), ProviderTypes.Normal),
-            ).toStrictEqual(provider1.getId());
+            ).toStrictEqual(provider2.getId());
 
             expect(
                 manager.getIdFromQueue(provider3.getQueueIndex(), ProviderTypes.Priority),
-            ).toStrictEqual(provider1.getId());
+            ).toStrictEqual(provider3.getId());
         });
 
         it('should throws when get initial provider from queue but not set', () => {
@@ -499,7 +622,7 @@ describe('ProviderManager tests', () => {
             manager.addToRemovalQueue(provider);
 
             const resultProvider: Provider = manager.getProviderFromQueue(
-                provider.getQueueIndex(),
+                provider.getRemovalQueueIndex(),
                 ProviderTypes.LiquidityRemoval,
             );
 
@@ -821,7 +944,7 @@ describe('ProviderManager tests', () => {
             for (let i: u8 = 0; i < 4; i++) {
                 providers[i].activate();
                 providers[i].markPriority();
-                providers[i].setLiquidityAmount(u128.fromU32(1000));
+                providers[i].setLiquidityAmount(u128.fromU32(20000));
                 providers[i].setReservedAmount(u128.fromU32(999));
                 manager.addToPriorityQueue(providers[i]);
             }
@@ -853,6 +976,7 @@ describe('ProviderManager tests', () => {
 
             for (let i: u8 = 0; i < 4; i++) {
                 manager.addToRemovalQueue(providers[i]);
+                owedBTCManager.setSatoshisOwed(providers[i].getId(), 20000);
             }
 
             const currentQuote = u256.fromU32(1000);
@@ -869,35 +993,5 @@ describe('ProviderManager tests', () => {
 
             expect(manager.previousRemovalStartingIndex).toStrictEqual(2);
         });
-    });
-
-    describe('Save', () => {
-        beforeEach(() => {
-            clearCachedProviders();
-            Blockchain.clearStorage();
-            Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
-        });
-
-        it('should return null when calling getNextProviderWithLiquidity and no provider are found', () => {
-            const owedBTCManager = new OwedBTCManager();
-            const manager: ProviderManager = new ProviderManager(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                owedBTCManager,
-            );
-
-            const currentQuote = u256.fromU32(1000);
-
-            const provider = manager.getNextProviderWithLiquidity(currentQuote);
-
-            expect(provider).toBeNull();
-        });
-
-        it('should return initial provider when quote is 0', () => {});
-        it('should return removal provider first', () => {});
-        it('should return priority provider second', () => {});
-        it('should return normal provider third', () => {});
-        it('should return initial provider if no other providers', () => {});
     });
 });

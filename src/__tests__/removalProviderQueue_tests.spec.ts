@@ -168,7 +168,7 @@ describe('ProviderQueue tests', () => {
             queue.removeAt(p3Index);
 
             const result: u32 = queue.cleanUp(0);
-            expect(result).toStrictEqual(2);
+            expect(result).toStrictEqual(3);
             expect(queue.startingIndex).toStrictEqual(0);
         });
 

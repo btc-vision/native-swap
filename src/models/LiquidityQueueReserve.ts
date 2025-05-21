@@ -71,7 +71,7 @@ export class LiquidityQueueReserve implements ILiquidityQueueReserve {
     }
 
     public get liquidity(): u256 {
-        return this._totalReserves.get(this.tokenId) || u256.Zero;
+        return this._totalReserves.get(this.tokenId);
     }
 
     public set liquidity(value: u256) {
@@ -79,7 +79,7 @@ export class LiquidityQueueReserve implements ILiquidityQueueReserve {
     }
 
     public get reservedLiquidity(): u256 {
-        return this._totalReserved.get(this.tokenId) || u256.Zero;
+        return this._totalReserved.get(this.tokenId);
     }
 
     public get virtualSatoshisReserve(): u64 {

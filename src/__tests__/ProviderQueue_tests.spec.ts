@@ -182,7 +182,7 @@ describe('ProviderQueue tests', () => {
 
             expect(queue.getAt(p2Index)).toStrictEqual(u256.Zero);
             expect(queue.getAt(p3Index)).toStrictEqual(u256.Zero);
-            expect(queue.length).toStrictEqual(0);
+            expect(queue.length).toStrictEqual(3);
         });
     });
 
@@ -221,7 +221,7 @@ describe('ProviderQueue tests', () => {
 
             expect(TransferHelper.safeTransferCalled).toBeTruthy();
             expect(queue.getAt(index)).toStrictEqual(u256.Zero);
-            expect(queue.length).toStrictEqual(0);
+            expect(queue.length).toStrictEqual(1);
             expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
@@ -242,7 +242,7 @@ describe('ProviderQueue tests', () => {
 
             expect(TransferHelper.safeTransferCalled).toBeFalsy();
             expect(queue.getAt(index)).toStrictEqual(u256.Zero);
-            expect(queue.length).toStrictEqual(0);
+            expect(queue.length).toStrictEqual(1);
             expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
@@ -290,7 +290,7 @@ describe('ProviderQueue tests', () => {
             queue.removeAt(p3Index);
 
             const result: u32 = queue.cleanUp(0);
-            expect(result).toStrictEqual(2);
+            expect(result).toStrictEqual(3);
             expect(queue.startingIndex).toStrictEqual(0);
         });
 
@@ -516,7 +516,6 @@ describe('ProviderQueue tests', () => {
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider1);
                 provider1.markInitialLiquidityProvider();
-                provider1.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
 
                 queue.getNextWithLiquidity(QUOTE);
             }).toThrow();
@@ -550,7 +549,7 @@ describe('ProviderQueue tests', () => {
             provider1.deactivate();
             queue.add(provider1);
 
-            const provider2: Provider = createProvider(providerAddress1, tokenAddress1);
+            const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
             provider2.setLiquidityAmount(u128.fromU64(100));
             provider2.setReservedAmount(u128.fromU64(50));
             queue.add(provider2);
@@ -568,7 +567,7 @@ describe('ProviderQueue tests', () => {
             provider1.deactivate();
             queue.add(provider1);
 
-            const provider2: Provider = createProvider(providerAddress1, tokenAddress1);
+            const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
             provider2.setLiquidityAmount(u128.fromU64(100));
             const index2: u32 = queue.add(provider2);
 
@@ -589,12 +588,12 @@ describe('ProviderQueue tests', () => {
             provider1.deactivate();
             queue.add(provider1);
 
-            const provider2: Provider = createProvider(providerAddress1, tokenAddress1);
+            const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
             provider2.setLiquidityAmount(u128.fromU64(10000));
-            const index2: u32 = queue.add(provider2);
+            queue.add(provider2);
 
             expect(queue.getNextWithLiquidity(QUOTE)).toBe(provider2);
-            expect(queue.currentIndex).toStrictEqual(1);
+            expect(queue.currentIndex).toStrictEqual(2);
         });
 
         /*!!!

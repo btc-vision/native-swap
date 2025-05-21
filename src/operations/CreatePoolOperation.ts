@@ -39,7 +39,7 @@ export class CreatePoolOperation extends BaseOperation {
 
     public execute(): void {
         this.checkPreConditions();
-        this.initializeLiquidity();
+        this.initializeInitialProvider();
         this.listTokenForSale();
         this.applyAntibotSettingsIfNeeded();
     }
@@ -53,7 +53,7 @@ export class CreatePoolOperation extends BaseOperation {
         this.ensureMaxReservesIn5BlocksPercentValid();
     }
 
-    private initializeLiquidity(): void {
+    private initializeInitialProvider(): void {
         const initialProvider: Provider = getProvider(this.providerId);
 
         initialProvider.markInitialLiquidityProvider();

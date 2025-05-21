@@ -117,20 +117,26 @@ export class TradeManager implements ITradeManager {
         const oldOwed: u64 = this.owedBTCManager.getSatoshisOwed(providerId);
         let tokensDesiredRemoval: u256 = satoshisToTokens(satoshisSent, this.quoteAtReservation);
 
-        // Partial fill
         if (!tokensDesiredRemoval.isZero()) {
-            // User did not pay enough
-            const leftover: u256 = SafeMath.sub(requestedTokens256, tokensDesiredRemoval);
-            if (!leftover.isZero()) {
-                const costInSatsLeftover: u64 = tokensToSatoshis(leftover, this.quoteAtReservation);
-                const revertSats: u64 = min64(costInSatsLeftover, owedReserved);
+            if (u256.lt(tokensDesiredRemoval, requestedTokens256)) {
+                // User did not pay enough
+                const leftover: u256 = SafeMath.sub(requestedTokens256, tokensDesiredRemoval);
 
-                owedReserved = SafeMath.sub64(owedReserved, revertSats);
+                if (!leftover.isZero()) {
+                    const costInSatsLeftover: u64 = tokensToSatoshis(
+                        leftover,
+                        this.quoteAtReservation,
+                    );
+
+                    const revertSats: u64 = min64(costInSatsLeftover, owedReserved);
+                    owedReserved = SafeMath.sub64(owedReserved, revertSats);
+                }
             }
 
-            // User paid too much
             let actualSpent: u64 = satoshisSent;
             if (u256.gt(tokensDesiredRemoval, requestedTokens256)) {
+                // User paid too much
+                //!!! What happens with remaining sats???
                 tokensDesiredRemoval = requestedTokens256;
                 actualSpent = tokensToSatoshis(tokensDesiredRemoval, this.quoteAtReservation);
             }
@@ -138,7 +144,7 @@ export class TradeManager implements ITradeManager {
             const newOwedReserved: u64 = SafeMath.sub64(owedReserved, actualSpent);
             this.owedBTCManager.setSatoshisOwedReserved(providerId, newOwedReserved);
 
-            this.setNewOwedValueAndRemoveIfNeeded(provider, oldOwed, newOwedReserved);
+            this.setNewOwedValueAndRemoveIfNeeded(provider, oldOwed, actualSpent);
             this.increaseTotalSatoshisRefunded(actualSpent);
             this.increaseTotalTokensRefunded(tokensDesiredRemoval);
             this.reportUTXOUsed(provider.getBtcReceiver(), satoshisSent);

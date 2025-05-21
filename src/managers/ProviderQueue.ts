@@ -83,6 +83,7 @@ export class ProviderQueue {
         this.ensureStartingIndexIsValid();
 
         const length: u32 = this.length;
+
         while (this._currentIndex < length && result === null) {
             const candidate: Provider | null = this.tryNextCandidate(currentQuote);
 
@@ -192,7 +193,7 @@ export class ProviderQueue {
             if (ENABLE_INDEX_VERIFICATION) {
                 if (provider.getQueueIndex() !== index) {
                     throw new Revert(
-                        `Impossible state: provider.indexedAt (${provider.getQueueIndex()}) does not match index (${index}).`,
+                        `Impossible state: provider.getQueueIndex (${provider.getQueueIndex()}) does not match index (${index}).`,
                     );
                 }
 

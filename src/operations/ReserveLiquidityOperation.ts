@@ -151,6 +151,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
             lastProviderId = provider.getId();
             lastIndex = provider.getQueueIndex();
+            //!!!! Problem here. we can have 2 similar index 1 from removal and 1 from normal.
+            // so this lastIndex things does not works
 
             this.ensureStatesAreValid(provider);
 
@@ -216,7 +218,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         reservation.addProvider(
             new ReservationProviderData(
-                provider.getQueueIndex(),
+                provider.getRemovalQueueIndex(),
                 tokens,
                 provider.getProviderType(),
             ),

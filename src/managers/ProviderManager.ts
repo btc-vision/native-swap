@@ -268,17 +268,14 @@ export class ProviderManager implements IProviderManager {
     public save(): void {
         this.previousNormalStartingIndex =
             this.currentIndexNormal === 0 ? this.currentIndexNormal : this.currentIndexNormal - 1;
-
         this.previousPriorityStartingIndex =
             this.currentIndexPriority === 0
                 ? this.currentIndexPriority
                 : this.currentIndexPriority - 1;
-
         this.previousRemovalStartingIndex =
             this.currentIndexRemoval === 0
                 ? this.currentIndexRemoval
                 : this.currentIndexRemoval - 1;
-
         this._startingIndex.save();
         this.normalQueue.save();
         this.priorityQueue.save();
@@ -311,9 +308,6 @@ export class ProviderManager implements IProviderManager {
 
             return null;
         }
-
-        //!!!initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
-        //!!!initialProvider.markInitialProvider();
 
         return initialProvider;
     }

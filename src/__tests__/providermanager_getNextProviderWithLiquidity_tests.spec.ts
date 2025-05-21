@@ -11,6 +11,7 @@ import {
     tokenIdUint8Array1,
 } from './test_helper';
 import { OwedBTCManager } from '../managers/OwedBTCManager';
+import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 
 describe('ProviderManager getNextProviderWithLiquidity with only providers in removal queue tests', () => {
     beforeEach(() => {
@@ -573,7 +574,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
     });
 });
 
-describe('ProviderManager getNextProviderWithLiquidity with only providers in standard queue tests', () => {
+describe('ProviderManager getNextProviderWithLiquidity with only providers in normal queue tests', () => {
     beforeEach(() => {
         clearCachedProviders();
         Blockchain.clearStorage();
@@ -895,6 +896,42 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
         TransferHelper.clearMockedResults();
     });
 
+    it('should return null when no provider are found', () => {
+        const owedBTCManager = new OwedBTCManager();
+        const manager: ProviderManager = new ProviderManager(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            owedBTCManager,
+        );
+
+        const currentQuote = u256.fromU32(1000);
+
+        const provider = manager.getNextProviderWithLiquidity(currentQuote);
+
+        expect(provider).toBeNull();
+    });
+
+    it('should return null when initial provider is not active', () => {
+        const owedBTCManager = new OwedBTCManager();
+        const manager: ProviderManager = new ProviderManager(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            owedBTCManager,
+        );
+
+        const provider = createProvider(providerAddress1, tokenAddress1);
+        provider.markInitialLiquidityProvider();
+        provider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+        provider.deactivate();
+        provider.save();
+
+        manager.initialLiquidityProviderId = provider.getId();
+
+        const provider2 = manager.getNextProviderWithLiquidity(u256.Zero);
+
+        expect(provider2).toBeNull();
+    });
+
     it('should return initialprovider when current quote is 0', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
         const manager: ProviderManager = new ProviderManager(
@@ -910,13 +947,15 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             true,
             true,
             '232332d2d3',
-            u128.fromU32(10000),
-            u128.fromU32(1000),
+            u128.fromU32(100000),
+            u128.fromU32(1000000),
             u128.fromU32(0),
             true,
             false,
         );
 
+        provider.markInitialLiquidityProvider();
+        provider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
         manager.initialLiquidityProviderId = provider.getId();
 
         const provider1 = manager.getNextProviderWithLiquidity(u256.Zero);
@@ -1043,5 +1082,49 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
         const currentQuote = u256.fromU32(1000);
         const provider1 = manager.getNextProviderWithLiquidity(currentQuote);
         expect(provider1).toBeNull();
+    });
+
+    it('should return null when initial provider availableLiquidity = 0', () => {
+        const owedBTCManager = new OwedBTCManager();
+        const manager: ProviderManager = new ProviderManager(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            owedBTCManager,
+        );
+
+        const provider = createProvider(providerAddress1, tokenAddress1);
+        provider.markInitialLiquidityProvider();
+        provider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+        provider.setLiquidityAmount(u128.Zero);
+        provider.setReservedAmount(u128.Zero);
+        provider.save();
+
+        manager.initialLiquidityProviderId = provider.getId();
+
+        const provider2 = manager.getNextProviderWithLiquidity(u256.Zero);
+
+        expect(provider2).toBeNull();
+    });
+
+    it('should return null when initial provider does not meet the minimal reservation amount and no reserved amount', () => {
+        const owedBTCManager = new OwedBTCManager();
+        const manager: ProviderManager = new ProviderManager(
+            tokenAddress1,
+            tokenIdUint8Array1,
+            owedBTCManager,
+        );
+
+        const provider = createProvider(providerAddress1, tokenAddress1);
+        provider.markInitialLiquidityProvider();
+        provider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+        provider.setLiquidityAmount(u128.fromU32(1));
+        provider.setReservedAmount(u128.Zero);
+        provider.save();
+
+        manager.initialLiquidityProviderId = provider.getId();
+
+        const provider2 = manager.getNextProviderWithLiquidity(u256.fromU32(10000000));
+
+        expect(provider2).toBeNull();
     });
 });

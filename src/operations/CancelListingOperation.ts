@@ -28,8 +28,6 @@ export class CancelListingOperation extends BaseOperation {
     }
 
     private prepareProviderForRefund(): void {
-        // !!!this.provider.loadIndexedAt();
-
         this.liquidityQueue.resetProvider(this.provider, false, true);
     }
 
