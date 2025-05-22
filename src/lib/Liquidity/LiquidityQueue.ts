@@ -47,6 +47,7 @@ import {
     IMPOSSIBLE_PURGE_INDEX,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     PURGE_AT_LEAST_X_PROVIDERS,
+    RESERVATION_EXPIRE_AFTER,
 } from '../../data-types/Constants';
 
 const ENABLE_FEES: bool = true;
@@ -61,7 +62,7 @@ class PurgedResult {
 
 export class LiquidityQueue {
     // Reservation settings
-    public static RESERVATION_EXPIRE_AFTER: u64 = 5; //5;
+    public static RESERVATION_EXPIRE_AFTER: u64 = RESERVATION_EXPIRE_AFTER;
     public static VOLATILITY_WINDOW_BLOCKS: u32 = 5;
     public static STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(600);
 
