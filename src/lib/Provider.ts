@@ -136,6 +136,7 @@ export class Provider {
     public setListedTokenAtBlock(block: u64): void {
         const store = new StoredU64(LISTED_TOKENS_AT_BLOCK_POINTER, this.providerBuffer);
         store.set(0, block);
+        store.save();
     }
 
     public increaseLiquidityProvided(amount: u256): void {
@@ -201,6 +202,8 @@ export class Provider {
 
     public resetListingValues(): void {
         this.userLiquidity.resetListingValues();
+
+        this.setListedTokenAtBlock(0);
     }
 
     public save(): void {

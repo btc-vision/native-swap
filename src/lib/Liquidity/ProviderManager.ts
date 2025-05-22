@@ -731,7 +731,8 @@ export class ProviderManager {
             const i: u64 = this.currentIndexPriority;
             providerId = this._priorityQueue.get_physical(i);
             if (providerId === u256.Zero) {
-                throw new Revert(`Impossible state. A providerId cannot be zero.`);
+                this.currentIndexPriority++;
+                continue;
             }
 
             provider = getProvider(providerId);
@@ -787,7 +788,8 @@ export class ProviderManager {
             providerId = this._queue.get_physical(i);
 
             if (providerId === u256.Zero) {
-                throw new Error(`Impossible state. A providerId cannot be zero.`);
+                this.currentIndex++;
+                continue;
             }
 
             provider = getProvider(providerId);
