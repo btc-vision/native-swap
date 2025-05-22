@@ -33,7 +33,7 @@ import { ReentrancyGuard } from '../contracts/ReentrancyGuard';
 import { STAKING_CA_POINTER } from '../constants/StoredPointers';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
-import { QUOTE_SCALE } from '../constants/Contract';
+import { ENABLE_INDEX_VERIFICATION, QUOTE_SCALE } from '../constants/Contract';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { TradeManager } from '../managers/TradeManager';
@@ -68,8 +68,6 @@ class GetLiquidityQueueResult {
 @final
 export class NativeSwap extends ReentrancyGuard {
     private readonly _stakingContractAddress: StoredAddress;
-
-    //private readonly minimumTradeSize: u256 = u256.fromU32(10_000); // The minimum trade size in satoshis.
 
     public constructor() {
         super();
@@ -651,7 +649,7 @@ export class NativeSwap extends ReentrancyGuard {
         tokenId: Uint8Array,
         owedBtcManager: IOwedBTCManager,
     ): IProviderManager {
-        return new ProviderManager(token, tokenId, owedBtcManager);
+        return new ProviderManager(token, tokenId, owedBtcManager, ENABLE_INDEX_VERIFICATION);
     }
 
     private getOwedBtcManager(): IOwedBTCManager {

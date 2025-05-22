@@ -8,11 +8,16 @@ import {
     U128_BYTE_LENGTH,
     U256_BYTE_LENGTH,
     U32_BYTE_LENGTH,
+    U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 import { AMOUNT_POINTER, LIQUIDITY_PROVIDED_POINTER } from '../constants/StoredPointers';
-import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    BLOCK_NOT_SET_VALUE,
+    INDEX_NOT_SET_VALUE,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+} from '../constants/Contract';
 
 @final
 export class ProviderData {
@@ -40,6 +45,138 @@ export class ProviderData {
         this.pointerBuffer = encodePointer(pointer, subPointer);
         this.liquidityProvidedPointer = encodePointer(LIQUIDITY_PROVIDED_POINTER, subPointer);
         this.amountPointer = encodePointer(AMOUNT_POINTER, subPointer);
+    }
+
+    private _purged: boolean = false;
+
+    /**
+     * @method purged
+     * @description Gets if the provider has been purged.
+     * @returns {boolean} - true if purged; false if not.
+     */
+    @inline
+    public get purged(): boolean {
+        this.ensureValues();
+        return this._purged;
+    }
+
+    /**
+     * @method purged
+     * @description Sets the purged states.
+     * @param {boolean} value - true if purged; false if not.
+     */
+    public set purged(value: boolean) {
+        this.ensureValues();
+        if (this._purged !== value) {
+            this._purged = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _removalPurged: boolean = false;
+
+    /**
+     * @method removalPurged
+     * @description Gets if the removal provider has been purged.
+     * @returns {boolean} - true if purged; false if not.
+     */
+    @inline
+    public get removalPurged(): boolean {
+        this.ensureValues();
+        return this._removalPurged;
+    }
+
+    /**
+     * @method removalPurged
+     * @description Sets the purged removal states.
+     * @param {boolean} value - true if purged; false if not.
+     */
+    public set removalPurged(value: boolean) {
+        this.ensureValues();
+        if (this._removalPurged !== value) {
+            this._removalPurged = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _listedTokenAtBlock: u64 = BLOCK_NOT_SET_VALUE;
+
+    /**
+     * @method listedTokenAtBlock
+     * @description Gets if the block associated with the listing of a token.
+     * @returns {u64} - the block number; BLOCK_NOT_SET_VALUE when no block.
+     */
+    @inline
+    public get listedTokenAtBlock(): u64 {
+        this.ensureValues();
+        return this._listedTokenAtBlock;
+    }
+
+    /**
+     * @method listedTokenAtBlock
+     * @description Sets the block associated with the listing of a token.
+     * @param {u64} value - the block number.
+     */
+    public set listedTokenAtBlock(value: u64) {
+        this.ensureValues();
+
+        if (this._listedTokenAtBlock !== value) {
+            this._listedTokenAtBlock = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _purgedIndex: u32 = INDEX_NOT_SET_VALUE;
+
+    //!!! WHAT IF provider is removal & normal/priority???
+    /**
+     * @method purgedIndex
+     * @description Gets the index of the provider purged index.
+     * @returns {u32} - The index of the provider purged index.
+     */
+    @inline
+    public get purgedIndex(): u32 {
+        this.ensureValues();
+        return this._purgedIndex;
+    }
+
+    /**
+     * @method purgedIndex
+     * @description Sets the index of the provider purged index.
+     * @param {u32} value - The index of the provider purged index.
+     */
+    public set purgedIndex(value: u32) {
+        this.ensureValues();
+        if (this._purgedIndex !== value) {
+            this._purgedIndex = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _removalPurgedIndex: u32 = INDEX_NOT_SET_VALUE;
+
+    /**
+     * @method removalPurgedIndex
+     * @description Gets the index of the removal provider purged index.
+     * @returns {u32} - The index of the removal provider purged index.
+     */
+    @inline
+    public get removalPurgedIndex(): u32 {
+        this.ensureValues();
+        return this._removalPurgedIndex;
+    }
+
+    /**
+     * @method removalPurgedIndex
+     * @description Sets the index of the removal provider purged index.
+     * @param {u32} value - The index of the removal provider purged index.
+     */
+    public set removalPurgedIndex(value: u32) {
+        this.ensureValues();
+        if (this._removalPurgedIndex !== value) {
+            this._removalPurgedIndex = value;
+            this.stateChanged = true;
+        }
     }
 
     private _removalQueueIndex: u32 = INDEX_NOT_SET_VALUE;
@@ -360,6 +497,9 @@ export class ProviderData {
         this.liquidityProvisionAllowed = false;
         this.liquidityAmount = u128.Zero;
         this.reservedAmount = u128.Zero;
+        this.purged = false;
+        this.purgedIndex = INDEX_NOT_SET_VALUE;
+        this.listedTokenAtBlock = BLOCK_NOT_SET_VALUE;
 
         if (this.queueIndex !== INITIAL_LIQUIDITY_PROVIDER_INDEX) {
             this.queueIndex = INDEX_NOT_SET_VALUE;
@@ -376,6 +516,9 @@ export class ProviderData {
         this.pendingRemoval = false;
         this.liquidityProvider = false;
         this.removalQueueIndex = INDEX_NOT_SET_VALUE;
+        this.removalPurged = false;
+        this.removalPurgedIndex = INDEX_NOT_SET_VALUE;
+        //!!!!this.listedTokenAtBlock = BLOCK_NOT_SET_VALUE;
     }
 
     /**
@@ -481,8 +624,13 @@ export class ProviderData {
         this._liquidityProvider = ((flag >> 3) & 1) === 1;
         this._pendingRemoval = ((flag >> 4) & 1) === 1;
         this._initialLiquidityProvider = ((flag >> 5) & 1) === 1;
+        this._purged = ((flag >> 6) & 1) === 1;
+        this._removalPurged = ((flag >> 7) & 1) === 1;
         this._queueIndex = reader.readU32();
         this._removalQueueIndex = reader.readU32();
+        this._listedTokenAtBlock = reader.readU64();
+        this._purgedIndex = reader.readU32();
+        this._removalPurgedIndex = reader.readU32();
     }
 
     /**
@@ -517,18 +665,24 @@ export class ProviderData {
      * @returns {Uint8Array} The packed Uint8Array value.
      */
     private packValues(): Uint8Array {
-        const writer: BytesWriter = new BytesWriter(U8_BYTE_LENGTH + 2 * U32_BYTE_LENGTH);
+        const writer: BytesWriter = new BytesWriter(
+            U8_BYTE_LENGTH + 4 * U32_BYTE_LENGTH + U64_BYTE_LENGTH,
+        );
         const flag: u8 =
             (this._active ? 1 : 0) |
             ((this._priority ? 1 : 0) << 1) |
             ((this._liquidityProvisionAllowed ? 1 : 0) << 2) |
             ((this._liquidityProvider ? 1 : 0) << 3) |
             ((this._pendingRemoval ? 1 : 0) << 4) |
-            ((this._initialLiquidityProvider ? 1 : 0) << 5);
-
+            ((this._initialLiquidityProvider ? 1 : 0) << 5) |
+            ((this._purged ? 1 : 0) << 6) |
+            ((this._removalPurged ? 1 : 0) << 7);
         writer.writeU8(flag);
         writer.writeU32(this._queueIndex);
         writer.writeU32(this._removalQueueIndex);
+        writer.writeU64(this._listedTokenAtBlock);
+        writer.writeU32(this._purgedIndex);
+        writer.writeU32(this._removalPurgedIndex);
 
         return writer.getBuffer();
     }

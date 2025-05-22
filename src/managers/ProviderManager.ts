@@ -1,12 +1,5 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import {
-    Address,
-    Blockchain,
-    Revert,
-    StoredU256,
-    StoredU32,
-    TransferHelper,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Revert, StoredU256, StoredU32 } from '@btc-vision/btc-runtime/runtime';
 import {
     INITIAL_LIQUIDITY_PROVIDER_POINTER,
     NORMAL_QUEUE_POINTER,
@@ -20,7 +13,6 @@ import { PriorityProviderQueue } from './PriorityProviderQueue';
 import { RemovalProviderQueue } from './RemovalProviderQueue';
 import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
-import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { IProviderManager } from './interfaces/IProviderManager';
 
@@ -35,21 +27,33 @@ export class ProviderManager implements IProviderManager {
     private readonly _startingIndex: StoredU32;
     private readonly _initialLiquidityProviderId: StoredU256;
 
-    constructor(token: Address, tokenIdUint8Array: Uint8Array, owedBTCManager: IOwedBTCManager) {
+    constructor(
+        token: Address,
+        tokenIdUint8Array: Uint8Array,
+        owedBTCManager: IOwedBTCManager,
+        enableIndexVerification: boolean,
+    ) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
         this.owedBTCManager = owedBTCManager;
-        this.normalQueue = new ProviderQueue(token, NORMAL_QUEUE_POINTER, tokenIdUint8Array);
+        this.normalQueue = new ProviderQueue(
+            token,
+            NORMAL_QUEUE_POINTER,
+            tokenIdUint8Array,
+            enableIndexVerification,
+        );
         this.priorityQueue = new PriorityProviderQueue(
             token,
             PRIORITY_QUEUE_POINTER,
             tokenIdUint8Array,
+            enableIndexVerification,
         );
         this.removalQueue = new RemovalProviderQueue(
             owedBTCManager,
             token,
             REMOVAL_QUEUE_POINTER,
             tokenIdUint8Array,
+            enableIndexVerification,
         );
         this._initialLiquidityProviderId = new StoredU256(
             INITIAL_LIQUIDITY_PROVIDER_POINTER,
@@ -232,25 +236,11 @@ export class ProviderManager implements IProviderManager {
     ): void {
         this.ensureProviderIsNotPendingRemoval(provider);
 
-        if (burnRemainingFunds && provider.hasLiquidityAmount()) {
-            TransferHelper.safeTransfer(
-                this.token,
-                Address.dead(),
-                provider.getLiquidityAmount().toU256(),
-            );
+        if (provider.isPriority()) {
+            this.priorityQueue.resetProvider(provider, burnRemainingFunds, canceled);
+        } else {
+            this.normalQueue.resetProvider(provider, burnRemainingFunds, canceled);
         }
-
-        if (!provider.isInitialLiquidityProvider()) {
-            if (provider.isPriority()) {
-                this.priorityQueue.removeAt(provider.getQueueIndex());
-            } else {
-                this.normalQueue.removeAt(provider.getQueueIndex());
-            }
-        }
-
-        provider.resetListingValues();
-
-        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
     }
 
     public resetStartingIndex(): void {

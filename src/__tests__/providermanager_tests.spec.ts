@@ -18,7 +18,11 @@ import {
 } from './test_helper';
 import { OwedBTCManager } from '../managers/OwedBTCManager';
 import { ProviderTypes } from '../types/ProviderTypes';
-import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    ENABLE_INDEX_VERIFICATION,
+    INDEX_NOT_SET_VALUE,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+} from '../constants/Contract';
 
 describe('ProviderManager tests', () => {
     beforeEach(() => {
@@ -42,6 +46,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             expect(manager.currentIndexNormal).toStrictEqual(0);
@@ -65,6 +70,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             manager.addToNormalQueue(createProvider(providerAddress1, tokenAddress1));
@@ -77,6 +83,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
             expect(manager2.currentIndexNormal).toStrictEqual(0);
             expect(manager2.currentIndexPriority).toStrictEqual(0);
@@ -99,6 +106,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const normalProvider = createProvider(
@@ -203,6 +211,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
             expect(manager2.currentIndexNormal).toStrictEqual(0);
             expect(manager2.currentIndexPriority).toStrictEqual(0);
@@ -234,6 +243,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const initialLiquidityProvider = u256.fromU64(99999);
@@ -249,6 +259,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             manager.previousPriorityStartingIndex = 100;
@@ -262,6 +273,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             manager.previousNormalStartingIndex = 200;
@@ -275,6 +287,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             manager.previousRemovalStartingIndex = 300;
@@ -288,6 +301,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -304,6 +318,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -320,6 +335,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -336,6 +352,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             manager.previousNormalStartingIndex = 100;
@@ -355,6 +372,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             manager.previousNormalStartingIndex = 100;
@@ -383,6 +401,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -409,6 +428,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             expect(manager.normalQueueLength).toStrictEqual(0);
@@ -435,6 +455,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             expect(manager.normalQueueLength).toStrictEqual(0);
@@ -461,6 +482,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1, true);
@@ -499,6 +521,7 @@ describe('ProviderManager tests', () => {
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
+                    ENABLE_INDEX_VERIFICATION,
                 );
 
                 manager.getProviderFromQueue(
@@ -514,6 +537,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const initialProvider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -538,6 +562,7 @@ describe('ProviderManager tests', () => {
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
+                    ENABLE_INDEX_VERIFICATION,
                 );
 
                 manager.getProviderFromQueue(23, ProviderTypes.Normal);
@@ -550,6 +575,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -571,6 +597,7 @@ describe('ProviderManager tests', () => {
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
+                    ENABLE_INDEX_VERIFICATION,
                 );
 
                 manager.getProviderFromQueue(23, ProviderTypes.Priority);
@@ -583,6 +610,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -604,6 +632,7 @@ describe('ProviderManager tests', () => {
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
+                    ENABLE_INDEX_VERIFICATION,
                 );
 
                 manager.getProviderFromQueue(23, ProviderTypes.LiquidityRemoval);
@@ -616,6 +645,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
@@ -638,6 +668,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const providerIdOut: u256 = manager.getFromPriorityQueue(22222);
@@ -651,6 +682,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
             const providerIdOut: u256 = manager.getFromRemovalQueue(22222);
 
@@ -663,6 +695,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const providerIdOut: u256 = manager.getFromNormalQueue(22222);
@@ -685,6 +718,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1, true);
@@ -717,6 +751,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -731,6 +766,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -746,6 +782,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -761,6 +798,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -788,6 +826,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -815,6 +854,7 @@ describe('ProviderManager tests', () => {
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
+                    ENABLE_INDEX_VERIFICATION,
                 );
 
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
@@ -828,6 +868,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -855,6 +896,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             manager.initialLiquidityProviderId = u256.fromU32(1);
@@ -876,6 +918,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             expect(manager.initialLiquidityProviderId).toStrictEqual(u256.fromU32(1));
@@ -910,6 +953,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const providers = createProviders(4, 0);
@@ -937,6 +981,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const providers = createProviders(4, 0);
@@ -970,6 +1015,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const providers = createProviders(4, 0, true);

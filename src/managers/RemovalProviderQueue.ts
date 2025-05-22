@@ -18,8 +18,9 @@ export class RemovalProviderQueue extends ProviderQueue {
         token: Address,
         pointer: u16,
         subPointer: Uint8Array,
+        enableIndexVerification: boolean,
     ) {
-        super(token, pointer, subPointer);
+        super(token, pointer, subPointer, enableIndexVerification);
         this.owedBTCManager = owedBTCManager;
     }
 

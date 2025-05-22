@@ -11,15 +11,20 @@ import { getProvider, Provider } from '../models/Provider';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
 import { MAXIMUM_PROVIDER_COUNT, MAXIMUM_VALID_INDEX } from '../constants/Contract';
 
-const ENABLE_INDEX_VERIFICATION: bool = true;
-
 export class ProviderQueue {
     protected readonly token: Address;
     protected readonly queue: StoredU256Array;
+    protected readonly enableIndexVerification: boolean;
 
-    constructor(token: Address, pointer: u16, subPointer: Uint8Array) {
-        this.queue = new StoredU256Array(pointer, subPointer);
+    constructor(
+        token: Address,
+        pointer: u16,
+        subPointer: Uint8Array,
+        enableIndexVerification: boolean,
+    ) {
+        this.queue = new StoredU256Array(pointer, subPointer, <u64>MAXIMUM_PROVIDER_COUNT);
         this.token = token;
+        this.enableIndexVerification = enableIndexVerification;
     }
 
     protected _currentIndex: u32 = 0;
@@ -118,7 +123,7 @@ export class ProviderQueue {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
-        this.ensureNotInitialLiquidityProvider(provider);
+        this.ensureProviderNotAlreadyPurged(provider.isPurged());
 
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
             TransferHelper.safeTransfer(
@@ -128,7 +133,9 @@ export class ProviderQueue {
             );
         }
 
-        this.queue.delete_physical(provider.getQueueIndex());
+        if (!provider.isInitialLiquidityProvider()) {
+            this.queue.delete_physical(provider.getQueueIndex());
+        }
 
         provider.resetListingValues();
 
@@ -141,6 +148,12 @@ export class ProviderQueue {
 
     public save(): void {
         this.queue.save();
+    }
+
+    protected ensureProviderNotAlreadyPurged(state: boolean): void {
+        if (state) {
+            throw new Revert('Impossible state: provider has already been purged.');
+        }
     }
 
     protected ensureStartingIndexIsValid(): void {
@@ -190,7 +203,7 @@ export class ProviderQueue {
         const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
 
         if (!availableLiquidity.isZero()) {
-            if (ENABLE_INDEX_VERIFICATION) {
+            if (this.enableIndexVerification) {
                 if (provider.getQueueIndex() !== index) {
                     throw new Revert(
                         `Impossible state: provider.getQueueIndex (${provider.getQueueIndex()}) does not match index (${index}).`,
@@ -213,11 +226,5 @@ export class ProviderQueue {
         }
 
         return result;
-    }
-
-    private ensureNotInitialLiquidityProvider(provider: Provider): void {
-        if (provider.isInitialLiquidityProvider()) {
-            throw new Revert('Impossible state: initial liquidity provider cannot be in a queue.');
-        }
     }
 }

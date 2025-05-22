@@ -35,7 +35,6 @@ export class AddLiquidityOperation extends BaseOperation {
         const trade: CompletedTrade = this.executeTrade(reservation);
         this.updateLiquidityQueue(trade);
         this.updateProvider(trade.getTotalTokensPurchased());
-        this.postProcessQueues();
         this.emitLiquidityAddedEvent(
             trade.getTotalTokensPurchased(),
             trade.getTotalSatoshisSpent(),
@@ -44,6 +43,36 @@ export class AddLiquidityOperation extends BaseOperation {
 
     private checkPreConditions(): void {
         this.ensureNotInRemovalQueue();
+    }
+
+    private emitLiquidityAddedEvent(tokensBoughtFromQueue: u256, btcSpent: u64): void {
+        Blockchain.emit(
+            new LiquidityAddedEvent(
+                SafeMath.add(tokensBoughtFromQueue, tokensBoughtFromQueue),
+                tokensBoughtFromQueue,
+                btcSpent,
+            ),
+        );
+    }
+
+    private ensureNotInRemovalQueue(): void {
+        if (this.provider.isPendingRemoval()) {
+            throw new Revert(
+                'NATIVE_SWAP: You are in the removal queue. Wait for removal of your liquidity first.',
+            );
+        }
+    }
+
+    private ensurePurchaseWasMade(tokensBoughtFromQueue: u256, btcSpent: u64): void {
+        if (tokensBoughtFromQueue.isZero() || btcSpent === 0) {
+            throw new Revert('NATIVE_SWAP: No effective purchase made. Check your BTC outputs.');
+        }
+    }
+
+    private ensureReservationForLP(reservation: Reservation): void {
+        if (!reservation.isForLiquidityPool()) {
+            throw new Revert('NATIVE_SWAP: You must reserve liquidity for LP first.');
+        }
     }
 
     private getReservation(): Reservation {
@@ -83,39 +112,5 @@ export class AddLiquidityOperation extends BaseOperation {
         }
 
         this.provider.addToLiquidityProvided(tokensBoughtFromQueue.toU128());
-    }
-
-    private postProcessQueues(): void {
-        this.liquidityQueue.cleanUpQueues();
-    }
-
-    private ensureNotInRemovalQueue(): void {
-        if (this.provider.isPendingRemoval()) {
-            throw new Revert(
-                'NATIVE_SWAP: You are in the removal queue. Wait for removal of your liquidity first.',
-            );
-        }
-    }
-
-    private ensureReservationForLP(reservation: Reservation): void {
-        if (!reservation.isForLiquidityPool()) {
-            throw new Revert('NATIVE_SWAP: You must reserve liquidity for LP first.');
-        }
-    }
-
-    private ensurePurchaseWasMade(tokensBoughtFromQueue: u256, btcSpent: u64): void {
-        if (tokensBoughtFromQueue.isZero() || btcSpent === 0) {
-            throw new Revert('NATIVE_SWAP: No effective purchase made. Check your BTC outputs.');
-        }
-    }
-
-    private emitLiquidityAddedEvent(tokensBoughtFromQueue: u256, btcSpent: u64): void {
-        Blockchain.emit(
-            new LiquidityAddedEvent(
-                SafeMath.add(tokensBoughtFromQueue, tokensBoughtFromQueue),
-                tokensBoughtFromQueue,
-                btcSpent,
-            ),
-        );
     }
 }

@@ -1,9 +1,15 @@
 import { BaseOperation } from './BaseOperation';
 import { getProvider, Provider } from '../models/Provider';
-import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ListingCanceledEvent } from '../events/ListingCanceledEvent';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
+import {
+    BLOCK_NOT_SET_VALUE,
+    SLASH_GRACE_WINDOW,
+    SLASH_RAMP_UP_BLOCKS,
+} from '../constants/Contract';
+import { slash } from '../utils/Slashing';
 
 export class CancelListingOperation extends BaseOperation {
     private readonly providerId: u256;
@@ -19,28 +25,26 @@ export class CancelListingOperation extends BaseOperation {
     public execute(): void {
         this.checkPreConditions();
 
-        const refundAmount: u128 = this.provider.getLiquidityAmount();
+        const initialAmount: u128 = this.provider.getLiquidityAmount();
+        const penaltyAmount: u128 = this.calculatePenalty(initialAmount);
+        const refundAmount: u128 = this.calculateRefund(initialAmount, penaltyAmount);
 
         this.prepareProviderForRefund();
         this.transferLiquidityBack(refundAmount);
-        this.postProcessQueues();
+        this.postProcessQueues(penaltyAmount);
         this.emitListingCanceledEvent(refundAmount);
     }
 
-    private prepareProviderForRefund(): void {
-        this.liquidityQueue.resetProvider(this.provider, false, true);
+    private calculatePenalty(amount: u128): u128 {
+        const listedAtBlock: u64 = this.provider.getListedTokenAtBlock();
+        this.ensureListedTokenAtBlock(listedAtBlock);
+
+        const delta: u64 = SafeMath.sub64(Blockchain.block.number, listedAtBlock);
+        return slash(amount, delta, SLASH_GRACE_WINDOW, SLASH_RAMP_UP_BLOCKS);
     }
 
-    private transferLiquidityBack(amount: u128): void {
-        TransferHelper.safeTransfer(
-            this.liquidityQueue.token,
-            Blockchain.tx.sender,
-            amount.toU256(),
-        );
-    }
-
-    private postProcessQueues(): void {
-        this.liquidityQueue.cleanUpQueues();
+    private calculateRefund(amount: u128, penalty: u128): u128 {
+        return SafeMath.sub128(amount, penalty);
     }
 
     private checkPreConditions(): void {
@@ -52,9 +56,19 @@ export class CancelListingOperation extends BaseOperation {
         this.ensureProviderNotPendingRemoval();
     }
 
-    private ensureProviderIsActive(): void {
-        if (!this.provider.isActive()) {
-            throw new Revert("NATIVE_SWAP: Provider is not active or doesn't exist.");
+    private emitListingCanceledEvent(amount: u128): void {
+        Blockchain.emit(new ListingCanceledEvent(amount));
+    }
+
+    private ensureLiquidityNotZero(): void {
+        if (!this.provider.hasLiquidityAmount()) {
+            throw new Revert('NATIVE_SWAP: Provider has no liquidity.');
+        }
+    }
+
+    private ensureListedTokenAtBlock(blockNumber: u64): void {
+        if (blockNumber === BLOCK_NOT_SET_VALUE) {
+            throw new Revert('NATIVE_SWAP: Provider is not listed.');
         }
     }
 
@@ -66,9 +80,9 @@ export class CancelListingOperation extends BaseOperation {
         }
     }
 
-    private ensureLiquidityNotZero(): void {
-        if (!this.provider.hasLiquidityAmount()) {
-            throw new Revert('NATIVE_SWAP: Provider has no liquidity.');
+    private ensureNotInitialProvider(): void {
+        if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProviderId)) {
+            throw new Revert('NATIVE_SWAP: Initial provider cannot cancel listing.');
         }
     }
 
@@ -80,9 +94,9 @@ export class CancelListingOperation extends BaseOperation {
         }
     }
 
-    private ensureNotInitialProvider(): void {
-        if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProviderId)) {
-            throw new Revert('NATIVE_SWAP: Initial provider cannot cancel listing.');
+    private ensureProviderIsActive(): void {
+        if (!this.provider.isActive()) {
+            throw new Revert("NATIVE_SWAP: Provider is not active or doesn't exist.");
         }
     }
 
@@ -92,7 +106,23 @@ export class CancelListingOperation extends BaseOperation {
         }
     }
 
-    private emitListingCanceledEvent(amount: u128): void {
-        Blockchain.emit(new ListingCanceledEvent(amount));
+    private postProcessQueues(penaltyAmount: u128): void {
+        if (!penaltyAmount.isZero()) {
+            this.liquidityQueue.accruePenalty(penaltyAmount);
+        }
+    }
+
+    private prepareProviderForRefund(): void {
+        this.liquidityQueue.resetProvider(this.provider, false, true);
+    }
+
+    private transferLiquidityBack(amount: u128): void {
+        if (!amount.isZero()) {
+            TransferHelper.safeTransfer(
+                this.liquidityQueue.token,
+                Blockchain.tx.sender,
+                amount.toU256(),
+            );
+        }
     }
 }

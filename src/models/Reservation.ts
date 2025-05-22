@@ -43,10 +43,6 @@ export class Reservation {
         this.reservedPriority = new StoredU8Array(RESERVATION_PRIORITY, reservationId);
     }
 
-    public static load(reservationId: u128): Reservation {
-        return new Reservation(Address.dead(), Address.dead(), reservationId.toUint8Array(true));
-    }
-
     public static generateId(token: Address, owner: Address): Uint8Array {
         const writer: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
         writer.writeAddress(token);
@@ -59,13 +55,8 @@ export class Reservation {
         return hash.slice(0, 16);
     }
 
-    public delete(isTimeout: boolean): void {
-        this.reservedIndexes.reset();
-        this.reservedValues.reset();
-        this.reservedPriority.reset();
-        this.reservationData.reset(isTimeout);
-
-        this.save();
+    public static load(reservationId: u128): Reservation {
+        return new Reservation(Address.dead(), Address.dead(), reservationId.toUint8Array(true));
     }
 
     public addProvider(providerData: ReservationProviderData): void {
@@ -76,6 +67,53 @@ export class Reservation {
         this.reservedIndexes.push(providerData.providerIndex);
         this.reservedValues.push(providerData.providedAmount);
         this.reservedPriority.push(<u8>providerData.providerType);
+    }
+
+    public clearForLiquidityPool(): void {
+        this.reservationData.forLiquidityPool = false;
+    }
+
+    public delete(isTimeout: boolean): void {
+        this.reservedIndexes.reset();
+        this.reservedValues.reset();
+        this.reservedPriority.reset();
+        this.reservationData.reset(isTimeout);
+
+        this.save();
+    }
+
+    public ensureCanBeConsumed(): void {
+        if (!this.isValid()) {
+            throw new Revert('No valid reservation for this address.');
+        }
+
+        if (this.getActivationDelay() === 0) {
+            if (this.getCreationBlock() === Blockchain.block.number) {
+                throw new Revert('Reservation cannot be consumed in the same block');
+            }
+        } else {
+            if (this.getCreationBlock() + this.getActivationDelay() > Blockchain.block.number) {
+                throw new Revert(
+                    `Too early to consume reservation: (${this.getCreationBlock()}, ${this.getActivationDelay()})`,
+                );
+            }
+        }
+    }
+
+    public getActivationDelay(): u8 {
+        return this.reservationData.activationDelay;
+    }
+
+    public getCreationBlock(): u64 {
+        return this.reservationData.creationBlock;
+    }
+
+    public getExpirationBlock(): u64 {
+        return this.reservationData.expirationBlock;
+    }
+
+    public getId(): u128 {
+        return this.id;
     }
 
     public getProviderAt(index: u32): ReservationProviderData {
@@ -102,22 +140,32 @@ export class Reservation {
         return this.reservedIndexes.getLength();
     }
 
-    public ensureCanBeConsumed(): void {
-        if (!this.isValid()) {
-            throw new Revert('No valid reservation for this address.');
-        }
+    public getPurgeIndex(): u32 {
+        return this.reservationData.purgeIndex;
+    }
 
-        if (this.getActivationDelay() === 0) {
-            if (this.getCreationBlock() === Blockchain.block.number) {
-                throw new Revert('Reservation cannot be consumed in the same block');
-            }
-        } else {
-            if (this.getCreationBlock() + this.getActivationDelay() > Blockchain.block.number) {
-                throw new Revert(
-                    `Too early to consume reservation: (${this.getCreationBlock()}, ${this.getActivationDelay()})`,
-                );
-            }
-        }
+    public getUserTimeoutBlockExpiration(): u64 {
+        return this.reservationData.userTimeoutExpirationBlock;
+    }
+
+    public isDirty(): boolean {
+        return this.reservedIndexes.getLength() > 0;
+    }
+
+    public isExpired(): boolean {
+        return Blockchain.block.number > this.reservationData.expirationBlock;
+    }
+
+    public isForLiquidityPool(): boolean {
+        return this.reservationData.forLiquidityPool;
+    }
+
+    public isValid(): boolean {
+        return !this.isExpired() && this.reservedIndexes.getLength() > 0;
+    }
+
+    public markForLiquidityPool(): void {
+        this.reservationData.forLiquidityPool = true;
     }
 
     public save(): void {
@@ -127,63 +175,23 @@ export class Reservation {
         this.reservedPriority.save();
     }
 
-    public getActivationDelay(): u8 {
-        return this.reservationData.activationDelay;
-    }
-
     public setActivationDelay(value: u8): void {
         this.reservationData.activationDelay = value;
-    }
-
-    public getPurgeIndex(): u32 {
-        return this.reservationData.purgeIndex;
-    }
-
-    public setPurgeIndex(index: u32): void {
-        this.reservationData.purgeIndex = index;
-    }
-
-    public getCreationBlock(): u64 {
-        return this.reservationData.creationBlock;
     }
 
     public setCreationBlock(value: u64): void {
         this.reservationData.creationBlock = value;
     }
 
-    public getUserTimeoutBlockExpiration(): u64 {
-        return this.reservationData.userTimeoutExpirationBlock;
-    }
-
-    public isForLiquidityPool(): boolean {
-        return this.reservationData.forLiquidityPool;
-    }
-
-    public markForLiquidityPool(): void {
-        this.reservationData.forLiquidityPool = true;
-    }
-
-    public clearForLiquidityPool(): void {
-        this.reservationData.forLiquidityPool = false;
-    }
-
-    public getId(): u128 {
-        return this.id;
+    public setPurgeIndex(index: u32): void {
+        this.reservationData.purgeIndex = index;
     }
 
     public timeoutUser(): void {
         this.reservationData.timeout = true;
     }
 
-    public isExpired(): boolean {
-        return Blockchain.block.number > this.reservationData.expirationBlock;
-    }
-
-    public isValid(): boolean {
-        return !this.isExpired() && this.reservedIndexes.getLength() > 0;
-    }
-
-    public getExpirationBlock(): u64 {
-        return this.reservationData.expirationBlock;
+    public toString(): string {
+        return `Reservation ${this.getId().toString()} (getExpirationBlock: ${this.getExpirationBlock()} - block: ${Blockchain.block.number} - index length: ${this.reservedIndexes.getLength()})`;
     }
 }

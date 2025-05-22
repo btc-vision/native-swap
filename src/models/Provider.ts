@@ -202,6 +202,24 @@ export class Provider {
     }
 
     /**
+     * @method getListedTokenAtBlock
+     * @description Gets if the block associated with the listing of a token.
+     * @returns {u64} - the block number; BLOCK_NOT_SET_VALUE when no block.
+     */
+    public getListedTokenAtBlock(): u64 {
+        return this.providerData.listedTokenAtBlock;
+    }
+
+    /**
+     * @method setListedTokenAtBloc
+     * @description Sets the block associated with the listing of a token.
+     * @param {u64} value - the block number.
+     */
+    public setListedTokenAtBloc(value: u64): void {
+        this.providerData.listedTokenAtBlock = value;
+    }
+
+    /**
      * @method getReservedAmount
      * @description Gets the reserved amount in tokens.
      * @returns {u128} - The reserved amount in tokens.
@@ -374,6 +392,60 @@ export class Provider {
     }
 
     /**
+     * @method isPurged
+     * @description Gets if the provider has been purged.
+     * @returns {boolean} - true if purged; false if not.
+     */
+    public isPurged(): boolean {
+        return this.providerData.purged;
+    }
+
+    /**
+     * @method markPurged
+     * @description Mark a provider as purged.
+     * @returns {void}
+     */
+    public markPurged(): void {
+        this.providerData.purged = true;
+    }
+
+    /**
+     * @method clearPurged
+     * @description Clear the purged state.
+     * @returns {void}
+     */
+    public clearPurged(): void {
+        this.providerData.purged = false;
+    }
+
+    /**
+     * @method isRemovalPurged
+     * @description Gets if the removal provider has been purged.
+     * @returns {boolean} - true if purged; false if not.
+     */
+    public isRemovalPurged(): boolean {
+        return this.providerData.purged;
+    }
+
+    /**
+     * @method markRemovalPurged
+     * @description Mark a removal provider as purged.
+     * @returns {void}
+     */
+    public markRemovalPurged(): void {
+        this.providerData.removalPurged = true;
+    }
+
+    /**
+     * @method clearRemovalPurged
+     * @description Clear the removal purged state.
+     * @returns {void}
+     */
+    public clearRemovalPurged(): void {
+        this.providerData.removalPurged = false;
+    }
+
+    /**
      * @method isPendingRemoval
      * @description Gets if a provider is a pending removal.
      * @returns {boolean} - true if pending removal; false if not.
@@ -436,6 +508,44 @@ export class Provider {
      */
     public setRemovalQueueIndex(value: u32): void {
         this.providerData.removalQueueIndex = value;
+    }
+
+    /**
+     * @method getPurgedIndex
+     * @description Gets the provider purged index.
+     * @returns {u32} - The provider purged index.
+     */
+    public getPurgedIndex(): u32 {
+        return this.providerData.purgedIndex;
+    }
+
+    /**
+     * @method setPurgedIndex
+     * @description Sets the provider purged index.
+     * @param {u32} value - The provider purged index.
+     * @returns {void}
+     */
+    public setPurgedIndex(value: u32): void {
+        this.providerData.purgedIndex = value;
+    }
+
+    /**
+     * @method getRemovalPurgedIndex
+     * @description Gets the removal provider purged index.
+     * @returns {u32} - The removal provider purged index.
+     */
+    public getRemovalPurgedIndex(): u32 {
+        return this.providerData.removalPurgedIndex;
+    }
+
+    /**
+     * @method setRemovalPurgedIndex
+     * @description Sets the removal provider purged index.
+     * @param {u32} value - The removal provider purged index.
+     * @returns {void}
+     */
+    public setRemovalPurgedIndex(value: u32): void {
+        this.providerData.removalPurgedIndex = value;
     }
 
     /**

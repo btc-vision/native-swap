@@ -12,7 +12,7 @@ import { Reservation } from '../models/Reservation';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
 import { ProviderManager } from '../managers/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import { MAXIMUM_PROVIDER_COUNT } from '../constants/Contract';
+import { ENABLE_INDEX_VERIFICATION, MAXIMUM_PROVIDER_COUNT } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
 import { IOwedBTCManager } from '../managers/interfaces/IOwedBTCManager';
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
@@ -533,7 +533,7 @@ export function getProviderManager(
     tokenId: Uint8Array,
     owedBtcManager: IOwedBTCManager,
 ): ITestProviderManager {
-    return new TestProviderManager(token, tokenId, owedBtcManager);
+    return new TestProviderManager(token, tokenId, owedBtcManager, ENABLE_INDEX_VERIFICATION);
 }
 
 export function getOwedBtcManager(): IOwedBTCManager {

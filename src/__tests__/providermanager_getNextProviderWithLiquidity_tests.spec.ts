@@ -11,7 +11,7 @@ import {
     tokenIdUint8Array1,
 } from './test_helper';
 import { OwedBTCManager } from '../managers/OwedBTCManager';
-import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import { ENABLE_INDEX_VERIFICATION, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 
 describe('ProviderManager getNextProviderWithLiquidity with only providers in removal queue tests', () => {
     beforeEach(() => {
@@ -27,6 +27,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         // Add 3 providers that will be deleted. This will move the removalQueue starting index to 3.
@@ -70,6 +71,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         // Add 3 providers that will be deleted. This will move the removalQueue starting index to 3.
@@ -106,6 +108,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const providersPendingRemoval = createProviders(4, 0, true);
@@ -130,6 +133,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const providersPendingRemoval = createProviders(4, 0, true);
@@ -155,6 +159,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const providersPendingRemoval = createProviders(4, 0, true);
@@ -181,6 +186,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const providersPendingRemoval = createProviders(4, 0, true);
@@ -206,6 +212,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
@@ -227,6 +234,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
@@ -246,6 +254,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in re
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
@@ -273,6 +282,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         // Add 3 providers that will be deleted. This will move the priorityQueue starting index to 3.
@@ -329,6 +339,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         // Add 3 providers that will be deleted. This will move the priorityQueue starting index to 3.
@@ -389,6 +400,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const providersPriority = createProviders(
@@ -426,6 +438,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const providersPriority = createProviders(
@@ -464,6 +477,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const providersPriority = createProviders(
@@ -501,6 +515,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider = createProvider(
@@ -530,6 +545,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider = createProvider(
@@ -560,6 +576,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in pr
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, false);
@@ -587,6 +604,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in no
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         // Add 3 providers that will be deleted. This will move the queue starting index to 3.
@@ -643,6 +661,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in no
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         // Add 3 providers that will be deleted. This will move the standard queue starting index to 3.
@@ -703,6 +722,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in no
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const providers = createProviders(
@@ -739,6 +759,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in no
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const providers = createProviders(
@@ -777,6 +798,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in no
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const providers = createProviders(
@@ -813,6 +835,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in no
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider = createProvider(
@@ -842,6 +865,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in no
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider = createProvider(
@@ -872,6 +896,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only providers in no
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, false);
@@ -902,6 +927,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const currentQuote = u256.fromU32(1000);
@@ -917,6 +943,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider = createProvider(providerAddress1, tokenAddress1);
@@ -938,6 +965,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider = createProvider(
@@ -968,6 +996,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider = createProvider(
@@ -998,6 +1027,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             const provider = createProvider(
@@ -1027,6 +1057,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider = createProvider(
@@ -1061,6 +1092,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider = createProvider(
@@ -1090,6 +1122,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1112,6 +1145,7 @@ describe('ProviderManager getNextProviderWithLiquidity with only initial liquidi
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider = createProvider(providerAddress1, tokenAddress1);

@@ -11,6 +11,7 @@ import {
     tokenIdUint8Array1,
 } from './test_helper';
 import { OwedBTCManager } from '../managers/OwedBTCManager';
+import { ENABLE_INDEX_VERIFICATION } from '../constants/Contract';
 
 describe('ProviderManager removal queue cleanUpQueues tests', () => {
     beforeEach(() => {
@@ -26,6 +27,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousRemovalStartingIndex).toStrictEqual(0);
@@ -50,6 +52,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousRemovalStartingIndex).toStrictEqual(0);
@@ -74,6 +77,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousRemovalStartingIndex).toStrictEqual(0);
@@ -101,6 +105,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousRemovalStartingIndex).toStrictEqual(0);
@@ -128,6 +133,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousRemovalStartingIndex).toStrictEqual(0);
@@ -155,6 +161,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousRemovalStartingIndex).toStrictEqual(0);
@@ -182,6 +189,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -211,6 +219,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -242,6 +251,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -276,6 +286,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         manager.addToRemovalQueue(provider1);
@@ -309,6 +320,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         manager.addToRemovalQueue(provider1);
@@ -342,6 +354,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         manager.addToRemovalQueue(provider1);
@@ -375,6 +388,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         manager.addToRemovalQueue(provider1);
@@ -408,6 +422,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
@@ -440,6 +455,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -466,6 +482,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -492,6 +509,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -524,6 +542,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -556,6 +575,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -588,6 +608,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -620,6 +641,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -655,6 +677,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -691,6 +714,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -733,6 +757,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         provider1.deactivate();
@@ -774,6 +799,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         provider1.deactivate();
@@ -815,6 +841,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         provider1.deactivate();
@@ -856,6 +883,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         provider1.deactivate();
@@ -897,6 +925,7 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
@@ -936,6 +965,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -962,6 +992,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -988,6 +1019,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -1020,6 +1052,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -1052,6 +1085,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -1084,6 +1118,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -1116,6 +1151,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1151,6 +1187,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1187,6 +1224,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
 
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1229,6 +1267,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         provider1.deactivate();
@@ -1270,6 +1309,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         provider1.deactivate();
@@ -1311,6 +1351,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         provider1.deactivate();
@@ -1352,6 +1393,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         provider1.deactivate();
@@ -1393,6 +1435,7 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
         const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
