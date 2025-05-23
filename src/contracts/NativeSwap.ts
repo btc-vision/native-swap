@@ -41,8 +41,6 @@ import { QUOTE_SCALE, satoshisToTokens, tokensToSatoshis } from '../utils/Native
 export class NativeSwap extends ReentrancyGuard {
     private readonly _stakingContractAddress: StoredAddress;
 
-    //private readonly minimumTradeSize: u256 = u256.fromU32(10_000); // The minimum trade size in satoshis.
-
     public constructor() {
         super();
 
@@ -373,7 +371,7 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureValidTokenAddress(token);
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
 
         this.ensurePoolExistsForToken(queue);
 

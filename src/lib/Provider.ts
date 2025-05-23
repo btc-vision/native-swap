@@ -5,9 +5,11 @@ import { UserLiquidity } from '../data-types/UserLiquidity';
 import {
     INDEXED_PROVIDER_POINTER,
     LIQUIDITY_PROVIDER_POINTER,
+    LISTED_TOKENS_AT_BLOCK_POINTER,
     PROVIDER_ADDRESS_POINTER,
     PROVIDER_LIQUIDITY_POINTER,
 } from './StoredPointers';
+import { IMPOSSIBLE_PURGE_INDEX, NOT_DEFINED_PROVIDER_INDEX } from '../data-types/Constants';
 
 export class Provider {
     public providerId: u256;
@@ -30,7 +32,7 @@ export class Provider {
         );
     }
 
-    public _indexedAt: u64 = 0;
+    public _indexedAt: u64 = NOT_DEFINED_PROVIDER_INDEX;
 
     public get indexedAt(): u64 {
         return this._indexedAt;
@@ -38,6 +40,26 @@ export class Provider {
 
     public set indexedAt(value: u64) {
         this._indexedAt = value;
+    }
+
+    private _purgedAt: u32 = IMPOSSIBLE_PURGE_INDEX;
+
+    public get purgedAt(): u32 {
+        return this._purgedAt;
+    }
+
+    public set purgedAt(value: u32) {
+        this._purgedAt = value;
+    }
+
+    private _queueType: u8 = 255;
+
+    public get queueType(): u8 {
+        return this._queueType;
+    }
+
+    public set queueType(type: u8) {
+        this._queueType = type;
     }
 
     public get pendingRemoval(): boolean {
@@ -106,6 +128,17 @@ export class Provider {
         this._indexedAt = store.get(0);
     }
 
+    public listedTokenAtBlock(): u64 {
+        const store = new StoredU64(LISTED_TOKENS_AT_BLOCK_POINTER, this.providerBuffer);
+        return store.get(0);
+    }
+
+    public setListedTokenAtBlock(block: u64): void {
+        const store = new StoredU64(LISTED_TOKENS_AT_BLOCK_POINTER, this.providerBuffer);
+        store.set(0, block);
+        store.save();
+    }
+
     public increaseLiquidityProvided(amount: u256): void {
         this.liquidityProvided = SafeMath.add(this.liquidityProvided, amount);
     }
@@ -138,6 +171,14 @@ export class Provider {
         return !this.reserved.isZero();
     }
 
+    public hasBeenPurged(): bool {
+        return this.userLiquidity.hasBeenPurged();
+    }
+
+    public setPurged(value: bool): void {
+        this.userLiquidity.setPurged(value);
+    }
+
     public isActive(): bool {
         return this.userLiquidity.getActiveFlag() === 1;
     }
@@ -161,6 +202,8 @@ export class Provider {
 
     public resetListingValues(): void {
         this.userLiquidity.resetListingValues();
+
+        this.setListedTokenAtBlock(0);
     }
 
     public save(): void {

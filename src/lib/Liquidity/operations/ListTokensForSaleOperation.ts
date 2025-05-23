@@ -191,6 +191,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
         // add to provider
         this.provider.liquidity = SafeMath.add128(this.oldLiquidity, this.amountIn);
+        this.provider.setListedTokenAtBlock(Blockchain.block.number);
 
         this.setProviderReceiver(this.provider);
 
