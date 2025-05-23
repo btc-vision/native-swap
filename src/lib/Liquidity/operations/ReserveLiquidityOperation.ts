@@ -17,6 +17,7 @@ import {
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
     NOT_DEFINED_PROVIDER_INDEX,
+    RESERVATION_EXPIRE_AFTER,
 } from '../../../data-types/Constants';
 
 export class ReserveLiquidityOperation extends BaseOperation {
@@ -59,12 +60,17 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         const reservation = new Reservation(this.liquidityQueue.token, this.buyer);
         this.ensureUserNotTimedOut(reservation);
+        this.ensureReservationPurged(reservation);
         this.ensureReservationNotValid(reservation);
 
         const currentQuote = this.liquidityQueue.quote();
         this.ensureCurrentQuoteIsValid(currentQuote);
 
         this.ensureNoBots();
+
+        // Manually purge once everything is checked and valid
+        this.liquidityQueue.purgeReservationsAndRestoreProviders();
+
         this.ensureEnoughLiquidity();
 
         let tokensRemaining: u256 = this.computeTokenRemaining(currentQuote);
@@ -242,9 +248,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         reservation.setActivationDelay(this.activationDelay);
         reservation.reservedLP = this.forLP;
-        reservation.setExpirationBlock(
-            Blockchain.block.number + LiquidityQueue.RESERVATION_EXPIRE_AFTER,
-        );
+        reservation.setExpirationBlock(Blockchain.block.number + RESERVATION_EXPIRE_AFTER);
 
         const index: u32 = this.liquidityQueue.addActiveReservationToList(
             Blockchain.block.number,
@@ -300,6 +304,36 @@ export class ReserveLiquidityOperation extends BaseOperation {
         } else {
             throw new Revert(
                 'NATIVE_SWAP: You already have an active reservation. Swap or wait for expiration before creating another',
+            );
+        }
+    }
+
+    private ensureReservationPurged(reservation: Reservation): void {
+        if (!reservation.expired()) {
+            return;
+        }
+
+        const expirationBlock: u64 = reservation.createdAt;
+        if (expirationBlock <= RESERVATION_EXPIRE_AFTER) {
+            return;
+        }
+
+        const reservations = this.liquidityQueue.getReservationListForBlock(expirationBlock);
+        const id = reservation.getPurgeIndex();
+        const reservationId = reservations.get(id);
+
+        if (!u128.eq(reservationId, reservation.reservationId)) {
+            throw new Revert(
+                `NATIVE_SWAP: Invalid reservationId ${reservationId} != ${reservation.reservationId}`,
+            );
+        }
+
+        const active = this.liquidityQueue.getActiveReservationListForBlock(expirationBlock);
+        const activeReservationId = active.get(id);
+
+        if (activeReservationId) {
+            throw new Revert(
+                `NATIVE_SWAP: You may not reserve at this time. Your previous reservation has not been purged yet. Please try again later.`,
             );
         }
     }

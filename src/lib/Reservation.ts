@@ -15,8 +15,8 @@ import {
 } from './StoredPointers';
 import { u128 } from '@btc-vision/as-bignum/assembly';
 import { UserReservation } from '../data-types/UserReservation';
-import { LiquidityQueue } from './Liquidity/LiquidityQueue';
 import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
+import { RESERVATION_EXPIRE_AFTER } from '../data-types/Constants';
 
 export const NORMAL_TYPE: u8 = 0;
 export const PRIORITY_TYPE: u8 = 1;
@@ -50,10 +50,10 @@ export class Reservation {
         const block: u64 = this.expirationBlock();
 
         // No opnet transaction under block 100
-        if (block <= LiquidityQueue.RESERVATION_EXPIRE_AFTER) {
+        if (block <= RESERVATION_EXPIRE_AFTER) {
             return 0;
         } else {
-            return block - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+            return block - RESERVATION_EXPIRE_AFTER;
         }
     }
 

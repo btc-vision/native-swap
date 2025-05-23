@@ -62,7 +62,6 @@ class PurgedResult {
 
 export class LiquidityQueue {
     // Reservation settings
-    public static RESERVATION_EXPIRE_AFTER: u64 = RESERVATION_EXPIRE_AFTER;
     public static VOLATILITY_WINDOW_BLOCKS: u32 = 5;
     public static STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT: u256 = u256.fromU32(600);
 
@@ -419,9 +418,6 @@ export class LiquidityQueue {
         );
 
         this.lastVirtualUpdateBlock = currentBlock;
-
-        // Clean up queues once per block, always the first tx.
-        //this._providerManager.cleanUpQueues();
     }
 
     public getUtilizationRatio(): u256 {
@@ -896,11 +892,11 @@ export class LiquidityQueue {
         this.lastPurgedBlock = maxBlockToPurge;
     }*/
 
-    protected purgeReservationsAndRestoreProviders(): void {
+    public purgeReservationsAndRestoreProviders(): void {
         const now: u64 = Blockchain.block.number;
-        if (LiquidityQueue.RESERVATION_EXPIRE_AFTER > now) return;
+        if (RESERVATION_EXPIRE_AFTER > now) return;
 
-        const maxBlock: u64 = now - LiquidityQueue.RESERVATION_EXPIRE_AFTER;
+        const maxBlock: u64 = now - RESERVATION_EXPIRE_AFTER;
         if (maxBlock <= this.lastPurgedBlock) {
             this._providerManager.restoreCurrentIndex();
             return;
@@ -1012,8 +1008,8 @@ export class LiquidityQueue {
 
         const finished = idx >= len;
         if (finished) {
-            reservations.reset();
-            active.reset();
+            //reservations.reset();
+            //active.reset();
             this.writePurgeCursor(blockNumber, 0);
         } else {
             this.writePurgeCursor(blockNumber, idx);
