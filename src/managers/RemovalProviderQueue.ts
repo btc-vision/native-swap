@@ -50,17 +50,21 @@ export class RemovalProviderQueue extends ProviderQueue {
                     this.queue.setStartingIndex(index);
                     break;
                 } else {
+                    this.ensureProviderNotAlreadyPurged(provider.isRemovalPurged());
                     this.queue.delete_physical(index); //!!! WHY should never happen
                 }
+            } else {
+                this.queue.setStartingIndex(index);
             }
 
             index++;
         }
 
-        return index;
+        return index === 0 ? index : index - 1; //!!!! Same as other???
     }
 
     public removeFromQueue(provider: Provider): void {
+        this.ensureProviderNotAlreadyPurged(provider.isRemovalPurged());
         this.queue.delete_physical(provider.getRemovalQueueIndex());
 
         provider.clearPendingRemoval();
@@ -68,6 +72,7 @@ export class RemovalProviderQueue extends ProviderQueue {
         provider.setRemovalQueueIndex(INDEX_NOT_SET_VALUE); //!!!!
         provider.clearFromRemovalQueue(); //!!!!
         //!!!! what else to do
+        //!!!!purgedIndex, purged????
 
         Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, true));
     }
@@ -83,15 +88,14 @@ export class RemovalProviderQueue extends ProviderQueue {
     protected tryNextCandidate(_currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
         const providerId: u256 = this.queue.get_physical(this._currentIndex);
+        this.ensureProviderIdIsValid(providerId);
 
-        if (providerId !== u256.Zero) {
-            const provider = getProvider(providerId);
+        const provider = getProvider(providerId);
 
-            if (provider.isPendingRemoval() && provider.isLiquidityProvider()) {
-                result = this.getProviderIfOwedBTC(providerId, provider);
-            } else {
-                this.removeFromQueue(provider); //!!! This should not happen???
-            }
+        if (provider.isPendingRemoval() && provider.isLiquidityProvider()) {
+            result = this.getProviderIfOwedBTC(providerId, provider);
+        } else {
+            this.removeFromQueue(provider); //!!! This should not happen???
         }
 
         return result;

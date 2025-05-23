@@ -23,7 +23,7 @@ export const MAXIMUM_VALID_INDEX: u32 = u32.MAX_VALUE - 2;
 export const MAXIMUM_PROVIDER_COUNT: u32 = U32.MAX_VALUE - 1; //!!!
 export const BLOCK_NOT_SET_VALUE: u64 = U64.MAX_VALUE;
 
-export const ALLOW_DIRTY: bool = true;
+export const ALLOW_DIRTY: boolean = true;
 
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???

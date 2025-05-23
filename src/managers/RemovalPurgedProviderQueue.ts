@@ -1,18 +1,9 @@
-import { Address, Revert } from '../../../btc-runtime/runtime';
+import { Revert } from '../../../btc-runtime/runtime';
 import { PurgedProviderQueue } from './PurgedProviderQueue';
 import { Provider } from '../models/Provider';
 import { ALLOW_DIRTY, INDEX_NOT_SET_VALUE } from '../constants/Contract';
 
 export class RemovalPurgedProviderQueue extends PurgedProviderQueue {
-    constructor(
-        token: Address,
-        pointer: u16,
-        subPointer: Uint8Array,
-        enableIndexVerification: boolean,
-    ) {
-        super(token, pointer, subPointer, enableIndexVerification);
-    }
-
     public override add(provider: Provider): void {
         if (!provider.isInitialLiquidityProvider()) {
             this.ensureProviderIsPendingRemoval(provider);
@@ -43,7 +34,7 @@ export class RemovalPurgedProviderQueue extends PurgedProviderQueue {
     }*/
 
     public remove(provider: Provider): void {
-        this.ensureProviderIdIsValid(provider.getId());
+        this.ensureProviderQueueIndexIsValid(provider.getRemovalPurgedIndex());
 
         // TODO: Technically, we don't need to remove the provider from the queue because we should theoretically process
         // TODO: "dirty" states correctly due to wrap around.
@@ -60,7 +51,7 @@ export class RemovalPurgedProviderQueue extends PurgedProviderQueue {
 
     private ensureProviderIsPendingRemoval(provider: Provider): void {
         if (!provider.isPendingRemoval()) {
-            throw new Revert('OP_NET: Impossible state. Provider is not pending removal.');
+            throw new Revert('Impossible state: Provider is not pending removal.');
         }
     }
 

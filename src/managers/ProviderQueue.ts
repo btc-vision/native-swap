@@ -67,14 +67,17 @@ export class ProviderQueue {
                     this.queue.setStartingIndex(index);
                     break;
                 } else {
+                    this.ensureProviderNotAlreadyPurged(provider.isPurged());
                     this.queue.delete_physical(index);
                 }
+            } else {
+                this.queue.setStartingIndex(index);
             }
 
             index++;
         }
 
-        return index;
+        return index === 0 ? index : index - 1;
     }
 
     public getAt(index: u32): u256 {
@@ -150,6 +153,12 @@ export class ProviderQueue {
         this.queue.save();
     }
 
+    protected ensureProviderIdIsValid(providerId: u256): void {
+        if (providerId.isZero()) {
+            throw new Revert(`Impossible state: A provider id cannot be zero.`);
+        }
+    }
+
     protected ensureProviderNotAlreadyPurged(state: boolean): void {
         if (state) {
             throw new Revert('Impossible state: provider has already been purged.');
@@ -185,13 +194,12 @@ export class ProviderQueue {
     protected tryNextCandidate(currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
         const providerId: u256 = this.queue.get_physical(this._currentIndex);
+        this.ensureProviderIdIsValid(providerId);
 
-        if (!providerId.isZero()) {
-            const provider: Provider = getProvider(providerId);
+        const provider: Provider = getProvider(providerId);
 
-            if (this.isEligible(provider)) {
-                result = this.returnProvider(provider, this._currentIndex, currentQuote);
-            }
+        if (this.isEligible(provider)) {
+            result = this.returnProvider(provider, this._currentIndex, currentQuote);
         }
 
         return result;
@@ -202,27 +210,29 @@ export class ProviderQueue {
         let result: Potential<Provider> = null;
         const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
 
-        if (!availableLiquidity.isZero()) {
-            if (this.enableIndexVerification) {
-                if (provider.getQueueIndex() !== index) {
-                    throw new Revert(
-                        `Impossible state: provider.getQueueIndex (${provider.getQueueIndex()}) does not match index (${index}).`,
-                    );
-                }
+        if (availableLiquidity.isZero()) {
+            return null;
+        }
 
-                if (provider.isInitialLiquidityProvider()) {
-                    throw new Revert(
-                        'Impossible state: Initial liquidity provider cannot be returned here.',
-                    );
-                }
+        if (this.enableIndexVerification) {
+            if (provider.getQueueIndex() !== index) {
+                throw new Revert(
+                    `Impossible state: provider.getQueueIndex (${provider.getQueueIndex()}) does not match index (${index}).`,
+                );
             }
 
-            if (Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)) {
-                provider.clearFromRemovalQueue();
-                result = provider;
-            } else if (!provider.hasReservedAmount()) {
-                this.resetProvider(provider);
+            if (provider.isInitialLiquidityProvider()) {
+                throw new Revert(
+                    'Impossible state: Initial liquidity provider cannot be returned here.',
+                );
             }
+        }
+
+        if (Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)) {
+            provider.clearFromRemovalQueue();
+            result = provider;
+        } else if (!provider.hasReservedAmount()) {
+            this.resetProvider(provider);
         }
 
         return result;
