@@ -25,7 +25,7 @@ export class ReentrancyGuard extends OP_NET {
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('status'):
+            case encodeSelector('status()'):
                 return this.status(calldata);
             default:
                 return super.execute(method, calldata);

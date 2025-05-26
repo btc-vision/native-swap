@@ -50,7 +50,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private static get DEPLOYER_SELECTOR(): Selector {
-        return encodeSelector('deployer');
+        return encodeSelector('deployer()');
     }
 
     private static get APPROVE_FROM_SELECTOR(): Selector {
@@ -121,13 +121,13 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getQuote(calldata);
             case encodeSelector('getProviderDetails(address)'):
                 return this.getProviderDetails(calldata);
-            case encodeSelector('getPriorityQueueCost'):
+            case encodeSelector('getPriorityQueueCost()'):
                 return this.getPriorityQueueCost();
-            case encodeSelector('getFees'):
+            case encodeSelector('getFees()'):
                 return this.getFees();
             case encodeSelector('getAntibotSettings(address)'):
                 return this.getAntibotSettings(calldata);
-            case encodeSelector('getStakingContractAddress'):
+            case encodeSelector('getStakingContractAddress()'):
                 return this.getStakingContractAddress(calldata);
             default:
                 return super.execute(method, calldata);
