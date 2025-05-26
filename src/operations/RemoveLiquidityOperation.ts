@@ -37,34 +37,12 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.ensureNotInPendingRemoval();
     }
 
-    private getSatoshisOwed(): u64 {
-        const SatoshisOwed: u64 = this.liquidityQueue.getSatoshisOwed(this.providerId);
-        this.ensureSatoshisOwedNotZero(SatoshisOwed);
-
-        return SatoshisOwed;
+    private emitActivateProviderEvent(SatoshisOwed: u64): void {
+        Blockchain.emit(new ActivateProviderEvent(this.providerId, u128.Zero, SatoshisOwed));
     }
 
-    private getLiquidityProvided(): u128 {
-        const liquidityProvided: u128 = this.provider.getLiquidityProvided();
-        this.ensureLiquidityProvidedNotZero(liquidityProvided);
-
-        return liquidityProvided;
-    }
-
-    private pullOutTokens(amount: u256): void {
-        TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
-    }
-
-    private updateProvider(): void {
-        this.provider.setLiquidityProvided(u128.Zero);
-        this.provider.markPendingRemoval();
-    }
-
-    private updateLiquidityQueue(tokenAmount: u256, SatoshisOwed: u64): void {
-        this.liquidityQueue.decreaseTotalReserve(tokenAmount);
-        this.liquidityQueue.decreaseVirtualTokenReserve(tokenAmount);
-        this.liquidityQueue.decreaseVirtualSatoshisReserve(SatoshisOwed);
-        this.liquidityQueue.addToRemovalQueue(this.provider);
+    private emitLiquidityRemovedEvent(SatoshisOwed: u64, tokenAmount: u128): void {
+        Blockchain.emit(new LiquidityRemovedEvent(this.providerId, SatoshisOwed, tokenAmount));
     }
 
     private ensureIsLiquidityProvider(): void {
@@ -107,11 +85,33 @@ export class RemoveLiquidityOperation extends BaseOperation {
         }
     }
 
-    private emitActivateProviderEvent(SatoshisOwed: u64): void {
-        Blockchain.emit(new ActivateProviderEvent(this.providerId, u128.Zero, SatoshisOwed));
+    private getLiquidityProvided(): u128 {
+        const liquidityProvided: u128 = this.provider.getLiquidityProvided();
+        this.ensureLiquidityProvidedNotZero(liquidityProvided);
+
+        return liquidityProvided;
     }
 
-    private emitLiquidityRemovedEvent(SatoshisOwed: u64, tokenAmount: u128): void {
-        Blockchain.emit(new LiquidityRemovedEvent(this.providerId, SatoshisOwed, tokenAmount));
+    private getSatoshisOwed(): u64 {
+        const SatoshisOwed: u64 = this.liquidityQueue.getSatoshisOwed(this.providerId);
+        this.ensureSatoshisOwedNotZero(SatoshisOwed);
+
+        return SatoshisOwed;
+    }
+
+    private pullOutTokens(amount: u256): void {
+        TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
+    }
+
+    private updateLiquidityQueue(tokenAmount: u256, SatoshisOwed: u64): void {
+        this.liquidityQueue.decreaseTotalReserve(tokenAmount);
+        this.liquidityQueue.decreaseVirtualTokenReserve(tokenAmount);
+        this.liquidityQueue.decreaseVirtualSatoshisReserve(SatoshisOwed);
+        this.liquidityQueue.addToRemovalQueue(this.provider);
+    }
+
+    private updateProvider(): void {
+        this.provider.setLiquidityProvided(u128.Zero);
+        this.provider.markPendingRemoval();
     }
 }

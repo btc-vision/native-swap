@@ -1,9 +1,12 @@
 import { Provider } from '../models/Provider';
 import { PurgedProviderQueue } from './PurgedProviderQueue';
 import { Revert } from '../../../btc-runtime/runtime';
+import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
 
 export class PriorityPurgedProviderQueue extends PurgedProviderQueue {
-    public override add(provider: Provider): void {
+    public override add(provider: Provider): u32 {
+        let index: u32 = INDEX_NOT_SET_VALUE;
+
         if (!provider.isInitialLiquidityProvider()) {
             this.ensureProviderNotAlreadyPurged(provider.isPurged());
             this.ensureProviderQueueIndexIsValid(provider.getQueueIndex());
@@ -11,10 +14,12 @@ export class PriorityPurgedProviderQueue extends PurgedProviderQueue {
 
             provider.markPurged();
 
-            const index: u32 = this.queue.push(provider.getQueueIndex(), false);
+            index = this.queue.push(provider.getQueueIndex(), false);
 
             provider.setPurgedIndex(index);
         }
+
+        return index;
     }
 
     private ensureProviderIsPriority(provider: Provider): void {

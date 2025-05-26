@@ -23,9 +23,9 @@ export class LiquidityQueueReserve implements ILiquidityQueueReserve {
     private readonly _virtualTokenReserve: StoredU256;
     private readonly _totalReserves: StoredMapU256;
     private readonly _totalReserved: StoredMapU256;
-    private readonly _deltaTokensAdd: StoredU256;
-    private readonly _deltaSatoshisBuy: StoredU64;
-    private readonly _deltaTokensBuy: StoredU256;
+    private readonly _totalTokensSellActivated: StoredU256;
+    private readonly _totalSatoshisExchangedForTokens: StoredU64;
+    private readonly _totalTokensExchangedForSatoshis: StoredU256;
 
     constructor(token: Address, tokenIdUint8Array: Uint8Array) {
         this.tokenId = u256.fromBytes(token, true);
@@ -34,40 +34,15 @@ export class LiquidityQueueReserve implements ILiquidityQueueReserve {
             tokenIdUint8Array,
         );
         this._virtualTokenReserve = new StoredU256(LIQUIDITY_VIRTUAL_T_POINTER, tokenIdUint8Array);
-        this._deltaTokensAdd = new StoredU256(DELTA_TOKENS_ADD, tokenIdUint8Array);
-        this._deltaSatoshisBuy = new StoredU64(DELTA_BTC_BUY, tokenIdUint8Array);
-        this._deltaTokensBuy = new StoredU256(DELTA_TOKENS_BUY, tokenIdUint8Array);
+        this._totalTokensSellActivated = new StoredU256(DELTA_TOKENS_ADD, tokenIdUint8Array);
+        this._totalSatoshisExchangedForTokens = new StoredU64(DELTA_BTC_BUY, tokenIdUint8Array);
+        this._totalTokensExchangedForSatoshis = new StoredU256(DELTA_TOKENS_BUY, tokenIdUint8Array);
         this._totalReserves = new StoredMapU256(TOTAL_RESERVES_POINTER);
         this._totalReserved = new StoredMapU256(LIQUIDITY_RESERVED_POINTER);
     }
 
     public get availableLiquidity(): u256 {
         return SafeMath.sub(this.liquidity, this.reservedLiquidity);
-    }
-
-    public get deltaTokensAdd(): u256 {
-        return this._deltaTokensAdd.value;
-    }
-
-    public set deltaTokensAdd(value: u256) {
-        this._deltaTokensAdd.value = value;
-    }
-
-    public get deltaSatoshisBuy(): u64 {
-        return this._deltaSatoshisBuy.get(0);
-    }
-
-    public set deltaSatoshisBuy(value: u64) {
-        this._deltaSatoshisBuy.set(0, value);
-        this._deltaSatoshisBuy.save();
-    }
-
-    public get deltaTokensBuy(): u256 {
-        return this._deltaTokensBuy.value;
-    }
-
-    public set deltaTokensBuy(value: u256) {
-        this._deltaTokensBuy.value = value;
     }
 
     public get liquidity(): u256 {
@@ -80,6 +55,31 @@ export class LiquidityQueueReserve implements ILiquidityQueueReserve {
 
     public get reservedLiquidity(): u256 {
         return this._totalReserved.get(this.tokenId);
+    }
+
+    public get totalSatoshisExchangedForTokens(): u64 {
+        return this._totalSatoshisExchangedForTokens.get(0);
+    }
+
+    public set totalSatoshisExchangedForTokens(value: u64) {
+        this._totalSatoshisExchangedForTokens.set(0, value);
+        this._totalSatoshisExchangedForTokens.save();
+    }
+
+    public get totalTokensExchangedForSatoshis(): u256 {
+        return this._totalTokensExchangedForSatoshis.value;
+    }
+
+    public set totalTokensExchangedForSatoshis(value: u256) {
+        this._totalTokensExchangedForSatoshis.value = value;
+    }
+
+    public get totalTokensSellActivated(): u256 {
+        return this._totalTokensSellActivated.value;
+    }
+
+    public set totalTokensSellActivated(value: u256) {
+        this._totalTokensSellActivated.value = value;
     }
 
     public get virtualSatoshisReserve(): u64 {
@@ -99,18 +99,6 @@ export class LiquidityQueueReserve implements ILiquidityQueueReserve {
         this._virtualTokenReserve.value = value;
     }
 
-    public addToDeltaSatoshisBuy(value: u64): void {
-        this.deltaSatoshisBuy = SafeMath.add64(this.deltaSatoshisBuy, value);
-    }
-
-    public addToDeltaTokensAdd(value: u256): void {
-        this.deltaTokensAdd = SafeMath.add(this.deltaTokensAdd, value);
-    }
-
-    public addToDeltaTokensBuy(value: u256): void {
-        this.deltaTokensBuy = SafeMath.add(this.deltaTokensBuy, value);
-    }
-
     public addToTotalReserve(value: u256): void {
         const currentReserve: u256 = this._totalReserves.get(this.tokenId);
         const newReserve: u256 = SafeMath.add(currentReserve, value);
@@ -121,6 +109,24 @@ export class LiquidityQueueReserve implements ILiquidityQueueReserve {
         const currentReserved: u256 = this._totalReserved.get(this.tokenId);
         const newReserved: u256 = SafeMath.add(currentReserved, value);
         this._totalReserved.set(this.tokenId, newReserved);
+    }
+
+    public addToTotalSatoshisExchangedForTokens(value: u64): void {
+        this.totalSatoshisExchangedForTokens = SafeMath.add64(
+            this.totalSatoshisExchangedForTokens,
+            value,
+        );
+    }
+
+    public addToTotalTokensExchangedForSatoshis(value: u256): void {
+        this.totalTokensExchangedForSatoshis = SafeMath.add(
+            this.totalTokensExchangedForSatoshis,
+            value,
+        );
+    }
+
+    public addToTotalTokensSellActivated(value: u256): void {
+        this.totalTokensSellActivated = SafeMath.add(this.totalTokensSellActivated, value);
     }
 
     public addToVirtualSatoshisReserve(value: u64): void {

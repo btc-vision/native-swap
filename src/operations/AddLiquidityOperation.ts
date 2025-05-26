@@ -75,13 +75,6 @@ export class AddLiquidityOperation extends BaseOperation {
         }
     }
 
-    private getReservation(): Reservation {
-        const reservation: Reservation = this.liquidityQueue.getReservationWithExpirationChecks();
-        this.ensureReservationForLP(reservation);
-
-        return reservation;
-    }
-
     private executeTrade(reservation: Reservation): CompletedTrade {
         const trade: CompletedTrade = this.tradeManager.executeTrade(reservation);
 
@@ -94,6 +87,13 @@ export class AddLiquidityOperation extends BaseOperation {
             trade.getTotalTokensPurchased(),
         );
         return trade;
+    }
+
+    private getReservation(): Reservation {
+        const reservation: Reservation = this.liquidityQueue.getReservationWithExpirationChecks();
+        this.ensureReservationForLP(reservation);
+
+        return reservation;
     }
 
     private updateLiquidityQueue(trade: CompletedTrade): void {

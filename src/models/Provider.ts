@@ -58,6 +58,33 @@ export class Provider {
     }
 
     /**
+     * @method isActive
+     * @description Gets the active state.
+     * @returns {boolean} - true if the provider is active; false if not.
+     */
+    public isActive(): boolean {
+        return this.providerData.active;
+    }
+
+    /**
+     * @method activate
+     * @description Mark the provider as active.
+     * @returns {void}
+     */
+    public activate(): void {
+        this.providerData.active = true;
+    }
+
+    /**
+     * @method deactivate
+     * @description Mark the provider as inactive.
+     * @returns {void}
+     */
+    public deactivate(): void {
+        this.providerData.active = false;
+    }
+
+    /**
      * @method isInitialLiquidityProvider
      * @description Gets if the provider is an initial liquidity provider.
      * @returns {boolean} - true if an initial liquidity provider; false if not.
@@ -85,20 +112,22 @@ export class Provider {
     }
 
     /**
-     * @method getProviderType
-     * @description Gets the provider type.
-     * @returns {ProviderTypes} - The provider type.
+     * @method getBtcReceiver
+     * @description Gets the btc receiver address.
+     * @returns {string} - The btc address.
      */
-    public getProviderType(): ProviderTypes {
-        let providerType: ProviderTypes = ProviderTypes.Normal;
+    public getBtcReceiver(): string {
+        return this.internalBTCReceiver.value;
+    }
 
-        if (this.isPriority()) {
-            providerType = ProviderTypes.Priority;
-        } else if (this.isPendingRemoval()) {
-            providerType = ProviderTypes.LiquidityRemoval;
-        }
-
-        return providerType;
+    /**
+     * @method setBtcReceiver
+     * @description Sets the btc receiver address.
+     * @param {string} value - The btc address.
+     * @returns {void}.
+     */
+    public setBtcReceiver(value: string): void {
+        this.internalBTCReceiver.value = value;
     }
 
     /**
@@ -129,30 +158,20 @@ export class Provider {
     }
 
     /**
-     * @method isActive
-     * @description Gets the active state.
-     * @returns {boolean} - true if the provider is active; false if not.
+     * @method getProviderType
+     * @description Gets the provider type.
+     * @returns {ProviderTypes} - The provider type.
      */
-    public isActive(): boolean {
-        return this.providerData.active;
-    }
+    public getProviderType(): ProviderTypes {
+        let providerType: ProviderTypes = ProviderTypes.Normal;
 
-    /**
-     * @method activate
-     * @description Mark the provider as active.
-     * @returns {void}
-     */
-    public activate(): void {
-        this.providerData.active = true;
-    }
+        if (this.isPriority()) {
+            providerType = ProviderTypes.Priority;
+        } else if (this.isPendingRemoval()) {
+            providerType = ProviderTypes.LiquidityRemoval;
+        }
 
-    /**
-     * @method deactivate
-     * @description Mark the provider as inactive.
-     * @returns {void}
-     */
-    public deactivate(): void {
-        this.providerData.active = false;
+        return providerType;
     }
 
     /**
@@ -183,25 +202,6 @@ export class Provider {
     }
 
     /**
-     * @method getBtcReceiver
-     * @description Gets the btc receiver address.
-     * @returns {string} - The btc address.
-     */
-    public getBtcReceiver(): string {
-        return this.internalBTCReceiver.value;
-    }
-
-    /**
-     * @method setBtcReceiver
-     * @description Sets the btc receiver address.
-     * @param {string} value - The btc address.
-     * @returns {void}.
-     */
-    public setBtcReceiver(value: string): void {
-        this.internalBTCReceiver.value = value;
-    }
-
-    /**
      * @method getListedTokenAtBlock
      * @description Gets if the block associated with the listing of a token.
      * @returns {u64} - the block number; BLOCK_NOT_SET_VALUE when no block.
@@ -211,11 +211,11 @@ export class Provider {
     }
 
     /**
-     * @method setListedTokenAtBloc
+     * @method setListedTokenAtBlock
      * @description Sets the block associated with the listing of a token.
      * @param {u64} value - the block number.
      */
-    public setListedTokenAtBloc(value: u64): void {
+    public setListedTokenAtBlock(value: u64): void {
         this.providerData.listedTokenAtBlock = value;
     }
 
@@ -603,12 +603,12 @@ export class Provider {
     }
 
     /**
-     * @method resetListingValues
-     * @description Reset all fields related to the listing.
+     * @method resetListingProviderValues
+     * @description Reset all fields related to the listing provider.
      * @returns {void}
      */
-    public resetListingValues(): void {
-        this.providerData.resetListingValues();
+    public resetListingProviderValues(): void {
+        this.providerData.resetListingProviderValues();
     }
 
     /**

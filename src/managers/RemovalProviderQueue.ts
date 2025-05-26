@@ -101,6 +101,20 @@ export class RemovalProviderQueue extends ProviderQueue {
         return result;
     }
 
+    private ensureOwedAboveMinimum(owedBTC: u64): void {
+        if (owedBTC < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
+            throw new Revert(
+                `Impossible state: Provider should have been removed from queue during swap operation.`,
+            );
+        }
+    }
+
+    private ensureReservedBTCIsValid(reservedBTC: u64, owedBTC: u64): void {
+        if (reservedBTC > owedBTC) {
+            throw new Revert(`Impossible state: reservedBTC cannot be > owedBTC.`);
+        }
+    }
+
     private getProviderIfOwedBTC(providerId: u256, provider: Provider): Provider | null {
         let result: Potential<Provider> = null;
         const owedBTC: u64 = this.owedBTCManager.getSatoshisOwed(providerId);
@@ -118,19 +132,5 @@ export class RemovalProviderQueue extends ProviderQueue {
         }
 
         return result;
-    }
-
-    private ensureOwedAboveMinimum(owedBTC: u64): void {
-        if (owedBTC < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
-            throw new Revert(
-                `Impossible state: Provider should have been removed from queue during swap operation.`,
-            );
-        }
-    }
-
-    private ensureReservedBTCIsValid(reservedBTC: u64, owedBTC: u64): void {
-        if (reservedBTC > owedBTC) {
-            throw new Revert(`Impossible state: reservedBTC cannot be > owedBTC.`);
-        }
     }
 }

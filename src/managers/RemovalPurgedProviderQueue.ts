@@ -4,7 +4,9 @@ import { Provider } from '../models/Provider';
 import { ALLOW_DIRTY, INDEX_NOT_SET_VALUE } from '../constants/Contract';
 
 export class RemovalPurgedProviderQueue extends PurgedProviderQueue {
-    public override add(provider: Provider): void {
+    public override add(provider: Provider): u32 {
+        let index: u32 = INDEX_NOT_SET_VALUE;
+
         if (!provider.isInitialLiquidityProvider()) {
             this.ensureProviderIsPendingRemoval(provider);
             this.ensureProviderNotAlreadyPurged(provider.isRemovalPurged());
@@ -12,10 +14,12 @@ export class RemovalPurgedProviderQueue extends PurgedProviderQueue {
 
             provider.markRemovalPurged();
 
-            const index: u32 = this.queue.push(provider.getRemovalQueueIndex(), false);
+            index = this.queue.push(provider.getRemovalQueueIndex(), false);
 
             provider.setRemovalPurgedIndex(index);
         }
+
+        return index;
     }
 
     /*public override get(associatedQueue: RemovalProviderQueue, quote: u256): Provider | null {

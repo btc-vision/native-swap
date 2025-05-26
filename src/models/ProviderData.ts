@@ -47,54 +47,158 @@ export class ProviderData {
         this.amountPointer = encodePointer(AMOUNT_POINTER, subPointer);
     }
 
-    private _purged: boolean = false;
+    private _active: boolean = false;
 
     /**
-     * @method purged
-     * @description Gets if the provider has been purged.
-     * @returns {boolean} - true if purged; false if not.
+     * @method active
+     * @description Gets if the provider is active.
+     * @returns {boolean} - true if active; false if not.
      */
     @inline
-    public get purged(): boolean {
+    public get active(): boolean {
         this.ensureValues();
-        return this._purged;
+        return this._active;
     }
 
     /**
-     * @method purged
-     * @description Sets the purged states.
-     * @param {boolean} value - true if purged; false if not.
+     * @method active
+     * @description Sets if the provider is active.
+     * @param {boolean} value - true if active; false if not.
      */
-    public set purged(value: boolean) {
+    public set active(value: boolean) {
         this.ensureValues();
-        if (this._purged !== value) {
-            this._purged = value;
+        if (this._active !== value) {
+            this._active = value;
             this.stateChanged = true;
         }
     }
 
-    private _removalPurged: boolean = false;
+    private _initialLiquidityProvider: boolean = false;
 
     /**
-     * @method removalPurged
-     * @description Gets if the removal provider has been purged.
-     * @returns {boolean} - true if purged; false if not.
+     * @method initialLiquidityProvider
+     * @description Gets if the provider is an initial liquidity provider.
+     * @returns {boolean} - true if an initial liquidity provider; false if not.
      */
     @inline
-    public get removalPurged(): boolean {
+    public get initialLiquidityProvider(): boolean {
         this.ensureValues();
-        return this._removalPurged;
+        return this._initialLiquidityProvider;
     }
 
     /**
-     * @method removalPurged
-     * @description Sets the purged removal states.
-     * @param {boolean} value - true if purged; false if not.
+     * @method initialLiquidityProvider
+     * @description Set if the provider is an initial liquidity provider.
+     * @param {boolean} value - true if an initial liquidity provider; false if not.
      */
-    public set removalPurged(value: boolean) {
+    public set initialLiquidityProvider(value: boolean) {
         this.ensureValues();
-        if (this._removalPurged !== value) {
-            this._removalPurged = value;
+        if (this._initialLiquidityProvider !== value) {
+            this._initialLiquidityProvider = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _liquidityAmount: u128 = u128.Zero;
+
+    /**
+     * @method liquidityAmount
+     * @description Gets the liquidity amount in tokens.
+     * @returns {u128} - The liquidity amount in tokens.
+     */
+    @inline
+    public get liquidityAmount(): u128 {
+        this.ensureAmount();
+        return this._liquidityAmount;
+    }
+
+    /**
+     * @method liquidityAmount
+     * @description Sets the liquidity amount in tokens.
+     * @param {u128} value - The liquidity amount in tokens.
+     */
+    public set liquidityAmount(value: u128) {
+        this.ensureAmount();
+        if (!u128.eq(this._liquidityAmount, value)) {
+            this._liquidityAmount = value;
+            this.amountChanged = true;
+        }
+    }
+
+    private _liquidityProvided: u128 = u128.Zero;
+
+    /**
+     * @method liquidityProvided
+     * @description Gets the liquidity provided in tokens.
+     * @returns {u128} - The liquidity provided in tokens.
+     */
+    @inline
+    public get liquidityProvided(): u128 {
+        this.ensureLiquidityProvided();
+        return this._liquidityProvided;
+    }
+
+    /**
+     * @method liquidityProvided
+     * @description Sets the liquidity provided in tokens.
+     * @param {u128} value - The liquidity provided in tokens.
+     */
+    public set liquidityProvided(value: u128) {
+        this.ensureLiquidityProvided();
+        if (!u128.eq(this._liquidityProvided, value)) {
+            this._liquidityProvided = value;
+            this.liquidityProvidedChanged = true;
+        }
+    }
+
+    private _liquidityProvider: boolean = false;
+
+    /**
+     * @method liquidityProvider
+     * @description Gets if the provider is a liquidity provider.
+     * @returns {boolean} - true if a liquidity provider; false if not.
+     */
+    @inline
+    public get liquidityProvider(): boolean {
+        this.ensureValues();
+        return this._liquidityProvider;
+    }
+
+    /**
+     * @method liquidityProvider
+     * @description Sets if the provider is a liquidity provider.
+     * @param {boolean} value - true if a liquidity provider; false if not.
+     */
+    public set liquidityProvider(value: boolean) {
+        this.ensureValues();
+        if (this._liquidityProvider !== value) {
+            this._liquidityProvider = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _liquidityProvisionAllowed: boolean = false;
+
+    /**
+     * @method liquidityProvisionAllowed
+     * @description Gets if the provider can provide liquidity.
+     * @returns {boolean} - true if can provide liquidity; false if not.
+     */
+    @inline
+    public get liquidityProvisionAllowed(): boolean {
+        this.ensureValues();
+        return this._liquidityProvisionAllowed;
+    }
+
+    /**
+     * @method liquidityProvisionAllowed
+     * @description Sets if the provider can provide liquidity.
+     * @param {boolean} value - true if can provide liquidity; false if not.
+     */
+    public set liquidityProvisionAllowed(value: boolean) {
+        this.ensureValues();
+        if (this._liquidityProvisionAllowed !== value) {
+            this._liquidityProvisionAllowed = value;
             this.stateChanged = true;
         }
     }
@@ -126,6 +230,84 @@ export class ProviderData {
         }
     }
 
+    private _pendingRemoval: boolean = false;
+
+    /**
+     * @method pendingRemoval
+     * @description Gets if the provider is in pending removal state.
+     * @returns {boolean} - true if in pending removal state; false if not.
+     */
+    @inline
+    public get pendingRemoval(): boolean {
+        this.ensureValues();
+        return this._pendingRemoval;
+    }
+
+    /**
+     * @method pendingRemoval
+     * @description Set if the provider is in pending removal state.
+     * @param {boolean} value - true if in pending removal; false if not.
+     */
+    public set pendingRemoval(value: boolean) {
+        this.ensureValues();
+        if (this._pendingRemoval !== value) {
+            this._pendingRemoval = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _priority: boolean = false;
+
+    /**
+     * @method priority
+     * @description Gets if the provider is a priority provider.
+     * @returns {boolean} - true if a priority provider; false if not.
+     */
+    @inline
+    public get priority(): boolean {
+        this.ensureValues();
+        return this._priority;
+    }
+
+    /**
+     * @method priority
+     * @description Sets if the provider is a priority provider.
+     * @param {boolean} value - true if a priority provider; false if not.
+     */
+    public set priority(value: boolean) {
+        this.ensureValues();
+        if (this._priority !== value) {
+            this._priority = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _purged: boolean = false;
+
+    /**
+     * @method purged
+     * @description Gets if the provider has been purged.
+     * @returns {boolean} - true if purged; false if not.
+     */
+    @inline
+    public get purged(): boolean {
+        this.ensureValues();
+        return this._purged;
+    }
+
+    /**
+     * @method purged
+     * @description Sets the purged states.
+     * @param {boolean} value - true if purged; false if not.
+     */
+    public set purged(value: boolean) {
+        this.ensureValues();
+        if (this._purged !== value) {
+            this._purged = value;
+            this.stateChanged = true;
+        }
+    }
+
     private _purgedIndex: u32 = INDEX_NOT_SET_VALUE;
 
     //!!! WHAT IF provider is removal & normal/priority???
@@ -149,6 +331,58 @@ export class ProviderData {
         this.ensureValues();
         if (this._purgedIndex !== value) {
             this._purgedIndex = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _queueIndex: u32 = INDEX_NOT_SET_VALUE;
+
+    /**
+     * @method queueIndex
+     * @description Gets the index of the provider in the normal/priority queue.
+     * @returns {u32} - The index of the provider in the normal/priority queue.
+     */
+    @inline
+    public get queueIndex(): u32 {
+        this.ensureValues();
+        return this._queueIndex;
+    }
+
+    /**
+     * @method queueIndex
+     * @description Sets the index of the provider in the normal/priority queue.
+     * @param {u32} value - The index of the provider in the normal/priority queue.
+     */
+    public set queueIndex(value: u32) {
+        this.ensureValues();
+        if (this._queueIndex !== value) {
+            this._queueIndex = value;
+            this.stateChanged = true;
+        }
+    }
+
+    private _removalPurged: boolean = false;
+
+    /**
+     * @method removalPurged
+     * @description Gets if the removal provider has been purged.
+     * @returns {boolean} - true if purged; false if not.
+     */
+    @inline
+    public get removalPurged(): boolean {
+        this.ensureValues();
+        return this._removalPurged;
+    }
+
+    /**
+     * @method removalPurged
+     * @description Sets the purged removal states.
+     * @param {boolean} value - true if purged; false if not.
+     */
+    public set removalPurged(value: boolean) {
+        this.ensureValues();
+        if (this._removalPurged !== value) {
+            this._removalPurged = value;
             this.stateChanged = true;
         }
     }
@@ -205,240 +439,6 @@ export class ProviderData {
         }
     }
 
-    private _initialLiquidityProvider: boolean = false;
-
-    /**
-     * @method initialLiquidityProvider
-     * @description Gets if the provider is an initial liquidity provider.
-     * @returns {boolean} - true if an initial liquidity provider; false if not.
-     */
-    @inline
-    public get initialLiquidityProvider(): boolean {
-        this.ensureValues();
-        return this._initialLiquidityProvider;
-    }
-
-    /**
-     * @method initialLiquidityProvider
-     * @description Set if the provider is an initial liquidity provider.
-     * @param {boolean} value - true if an initial liquidity provider; false if not.
-     */
-    public set initialLiquidityProvider(value: boolean) {
-        this.ensureValues();
-        if (this._initialLiquidityProvider !== value) {
-            this._initialLiquidityProvider = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _pendingRemoval: boolean = false;
-
-    /**
-     * @method pendingRemoval
-     * @description Gets if the provider is in pending removal state.
-     * @returns {boolean} - true if in pending removal state; false if not.
-     */
-    @inline
-    public get pendingRemoval(): boolean {
-        this.ensureValues();
-        return this._pendingRemoval;
-    }
-
-    /**
-     * @method pendingRemoval
-     * @description Set if the provider is in pending removal state.
-     * @param {boolean} value - true if in pending removal; false if not.
-     */
-    public set pendingRemoval(value: boolean) {
-        this.ensureValues();
-        if (this._pendingRemoval !== value) {
-            this._pendingRemoval = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _active: boolean = false;
-
-    /**
-     * @method active
-     * @description Gets if the provider is active.
-     * @returns {boolean} - true if active; false if not.
-     */
-    @inline
-    public get active(): boolean {
-        this.ensureValues();
-        return this._active;
-    }
-
-    /**
-     * @method active
-     * @description Sets if the provider is active.
-     * @param {boolean} value - true if active; false if not.
-     */
-    public set active(value: boolean) {
-        this.ensureValues();
-        if (this._active !== value) {
-            this._active = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _priority: boolean = false;
-
-    /**
-     * @method priority
-     * @description Gets if the provider is a priority provider.
-     * @returns {boolean} - true if a priority provider; false if not.
-     */
-    @inline
-    public get priority(): boolean {
-        this.ensureValues();
-        return this._priority;
-    }
-
-    /**
-     * @method priority
-     * @description Sets if the provider is a priority provider.
-     * @param {boolean} value - true if a priority provider; false if not.
-     */
-    public set priority(value: boolean) {
-        this.ensureValues();
-        if (this._priority !== value) {
-            this._priority = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _liquidityProvisionAllowed: boolean = false;
-
-    /**
-     * @method liquidityProvisionAllowed
-     * @description Gets if the provider can provide liquidity.
-     * @returns {boolean} - true if can provide liquidity; false if not.
-     */
-    @inline
-    public get liquidityProvisionAllowed(): boolean {
-        this.ensureValues();
-        return this._liquidityProvisionAllowed;
-    }
-
-    /**
-     * @method liquidityProvisionAllowed
-     * @description Sets if the provider can provide liquidity.
-     * @param {boolean} value - true if can provide liquidity; false if not.
-     */
-    public set liquidityProvisionAllowed(value: boolean) {
-        this.ensureValues();
-        if (this._liquidityProvisionAllowed !== value) {
-            this._liquidityProvisionAllowed = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _liquidityProvider: boolean = false;
-
-    /**
-     * @method liquidityProvider
-     * @description Gets if the provider is a liquidity provider.
-     * @returns {boolean} - true if a liquidity provider; false if not.
-     */
-    @inline
-    public get liquidityProvider(): boolean {
-        this.ensureValues();
-        return this._liquidityProvider;
-    }
-
-    /**
-     * @method liquidityProvider
-     * @description Sets if the provider is a liquidity provider.
-     * @param {boolean} value - true if a liquidity provider; false if not.
-     */
-    public set liquidityProvider(value: boolean) {
-        this.ensureValues();
-        if (this._liquidityProvider !== value) {
-            this._liquidityProvider = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _queueIndex: u32 = INDEX_NOT_SET_VALUE;
-
-    /**
-     * @method queueIndex
-     * @description Gets the index of the provider in the normal/priority queue.
-     * @returns {u32} - The index of the provider in the normal/priority queue.
-     */
-    @inline
-    public get queueIndex(): u32 {
-        this.ensureValues();
-        return this._queueIndex;
-    }
-
-    /**
-     * @method queueIndex
-     * @description Sets the index of the provider in the normal/priority queue.
-     * @param {u32} value - The index of the provider in the normal/priority queue.
-     */
-    public set queueIndex(value: u32) {
-        this.ensureValues();
-        if (this._queueIndex !== value) {
-            this._queueIndex = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _liquidityProvided: u128 = u128.Zero;
-
-    /**
-     * @method liquidityProvided
-     * @description Gets the liquidity provided in tokens.
-     * @returns {u128} - The liquidity provided in tokens.
-     */
-    @inline
-    public get liquidityProvided(): u128 {
-        this.ensureLiquidityProvided();
-        return this._liquidityProvided;
-    }
-
-    /**
-     * @method liquidityProvided
-     * @description Sets the liquidity provided in tokens.
-     * @param {u128} value - The liquidity provided in tokens.
-     */
-    public set liquidityProvided(value: u128) {
-        this.ensureLiquidityProvided();
-        if (!u128.eq(this._liquidityProvided, value)) {
-            this._liquidityProvided = value;
-            this.liquidityProvidedChanged = true;
-        }
-    }
-
-    private _liquidityAmount: u128 = u128.Zero;
-
-    /**
-     * @method liquidityAmount
-     * @description Gets the liquidity amount in tokens.
-     * @returns {u128} - The liquidity amount in tokens.
-     */
-    @inline
-    public get liquidityAmount(): u128 {
-        this.ensureAmount();
-        return this._liquidityAmount;
-    }
-
-    /**
-     * @method liquidityAmount
-     * @description Sets the liquidity amount in tokens.
-     * @param {u128} value - The liquidity amount in tokens.
-     */
-    public set liquidityAmount(value: u128) {
-        this.ensureAmount();
-        if (!u128.eq(this._liquidityAmount, value)) {
-            this._liquidityAmount = value;
-            this.amountChanged = true;
-        }
-    }
-
     private _reservedAmount: u128 = u128.Zero;
 
     /**
@@ -466,32 +466,21 @@ export class ProviderData {
     }
 
     /**
-     * @method save
-     * @description Persists the cached values to storage if any have been modified.
-     * @returns {void}
-     */
-    public save(): void {
-        this.saveStateIfChanged();
-        this.saveLiquidityProvidedIfChanged();
-        this.saveAmountIfChanged();
-    }
-
-    /**
      * @method resetAll
      * @description Reset all values (listing and liquidity provider).
      * @returns {void}
      */
     public resetAll(): void {
-        this.resetListingValues();
+        this.resetListingProviderValues();
         this.resetLiquidityProviderValues();
     }
 
     /**
-     * @method resetListingValues
-     * @description Reset only the values used by a listing.
+     * @method resetListingProviderValues
+     * @description Reset only the values used by a listing provider.
      * @returns {void}
      */
-    public resetListingValues(): void {
+    public resetListingProviderValues(): void {
         this.active = false;
         this.priority = false;
         this.liquidityProvisionAllowed = false;
@@ -522,41 +511,27 @@ export class ProviderData {
     }
 
     /**
-     * @method saveStateIfChanged
-     * @description Persists the states if any have been modified
-     * @returns {void}.
+     * @method save
+     * @description Persists the cached values to storage if any have been modified.
+     * @returns {void}
      */
-    private saveStateIfChanged(): void {
-        if (this.stateChanged) {
-            const packed: Uint8Array = this.packValues();
-            Blockchain.setStorageAt(this.pointerBuffer, packed);
-            this.stateChanged = false;
-        }
+    public save(): void {
+        this.saveStateIfChanged();
+        this.saveLiquidityProvidedIfChanged();
+        this.saveAmountIfChanged();
     }
 
     /**
-     * @method saveLiquidityProvidedIfChanged
-     * @description Persists the liquidity provided if modified.
+     * @private
+     * @method ensureAmount
+     * @description Loads the liquidity and reserved amount from storage if needed.
      * @returns {void}
      */
-    private saveLiquidityProvidedIfChanged(): void {
-        if (this.liquidityProvidedChanged) {
-            const packed: Uint8Array = this.packLiquidityProvided();
-            Blockchain.setStorageAt(this.liquidityProvidedPointer, packed);
-            this.liquidityProvidedChanged = false;
-        }
-    }
-
-    /**
-     * @method saveAmountIfChanged
-     * @description Persists the liquidity and reserved amount if modified.
-     * @returns {void}
-     */
-    private saveAmountIfChanged(): void {
-        if (this.amountChanged) {
-            const packed: Uint8Array = this.packAmounts();
-            Blockchain.setStorageAt(this.amountPointer, packed);
-            this.amountChanged = false;
+    private ensureAmount(): void {
+        if (!this.amountLoaded) {
+            const storedData: Uint8Array = Blockchain.getStorageAt(this.amountPointer);
+            this.unpackAmounts(storedData);
+            this.amountLoaded = true;
         }
     }
 
@@ -571,20 +546,6 @@ export class ProviderData {
             const storedData: Uint8Array = Blockchain.getStorageAt(this.liquidityProvidedPointer);
             this.unpackLiquidityProvided(storedData);
             this.liquidityProvidedLoaded = true;
-        }
-    }
-
-    /**
-     * @private
-     * @method ensureAmount
-     * @description Loads the liquidity and reserved amount from storage if needed.
-     * @returns {void}
-     */
-    private ensureAmount(): void {
-        if (!this.amountLoaded) {
-            const storedData: Uint8Array = Blockchain.getStorageAt(this.amountPointer);
-            this.unpackAmounts(storedData);
-            this.amountLoaded = true;
         }
     }
 
@@ -608,54 +569,29 @@ export class ProviderData {
 
     /**
      * @private
-     * @method unpackValues
-     * @description Unpacks the internal data.
-     * @param {Uint8Array} packedData - The data to unpack.
-     * @returns {void}
+     * @method packAmounts
+     * @description Packs the liquidity amount and the reserved amount data for storage.
+     * @returns {Uint8Array} The packed Uint8Array value.
      */
-    private unpackValues(packedData: Uint8Array): void {
-        const reader: BytesReader = new BytesReader(packedData);
+    private packAmounts(): Uint8Array {
+        const writer: BytesWriter = new BytesWriter(U256_BYTE_LENGTH);
+        writer.writeU128(this._liquidityAmount);
+        writer.writeU128(this._reservedAmount);
 
-        const flag: u8 = reader.readU8();
-
-        this._active = (flag & 1) === 1;
-        this._priority = ((flag >> 1) & 1) === 1;
-        this._liquidityProvisionAllowed = ((flag >> 2) & 1) === 1;
-        this._liquidityProvider = ((flag >> 3) & 1) === 1;
-        this._pendingRemoval = ((flag >> 4) & 1) === 1;
-        this._initialLiquidityProvider = ((flag >> 5) & 1) === 1;
-        this._purged = ((flag >> 6) & 1) === 1;
-        this._removalPurged = ((flag >> 7) & 1) === 1;
-        this._queueIndex = reader.readU32();
-        this._removalQueueIndex = reader.readU32();
-        this._listedTokenAtBlock = reader.readU64();
-        this._purgedIndex = reader.readU32();
-        this._removalPurgedIndex = reader.readU32();
+        return writer.getBuffer();
     }
 
     /**
      * @private
-     * @method unpackLiquidityProvided
-     * @description Unpacks the liquidity amount and reserved amount.
-     * @param {Uint8Array} packedData - The data to unpack.
-     * @returns {void}
+     * @method packLiquidityProvided
+     * @description Packs the liquidity provided data for storage.
+     * @returns {Uint8Array} The packed Uint8Array value.
      */
-    private unpackLiquidityProvided(packedData: Uint8Array): void {
-        const reader: BytesReader = new BytesReader(packedData);
-        this._liquidityProvided = reader.readU128();
-    }
+    private packLiquidityProvided(): Uint8Array {
+        const writer: BytesWriter = new BytesWriter(U128_BYTE_LENGTH);
+        writer.writeU128(this._liquidityProvided);
 
-    /**
-     * @private
-     * @method unpackAmounts
-     * @description Unpacks the liquidity amount and reserved amount.
-     * @param {Uint8Array} packedData - The data to unpack.
-     * @returns {void}
-     */
-    private unpackAmounts(packedData: Uint8Array): void {
-        const reader: BytesReader = new BytesReader(packedData);
-        this._liquidityAmount = reader.readU128();
-        this._reservedAmount = reader.readU128();
+        return writer.getBuffer();
     }
 
     /**
@@ -688,29 +624,93 @@ export class ProviderData {
     }
 
     /**
-     * @private
-     * @method packLiquidityProvided
-     * @description Packs the liquidity provided data for storage.
-     * @returns {Uint8Array} The packed Uint8Array value.
+     * @method saveAmountIfChanged
+     * @description Persists the liquidity and reserved amount if modified.
+     * @returns {void}
      */
-    private packLiquidityProvided(): Uint8Array {
-        const writer: BytesWriter = new BytesWriter(U128_BYTE_LENGTH);
-        writer.writeU128(this._liquidityProvided);
+    private saveAmountIfChanged(): void {
+        if (this.amountChanged) {
+            const packed: Uint8Array = this.packAmounts();
+            Blockchain.setStorageAt(this.amountPointer, packed);
+            this.amountChanged = false;
+        }
+    }
 
-        return writer.getBuffer();
+    /**
+     * @method saveLiquidityProvidedIfChanged
+     * @description Persists the liquidity provided if modified.
+     * @returns {void}
+     */
+    private saveLiquidityProvidedIfChanged(): void {
+        if (this.liquidityProvidedChanged) {
+            const packed: Uint8Array = this.packLiquidityProvided();
+            Blockchain.setStorageAt(this.liquidityProvidedPointer, packed);
+            this.liquidityProvidedChanged = false;
+        }
+    }
+
+    /**
+     * @method saveStateIfChanged
+     * @description Persists the states if any have been modified
+     * @returns {void}.
+     */
+    private saveStateIfChanged(): void {
+        if (this.stateChanged) {
+            const packed: Uint8Array = this.packValues();
+            Blockchain.setStorageAt(this.pointerBuffer, packed);
+            this.stateChanged = false;
+        }
     }
 
     /**
      * @private
-     * @method packAmounts
-     * @description Packs the liquidity amount and the reserved amount data for storage.
-     * @returns {Uint8Array} The packed Uint8Array value.
+     * @method unpackAmounts
+     * @description Unpacks the liquidity amount and reserved amount.
+     * @param {Uint8Array} packedData - The data to unpack.
+     * @returns {void}
      */
-    private packAmounts(): Uint8Array {
-        const writer: BytesWriter = new BytesWriter(U256_BYTE_LENGTH);
-        writer.writeU128(this._liquidityAmount);
-        writer.writeU128(this._reservedAmount);
+    private unpackAmounts(packedData: Uint8Array): void {
+        const reader: BytesReader = new BytesReader(packedData);
+        this._liquidityAmount = reader.readU128();
+        this._reservedAmount = reader.readU128();
+    }
 
-        return writer.getBuffer();
+    /**
+     * @private
+     * @method unpackLiquidityProvided
+     * @description Unpacks the liquidity amount and reserved amount.
+     * @param {Uint8Array} packedData - The data to unpack.
+     * @returns {void}
+     */
+    private unpackLiquidityProvided(packedData: Uint8Array): void {
+        const reader: BytesReader = new BytesReader(packedData);
+        this._liquidityProvided = reader.readU128();
+    }
+
+    /**
+     * @private
+     * @method unpackValues
+     * @description Unpacks the internal data.
+     * @param {Uint8Array} packedData - The data to unpack.
+     * @returns {void}
+     */
+    private unpackValues(packedData: Uint8Array): void {
+        const reader: BytesReader = new BytesReader(packedData);
+
+        const flag: u8 = reader.readU8();
+
+        this._active = (flag & 1) === 1;
+        this._priority = ((flag >> 1) & 1) === 1;
+        this._liquidityProvisionAllowed = ((flag >> 2) & 1) === 1;
+        this._liquidityProvider = ((flag >> 3) & 1) === 1;
+        this._pendingRemoval = ((flag >> 4) & 1) === 1;
+        this._initialLiquidityProvider = ((flag >> 5) & 1) === 1;
+        this._purged = ((flag >> 6) & 1) === 1;
+        this._removalPurged = ((flag >> 7) & 1) === 1;
+        this._queueIndex = reader.readU32();
+        this._removalQueueIndex = reader.readU32();
+        this._listedTokenAtBlock = reader.readU64();
+        this._purgedIndex = reader.readU32();
+        this._removalPurgedIndex = reader.readU32();
     }
 }

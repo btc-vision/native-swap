@@ -43,3 +43,5 @@ export const STAKING_CA_POINTER: u16 = Blockchain.nextPointer;
 export const NORMAL_QUEUE_PURGED_RESERVATION: u16 = Blockchain.nextPointer;
 export const PRIORITY_QUEUE_PURGED_RESERVATION: u16 = Blockchain.nextPointer;
 export const REMOVAL_QUEUE_PURGED_RESERVATION: u16 = Blockchain.nextPointer;
+export const PURGE_RESERVATION_INDEX_POINTER: u16 = Blockchain.nextPointer;
+export const LISTED_TOKENS_AT_BLOCK_POINTER: u16 = Blockchain.nextPointer;

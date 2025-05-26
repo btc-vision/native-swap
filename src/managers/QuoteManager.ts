@@ -14,6 +14,11 @@ export class QuoteManager implements IQuoteManager {
         );
     }
 
+    /**
+     * Retrieves the stored quote for a given block.
+     * @param {u64} blockNumber — the block height at which the quote was saved
+     * @returns {u256} - the quote recorded at that block
+     */
     public getBlockQuote(blockNumber: u64): u256 {
         if (blockNumber > <u64>MAXIMUM_VALID_INDEX) {
             throw new Revert('Impossible state: Block number too large for maximum array size.');
@@ -22,6 +27,11 @@ export class QuoteManager implements IQuoteManager {
         return this._quoteHistory.get(<u32>blockNumber);
     }
 
+    /**
+     * Retrieves the stored quote for a given block. If the quote is Zero the functions throw.
+     * @param {u64} blockNumber — the block height at which the quote was saved
+     * @returns {u256} - the quote recorded at that block
+     */
     public getValidBlockQuote(blockNumber: u64): u256 {
         if (blockNumber > <u64>MAXIMUM_VALID_INDEX) {
             throw new Revert('Impossible state: Block number too large for maximum array size.');
@@ -33,14 +43,29 @@ export class QuoteManager implements IQuoteManager {
         return quote;
     }
 
+    /**
+     * Stores the quote for the current block.
+     * @param {u64} blockNumber — the block height at which the quote was saved
+     * @param {u256} value — the quote
+     * @returns {void}
+     */
     public setBlockQuote(blockNumber: u64, value: u256): void {
+        //!!!! Roll over on blocknumber
         if (blockNumber > <u64>MAXIMUM_VALID_INDEX) {
             throw new Revert('Impossible state: Block number too large for maximum array size.');
         }
 
-        this._quoteHistory.set(<u32>blockNumber, value);
+        const currentQuote: u256 = this._quoteHistory.get(<u32>blockNumber); //!!!!
+
+        if (!u256.eq(currentQuote, value)) {
+            this._quoteHistory.set(<u32>blockNumber, value);
+        }
     }
 
+    /**
+     * Persists any in-memory changes to storage.
+     * @returns {void}
+     */
     public save(): void {
         this._quoteHistory.save();
     }

@@ -6,9 +6,6 @@ import { Address } from '@btc-vision/btc-runtime/runtime';
 export interface ILiquidityQueue {
     antiBotExpirationBlock: u64;
     readonly availableLiquidity: u256;
-    deltaSatoshisBuy: u64;
-    deltaTokensAdd: u256;
-    deltaTokensBuy: u256;
     readonly feesEnabled: bool;
     initialLiquidityProviderId: u256;
     lastPurgedBlock: u64;
@@ -19,20 +16,23 @@ export interface ILiquidityQueue {
     readonly reservedLiquidity: u256;
     readonly timeOutEnabled: bool;
     token: Address;
+    totalSatoshisExchangedForTokens: u64;
+    totalTokensExchangedForSatoshis: u256;
+    totalTokensSellActivated: u256;
     virtualSatoshisReserve: u64;
     virtualTokenReserve: u256;
 
+    accruePenalty(penalty: u128): void;
+
     addActiveReservation(reservation: Reservation): u32;
+
+    addToNormalQueue(provider: Provider): void;
 
     addToPriorityQueue(provider: Provider): void;
 
     addToRemovalQueue(provider: Provider): void;
 
-    addToNormalQueue(provider: Provider): void;
-
     buyTokens(tokensOut: u256, satoshisIn: u64): void;
-
-    cleanUpQueues(): void;
 
     computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256;
 
@@ -46,6 +46,8 @@ export interface ILiquidityQueue {
 
     distributeFee(totalFee: u256, stakingAddress: Address): void;
 
+    getActiveReservationAtIndex(blockNumber: u64, index: u32): boolean;
+
     getSatoshisOwed(providerId: u256): u64;
 
     getSatoshisOwedLeft(providerId: u256): u64;
@@ -56,19 +58,23 @@ export interface ILiquidityQueue {
 
     getNextProviderWithLiquidity(quote: u256): Provider | null;
 
+    getReservationIdAtIndex(blockNumber: u64, index: u32): u128;
+
     getReservationWithExpirationChecks(): Reservation;
 
     getUtilizationRatio(): u256;
+
+    hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean;
 
     increaseSatoshisOwed(providerId: u256, value: u64): void;
 
     increaseSatoshisOwedReserved(providerId: u256, value: u64): void;
 
-    increaseDeltaSatoshisBuy(value: u64): void;
+    increaseTotalSatoshisExchangedForTokens(value: u64): void;
 
-    increaseDeltaTokensAdd(value: u256): void;
+    increaseTotalTokensExchangedForSatoshis(value: u256): void;
 
-    increaseDeltaTokensBuy(value: u256): void;
+    increaseTotalTokensSellActivated(value: u256): void;
 
     increaseTotalReserve(value: u256): void;
 
@@ -85,13 +91,19 @@ export interface ILiquidityQueue {
         maxReserves5BlockPercent: u64,
     ): void;
 
+    purgeReservationsAndRestoreProviders(): void;
+
+    quote(): u256;
+
+    removeFromPurgeQueue(provider: Provider): void;
+
+    removeFromRemovalPurgeQueue(provider: Provider): void;
+
     resetProvider(
         provider: Provider,
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void;
-
-    quote(): u256;
 
     save(): void;
 

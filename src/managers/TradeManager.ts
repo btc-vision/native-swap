@@ -183,7 +183,7 @@ export class TradeManager implements ITradeManager {
                 provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX
             ) {
                 provider.allowLiquidityProvision();
-                this.liquidityQueueReserve.addToDeltaTokensAdd(
+                this.liquidityQueueReserve.addToTotalTokensSellActivated(
                     provider.getLiquidityAmount().toU256(),
                 );
                 this.emitActivateProviderEvent(provider);
@@ -357,25 +357,21 @@ export class TradeManager implements ITradeManager {
         this.quoteAtReservation = this.quoteManager.getValidBlockQuote(blockNumber);
     }
 
+    private emitActivateProviderEvent(provider: Provider): void {
+        Blockchain.emit(
+            new ActivateProviderEvent(provider.getId(), provider.getLiquidityAmount(), 0),
+        );
+    }
+
     private ensureProviderHasEnoughLiquidity(provider: Provider, tokensDesired: u128): void {
         if (u128.lt(provider.getLiquidityAmount(), tokensDesired)) {
             throw new Revert('Impossible state: liquidity < tokensDesired.');
         }
     }
 
-    private ensureReservedAmountIsValid(provider: Provider, providedAmount: u128): void {
-        if (u128.lt(provider.getReservedAmount(), providedAmount)) {
-            throw new Revert(
-                `Impossible state: provider.reserved < reservedAmount (${provider.getReservedAmount()} < ${providedAmount}).`,
-            );
-        }
-    }
-
-    private ensureReservationIsValid(reservation: Reservation): void {
-        if (!reservation.isValid()) {
-            throw new Revert(
-                'Impossible state: Reservation is invalid but went thru executeTrade.',
-            );
+    private ensurePurgeIndexIsValid(purgeIndex: u32): void {
+        if (purgeIndex === INDEX_NOT_SET_VALUE) {
+            throw new Revert('Impossible state: purgeIndex is not set.');
         }
     }
 
@@ -393,15 +389,19 @@ export class TradeManager implements ITradeManager {
         }
     }
 
-    private ensurePurgeIndexIsValid(purgeIndex: u32): void {
-        if (purgeIndex === INDEX_NOT_SET_VALUE) {
-            throw new Revert('Impossible state: purgeIndex is not set.');
+    private ensureReservationIsValid(reservation: Reservation): void {
+        if (!reservation.isValid()) {
+            throw new Revert(
+                'Impossible state: Reservation is invalid but went thru executeTrade.',
+            );
         }
     }
 
-    private emitActivateProviderEvent(provider: Provider): void {
-        Blockchain.emit(
-            new ActivateProviderEvent(provider.getId(), provider.getLiquidityAmount(), 0),
-        );
+    private ensureReservedAmountIsValid(provider: Provider, providedAmount: u128): void {
+        if (u128.lt(provider.getReservedAmount(), providedAmount)) {
+            throw new Revert(
+                `Impossible state: provider.reserved < reservedAmount (${provider.getReservedAmount()} < ${providedAmount}).`,
+            );
+        }
     }
 }

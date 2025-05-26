@@ -3,29 +3,35 @@ import { Provider } from '../../models/Provider';
 import { ProviderTypes } from '../../types/ProviderTypes';
 
 export interface IProviderManager {
+    readonly currentIndexNormal: u32;
+    readonly currentIndexPriority: u32;
+    readonly currentIndexRemoval: u32;
+    initialLiquidityProviderId: u256;
     readonly normalQueueLength: u32;
     readonly normalQueueStartingIndex: u32;
     readonly priorityQueueLength: u32;
     readonly priorityQueueStartingIndex: u32;
-    readonly removalQueueLength: u32;
-    readonly removalQueueStartingIndex: u32;
     previousNormalStartingIndex: u32;
     previousPriorityStartingIndex: u32;
     previousRemovalStartingIndex: u32;
-    initialLiquidityProviderId: u256;
-    readonly currentIndexNormal: u32;
-    readonly currentIndexPriority: u32;
-    readonly currentIndexRemoval: u32;
+    readonly removalQueueLength: u32;
+    readonly removalQueueStartingIndex: u32;
 
     addToNormalQueue(provider: Provider): u32;
 
+    addToNormalPurgedQueue(provider: Provider): u32;
+
     addToPriorityQueue(provider: Provider): u32;
+
+    addToPriorityPurgedQueue(provider: Provider): u32;
 
     addToRemovalQueue(provider: Provider): u32;
 
-    getIdFromQueue(index: u32, type: ProviderTypes): u256;
+    addToRemovalPurgedQueue(provider: Provider): u32;
 
-    getProviderFromQueue(index: u32, type: ProviderTypes): Provider;
+    cleanUpQueues(): void;
+
+    getIdFromQueue(index: u32, type: ProviderTypes): u256;
 
     getFromNormalQueue(index: u32): u256;
 
@@ -33,9 +39,15 @@ export interface IProviderManager {
 
     getFromRemovalQueue(index: u32): u256;
 
-    cleanUpQueues(): void;
+    getProviderFromQueue(index: u32, type: ProviderTypes): Provider;
+
+    hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean;
 
     getNextProviderWithLiquidity(quote: u256): Provider | null;
+
+    removeFromPurgeQueue(provider: Provider): void;
+
+    removeFromRemovalPurgeQueue(provider: Provider): void;
 
     removePendingLiquidityProviderFromRemovalQueue(provider: Provider): void;
 

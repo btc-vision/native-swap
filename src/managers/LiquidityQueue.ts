@@ -72,12 +72,26 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.timeoutEnabled = timeoutEnabled;
 
         if (purgeOldReservations) {
-            this.lastPurgedBlock = this.reservationManager.purgeReservationsAndRestoreProviders(
-                this.lastPurgedBlock,
-            );
+            this.purgeReservationsAndRestoreProviders();
         }
 
         this.updateVirtualPoolIfNeeded();
+    }
+
+    public get antiBotExpirationBlock(): u64 {
+        return this.settings.get(2);
+    }
+
+    public set antiBotExpirationBlock(value: u64) {
+        this.settings.set(2, value);
+    }
+
+    public get availableLiquidity(): u256 {
+        return this.liquidityQueueReserve.availableLiquidity;
+    }
+
+    public get feesEnabled(): bool {
+        return ENABLE_FEES;
     }
 
     public get initialLiquidityProviderId(): u256 {
@@ -86,6 +100,74 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     public set initialLiquidityProviderId(value: u256) {
         this.providerManager.initialLiquidityProviderId = value;
+    }
+
+    public get lastPurgedBlock(): u64 {
+        return this.settings.get(1);
+    }
+
+    public set lastPurgedBlock(value: u64) {
+        this.settings.set(1, value);
+    }
+
+    public get lastVirtualUpdateBlock(): u64 {
+        return this.settings.get(3);
+    }
+
+    public set lastVirtualUpdateBlock(value: u64) {
+        this.settings.set(3, value);
+    }
+
+    public get liquidity(): u256 {
+        return this.liquidityQueueReserve.liquidity;
+    }
+
+    public get maxReserves5BlockPercent(): u64 {
+        return this.settings.get(0);
+    }
+
+    public set maxReserves5BlockPercent(value: u64) {
+        this.settings.set(0, value);
+    }
+
+    public get maxTokensPerReservation(): u256 {
+        return this._maxTokensPerReservation.value;
+    }
+
+    public set maxTokensPerReservation(value: u256) {
+        this._maxTokensPerReservation.value = value;
+    }
+
+    public get reservedLiquidity(): u256 {
+        return this.liquidityQueueReserve.reservedLiquidity;
+    }
+
+    public get totalTokensSellActivated(): u256 {
+        return this.liquidityQueueReserve.totalTokensSellActivated;
+    }
+
+    public set totalTokensSellActivated(value: u256) {
+        this.liquidityQueueReserve.totalTokensSellActivated = value;
+    }
+
+    public get totalSatoshisExchangedForTokens(): u64 {
+        return this.liquidityQueueReserve.totalSatoshisExchangedForTokens;
+    }
+
+    public set totalSatoshisExchangedForTokens(value: u64) {
+        this.liquidityQueueReserve.totalSatoshisExchangedForTokens = value;
+    }
+
+    public get totalTokensExchangedForSatoshis(): u256 {
+        return this.liquidityQueueReserve.totalTokensExchangedForSatoshis;
+    }
+
+    public set totalTokensExchangedForSatoshis(value: u256) {
+        this.liquidityQueueReserve.totalTokensExchangedForSatoshis = value;
+    }
+
+    public get timeOutEnabled(): bool {
+        return this.timeoutEnabled;
     }
 
     public get virtualSatoshisReserve(): u64 {
@@ -104,88 +186,13 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.liquidityQueueReserve.virtualTokenReserve = value;
     }
 
-    public get deltaTokensAdd(): u256 {
-        return this.liquidityQueueReserve.deltaTokensAdd;
-    }
+    public accruePenalty(penalty: u128): void {
+        if (!penalty.isZero()) {
+            const penaltyU256 = u256.fromU128(penalty);
 
-    public set deltaTokensAdd(value: u256) {
-        this.liquidityQueueReserve.deltaTokensAdd = value;
-    }
-
-    public get deltaSatoshisBuy(): u64 {
-        return this.liquidityQueueReserve.deltaSatoshisBuy;
-    }
-
-    public set deltaSatoshisBuy(value: u64) {
-        this.liquidityQueueReserve.deltaSatoshisBuy = value;
-    }
-
-    public get deltaTokensBuy(): u256 {
-        return this.liquidityQueueReserve.deltaTokensBuy;
-    }
-
-    public set deltaTokensBuy(value: u256) {
-        this.liquidityQueueReserve.deltaTokensBuy = value;
-    }
-
-    public get availableLiquidity(): u256 {
-        return this.liquidityQueueReserve.availableLiquidity;
-    }
-
-    public get reservedLiquidity(): u256 {
-        return this.liquidityQueueReserve.reservedLiquidity;
-    }
-
-    public get liquidity(): u256 {
-        return this.liquidityQueueReserve.liquidity;
-    }
-
-    public get maxTokensPerReservation(): u256 {
-        return this._maxTokensPerReservation.value;
-    }
-
-    public set maxTokensPerReservation(value: u256) {
-        this._maxTokensPerReservation.value = value;
-    }
-
-    public get maxReserves5BlockPercent(): u64 {
-        return this.settings.get(0);
-    }
-
-    public set maxReserves5BlockPercent(value: u64) {
-        this.settings.set(0, value);
-    }
-
-    public get lastPurgedBlock(): u64 {
-        return this.settings.get(1);
-    }
-
-    public set lastPurgedBlock(value: u64) {
-        this.settings.set(1, value);
-    }
-
-    public get antiBotExpirationBlock(): u64 {
-        return this.settings.get(2);
-    }
-
-    public set antiBotExpirationBlock(value: u64) {
-        this.settings.set(2, value);
-    }
-
-    public get lastVirtualUpdateBlock(): u64 {
-        return this.settings.get(3);
-    }
-
-    public set lastVirtualUpdateBlock(value: u64) {
-        this.settings.set(3, value);
-    }
-
-    public get feesEnabled(): bool {
-        return ENABLE_FEES;
-    }
-
-    public get timeOutEnabled(): bool {
-        return this.timeoutEnabled;
+            this.increaseVirtualTokenReserve(penaltyU256);
+            this.increaseTotalReserve(penaltyU256);
+        }
     }
 
     public addActiveReservation(reservation: Reservation): u32 {
@@ -195,12 +202,12 @@ export class LiquidityQueue implements ILiquidityQueue {
         );
     }
 
-    public addToPriorityQueue(provider: Provider): void {
-        this.providerManager.addToPriorityQueue(provider);
-    }
-
     public addToNormalQueue(provider: Provider): void {
         this.providerManager.addToNormalQueue(provider);
+    }
+
+    public addToPriorityQueue(provider: Provider): void {
+        this.providerManager.addToPriorityQueue(provider);
     }
 
     public addToRemovalQueue(provider: Provider): void {
@@ -208,12 +215,8 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public buyTokens(tokensOut: u256, satoshisIn: u64): void {
-        this.increaseDeltaSatoshisBuy(satoshisIn);
-        this.increaseDeltaTokensBuy(tokensOut);
-    }
-
-    public cleanUpQueues(): void {
-        this.providerManager.cleanUpQueues();
+        this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
+        this.increaseTotalTokensExchangedForSatoshis(tokensOut);
     }
 
     public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256 {
@@ -256,16 +259,12 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
     }
 
+    public getActiveReservationAtIndex(blockNumber: u64, index: u32): boolean {
+        return this.reservationManager.getReservationActiveAtIndex(blockNumber, index);
+    }
+
     public getSatoshisOwed(providerId: u256): u64 {
         return this.owedBTCManager.getSatoshisOwed(providerId);
-    }
-
-    public getSatoshisOwedLeft(providerId: u256): u64 {
-        return this.owedBTCManager.getSatoshisOwedLeft(providerId);
-    }
-
-    public getSatoshisOwedReserved(providerId: u256): u64 {
-        return this.owedBTCManager.getSatoshisOwedReserved(providerId);
     }
 
     public getMaximumTokensLeftBeforeCap(): u256 {
@@ -290,11 +289,23 @@ export class LiquidityQueue implements ILiquidityQueue {
         return this.providerManager.getNextProviderWithLiquidity(quote);
     }
 
+    public getReservationIdAtIndex(blockNumber: u64, index: u32): u128 {
+        return this.reservationManager.getReservationIdAtIndex(blockNumber, index);
+    }
+
     public getReservationWithExpirationChecks(): Reservation {
         const reservation = new Reservation(this.token, Blockchain.tx.sender);
         reservation.ensureCanBeConsumed();
 
         return reservation;
+    }
+
+    public getSatoshisOwedLeft(providerId: u256): u64 {
+        return this.owedBTCManager.getSatoshisOwedLeft(providerId);
+    }
+
+    public getSatoshisOwedReserved(providerId: u256): u64 {
+        return this.owedBTCManager.getSatoshisOwedReserved(providerId);
     }
 
     public getUtilizationRatio(): u256 {
@@ -306,6 +317,10 @@ export class LiquidityQueue implements ILiquidityQueue {
             SafeMath.mul(this.reservedLiquidity, u256.fromU64(100)),
             this.liquidity,
         );
+    }
+
+    public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
+        return this.providerManager.hasEnoughLiquidityLeftProvider(provider, quote);
     }
 
     public increaseSatoshisOwed(providerId: u256, value: u64): void {
@@ -320,16 +335,16 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.setSatoshisOwedReserved(providerId, owedReservedAfter);
     }
 
-    public increaseDeltaSatoshisBuy(value: u64): void {
-        this.liquidityQueueReserve.addToDeltaSatoshisBuy(value);
+    public increaseTotalSatoshisExchangedForTokens(value: u64): void {
+        this.liquidityQueueReserve.addToTotalSatoshisExchangedForTokens(value);
     }
 
-    public increaseDeltaTokensAdd(value: u256): void {
-        this.liquidityQueueReserve.addToDeltaTokensAdd(value);
+    public increaseTotalTokensExchangedForSatoshis(value: u256): void {
+        this.liquidityQueueReserve.addToTotalTokensExchangedForSatoshis(value);
     }
 
-    public increaseDeltaTokensBuy(value: u256): void {
-        this.liquidityQueueReserve.addToDeltaTokensBuy(value);
+    public increaseTotalTokensSellActivated(value: u256): void {
+        this.liquidityQueueReserve.addToTotalTokensSellActivated(value);
     }
 
     public increaseTotalReserve(value: u256): void {
@@ -363,12 +378,10 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.maxReserves5BlockPercent = maxReserves5BlockPercent;
     }
 
-    public resetProvider(
-        provider: Provider,
-        burnRemainingFunds: boolean = true,
-        canceled: boolean = false,
-    ): void {
-        this.providerManager.resetProvider(provider, burnRemainingFunds, canceled);
+    public purgeReservationsAndRestoreProviders(): void {
+        this.lastPurgedBlock = this.reservationManager.purgeReservationsAndRestoreProviders(
+            this.lastPurgedBlock,
+        );
     }
 
     // Return number of tokens per satoshi
@@ -385,6 +398,22 @@ export class LiquidityQueue implements ILiquidityQueue {
         // scaledQuote = T * QUOTE_SCALE / B
         const scaled = SafeMath.mul(T, QUOTE_SCALE);
         return SafeMath.div(scaled, u256.fromU64(this.virtualSatoshisReserve));
+    }
+
+    public removeFromPurgeQueue(provider: Provider): void {
+        this.providerManager.removeFromPurgeQueue(provider);
+    }
+
+    public removeFromRemovalPurgeQueue(provider: Provider): void {
+        this.providerManager.removeFromRemovalPurgeQueue(provider);
+    }
+
+    public resetProvider(
+        provider: Provider,
+        burnRemainingFunds: boolean = true,
+        canceled: boolean = false,
+    ): void {
+        this.providerManager.resetProvider(provider, burnRemainingFunds, canceled);
     }
 
     public save(): void {
@@ -416,36 +445,30 @@ export class LiquidityQueue implements ILiquidityQueue {
         let T: u256 = this.virtualTokenReserve;
 
         // Add tokens from deltaTokensAdd
-        const dT_add: u256 = this.deltaTokensAdd;
+        const dT_add: u256 = this.totalTokensSellActivated;
         if (!dT_add.isZero()) {
             T = SafeMath.add(T, dT_add);
         }
 
         // apply net "buys"
-        const dB_buy: u256 = u256.fromU64(this.deltaSatoshisBuy);
-        const dT_buy: u256 = this.deltaTokensBuy;
+        const dB_buy: u256 = u256.fromU64(this.totalSatoshisExchangedForTokens);
+        const dT_buy: u256 = this.totalTokensSellActivated;
 
         if (!dT_buy.isZero()) {
-            let Tprime: u256;
-            if (u256.ge(dT_buy, T)) {
-                Tprime = u256.One;
-            } else {
-                Tprime = SafeMath.sub(T, dT_buy);
-            }
+            let Tprime = T >= dT_buy ? SafeMath.sub(T, dT_buy) : u256.One;
+            let Bprime = SafeMath.div(SafeMath.mul(B, T), Tprime);
+            const incB = SafeMath.sub(Bprime, B);
 
-            const numerator: u256 = SafeMath.mul(B, T);
-            let Bprime: u256 = SafeMath.div(numerator, Tprime);
-            const incB: u256 = SafeMath.sub(Bprime, B);
-
-            if (u256.gt(incB, dB_buy)) {
+            if (incB > dB_buy) {
                 Bprime = SafeMath.add(B, dB_buy);
-
-                let newTprime: u256 = SafeMath.div(numerator, Bprime);
-                if (u256.lt(newTprime, u256.One)) {
-                    newTprime = u256.One;
-                }
-                Tprime = newTprime;
+                Tprime = SafeMath.div(SafeMath.mul(B, T), Bprime);
+                if (Tprime < u256.One) Tprime = u256.One;
+            } else if (incB < dB_buy) {
+                Bprime = SafeMath.add(B, dB_buy);
+                Tprime = SafeMath.div(SafeMath.mul(B, T), Bprime);
+                if (Tprime < u256.One) Tprime = u256.One;
             }
+
             B = Bprime;
             T = Tprime;
         }
@@ -455,7 +478,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
 
         //!!!
-        if (B > u256.fromU64(u64.MAX_VALUE)) {
+        if (B > MAX_TOTAL_SATOSHIS) {
             throw new Revert(`Impossible state: New virtual satoshis reserve out of range.`);
         }
 
@@ -483,12 +506,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         return reserve.toU64();
     }
 
-    private resetAccumulators(): void {
-        this.liquidityQueueReserve.deltaTokensAdd = u256.Zero;
-        this.liquidityQueueReserve.deltaTokensBuy = u256.Zero;
-        this.liquidityQueueReserve.deltaSatoshisBuy = 0;
-    }
-
     private computeVolatility(
         currentBlock: u64,
         windowSize: u32 = VOLATILITY_WINDOW_IN_BLOCKS,
@@ -511,5 +528,11 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
 
         return volatility;
+    }
+
+    private resetAccumulators(): void {
+        this.liquidityQueueReserve.totalTokensExchangedForSatoshis = u256.Zero;
+        this.liquidityQueueReserve.totalTokensSellActivated = u256.Zero;
+        this.liquidityQueueReserve.totalSatoshisExchangedForTokens = 0;
     }
 }

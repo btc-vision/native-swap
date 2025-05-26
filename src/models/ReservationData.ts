@@ -38,32 +38,6 @@ export class ReservationData {
         this.pointerBuffer = encodePointer(pointer, subPointer);
     }
 
-    private _timeout: boolean = false;
-
-    /**
-     * @method timeout
-     * @description Gets the timeout state.
-     * @returns {boolean} true if timeout; false if not.
-     */
-    @inline
-    public get timeout(): boolean {
-        this.ensureValues();
-        return this._timeout;
-    }
-
-    /**
-     * @method timeout
-     * @description Sets the timeout state.
-     * @param {boolean} true to timeout, false to not timeout.
-     */
-    public set timeout(value: boolean) {
-        this.ensureValues();
-        if (this._timeout !== value) {
-            this._timeout = value;
-            this.isChanged = true;
-        }
-    }
-
     private _activationDelay: u8 = 0;
 
     /**
@@ -86,59 +60,6 @@ export class ReservationData {
         this.ensureValues();
         if (this._activationDelay !== value) {
             this._activationDelay = value;
-            this.isChanged = true;
-        }
-    }
-
-    private _purgeIndex: u32 = INDEX_NOT_SET_VALUE;
-
-    /**
-     * @method purgeIndex
-     * @description Gets the purge index.
-     * @returns {u32}
-     */
-    @inline
-    public get purgeIndex(): u32 {
-        this.ensureValues();
-        return this._purgeIndex;
-    }
-
-    /**
-     * @method purgeIndex
-     * @description Sets the purge index.
-     * @param {u32} value - The purge index.
-     */
-    public set purgeIndex(value: u32) {
-        this.ensureValues();
-        if (this._purgeIndex !== value) {
-            this._purgeIndex = value;
-            this.isChanged = true;
-        }
-    }
-
-    private _forLiquidityPool: boolean = false;
-
-    /**
-     * @method forLiquidityPool
-     * @description Gets if the reservation is for a liquidity pool.
-     * @returns {boolean} - true if the reservation is for a liquidity pool; false if not.
-     */
-    @inline
-    public get forLiquidityPool(): boolean {
-        this.ensureValues();
-        return this._forLiquidityPool;
-    }
-
-    /**
-     * @method forLiquidityPool
-     * @description Sets if the reservation is for a liquidity pool.
-     * @param {boolean} value - true if the reservation is for a liquidity pool; false if not.
-     */
-    public set forLiquidityPool(value: boolean) {
-        this.ensureValues();
-
-        if (this._forLiquidityPool !== value) {
-            this._forLiquidityPool = value;
             this.isChanged = true;
         }
     }
@@ -184,6 +105,85 @@ export class ReservationData {
         return this._creationBlock + RESERVATION_EXPIRE_AFTER_IN_BLOCKS;
     }
 
+    private _forLiquidityPool: boolean = false;
+
+    /**
+     * @method forLiquidityPool
+     * @description Gets if the reservation is for a liquidity pool.
+     * @returns {boolean} - true if the reservation is for a liquidity pool; false if not.
+     */
+    @inline
+    public get forLiquidityPool(): boolean {
+        this.ensureValues();
+        return this._forLiquidityPool;
+    }
+
+    /**
+     * @method forLiquidityPool
+     * @description Sets if the reservation is for a liquidity pool.
+     * @param {boolean} value - true if the reservation is for a liquidity pool; false if not.
+     */
+    public set forLiquidityPool(value: boolean) {
+        this.ensureValues();
+
+        if (this._forLiquidityPool !== value) {
+            this._forLiquidityPool = value;
+            this.isChanged = true;
+        }
+    }
+
+    private _purgeIndex: u32 = INDEX_NOT_SET_VALUE;
+
+    /**
+     * @method purgeIndex
+     * @description Gets the purge index.
+     * @returns {u32}
+     */
+    @inline
+    public get purgeIndex(): u32 {
+        this.ensureValues();
+        return this._purgeIndex;
+    }
+
+    /**
+     * @method purgeIndex
+     * @description Sets the purge index.
+     * @param {u32} value - The purge index.
+     */
+    public set purgeIndex(value: u32) {
+        this.ensureValues();
+        if (this._purgeIndex !== value) {
+            this._purgeIndex = value;
+            this.isChanged = true;
+        }
+    }
+
+    private _timeout: boolean = false;
+
+    /**
+     * @method timeout
+     * @description Gets the timeout state.
+     * @returns {boolean} true if timeout; false if not.
+     */
+    @inline
+    public get timeout(): boolean {
+        this.ensureValues();
+        return this._timeout;
+    }
+
+    /**
+     * @method timeout
+     * @description Sets the timeout state.
+     * @param {boolean} true to timeout, false to not timeout.
+     */
+    public set timeout(value: boolean) {
+        this.ensureValues();
+        if (this._timeout !== value) {
+            this._timeout = value;
+            this.isChanged = true;
+        }
+    }
+
     /**
      * @method userTimeoutExpirationBlock
      * @description Gets the expiration if the user is timeouted.
@@ -197,20 +197,6 @@ export class ReservationData {
             return this.expirationBlock + TIMEOUT_AFTER_EXPIRATION_BLOCKS;
         } else {
             return 0;
-        }
-    }
-
-    /**
-     * @method save
-     * @description Persists the cached values to storage if any have been modified.
-     * @returns {void}
-     */
-    public save(): void {
-        if (this.isChanged) {
-            const packed: Uint8Array = this.packValues();
-            Blockchain.setStorageAt(this.pointerBuffer, packed);
-
-            this.isChanged = false;
         }
     }
 
@@ -235,30 +221,17 @@ export class ReservationData {
     }
 
     /**
-     * @private
-     * @method unpackFlags
-     * @description Unpack the flags from a U8.
-     * @param {u8} packedFlags - The flags to unpack.
+     * @method save
+     * @description Persists the cached values to storage if any have been modified.
      * @returns {void}
      */
-    private unpackFlags(packedFlags: u8): void {
-        this._forLiquidityPool = (packedFlags & 0b1) !== 0;
-        this._timeout = (packedFlags & 0b10) !== 0;
-    }
+    public save(): void {
+        if (this.isChanged) {
+            const packed: Uint8Array = this.packValues();
+            Blockchain.setStorageAt(this.pointerBuffer, packed);
 
-    /**
-     * @private
-     * @method packFlags
-     * @description Packs the flags into a single U8.
-     * @returns The packed flags.
-     */
-    private packFlags(): u8 {
-        let flags: u8 = 0;
-
-        if (this.forLiquidityPool) flags |= 0b1;
-        if (this.timeout) flags |= 0b10;
-
-        return flags;
+            this.isChanged = false;
+        }
     }
 
     /**
@@ -281,18 +254,17 @@ export class ReservationData {
 
     /**
      * @private
-     * @method unpackValues
-     * @description Unpacks the internal data.
-     * @param {Uint8Array} packedData - The data to unpack.
-     * @returns {void}
+     * @method packFlags
+     * @description Packs the flags into a single U8.
+     * @returns The packed flags.
      */
-    private unpackValues(packedData: Uint8Array): void {
-        const reader: BytesReader = new BytesReader(packedData);
+    private packFlags(): u8 {
+        let flags: u8 = 0;
 
-        this.unpackFlags(reader.readU8());
-        this._creationBlock = reader.readU64();
-        this._purgeIndex = reader.readU32();
-        this._activationDelay = reader.readU8();
+        if (this.forLiquidityPool) flags |= 0b1;
+        if (this.timeout) flags |= 0b10;
+
+        return flags;
     }
 
     /**
@@ -312,5 +284,33 @@ export class ReservationData {
         writer.writeU8(this.activationDelay);
 
         return writer.getBuffer();
+    }
+
+    /**
+     * @private
+     * @method unpackFlags
+     * @description Unpack the flags from a U8.
+     * @param {u8} packedFlags - The flags to unpack.
+     * @returns {void}
+     */
+    private unpackFlags(packedFlags: u8): void {
+        this._forLiquidityPool = (packedFlags & 0b1) !== 0;
+        this._timeout = (packedFlags & 0b10) !== 0;
+    }
+
+    /**
+     * @private
+     * @method unpackValues
+     * @description Unpacks the internal data.
+     * @param {Uint8Array} packedData - The data to unpack.
+     * @returns {void}
+     */
+    private unpackValues(packedData: Uint8Array): void {
+        const reader: BytesReader = new BytesReader(packedData);
+
+        this.unpackFlags(reader.readU8());
+        this._creationBlock = reader.readU64();
+        this._purgeIndex = reader.readU32();
+        this._activationDelay = reader.readU8();
     }
 }

@@ -22,7 +22,7 @@ export class ProviderQueue {
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
     ) {
-        this.queue = new StoredU256Array(pointer, subPointer, <u64>MAXIMUM_PROVIDER_COUNT);
+        this.queue = new StoredU256Array(pointer, subPointer, MAXIMUM_PROVIDER_COUNT);
         this.token = token;
         this.enableIndexVerification = enableIndexVerification;
     }
@@ -140,7 +140,7 @@ export class ProviderQueue {
             this.queue.delete_physical(provider.getQueueIndex());
         }
 
-        provider.resetListingValues();
+        provider.resetListingProviderValues();
 
         Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
     }

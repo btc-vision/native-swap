@@ -59,7 +59,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private assignBlockNumber(): void {
-        this.provider.setListedTokenAtBloc(Blockchain.block.number);
+        this.provider.setListedTokenAtBlock(Blockchain.block.number);
     }
 
     private assignReceiver(): void {
@@ -214,8 +214,6 @@ export class ListTokensForSaleOperation extends BaseOperation {
             this.amountIn256,
         );
     }
-
-    private setProviderReceiver(provider: Provider): void {}
 
     private snapshotBlockQuote(): void {
         this.liquidityQueue.setBlockQuote();

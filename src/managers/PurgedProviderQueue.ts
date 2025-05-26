@@ -26,7 +26,7 @@ export class PurgedProviderQueue {
         allowDirty: boolean,
     ) {
         this.token = token;
-        this.queue = new StoredU32Array(pointer, subPointer, <u64>MAXIMUM_PROVIDER_COUNT);
+        this.queue = new StoredU32Array(pointer, subPointer, MAXIMUM_PROVIDER_COUNT);
         this.enableIndexVerification = enableIndexVerification;
         this.allowDirty = allowDirty;
     }
@@ -35,7 +35,9 @@ export class PurgedProviderQueue {
         return this.queue.getLength();
     }
 
-    public add(provider: Provider): void {
+    public add(provider: Provider): u32 {
+        let index: u32 = INDEX_NOT_SET_VALUE;
+
         if (!provider.isInitialLiquidityProvider()) {
             this.ensureProviderNotAlreadyPurged(provider.isPurged());
             this.ensureProviderNotPriority(provider);
@@ -43,10 +45,12 @@ export class PurgedProviderQueue {
 
             provider.markPurged();
 
-            const index: u32 = this.queue.push(provider.getQueueIndex(), false);
+            index = this.queue.push(provider.getQueueIndex(), false);
 
             provider.setPurgedIndex(index);
         }
+
+        return index;
     }
 
     public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
@@ -100,7 +104,7 @@ export class PurgedProviderQueue {
             this.queue.delete_physical(provider.getQueueIndex());
         }
 
-        provider.resetListingValues();
+        provider.resetListingProviderValues();
 
         Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
     }

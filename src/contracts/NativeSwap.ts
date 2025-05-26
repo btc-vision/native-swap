@@ -422,7 +422,7 @@ export class NativeSwap extends ReentrancyGuard {
         const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
             token,
             this.addressToPointer(token),
-            true,
+            false,
         );
 
         this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);

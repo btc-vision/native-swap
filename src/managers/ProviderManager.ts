@@ -1,4 +1,4 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, Revert, StoredU256, StoredU32 } from '@btc-vision/btc-runtime/runtime';
 import {
     INITIAL_LIQUIDITY_PROVIDER_POINTER,
@@ -92,6 +92,10 @@ export class ProviderManager implements IProviderManager {
         this._startingIndex = new StoredU32(STARTING_INDEX_POINTER, tokenIdUint8Array);
     }
 
+    public get currentIndexNormal(): u32 {
+        return this.normalQueue.currentIndex;
+    }
+
     public get currentIndexPriority(): u32 {
         return this.priorityQueue.currentIndex;
     }
@@ -100,16 +104,28 @@ export class ProviderManager implements IProviderManager {
         return this.removalQueue.currentIndex;
     }
 
-    public get currentIndexNormal(): u32 {
-        return this.normalQueue.currentIndex;
-    }
-
     public get initialLiquidityProviderId(): u256 {
         return this._initialLiquidityProviderId.value;
     }
 
     public set initialLiquidityProviderId(value: u256) {
         this._initialLiquidityProviderId.value = value;
+    }
+
+    public get normalQueueLength(): u32 {
+        return this.normalQueue.length;
+    }
+
+    public get normalQueueStartingIndex(): u32 {
+        return this.normalQueue.startingIndex;
+    }
+
+    public get previousNormalStartingIndex(): u32 {
+        return this._startingIndex.get(0);
+    }
+
+    public set previousNormalStartingIndex(value: u32) {
+        this._startingIndex.set(0, value);
     }
 
     public get previousPriorityStartingIndex(): u32 {
@@ -128,14 +144,6 @@ export class ProviderManager implements IProviderManager {
         this._startingIndex.set(2, value);
     }
 
-    public get previousNormalStartingIndex(): u32 {
-        return this._startingIndex.get(0);
-    }
-
-    public set previousNormalStartingIndex(value: u32) {
-        this._startingIndex.set(0, value);
-    }
-
     public get priorityQueueLength(): u32 {
         return this.priorityQueue.length;
     }
@@ -152,14 +160,6 @@ export class ProviderManager implements IProviderManager {
         return this.removalQueue.startingIndex;
     }
 
-    public get normalQueueLength(): u32 {
-        return this.normalQueue.length;
-    }
-
-    public get normalQueueStartingIndex(): u32 {
-        return this.normalQueue.startingIndex;
-    }
-
     public addToNormalQueue(provider: Provider): u32 {
         return this.normalQueue.add(provider);
     }
@@ -170,6 +170,18 @@ export class ProviderManager implements IProviderManager {
 
     public addToRemovalQueue(provider: Provider): u32 {
         return this.removalQueue.add(provider);
+    }
+
+    public addToNormalPurgedQueue(provider: Provider): u32 {
+        return this.normalPurgedQueue.add(provider);
+    }
+
+    public addToPriorityPurgedQueue(provider: Provider): u32 {
+        return this.priorityPurgedQueue.add(provider);
+    }
+
+    public addToRemovalPurgedQueue(provider: Provider): u32 {
+        return this.removalPurgedQueue.add(provider);
     }
 
     public cleanUpQueues(): void {
@@ -211,6 +223,24 @@ export class ProviderManager implements IProviderManager {
                 throw new Revert('Impossible state: Invalid provider type');
             }
         }
+    }
+
+    public getNextFromPurgedProvider(currentQuote: u256): Provider | null {
+        let result: Provider | null = null;
+
+        if (this.removalPurgedQueue.length > 0) {
+            result = this.removalPurgedQueue.get(this.removalQueue, currentQuote);
+        }
+
+        if (result === null && this.priorityPurgedQueue.length > 0) {
+            result = this.priorityPurgedQueue.get(this.priorityQueue, currentQuote);
+        }
+
+        if (result === null && this.normalPurgedQueue.length > 0) {
+            result = this.normalPurgedQueue.get(this.normalQueue, currentQuote);
+        }
+
+        return result;
     }
 
     public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
@@ -260,7 +290,7 @@ export class ProviderManager implements IProviderManager {
                 this.currentIndexNormal === 0
                     ? this.currentIndexNormal
                     : this.currentIndexNormal - 1;
-            
+
             return provider;
         }
 
@@ -279,6 +309,21 @@ export class ProviderManager implements IProviderManager {
         this.ensureProviderExists(providerId, index, type);
 
         return getProvider(providerId);
+    }
+
+    public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
+        let result: boolean = false;
+        const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
+
+        if (!availableLiquidity.isZero()) {
+            result = this.verifyProviderRemainingLiquidityAndReset(
+                provider,
+                availableLiquidity,
+                quote,
+            );
+        }
+
+        return result;
     }
 
     public removeFromPurgeQueue(provider: Provider): void {
@@ -340,22 +385,33 @@ export class ProviderManager implements IProviderManager {
         this.removalPurgedQueue.save();
     }
 
-    public getNextFromPurgedProvider(currentQuote: u256): Provider | null {
-        let result: Provider | null = null;
-
-        if (this.removalPurgedQueue.length > 0) {
-            result = this.removalPurgedQueue.get(this.removalQueue, currentQuote);
+    private ensureInitialProviderIsNotPurged(provider: Provider): void {
+        if (provider.isPurged()) {
+            throw new Revert(
+                `Impossible state: Initial liquidity provider is present in purge queue.`,
+            );
         }
+    }
 
-        if (result === null && this.priorityPurgedQueue.length > 0) {
-            result = this.priorityPurgedQueue.get(this.priorityQueue, currentQuote);
+    private ensureProviderExists(providerId: u256, index: u32, type: ProviderTypes): void {
+        if (providerId.isZero()) {
+            throw new Revert(
+                `Impossible state: Cannot load provider. Index: ${index} Type: ${type}. Pool corrupted.`,
+            );
         }
+    }
 
-        if (result === null && this.normalPurgedQueue.length > 0) {
-            result = this.normalPurgedQueue.get(this.normalQueue, currentQuote);
+    private ensureProviderIsNotPendingRemoval(provider: Provider): void {
+        if (provider.isPendingRemoval()) {
+            throw new Revert('Impossible state: removal provider cannot be reset.');
         }
+    }
 
-        return result;
+    private ensureProviderIsNotPurged(provider: Provider): void {
+        //!!! What about removal
+        if (provider.isPurged()) {
+            throw new Revert(`Impossible state: Provider is present in purge queue.`);
+        }
     }
 
     private getInitialProvider(currentQuote: u256): Provider | null {
@@ -390,31 +446,21 @@ export class ProviderManager implements IProviderManager {
         return initialProvider;
     }
 
-    private ensureProviderExists(providerId: u256, index: u32, type: ProviderTypes): void {
-        if (providerId.isZero()) {
-            throw new Revert(
-                `Impossible state: Cannot load provider. Index: ${index} Type: ${type}. Pool corrupted.`,
-            );
-        }
-    }
+    private verifyProviderRemainingLiquidityAndReset(
+        provider: Provider,
+        availableLiquidity: u128,
+        quote: u256,
+    ): boolean {
+        let result: boolean = true;
 
-    private ensureProviderIsNotPurged(provider: Provider): void {
-        if (provider.isPurged()) {
-            throw new Revert(`Impossible state: Provider is present in purge queue.`);
-        }
-    }
+        if (!Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
+            if (!provider.hasReservedAmount()) {
+                this.resetProvider(provider);
+            }
 
-    private ensureInitialProviderIsNotPurged(provider: Provider): void {
-        if (provider.isPurged()) {
-            throw new Revert(
-                `Impossible state: Initial liquidity provider is present in purge queue.`,
-            );
+            result = false;
         }
-    }
 
-    private ensureProviderIsNotPendingRemoval(provider: Provider): void {
-        if (provider.isPendingRemoval()) {
-            throw new Revert('Impossible state: removal provider cannot be reset.');
-        }
+        return result;
     }
 }

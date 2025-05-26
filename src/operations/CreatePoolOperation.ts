@@ -44,6 +44,14 @@ export class CreatePoolOperation extends BaseOperation {
         this.applyAntibotSettingsIfNeeded();
     }
 
+    private applyAntibotSettingsIfNeeded(): void {
+        if (this.antiBotEnabledFor > 0) {
+            this.liquidityQueue.antiBotExpirationBlock =
+                Blockchain.block.number + u64(this.antiBotEnabledFor);
+            this.liquidityQueue.maxTokensPerReservation = this.antiBotMaximumTokensPerReservation;
+        }
+    }
+
     private checkPreConditions(): void {
         this.ensureReceiverAddressValid();
         this.ensureFloorPriceNotZero();
@@ -51,6 +59,44 @@ export class CreatePoolOperation extends BaseOperation {
         this.ensureAntibotSettingsValid();
         this.ensureInitialLiquidityProviderNotAlreadySet();
         this.ensureMaxReservesIn5BlocksPercentValid();
+    }
+
+    private ensureAntibotSettingsValid(): void {
+        if (this.antiBotEnabledFor !== 0 && this.antiBotMaximumTokensPerReservation.isZero()) {
+            throw new Revert('NATIVE_SWAP: Anti-bot max tokens per reservation cannot be zero');
+        }
+    }
+
+    private ensureFloorPriceNotZero(): void {
+        if (this.floorPrice.isZero()) {
+            throw new Revert('NATIVE_SWAP: Floor price cannot be zero');
+        }
+    }
+
+    private ensureInitialLiquidityNotZero(): void {
+        if (this.initialLiquidity.isZero()) {
+            throw new Revert('NATIVE_SWAP: Initial liquidity cannot be zero');
+        }
+    }
+
+    private ensureInitialLiquidityProviderNotAlreadySet(): void {
+        if (!this.liquidityQueue.initialLiquidityProviderId.isZero()) {
+            throw new Revert('Base quote already set');
+        }
+    }
+
+    private ensureMaxReservesIn5BlocksPercentValid(): void {
+        if (this.maxReservesIn5BlocksPercent > 100) {
+            throw new Revert(
+                'NATIVE_SWAP: The maximum reservation percentage for 5 blocks must be less than or equal to 100.',
+            );
+        }
+    }
+
+    private ensureReceiverAddressValid(): void {
+        if (Blockchain.validateBitcoinAddress(this.receiver) == false) {
+            throw new Revert('NATIVE_SWAP: Invalid receiver address');
+        }
     }
 
     private initializeInitialProvider(): void {
@@ -80,51 +126,5 @@ export class CreatePoolOperation extends BaseOperation {
         );
 
         listTokenForSaleOp.execute();
-    }
-
-    private applyAntibotSettingsIfNeeded(): void {
-        if (this.antiBotEnabledFor > 0) {
-            this.liquidityQueue.antiBotExpirationBlock =
-                Blockchain.block.number + u64(this.antiBotEnabledFor);
-            this.liquidityQueue.maxTokensPerReservation = this.antiBotMaximumTokensPerReservation;
-        }
-    }
-
-    private ensureMaxReservesIn5BlocksPercentValid(): void {
-        if (this.maxReservesIn5BlocksPercent > 100) {
-            throw new Revert(
-                'NATIVE_SWAP: The maximum reservation percentage for 5 blocks must be less than or equal to 100.',
-            );
-        }
-    }
-
-    private ensureReceiverAddressValid(): void {
-        if (Blockchain.validateBitcoinAddress(this.receiver) == false) {
-            throw new Revert('NATIVE_SWAP: Invalid receiver address');
-        }
-    }
-
-    private ensureFloorPriceNotZero(): void {
-        if (this.floorPrice.isZero()) {
-            throw new Revert('NATIVE_SWAP: Floor price cannot be zero');
-        }
-    }
-
-    private ensureInitialLiquidityNotZero(): void {
-        if (this.initialLiquidity.isZero()) {
-            throw new Revert('NATIVE_SWAP: Initial liquidity cannot be zero');
-        }
-    }
-
-    private ensureAntibotSettingsValid(): void {
-        if (this.antiBotEnabledFor !== 0 && this.antiBotMaximumTokensPerReservation.isZero()) {
-            throw new Revert('NATIVE_SWAP: Anti-bot max tokens per reservation cannot be zero');
-        }
-    }
-
-    private ensureInitialLiquidityProviderNotAlreadySet(): void {
-        if (!this.liquidityQueue.initialLiquidityProviderId.isZero()) {
-            throw new Revert('Base quote already set');
-        }
     }
 }
