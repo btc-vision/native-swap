@@ -2,6 +2,7 @@ import {
     Address,
     ADDRESS_BYTE_LENGTH,
     Blockchain,
+    BytesReader,
     BytesWriter,
     Calldata,
     encodeSelector,
@@ -10,27 +11,54 @@ import {
     Selector,
     StoredAddress,
     U128_BYTE_LENGTH,
+    U16_BYTE_LENGTH,
     U256_BYTE_LENGTH,
     U64_BYTE_LENGTH,
     ZERO_ADDRESS,
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
-import { getProvider, saveAllProviders } from '../lib/Provider';
-import { FeeManager } from '../lib/FeeManager';
-import { AddLiquidityOperation } from '../lib/Liquidity/operations/AddLiquidityOperation';
-import { RemoveLiquidityOperation } from '../lib/Liquidity/operations/RemoveLiquidityOperation';
-import { CreatePoolOperation } from '../lib/Liquidity/operations/CreatePoolOperation';
-import { ListTokensForSaleOperation } from '../lib/Liquidity/operations/ListTokensForSaleOperation';
-import { ReserveLiquidityOperation } from '../lib/Liquidity/operations/ReserveLiquidityOperation';
-import { CancelListingOperation } from '../lib/Liquidity/operations/CancelListingOperation';
-import { SwapOperation } from '../lib/Liquidity/operations/SwapOperation';
+import { LiquidityQueue } from '../managers/LiquidityQueue';
+import { getProvider, Provider, saveAllProviders } from '../models/Provider';
+import { FeeManager } from '../managers/FeeManager';
+import { AddLiquidityOperation } from '../operations/AddLiquidityOperation';
+import { RemoveLiquidityOperation } from '../operations/RemoveLiquidityOperation';
+import { CreatePoolOperation } from '../operations/CreatePoolOperation';
+import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
+import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
+import { CancelListingOperation } from '../operations/CancelListingOperation';
+import { SwapOperation } from '../operations/SwapOperation';
 import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import { ReentrancyGuard } from '../lib/ReentrancyGuard';
-import { STAKING_CA_POINTER } from '../lib/StoredPointers';
+import { ReentrancyGuard } from '../contracts/ReentrancyGuard';
+import { STAKING_CA_POINTER } from '../constants/StoredPointers';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
-import { QUOTE_SCALE, satoshisToTokens, tokensToSatoshis } from '../utils/NativeSwapUtils';
+import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
+import { ENABLE_INDEX_VERIFICATION, QUOTE_SCALE } from '../constants/Contract';
+import { ITradeManager } from '../managers/interfaces/ITradeManager';
+import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
+import { TradeManager } from '../managers/TradeManager';
+import { QuoteManager } from '../managers/QuoteManager';
+import { ProviderManager } from '../managers/ProviderManager';
+import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
+import { IOwedBTCManager } from '../managers/interfaces/IOwedBTCManager';
+import { OwedBTCManager } from '../managers/OwedBTCManager';
+import { IProviderManager } from '../managers/interfaces/IProviderManager';
+import { ILiquidityQueueReserve } from '../managers/interfaces/ILiquidityQueueReserve';
+import { LiquidityQueueReserve } from '../models/LiquidityQueueReserve';
+import { IReservationManager } from '../managers/interfaces/IReservationManager';
+import { ReservationManager } from '../managers/ReservationManager';
+import { IDynamicFee } from '../managers/interfaces/IDynamicFee';
+import { DynamicFee } from '../managers/DynamicFee';
+
+class GetLiquidityQueueResult {
+    public liquidityQueue: ILiquidityQueue;
+    public tradeManager: ITradeManager;
+
+    constructor(liquidityQueue: ILiquidityQueue, tradeManager: ITradeManager) {
+        this.liquidityQueue = liquidityQueue;
+        this.tradeManager = tradeManager;
+    }
+}
 
 /**
  * OrderBook contract for the OP_NET order book system,
@@ -40,8 +68,6 @@ import { QUOTE_SCALE, satoshisToTokens, tokensToSatoshis } from '../utils/Native
 @final
 export class NativeSwap extends ReentrancyGuard {
     private readonly _stakingContractAddress: StoredAddress;
-
-    //private readonly minimumTradeSize: u256 = u256.fromU32(10_000); // The minimum trade size in satoshis.
 
     public constructor() {
         super();
@@ -58,7 +84,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     public get stakingContractAddress(): Address {
-        const address = this._stakingContractAddress.value;
+        const address: Address = this._stakingContractAddress.value;
         if (eqUint(address, ZERO_ADDRESS)) {
             return Address.dead();
         }
@@ -71,20 +97,12 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     public override onExecutionCompleted(): void {
+        super.onExecutionCompleted();
         FeeManager.save();
         saveAllProviders();
-
-        // Ensure that the reentrancy guard is reset
-        this._stopEntry();
     }
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        // Ensure that the reentrancy guard is not active
-        this.checkReentrancy();
-
-        // Start the reentrancy guard
-        this._startEntry();
-
         switch (method) {
             case encodeSelector('reserve(address,uint256,uint256,bool,uint8)'):
                 return this.reserve(calldata);
@@ -135,20 +153,24 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private getAntibotSettings(calldata: Calldata): BytesWriter {
-        const token = calldata.readAddress();
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
+        const token: Address = calldata.readAddress();
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            this.addressToPointer(token),
+            false,
+        );
 
-        const writer = new BytesWriter(U64_BYTE_LENGTH + U256_BYTE_LENGTH);
-        writer.writeU64(queue.antiBotExpirationBlock);
-        writer.writeU256(queue.maxTokensPerReservation);
+        const writer: BytesWriter = new BytesWriter(U64_BYTE_LENGTH + U256_BYTE_LENGTH);
+        writer.writeU64(liquidityQueueResult.liquidityQueue.antiBotExpirationBlock);
+        writer.writeU256(liquidityQueueResult.liquidityQueue.maxTokensPerReservation);
 
         return writer;
     }
 
     private getFees(): BytesWriter {
-        const writer = new BytesWriter(2 * U64_BYTE_LENGTH);
-        writer.writeU64(FeeManager.RESERVATION_BASE_FEE);
-        writer.writeU64(FeeManager.PRIORITY_QUEUE_BASE_FEE);
+        const writer: BytesWriter = new BytesWriter(2 * U64_BYTE_LENGTH);
+        writer.writeU64(FeeManager.reservationBaseFee);
+        writer.writeU64(FeeManager.priorityQueueBaseFee);
 
         return writer;
     }
@@ -156,17 +178,17 @@ export class NativeSwap extends ReentrancyGuard {
     private setFees(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
-        FeeManager.RESERVATION_BASE_FEE = calldata.readU64();
-        FeeManager.PRIORITY_QUEUE_BASE_FEE = calldata.readU64();
+        FeeManager.reservationBaseFee = calldata.readU64();
+        FeeManager.priorityQueueBaseFee = calldata.readU64();
 
-        const result = new BytesWriter(1);
+        const result: BytesWriter = new BytesWriter(1);
         result.writeBoolean(true);
 
         return result;
     }
 
     private getStakingContractAddress(_calldata: Calldata): BytesWriter {
-        const response = new BytesWriter(ADDRESS_BYTE_LENGTH);
+        const response: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH);
         response.writeAddress(this.stakingContractAddress);
 
         return response;
@@ -177,82 +199,98 @@ export class NativeSwap extends ReentrancyGuard {
 
         this._stakingContractAddress.value = calldata.readAddress();
 
-        const result = new BytesWriter(1);
+        const result: BytesWriter = new BytesWriter(1);
         result.writeBoolean(true);
 
         return result;
     }
 
     private getProviderDetails(calldata: Calldata): BytesWriter {
-        const token = calldata.readAddress();
-        const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const provider = getProvider(providerId);
+        const token: Address = calldata.readAddress();
+        const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
+        const provider: Provider = getProvider(providerId);
 
-        const writer = new BytesWriter(
-            U128_BYTE_LENGTH * 2 + (2 + provider.btcReceiver.length) + 32,
+        const writer: BytesWriter = new BytesWriter(
+            U128_BYTE_LENGTH * 3 + (U16_BYTE_LENGTH + provider.getBtcReceiver().length),
         );
-        writer.writeU128(provider.liquidity);
-        writer.writeU128(provider.reserved);
-        writer.writeU256(provider.liquidityProvided);
-        writer.writeStringWithLength(provider.btcReceiver);
+        writer.writeU128(provider.getLiquidityAmount());
+        writer.writeU128(provider.getReservedAmount());
+        writer.writeU128(provider.getLiquidityProvided());
+        writer.writeStringWithLength(provider.getBtcReceiver());
 
         return writer;
     }
 
     private getPriorityQueueCost(): BytesWriter {
-        const cost = FeeManager.PRIORITY_QUEUE_BASE_FEE;
+        const cost: u64 = FeeManager.priorityQueueBaseFee;
 
-        const writer = new BytesWriter(U64_BYTE_LENGTH);
+        const writer: BytesWriter = new BytesWriter(U64_BYTE_LENGTH);
         writer.writeU64(cost);
 
         return writer;
     }
 
     private addLiquidity(calldata: Calldata): BytesWriter {
-        const token = calldata.readAddress();
-        const receiver = calldata.readStringWithLength();
-        const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
+        const token: Address = calldata.readAddress();
+        const receiver: string = calldata.readStringWithLength();
+        const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            this.addressToPointer(token),
+            false,
+        );
 
-        this.ensurePoolExistsForToken(queue);
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
 
-        const operation = new AddLiquidityOperation(queue, providerId, receiver);
+        const operation: AddLiquidityOperation = new AddLiquidityOperation(
+            liquidityQueueResult.liquidityQueue,
+            liquidityQueueResult.tradeManager,
+            providerId,
+            receiver,
+        );
 
         operation.execute();
-        queue.save();
+        liquidityQueueResult.liquidityQueue.save();
 
-        const result = new BytesWriter(1);
+        const result: BytesWriter = new BytesWriter(1);
         result.writeBoolean(true);
 
         return result;
     }
 
     private removeLiquidity(calldata: Calldata): BytesWriter {
-        const token = calldata.readAddress();
-        const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+        const token: Address = calldata.readAddress();
+        const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            this.addressToPointer(token),
+            true,
+        );
 
-        this.ensurePoolExistsForToken(queue);
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
 
-        const operation = new RemoveLiquidityOperation(queue, providerId);
+        const operation: RemoveLiquidityOperation = new RemoveLiquidityOperation(
+            liquidityQueueResult.liquidityQueue,
+            providerId,
+        );
 
         operation.execute();
-        queue.save();
+        liquidityQueueResult.liquidityQueue.save();
 
-        const result = new BytesWriter(1);
+        const result: BytesWriter = new BytesWriter(1);
         result.writeBoolean(true);
 
         return result;
     }
 
     private createPoolWithSignature(calldata: Calldata): BytesWriter {
-        const signature = calldata.readBytesWithLength();
+        const signature: Uint8Array = calldata.readBytesWithLength();
         this.ensureValidSignatureLength(signature);
 
-        const amount = calldata.readU256();
-        const nonce = calldata.readU256();
+        const amount: u256 = calldata.readU256();
+        const nonce: u256 = calldata.readU256();
 
-        const calldataSend = new BytesWriter(
+        const calldataSend: BytesWriter = new BytesWriter(
             SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH + U256_BYTE_LENGTH + 68,
         );
 
@@ -270,7 +308,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private createPool(calldata: Calldata, token: Address): BytesWriter {
-        const tokenOwner = this.getDeployer(token);
+        const tokenOwner: Address = this.getDeployer(token);
 
         this.ensureContractDeployer(tokenOwner);
 
@@ -280,10 +318,14 @@ export class NativeSwap extends ReentrancyGuard {
         const antiBotEnabledFor: u16 = calldata.readU16();
         const antiBotMaximumTokensPerReservation: u256 = calldata.readU256();
         const maxReservesIn5BlocksPercent: u16 = calldata.readU16();
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
-        const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const operation = new CreatePoolOperation(
-            queue,
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            this.addressToPointer(token),
+            true,
+        );
+        const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
+        const operation: CreatePoolOperation = new CreatePoolOperation(
+            liquidityQueueResult.liquidityQueue,
             floorPrice,
             providerId,
             initialLiquidity,
@@ -295,9 +337,9 @@ export class NativeSwap extends ReentrancyGuard {
         );
 
         operation.execute();
-        queue.save();
+        liquidityQueueResult.liquidityQueue.save();
 
-        const writer = new BytesWriter(1);
+        const writer: BytesWriter = new BytesWriter(1);
         writer.writeBoolean(true);
 
         return writer;
@@ -314,7 +356,7 @@ export class NativeSwap extends ReentrancyGuard {
 
         this._listLiquidity(token, receiver, amountIn, priority);
 
-        const result = new BytesWriter(1);
+        const result: BytesWriter = new BytesWriter(1);
         result.writeBoolean(true);
 
         return result;
@@ -328,14 +370,18 @@ export class NativeSwap extends ReentrancyGuard {
     ): void {
         this.ensureValidTokenAddress(token);
 
-        const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const tokenId = this.addressToPointer(token);
-        const queue = this.getLiquidityQueue(token, tokenId, true);
+        const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
+        const tokenId: Uint8Array = this.addressToPointer(token);
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            tokenId,
+            true,
+        );
 
-        this.ensurePoolExistsForToken(queue);
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
 
-        const operation = new ListTokensForSaleOperation(
-            queue,
+        const operation: ListTokensForSaleOperation = new ListTokensForSaleOperation(
+            liquidityQueueResult.liquidityQueue,
             providerId,
             amountIn,
             receiver,
@@ -345,19 +391,19 @@ export class NativeSwap extends ReentrancyGuard {
         );
 
         operation.execute();
-        queue.save();
+        liquidityQueueResult.liquidityQueue.save();
     }
 
     private reserve(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
-        const maximumAmountIn: u256 = calldata.readU256();
+        const maximumAmountIn: u64 = calldata.readU64();
         const minimumAmountOut: u256 = calldata.readU256();
-        const forLP: bool = calldata.readBoolean();
+        const forLP: boolean = calldata.readBoolean();
         const activationDelay: u8 = calldata.readU8();
 
         this._reserve(token, maximumAmountIn, minimumAmountOut, forLP, activationDelay);
 
-        const result = new BytesWriter(1);
+        const result: BytesWriter = new BytesWriter(1);
         result.writeBoolean(true);
 
         return result;
@@ -365,20 +411,24 @@ export class NativeSwap extends ReentrancyGuard {
 
     private _reserve(
         token: Address,
-        maximumAmountIn: u256,
+        maximumAmountIn: u64,
         minimumAmountOut: u256,
-        forLP: bool,
+        forLP: boolean,
         activationDelay: u8,
     ): void {
         this.ensureValidTokenAddress(token);
 
-        const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+        const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            this.addressToPointer(token),
+            true,
+        );
 
-        this.ensurePoolExistsForToken(queue);
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
 
-        const operation = new ReserveLiquidityOperation(
-            queue,
+        const operation: ReserveLiquidityOperation = new ReserveLiquidityOperation(
+            liquidityQueueResult.liquidityQueue,
             providerId,
             Blockchain.tx.sender,
             maximumAmountIn,
@@ -388,14 +438,14 @@ export class NativeSwap extends ReentrancyGuard {
         );
 
         operation.execute();
-        queue.save();
+        liquidityQueueResult.liquidityQueue.save();
     }
 
     private cancelListing(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
         this._cancelListing(token);
 
-        const result = new BytesWriter(1);
+        const result: BytesWriter = new BytesWriter(1);
         result.writeBoolean(true);
 
         return result;
@@ -404,23 +454,30 @@ export class NativeSwap extends ReentrancyGuard {
     private _cancelListing(token: Address): void {
         this.ensureValidTokenAddress(token);
 
-        const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const tokenId = this.addressToPointer(token);
-        const queue = this.getLiquidityQueue(token, tokenId, true);
+        const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
+        const tokenId: Uint8Array = this.addressToPointer(token);
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            tokenId,
+            true,
+        );
 
-        this.ensurePoolExistsForToken(queue);
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
 
-        const operation = new CancelListingOperation(queue, providerId);
+        const operation: CancelListingOperation = new CancelListingOperation(
+            liquidityQueueResult.liquidityQueue,
+            providerId,
+        );
 
         operation.execute();
-        queue.save();
+        liquidityQueueResult.liquidityQueue.save();
     }
 
     private swap(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
         this._swap(token);
 
-        const result = new BytesWriter(1);
+        const result: BytesWriter = new BytesWriter(1);
         result.writeBoolean(true);
 
         return result;
@@ -429,18 +486,22 @@ export class NativeSwap extends ReentrancyGuard {
     private _swap(token: Address): void {
         this.ensureValidTokenAddress(token);
 
-        const queue: LiquidityQueue = this.getLiquidityQueue(
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
             token,
             this.addressToPointer(token),
             false,
         );
 
-        this.ensurePoolExistsForToken(queue);
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
 
-        const operation = new SwapOperation(queue, this.stakingContractAddress);
+        const operation: SwapOperation = new SwapOperation(
+            liquidityQueueResult.liquidityQueue,
+            liquidityQueueResult.tradeManager,
+            this.stakingContractAddress,
+        );
 
         operation.execute();
-        queue.save();
+        liquidityQueueResult.liquidityQueue.save();
     }
 
     private getReserve(calldata: Calldata): BytesWriter {
@@ -452,22 +513,26 @@ export class NativeSwap extends ReentrancyGuard {
     private _getReserve(token: Address): BytesWriter {
         this.ensureValidTokenAddress(token);
 
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            this.addressToPointer(token),
+            true,
+        );
 
-        this.ensurePoolExistsForToken(queue);
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
 
-        const result = new BytesWriter(4 * U256_BYTE_LENGTH);
-        result.writeU256(queue.liquidity);
-        result.writeU256(queue.reservedLiquidity);
-        result.writeU256(queue.virtualBTCReserve);
-        result.writeU256(queue.virtualTokenReserve);
+        const result: BytesWriter = new BytesWriter(3 * U256_BYTE_LENGTH + U64_BYTE_LENGTH);
+        result.writeU256(liquidityQueueResult.liquidityQueue.liquidity);
+        result.writeU256(liquidityQueueResult.liquidityQueue.reservedLiquidity);
+        result.writeU64(liquidityQueueResult.liquidityQueue.virtualSatoshisReserve);
+        result.writeU256(liquidityQueueResult.liquidityQueue.virtualTokenReserve);
 
         return result;
     }
 
     private getQuote(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
-        const satoshisIn: u256 = calldata.readU256();
+        const satoshisIn: u64 = calldata.readU64();
 
         return this._getQuote(token, satoshisIn);
     }
@@ -482,40 +547,43 @@ export class NativeSwap extends ReentrancyGuard {
      *   3) If tokensOut > availableLiquidity, cap it
      *   4) requiredSatoshis = min( satoshisIn, (tokensOut * SHIFT) / price )
      */
-    private _getQuote(token: Address, satoshisIn: u256): BytesWriter {
+    private _getQuote(token: Address, satoshisIn: u64): BytesWriter {
         this.ensureValidTokenAddress(token);
         this.ensureMaximumAmountInNotZero(satoshisIn);
 
-        const queue: LiquidityQueue = this.getLiquidityQueue(
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
             token,
             this.addressToPointer(token),
             false,
         );
-        this.ensurePoolExistsForToken(queue);
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
 
-        const price: u256 = queue.quote();
+        const price: u256 = liquidityQueueResult.liquidityQueue.quote();
         this.ensurePriceNotZeroAndLiquidity(price);
 
-        let tokensOut = satoshisToTokens(satoshisIn, price);
+        let tokensOut: u256 = satoshisToTokens(satoshisIn, price);
 
         // If tokensOut > availableLiquidity, cap it
-        const availableLiquidity = SafeMath.sub(queue.liquidity, queue.reservedLiquidity);
+        const availableLiquidity: u256 = SafeMath.sub(
+            liquidityQueueResult.liquidityQueue.liquidity,
+            liquidityQueueResult.liquidityQueue.reservedLiquidity,
+        );
 
-        let requiredSatoshis = satoshisIn;
+        let requiredSatoshis: u64 = satoshisIn;
         if (u256.gt(tokensOut, availableLiquidity)) {
             tokensOut = availableLiquidity;
             requiredSatoshis = tokensToSatoshis(tokensOut, price);
 
             // If that is bigger than satoshisIn, clamp
-            if (u256.gt(requiredSatoshis, satoshisIn)) {
+            if (requiredSatoshis > satoshisIn) {
                 requiredSatoshis = satoshisIn;
             }
         }
 
         // Prepare output
-        const result = new BytesWriter(3 * U256_BYTE_LENGTH + U64_BYTE_LENGTH);
+        const result: BytesWriter = new BytesWriter(2 * U256_BYTE_LENGTH + 2 * U64_BYTE_LENGTH);
         result.writeU256(tokensOut); // how many tokens
-        result.writeU256(requiredSatoshis); // how many sat needed
+        result.writeU64(requiredSatoshis); // how many sat needed
         result.writeU256(price); // final *scaled* price
         result.writeU64(QUOTE_SCALE.toU64());
         return result;
@@ -526,12 +594,96 @@ export class NativeSwap extends ReentrancyGuard {
         tokenId: Uint8Array,
         purgeOldReservations: boolean,
         timeoutEnabled: boolean = false,
-    ): LiquidityQueue {
-        return new LiquidityQueue(token, tokenId, purgeOldReservations, timeoutEnabled);
+    ): GetLiquidityQueueResult {
+        const owedBtcManager: IOwedBTCManager = this.getOwedBtcManager();
+        const quoteManager: IQuoteManager = this.getQuoteManager(tokenId);
+        const liquidityQueueReserve: ILiquidityQueueReserve = this.getLiquidityQueueReserve(
+            token,
+            tokenId,
+        );
+        const providerManager: IProviderManager = this.getProviderManager(
+            token,
+            tokenId,
+            owedBtcManager,
+        );
+        const reservationManager: IReservationManager = this.getReservationManager(
+            token,
+            tokenId,
+            providerManager,
+            quoteManager,
+            liquidityQueueReserve,
+            owedBtcManager,
+        );
+        const dynamicFee: IDynamicFee = this.getDynamicFee(tokenId);
+
+        const liquidityQueue: LiquidityQueue = new LiquidityQueue(
+            token,
+            tokenId,
+            providerManager,
+            liquidityQueueReserve,
+            quoteManager,
+            reservationManager,
+            dynamicFee,
+            owedBtcManager,
+            purgeOldReservations,
+            timeoutEnabled,
+        );
+
+        const tradeManager: TradeManager = new TradeManager(
+            tokenId,
+            quoteManager,
+            providerManager,
+            liquidityQueueReserve,
+            owedBtcManager,
+        );
+
+        return new GetLiquidityQueueResult(liquidityQueue, tradeManager);
+    }
+
+    private getQuoteManager(tokenId: Uint8Array): IQuoteManager {
+        return new QuoteManager(tokenId);
+    }
+
+    private getProviderManager(
+        token: Address,
+        tokenId: Uint8Array,
+        owedBtcManager: IOwedBTCManager,
+    ): IProviderManager {
+        return new ProviderManager(token, tokenId, owedBtcManager, ENABLE_INDEX_VERIFICATION);
+    }
+
+    private getOwedBtcManager(): IOwedBTCManager {
+        return new OwedBTCManager();
+    }
+
+    private getLiquidityQueueReserve(token: Address, tokenId: Uint8Array): ILiquidityQueueReserve {
+        return new LiquidityQueueReserve(token, tokenId);
+    }
+
+    private getReservationManager(
+        token: Address,
+        tokenId: Uint8Array,
+        providerManager: IProviderManager,
+        quoteManager: IQuoteManager,
+        liquidityQueueReserve: ILiquidityQueueReserve,
+        owedBTCManager: IOwedBTCManager,
+    ): IReservationManager {
+        return new ReservationManager(
+            token,
+            tokenId,
+            providerManager,
+            quoteManager,
+            liquidityQueueReserve,
+            owedBTCManager,
+        );
+    }
+
+    private getDynamicFee(tokenId: Uint8Array): IDynamicFee {
+        return new DynamicFee(tokenId);
     }
 
     private addressToPointerU256(address: Address, token: Address): u256 {
-        const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
+        const writer: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
         writer.writeAddress(address);
         writer.writeAddress(token);
         return u256.fromBytes(sha256(writer.getBuffer()), true);
@@ -542,10 +694,10 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private getDeployer(token: Address): Address {
-        const calldata = new BytesWriter(4);
+        const calldata: BytesWriter = new BytesWriter(4);
         calldata.writeSelector(NativeSwap.DEPLOYER_SELECTOR);
 
-        const response = Blockchain.call(token, calldata);
+        const response: BytesReader = Blockchain.call(token, calldata);
         return response.readAddress();
     }
 
@@ -567,14 +719,14 @@ export class NativeSwap extends ReentrancyGuard {
         }
     }
 
-    private ensurePoolExistsForToken(queue: LiquidityQueue): void {
-        if (queue.initialLiquidityProvider.isZero()) {
+    private ensurePoolExistsForToken(queue: ILiquidityQueue): void {
+        if (queue.initialLiquidityProviderId.isZero()) {
             throw new Revert('NATIVE_SWAP: Pool does not exist for token');
         }
     }
 
-    private ensureMaximumAmountInNotZero(maximumAmountIn: u256): void {
-        if (maximumAmountIn.isZero()) {
+    private ensureMaximumAmountInNotZero(maximumAmountIn: u64): void {
+        if (maximumAmountIn === 0) {
             throw new Revert('NATIVE_SWAP: Maximum amount in cannot be zero');
         }
     }
