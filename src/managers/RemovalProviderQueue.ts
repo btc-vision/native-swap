@@ -42,7 +42,7 @@ export class RemovalProviderQueue extends ProviderQueue {
                     break;
                 } else {
                     this.ensureProviderNotAlreadyPurged(provider.isPurged());
-                    this.queue.delete_physical(index); //!!! WHY should never happen-> Corrupted
+                    this.queue.delete_physical(index); //!!! WHY should never happen-> Corrupted should revert
                 }
             } else {
                 this.queue.setStartingIndex(index);

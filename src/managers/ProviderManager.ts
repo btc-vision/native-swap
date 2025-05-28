@@ -345,6 +345,14 @@ export class ProviderManager implements IProviderManager {
         }
     }
 
+    public removeFromNormalQueue(provider: Provider): void {
+        this.normalQueue.remove(provider);
+    }
+
+    public removeFromPriorityQueue(provider: Provider): void {
+        this.priorityQueue.remove(provider);
+    }
+
     public removeFromPurgeQueue(provider: Provider): void {
         if (!provider.isPriority()) {
             this.normalPurgedQueue.remove(provider);

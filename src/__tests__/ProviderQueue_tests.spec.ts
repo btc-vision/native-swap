@@ -14,7 +14,11 @@ import {
     tokenIdUint8Array1,
 } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    ENABLE_INDEX_VERIFICATION,
+    INDEX_NOT_SET_VALUE,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+} from '../constants/Contract';
 
 const QUOTE = u256.fromU64(100000000);
 
@@ -39,6 +43,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             expect(queue.currentIndex).toStrictEqual(0);
         });
@@ -48,6 +53,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             expect(queue.length).toStrictEqual(0);
         });
@@ -57,6 +63,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             queue.add(createProvider(providerAddress1, tokenAddress1));
             queue.add(createProvider(providerAddress2, tokenAddress1));
@@ -68,6 +75,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             expect(queue.startingIndex).toStrictEqual(0);
         });
@@ -77,6 +85,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             queue.getQueue().setStartingIndex(10);
             expect(queue.startingIndex).toStrictEqual(10);
@@ -98,6 +107,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
@@ -111,26 +121,6 @@ describe('ProviderQueue tests', () => {
             expect(provider2.getQueueIndex()).toStrictEqual(index2);
             expect(queue.getQueue().get_physical(index2)).toStrictEqual(provider2.getId());
         });
-
-        /*!!!
-        it('throws when queue is full', () => {
-            expect(() => {
-                const queue: ProviderQueue = new ProviderQueue(
-                    tokenAddress1,
-                    NORMAL_QUEUE_POINTER,
-                    tokenIdUint8Array1,
-                );
-                const providers = createMaxProviders();
-                for (let i = 0; i < providers.length; i++) {
-                    queue.add(providers[i]);
-                }
-
-                const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
-                queue.add(provider2);
-            }).toThrow();
-        });
-        
-         */
     });
 
     describe('ProviderQueue – getAt and removeAt', () => {
@@ -146,6 +136,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             const p1Index: u32 = queue.add(p1);
@@ -167,9 +158,10 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
-            const p1Index: u32 = queue.add(p1);
+            queue.add(p1);
 
             const p2: Provider = createProvider(providerAddress2, tokenAddress2);
             const p2Index: u32 = queue.add(p2);
@@ -177,8 +169,8 @@ describe('ProviderQueue tests', () => {
             const p3: Provider = createProvider(providerAddress3, tokenAddress2);
             const p3Index: u32 = queue.add(p3);
 
-            queue.removeAt(p2Index);
-            queue.removeAt(p3Index);
+            queue.remove(p2);
+            queue.remove(p3);
 
             expect(queue.getAt(p2Index)).toStrictEqual(u256.Zero);
             expect(queue.getAt(p3Index)).toStrictEqual(u256.Zero);
@@ -200,6 +192,7 @@ describe('ProviderQueue tests', () => {
                     tokenAddress1,
                     NORMAL_QUEUE_POINTER,
                     tokenIdUint8Array1,
+                    ENABLE_INDEX_VERIFICATION,
                 );
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider);
@@ -214,6 +207,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
@@ -235,6 +229,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
@@ -265,6 +260,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const result: u32 = queue.cleanUp(0);
             expect(result).toStrictEqual(0);
@@ -275,19 +271,20 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
-            const p1Index: u32 = queue.add(p1);
+            queue.add(p1);
 
             const p2: Provider = createProvider(providerAddress2, tokenAddress2);
-            const p2Index: u32 = queue.add(p2);
+            queue.add(p2);
 
             const p3: Provider = createProvider(providerAddress3, tokenAddress2);
-            const p3Index: u32 = queue.add(p3);
+            queue.add(p3);
 
-            queue.removeAt(p1Index);
-            queue.removeAt(p2Index);
-            queue.removeAt(p3Index);
+            queue.remove(p1);
+            queue.remove(p2);
+            queue.remove(p3);
 
             const result: u32 = queue.cleanUp(0);
             expect(result).toStrictEqual(3);
@@ -299,18 +296,19 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             p1.deactivate();
-            const p1Index: u32 = queue.add(p1);
+            queue.add(p1);
 
             const p2: Provider = createProvider(providerAddress2, tokenAddress2);
             p2.deactivate();
-            const p2Index: u32 = queue.add(p2);
+            queue.add(p2);
 
             const p3: Provider = createProvider(providerAddress3, tokenAddress2);
             p3.deactivate();
-            const p3Index: u32 = queue.add(p3);
+            queue.add(p3);
 
             const result: u32 = queue.cleanUp(0);
             expect(result).toStrictEqual(3);
@@ -325,19 +323,20 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             p1.deactivate();
-            const p1Index: u32 = queue.add(p1);
+            queue.add(p1);
 
             const p2: Provider = createProvider(providerAddress2, tokenAddress2);
             p2.deactivate();
-            const p2Index: u32 = queue.add(p2);
+            queue.add(p2);
 
             const p3: Provider = createProvider(providerAddress3, tokenAddress2);
-            const p3Index: u32 = queue.add(p3);
+            queue.add(p3);
 
-            queue.removeAt(p1Index);
+            queue.remove(p1);
 
             const result: u32 = queue.cleanUp(0);
 
@@ -350,6 +349,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const providers: Provider[] = createProviders(5, 0);
 
@@ -367,6 +367,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             p1.deactivate();
@@ -390,6 +391,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             const p1Index: u32 = queue.add(p1);
@@ -413,6 +415,7 @@ describe('ProviderQueue tests', () => {
                     tokenAddress1,
                     NORMAL_QUEUE_POINTER,
                     tokenIdUint8Array1,
+                    ENABLE_INDEX_VERIFICATION,
                 );
                 queue.getQueue().setStartingIndex(10);
                 queue.callEnsureStartingIndexIsValid();
@@ -424,6 +427,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             queue.getQueue().setStartingIndex(10);
             queue.callInitializeCurrentIndex();
@@ -436,6 +440,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             queue.restoreCurrentIndex(9999);
             expect(queue.currentIndex).toStrictEqual(9999);
@@ -455,6 +460,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             expect(queue.getNextWithLiquidity(QUOTE)).toBeNull();
         });
@@ -464,6 +470,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
@@ -482,6 +489,7 @@ describe('ProviderQueue tests', () => {
                     tokenAddress1,
                     NORMAL_QUEUE_POINTER,
                     tokenIdUint8Array1,
+                    ENABLE_INDEX_VERIFICATION,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider1.markPriority();
@@ -497,6 +505,7 @@ describe('ProviderQueue tests', () => {
                     tokenAddress1,
                     NORMAL_QUEUE_POINTER,
                     tokenIdUint8Array1,
+                    ENABLE_INDEX_VERIFICATION,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider1);
@@ -512,6 +521,7 @@ describe('ProviderQueue tests', () => {
                     tokenAddress1,
                     NORMAL_QUEUE_POINTER,
                     tokenIdUint8Array1,
+                    ENABLE_INDEX_VERIFICATION,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider1);
@@ -526,6 +536,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
@@ -544,6 +555,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
@@ -562,6 +574,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
@@ -583,6 +596,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
@@ -595,64 +609,6 @@ describe('ProviderQueue tests', () => {
             expect(queue.getNextWithLiquidity(QUOTE)).toBe(provider2);
             expect(queue.currentIndex).toStrictEqual(2);
         });
-
-        /*!!!
-        it('throws if index reaches MAXIMUM_VALID_INDEX without match', () => {
-            expect(() => {
-                const queue: ProviderQueue = new ProviderQueue(
-                    tokenAddress1,
-                    NORMAL_QUEUE_POINTER,
-                    tokenIdUint8Array1,
-                );
-                const providers: Provider[] = createMaxProviders(
-                    false,
-                    false,
-                    false,
-                    'abcdef',
-                    u128.Zero,
-                    u128.Zero,
-                    u128.Zero,
-                    false,
-                    false,
-                );
-                for (let i = 0; i < providers.length; i++) {
-                    queue.add(providers[i]);
-                }
-
-                queue.getNextWithLiquidity(QUOTE);
-            }).toThrow();
-        });*/
-
-        /*!!!
-        it('returns valid provider at MAXIMUM_VALID_INDEX without throwing', () => {
-            const queue: ProviderQueue = new ProviderQueue(
-                tokenAddress1,
-                NORMAL_QUEUE_POINTER,
-                tokenIdUint8Array1,
-            );
-            const providers: Provider[] = createMaxProviders(
-                false,
-                false,
-                false,
-                'abcdef',
-                u128.Zero,
-                u128.Zero,
-                u128.Zero,
-                false,
-                false,
-            );
-            providers[MAXIMUM_VALID_INDEX].activate();
-
-            for (let i = 0; i < providers.length; i++) {
-                queue.add(providers[i]);
-            }
-
-            const result: Provider | null = queue.getNextWithLiquidity(QUOTE);
-
-            expect(result).not.toBeNull();
-            expect(result).toBe(providers[MAXIMUM_VALID_INDEX]);
-            expect(queue.currentIndex).toStrictEqual(MAXIMUM_VALID_INDEX);
-        });*/
     });
 
     describe('ProviderQueue – save', () => {
@@ -668,6 +624,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
@@ -680,6 +637,7 @@ describe('ProviderQueue tests', () => {
                 tokenAddress1,
                 NORMAL_QUEUE_POINTER,
                 tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
             );
 
             expect(queue2.length).toStrictEqual(queue.length);

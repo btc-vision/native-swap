@@ -3,6 +3,8 @@ import {
     ADDRESS_BYTE_LENGTH,
     Blockchain,
     BytesWriter,
+    StoredBooleanArray,
+    StoredU128Array,
     StoredU256Array,
     U64_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
@@ -12,7 +14,11 @@ import { Reservation } from '../models/Reservation';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
 import { ProviderManager } from '../managers/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import { ENABLE_INDEX_VERIFICATION, MAXIMUM_PROVIDER_COUNT } from '../constants/Contract';
+import {
+    ALLOW_DIRTY,
+    AT_LEAST_PROVIDERS_TO_PURGE,
+    ENABLE_INDEX_VERIFICATION,
+} from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
 import { IOwedBTCManager } from '../managers/interfaces/IOwedBTCManager';
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
@@ -310,7 +316,7 @@ export function createMaxProviders(
     const providers: Provider[] = [];
 
     let i: u32 = 0;
-    while (i < MAXIMUM_PROVIDER_COUNT) {
+    while (i < u32.MAX_VALUE) {
         for (let j: u8 = 0; j <= 255; j++) {
             for (let k: u8 = 0; k <= 255; k++) {
                 const address: Address = new Address([
@@ -365,7 +371,7 @@ export function createMaxProviders(
 
                 providers.push(provider);
 
-                if (i == MAXIMUM_PROVIDER_COUNT) {
+                if (i == u32.MAX_VALUE) {
                     break;
                 }
             }
@@ -438,6 +444,10 @@ export interface ITestReservationManager extends IReservationManager {
     mockAddToListReturn(index: u32): void;
 
     mockAddToActiveListReturn(index: u32): void;
+
+    getReservationListForBlock(blockNumber: u64): StoredU128Array;
+
+    getActiveListForBlock(blockNumber: u64): StoredBooleanArray;
 }
 
 export interface ITestLiquidityQueue extends ILiquidityQueue {
@@ -483,6 +493,7 @@ export function createLiquidityQueue(
         token,
         tokenId,
         owedBtcManager,
+        quoteManager,
     );
     const reservationManager: ITestReservationManager = getReservationManager(
         token,
@@ -513,6 +524,7 @@ export function createLiquidityQueue(
         providerManager,
         liquidityQueueReserve,
         owedBtcManager,
+        reservationManager,
     );
 
     return new CreateLiquidityQueueResult(
@@ -532,8 +544,15 @@ export function getProviderManager(
     token: Address,
     tokenId: Uint8Array,
     owedBtcManager: IOwedBTCManager,
+    quoteManager: IQuoteManager,
 ): ITestProviderManager {
-    return new TestProviderManager(token, tokenId, owedBtcManager, ENABLE_INDEX_VERIFICATION);
+    return new TestProviderManager(
+        token,
+        tokenId,
+        owedBtcManager,
+        quoteManager,
+        ENABLE_INDEX_VERIFICATION,
+    );
 }
 
 export function getOwedBtcManager(): IOwedBTCManager {
@@ -559,9 +578,9 @@ export function getReservationManager(
         token,
         tokenId,
         providerManager,
-        quoteManager,
         liquidityQueueReserve,
-        owedBTCManager,
+        AT_LEAST_PROVIDERS_TO_PURGE,
+        ALLOW_DIRTY,
     );
 }
 
@@ -688,7 +707,15 @@ export class TestReservationManager extends ReservationManager implements ITestR
         this._mockedAddToActiveListReturn = index;
     }
 
-    public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
+    public override getReservationListForBlock(blockNumber: u64): StoredU128Array {
+        return super.getReservationListForBlock(blockNumber);
+    }
+
+    public override getActiveListForBlock(blockNumber: u64): StoredBooleanArray {
+        return super.getActiveListForBlock(blockNumber);
+    }
+
+    override purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
         this._purgeReservationsAndRestoreProvidersCalled = true;
 
         return super.purgeReservationsAndRestoreProviders(lastPurgedBlock);
@@ -704,21 +731,21 @@ export class TestReservationManager extends ReservationManager implements ITestR
         return u64.MAX_VALUE;
     }
 
-    protected addToList(blockNumber: u64, reservationId: u128): u32 {
+    protected override pushToReservationList(blockNumber: u64, reservationId: u128): u32 {
         if (this._mockedAddToListReturn !== u32.MAX_VALUE) {
-            super.addToList(blockNumber, reservationId);
+            super.pushToReservationList(blockNumber, reservationId);
             return this._mockedAddToListReturn;
         } else {
-            return super.addToList(blockNumber, reservationId);
+            return super.pushToReservationList(blockNumber, reservationId);
         }
     }
 
-    protected addToActiveList(blockNumber: u64): u32 {
+    protected override pushToActiveList(blockNumber: u64): u32 {
         if (this._mockedAddToActiveListReturn !== u32.MAX_VALUE) {
-            super.addToActiveList(blockNumber);
+            super.pushToActiveList(blockNumber);
             return this._mockedAddToActiveListReturn;
         } else {
-            return super.addToActiveList(blockNumber);
+            return super.pushToActiveList(blockNumber);
         }
     }
 }

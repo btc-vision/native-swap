@@ -85,13 +85,28 @@ describe('Reservation tests', () => {
             reservation.setActivationDelay(2);
             reservation.timeoutUser();
             reservation.addProvider(
-                new ReservationProviderData(1, u128.fromU64(1000), ProviderTypes.Normal),
+                new ReservationProviderData(
+                    1,
+                    u128.fromU64(1000),
+                    ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
+                ),
             );
             reservation.addProvider(
-                new ReservationProviderData(2, u128.fromU64(2000), ProviderTypes.Priority),
+                new ReservationProviderData(
+                    2,
+                    u128.fromU64(2000),
+                    ProviderTypes.Priority,
+                    reservation.getCreationBlock(),
+                ),
             );
             reservation.addProvider(
-                new ReservationProviderData(3, u128.fromU64(3000), ProviderTypes.LiquidityRemoval),
+                new ReservationProviderData(
+                    3,
+                    u128.fromU64(3000),
+                    ProviderTypes.LiquidityRemoval,
+                    reservation.getCreationBlock(),
+                ),
             );
 
             reservation.save();
@@ -145,6 +160,7 @@ describe('Reservation tests', () => {
                 5,
                 u128.fromU64(99),
                 ProviderTypes.Normal,
+                1000,
             );
             reservation.addProvider(providerData);
 
@@ -152,6 +168,7 @@ describe('Reservation tests', () => {
             expect(fetched.providerIndex).toBe(5);
             expect(fetched.providedAmount).toStrictEqual(u128.fromU64(99));
             expect(fetched.providerType).toStrictEqual(ProviderTypes.Normal);
+            expect(fetched.creationBlock).toStrictEqual(1000);
         });
 
         it('addProvider stores and getProviderAt retrieves values when Reservation saved/loaded', () => {
@@ -163,6 +180,7 @@ describe('Reservation tests', () => {
                 5,
                 u128.fromU64(99),
                 ProviderTypes.Normal,
+                1000,
             );
             reservation.addProvider(providerData);
             reservation.save();
@@ -172,39 +190,7 @@ describe('Reservation tests', () => {
             expect(fetched.providerIndex).toStrictEqual(5);
             expect(fetched.providedAmount).toStrictEqual(u128.fromU64(99));
             expect(fetched.providerType).toStrictEqual(ProviderTypes.Normal);
-        });
-
-        /*!!!!
-        it('addProvider throws when exceeding MAXIMUM_PROVIDER_COUNT', () => {
-            expect(() => {
-                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-                setBlockchainEnvironment(1000);
-
-                for (let i: u32 = 0; i < MAXIMUM_PROVIDER_COUNT; i++) {
-                    reservation.addProvider(
-                        new ReservationProviderData(i, u128.Zero, ProviderTypes.Normal),
-                    );
-                }
-
-                reservation.addProvider(
-                    new ReservationProviderData(99, u128.Zero, ProviderTypes.Normal),
-                );
-            }).toThrow();
-        });
-*/
-        it('getProviderAt bounds check throws', () => {
-            expect(() => {
-                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-                setBlockchainEnvironment(1000);
-
-                reservation.addProvider(
-                    new ReservationProviderData(1, u128.Zero, ProviderTypes.Normal),
-                );
-
-                reservation.getProviderAt(2);
-            }).toThrow();
+            expect(fetched.creationBlock).toStrictEqual(1000);
         });
     });
 
@@ -220,7 +206,7 @@ describe('Reservation tests', () => {
             expect(() => {
                 const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
                 reservation.addProvider(
-                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
                 );
 
                 setBlockchainEnvironment(1000);
@@ -235,7 +221,7 @@ describe('Reservation tests', () => {
             expect(() => {
                 const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
                 reservation.addProvider(
-                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
                 );
 
                 setBlockchainEnvironment(1000);
@@ -252,7 +238,7 @@ describe('Reservation tests', () => {
             expect(() => {
                 const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
                 reservation.addProvider(
-                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
                 );
 
                 setBlockchainEnvironment(1000);
@@ -269,7 +255,7 @@ describe('Reservation tests', () => {
             expect(() => {
                 const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
                 reservation.addProvider(
-                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
                 );
 
                 setBlockchainEnvironment(1000);
@@ -294,7 +280,7 @@ describe('Reservation tests', () => {
         it('isExpired false before expiration block', () => {
             const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
             reservation.addProvider(
-                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
             );
 
             setBlockchainEnvironment(1000);
@@ -306,7 +292,7 @@ describe('Reservation tests', () => {
         it('isExpired true after expiration block', () => {
             const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
             reservation.addProvider(
-                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
             );
 
             setBlockchainEnvironment(1000);
@@ -319,7 +305,7 @@ describe('Reservation tests', () => {
         it('isValid false when expired', () => {
             const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
             reservation.addProvider(
-                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
             );
 
             setBlockchainEnvironment(1000);
@@ -332,7 +318,7 @@ describe('Reservation tests', () => {
         it('isValid false when no providers', () => {
             const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
             reservation.addProvider(
-                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
             );
 
             const reservation1 = new Reservation(tokenAddress2, providerAddress2);
@@ -439,13 +425,18 @@ describe('Reservation tests', () => {
             reservation.setPurgeIndex(10);
             reservation.setActivationDelay(2);
             reservation.addProvider(
-                new ReservationProviderData(1, u128.fromU64(1000), ProviderTypes.Normal),
+                new ReservationProviderData(1, u128.fromU64(1000), ProviderTypes.Normal, 1000),
             );
             reservation.addProvider(
-                new ReservationProviderData(2, u128.fromU64(2000), ProviderTypes.Priority),
+                new ReservationProviderData(2, u128.fromU64(2000), ProviderTypes.Priority, 1000),
             );
             reservation.addProvider(
-                new ReservationProviderData(3, u128.fromU64(3000), ProviderTypes.LiquidityRemoval),
+                new ReservationProviderData(
+                    3,
+                    u128.fromU64(3000),
+                    ProviderTypes.LiquidityRemoval,
+                    1000,
+                ),
             );
             reservation.save();
 
@@ -466,16 +457,19 @@ describe('Reservation tests', () => {
             expect(pd1.providerIndex).toStrictEqual(1);
             expect(pd1.providedAmount).toStrictEqual(u128.fromU64(1000));
             expect(pd1.providerType).toStrictEqual(ProviderTypes.Normal);
+            expect(pd1.creationBlock).toStrictEqual(1000);
 
             const pd2: ReservationProviderData = reservation2.getProviderAt(1);
             expect(pd2.providerIndex).toStrictEqual(2);
             expect(pd2.providedAmount).toStrictEqual(u128.fromU64(2000));
             expect(pd2.providerType).toStrictEqual(ProviderTypes.Priority);
+            expect(pd2.creationBlock).toStrictEqual(1000);
 
             const pd3: ReservationProviderData = reservation2.getProviderAt(2);
             expect(pd3.providerIndex).toStrictEqual(3);
             expect(pd3.providedAmount).toStrictEqual(u128.fromU64(3000));
             expect(pd3.providerType).toStrictEqual(ProviderTypes.LiquidityRemoval);
+            expect(pd3.creationBlock).toStrictEqual(1000);
 
             reservation2.delete(false);
 

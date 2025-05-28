@@ -227,10 +227,12 @@ describe('ListTokenForSaleOperation tests', () => {
             FeeManager.onDeploy();
 
             const txOut: TransactionOutput[] = [];
-            txOut.push(new TransactionOutput(0, `random address`, 0));
+            txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
             txOut.push(
                 new TransactionOutput(
                     1,
+                    0,
+                    null,
                     FEE_COLLECT_SCRIPT_PUBKEY,
                     FeeManager.priorityQueueBaseFee,
                 ),
@@ -264,9 +266,15 @@ describe('ListTokenForSaleOperation tests', () => {
         FeeManager.onDeploy();
 
         const txOut: TransactionOutput[] = [];
-        txOut.push(new TransactionOutput(0, `random address`, 0));
+        txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
         txOut.push(
-            new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, FeeManager.priorityQueueBaseFee),
+            new TransactionOutput(
+                1,
+                0,
+                null,
+                FEE_COLLECT_SCRIPT_PUBKEY,
+                FeeManager.priorityQueueBaseFee,
+            ),
         );
         Blockchain.mockTransactionOutput(txOut);
 
@@ -304,9 +312,15 @@ describe('ListTokenForSaleOperation tests', () => {
         FeeManager.onDeploy();
 
         const txOut: TransactionOutput[] = [];
-        txOut.push(new TransactionOutput(0, `random address`, 0));
+        txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
         txOut.push(
-            new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, FeeManager.priorityQueueBaseFee),
+            new TransactionOutput(
+                1,
+                0,
+                null,
+                FEE_COLLECT_SCRIPT_PUBKEY,
+                FeeManager.priorityQueueBaseFee,
+            ),
         );
         Blockchain.mockTransactionOutput(txOut);
 
@@ -530,8 +544,8 @@ describe('ListTokenForSaleOperation tests', () => {
         FeeManager.onDeploy();
 
         const txOut: TransactionOutput[] = [];
-        txOut.push(new TransactionOutput(0, `random address`, 0));
-        txOut.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
+        txOut.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
         Blockchain.mockTransactionOutput(txOut);
 
         expect(() => {
@@ -564,9 +578,15 @@ describe('ListTokenForSaleOperation tests', () => {
         FeeManager.onDeploy();
 
         const txOut: TransactionOutput[] = [];
-        txOut.push(new TransactionOutput(0, `random address`, 0));
+        txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
         txOut.push(
-            new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, FeeManager.priorityQueueBaseFee),
+            new TransactionOutput(
+                1,
+                0,
+                null,
+                FEE_COLLECT_SCRIPT_PUBKEY,
+                FeeManager.priorityQueueBaseFee,
+            ),
         );
         Blockchain.mockTransactionOutput(txOut);
 
@@ -593,8 +613,10 @@ describe('ListTokenForSaleOperation tests', () => {
         operation.execute();
 
         expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(297000000));
-        expect(queue.liquidityQueue.deltaSatoshisBuy).toStrictEqual(0);
-        expect(queue.liquidityQueue.deltaTokensBuy).toStrictEqual(u256.fromU64(3000000));
+        expect(queue.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(0);
+        expect(queue.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
+            u256.fromU64(3000000),
+        );
         expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(97000000));
         expect(TransferHelper.safeTransferCalled).toBeTruthy();
     });

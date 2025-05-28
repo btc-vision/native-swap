@@ -903,8 +903,7 @@ describe('ReserveLiquidityOperation tests', () => {
         );
 
         const reservationList = queue3.reservationManager.getReservationListForBlock(103);
-        const reservationActiveList =
-            queue3.reservationManager.getActiveReservationListForBlock(103);
+        const reservationActiveList = queue3.reservationManager.getActiveListForBlock(103);
 
         expect(reservationList.getLength()).toStrictEqual(1);
         expect(reservationList.get(reservation.getPurgeIndex())).toStrictEqual(reservation.getId());

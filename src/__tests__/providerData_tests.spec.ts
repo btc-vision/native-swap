@@ -23,17 +23,17 @@ describe('ProviderData tests', () => {
         }).toThrow();
     });
 
-    it('default removalQueueIndex is INDEX_NOT_SET_VALUE', () => {
+    it('default queueIndex is INDEX_NOT_SET_VALUE', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
-        expect(providerData.removalQueueIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
+        expect(providerData.queueIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
     });
-    it('setter removalQueueIndex marks stateChanged and save writes to storage', () => {
+    it('setter queueIndex marks stateChanged and save writes to storage', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
-        providerData.removalQueueIndex = 10;
+        providerData.queueIndex = 10;
         providerData.save();
 
         const providerData2 = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
-        expect(providerData2.removalQueueIndex).toStrictEqual(10);
+        expect(providerData2.queueIndex).toStrictEqual(10);
     });
 
     it('setter/getter for initialLiquidityProvider', () => {
@@ -89,7 +89,7 @@ describe('ProviderData tests', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
 
         providerData.initialLiquidityProvider = true;
-        providerData.removalQueueIndex = 7;
+        providerData.queueIndex = 7;
         providerData.liquidityProvisionAllowed = true;
         providerData.queueIndex = 1;
         providerData.liquidityAmount = u128.fromU64(90);
@@ -103,7 +103,7 @@ describe('ProviderData tests', () => {
 
         const providerData2 = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
         expect(providerData2.initialLiquidityProvider).toBeTruthy();
-        expect(providerData2.removalQueueIndex).toStrictEqual(7);
+        expect(providerData2.queueIndex).toStrictEqual(7);
         expect(providerData2.liquidityProvisionAllowed).toBeTruthy();
         expect(providerData2.queueIndex).toStrictEqual(1);
         expect(providerData2.liquidityAmount).toStrictEqual(u128.fromU64(90));
@@ -119,7 +119,7 @@ describe('ProviderData tests', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
 
         providerData.initialLiquidityProvider = false;
-        providerData.removalQueueIndex = 7;
+        providerData.queueIndex = 7;
         providerData.liquidityProvisionAllowed = false;
         providerData.queueIndex = 1;
         providerData.liquidityAmount = u128.fromU64(90);
@@ -133,7 +133,7 @@ describe('ProviderData tests', () => {
 
         const providerData2 = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
         expect(providerData2.initialLiquidityProvider).toBeFalsy();
-        expect(providerData2.removalQueueIndex).toStrictEqual(7);
+        expect(providerData2.queueIndex).toStrictEqual(7);
         expect(providerData2.liquidityProvisionAllowed).toBeFalsy();
         expect(providerData2.queueIndex).toStrictEqual(1);
         expect(providerData2.liquidityAmount).toStrictEqual(u128.fromU64(90));
@@ -154,7 +154,7 @@ describe('ProviderData tests', () => {
         providerData.reservedAmount = u128.fromU64(10);
         providerData.queueIndex = 2;
 
-        providerData.resetListingValues();
+        providerData.resetListingProviderValues();
 
         expect(providerData.active).toBeFalsy();
         expect(providerData.priority).toBeFalsy();
@@ -174,7 +174,7 @@ describe('ProviderData tests', () => {
         providerData.queueIndex = INITIAL_LIQUIDITY_PROVIDER_INDEX;
         providerData.initialLiquidityProvider = true;
 
-        providerData.resetListingValues();
+        providerData.resetListingProviderValues();
 
         expect(providerData.active).toBeFalsy();
         expect(providerData.priority).toBeFalsy();
@@ -190,14 +190,14 @@ describe('ProviderData tests', () => {
         providerData.liquidityProvided = u128.fromU64(30);
         providerData.pendingRemoval = true;
         providerData.liquidityProvider = true;
-        providerData.removalQueueIndex = 5;
+        providerData.queueIndex = 5;
 
         providerData.resetLiquidityProviderValues();
 
         expect(providerData.liquidityProvided).toStrictEqual(u128.Zero);
         expect(providerData.pendingRemoval).toBeFalsy();
         expect(providerData.liquidityProvider).toBeFalsy();
-        expect(providerData.removalQueueIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
+        expect(providerData.queueIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
     });
 
     it('resetAll calls both resetListingValues and resetLiquidityProviderValues', () => {

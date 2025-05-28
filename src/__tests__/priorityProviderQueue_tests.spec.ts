@@ -4,6 +4,7 @@ import { createProvider, providerAddress1, tokenAddress1, tokenIdUint8Array1 } f
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { PriorityProviderQueue } from '../managers/PriorityProviderQueue';
 import { PRIORITY_QUEUE_POINTER } from '../constants/StoredPointers';
+import { ENABLE_INDEX_VERIFICATION } from '../constants/Contract';
 
 const QUOTE = u256.fromU64(100000000);
 
@@ -29,8 +30,9 @@ describe('PriorityProviderQueue tests', () => {
                     tokenAddress1,
                     PRIORITY_QUEUE_POINTER,
                     tokenIdUint8Array1,
+                    ENABLE_INDEX_VERIFICATION,
                 );
-                
+
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider1.clearPriority();
                 queue.add(provider1);

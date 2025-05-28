@@ -58,9 +58,9 @@ describe('Liquidity queue tests', () => {
             expect(queue.initialLiquidityProviderId).toStrictEqual(u256.Zero);
             expect(queue.virtualSatoshisReserve).toStrictEqual(0);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
-            expect(queue.deltaTokensAdd).toStrictEqual(u256.Zero);
-            expect(queue.deltaSatoshisBuy).toStrictEqual(0);
-            expect(queue.deltaTokensBuy).toStrictEqual(u256.Zero);
+            expect(queue.totalTokensSellActivated).toStrictEqual(u256.Zero);
+            expect(queue.totalSatoshisExchangedForTokens).toStrictEqual(0);
+            expect(queue.totalTokensExchangedForSatoshis).toStrictEqual(u256.Zero);
             expect(queue.lastVirtualUpdateBlock).toStrictEqual(0);
             expect(queue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue.liquidity).toStrictEqual(u256.Zero);
@@ -83,9 +83,9 @@ describe('Liquidity queue tests', () => {
             expect(queue.initialLiquidityProviderId).toStrictEqual(u256.Zero);
             expect(queue.virtualSatoshisReserve).toStrictEqual(0);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(1));
-            expect(queue.deltaTokensAdd).toStrictEqual(u256.Zero);
-            expect(queue.deltaSatoshisBuy).toStrictEqual(0);
-            expect(queue.deltaTokensBuy).toStrictEqual(u256.Zero);
+            expect(queue.totalTokensSellActivated).toStrictEqual(u256.Zero);
+            expect(queue.totalSatoshisExchangedForTokens).toStrictEqual(0);
+            expect(queue.totalTokensExchangedForSatoshis).toStrictEqual(u256.Zero);
             expect(queue.lastVirtualUpdateBlock).toStrictEqual(1);
             expect(queue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue.liquidity).toStrictEqual(u256.Zero);
@@ -141,9 +141,9 @@ describe('Liquidity queue tests', () => {
             queue.maxTokensPerReservation = u256.fromU32(20000);
             queue.increaseTotalReserve(u256.fromU32(1000));
             queue.increaseTotalReserved(u256.fromU32(2000));
-            queue.deltaTokensAdd = u256.fromU32(10000);
-            queue.deltaSatoshisBuy = 20000;
-            queue.deltaTokensBuy = u256.fromU32(40000);
+            queue.totalTokensSellActivated = u256.fromU32(10000);
+            queue.totalSatoshisExchangedForTokens = 20000;
+            queue.totalTokensExchangedForSatoshis = u256.fromU32(40000);
 
             queue.save();
 
@@ -162,9 +162,13 @@ describe('Liquidity queue tests', () => {
             expect(queue2.maxTokensPerReservation).toStrictEqual(queue.maxTokensPerReservation);
             expect(queue2.liquidity).toStrictEqual(queue.liquidity);
             expect(queue2.reservedLiquidity).toStrictEqual(queue.reservedLiquidity);
-            expect(queue2.deltaTokensAdd).toStrictEqual(queue.deltaTokensAdd);
-            expect(queue2.deltaSatoshisBuy).toStrictEqual(queue.deltaSatoshisBuy);
-            expect(queue2.deltaTokensBuy).toStrictEqual(queue.deltaTokensBuy);
+            expect(queue2.totalTokensSellActivated).toStrictEqual(queue.totalTokensSellActivated);
+            expect(queue2.totalSatoshisExchangedForTokens).toStrictEqual(
+                queue.totalSatoshisExchangedForTokens,
+            );
+            expect(queue2.totalTokensExchangedForSatoshis).toStrictEqual(
+                queue.totalTokensExchangedForSatoshis,
+            );
             expect(queue2.antiBotExpirationBlock).toStrictEqual(queue.antiBotExpirationBlock);
             expect(queue2.lastPurgedBlock).toStrictEqual(queue.lastPurgedBlock);
             expect(queue2.maxReserves5BlockPercent).toStrictEqual(queue.maxReserves5BlockPercent);
@@ -219,9 +223,9 @@ describe('Liquidity queue tests', () => {
             queue.maxTokensPerReservation = u256.fromU32(20000);
             queue.increaseTotalReserve(u256.fromU32(1000));
             queue.increaseTotalReserved(u256.fromU32(2000));
-            queue.deltaTokensAdd = u256.fromU32(10000);
-            queue.deltaSatoshisBuy = 20000;
-            queue.deltaTokensBuy = u256.fromU32(40000);
+            queue.totalTokensSellActivated = u256.fromU32(10000);
+            queue.totalSatoshisExchangedForTokens = 20000;
+            queue.totalTokensExchangedForSatoshis = u256.fromU32(40000);
 
             queue.save();
 
@@ -334,7 +338,7 @@ describe('Liquidity queue tests', () => {
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(8888888));
         });
 
-        it('should correctly get/set deltaTokensAdd value', () => {
+        it('should correctly get/set totalTokensSellActivated value', () => {
             setBlockchainEnvironment(1);
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
@@ -343,11 +347,11 @@ describe('Liquidity queue tests', () => {
             );
             const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
 
-            queue.deltaTokensAdd = u256.fromU32(1000);
-            expect(queue.deltaTokensAdd).toStrictEqual(u256.fromU32(1000));
+            queue.totalTokensSellActivated = u256.fromU32(1000);
+            expect(queue.totalTokensSellActivated).toStrictEqual(u256.fromU32(1000));
         });
 
-        it('should correctly get/set deltaSatoshisBuy value', () => {
+        it('should correctly get/set totalSatoshisExchangedForTokens value', () => {
             setBlockchainEnvironment(1);
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
@@ -356,8 +360,8 @@ describe('Liquidity queue tests', () => {
             );
             const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
 
-            queue.deltaSatoshisBuy = 1000;
-            expect(queue.deltaSatoshisBuy).toStrictEqual(1000);
+            queue.totalSatoshisExchangedForTokens = 1000;
+            expect(queue.totalSatoshisExchangedForTokens).toStrictEqual(1000);
         });
 
         it('should correctly get available liquidity', () => {
@@ -480,7 +484,7 @@ describe('Liquidity queue tests', () => {
             expect(queue.getSatoshisOwedReserved(u256.fromU32(10))).toStrictEqual(2000);
         });
 
-        it('should correctly set deltaSatoshisBuy and deltaTokensBuy when calling buyTokens', () => {
+        it('should correctly set totalSatoshisExchangedForTokens and totalTokensExchangedForSatoshis when calling buyTokens', () => {
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -489,8 +493,8 @@ describe('Liquidity queue tests', () => {
             const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
             queue.buyTokens(u256.fromU32(10000), 888888);
 
-            expect(queue.deltaSatoshisBuy).toStrictEqual(888888);
-            expect(queue.deltaTokensBuy).toStrictEqual(u256.fromU32(10000));
+            expect(queue.totalSatoshisExchangedForTokens).toStrictEqual(888888);
+            expect(queue.totalTokensExchangedForSatoshis).toStrictEqual(u256.fromU32(10000));
         });
 
         it('should gets the feesEnabled', () => {
@@ -822,9 +826,9 @@ describe('Liquidity queue tests', () => {
                 false,
             );
             const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            queue.increaseDeltaSatoshisBuy(100);
+            queue.increaseTotalSatoshisExchangedForTokens(100);
 
-            expect(queue.deltaSatoshisBuy).toStrictEqual(100);
+            expect(queue.totalSatoshisExchangedForTokens).toStrictEqual(100);
         });
 
         it('should correctly increase delta tokens add value', () => {
@@ -835,9 +839,9 @@ describe('Liquidity queue tests', () => {
                 false,
             );
             const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            queue.increaseDeltaTokensAdd(u256.fromU32(100));
+            queue.increaseTotalTokensSellActivated(u256.fromU32(100));
 
-            expect(queue.deltaTokensAdd).toStrictEqual(u256.fromU32(100));
+            expect(queue.totalTokensSellActivated).toStrictEqual(u256.fromU32(100));
         });
 
         it('should correctly increase delta tokens buy value', () => {
@@ -848,9 +852,9 @@ describe('Liquidity queue tests', () => {
                 false,
             );
             const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            queue.increaseDeltaTokensBuy(u256.fromU32(100));
+            queue.increaseTotalTokensExchangedForSatoshis(u256.fromU32(100));
 
-            expect(queue.deltaTokensBuy).toStrictEqual(u256.fromU32(100));
+            expect(queue.totalTokensExchangedForSatoshis).toStrictEqual(u256.fromU32(100));
         });
 
         it('should correctly increase total reserve value', () => {
@@ -1068,13 +1072,13 @@ describe('Liquidity queue tests', () => {
             queue.lastVirtualUpdateBlock = 4;
             queue.virtualSatoshisReserve = 0;
             queue.virtualTokenReserve = u256.Zero;
-            queue.deltaTokensAdd = u256.fromU32(1000);
+            queue.totalTokensSellActivated = u256.fromU32(1000);
             queue.updateVirtualPoolIfNeeded();
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(1000));
         });
 
-        it('should apply the tokens buys to the virtual pool when the deltaTokensBuy >= virtualTokenReserve ', () => {
+        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis >= virtualTokenReserve ', () => {
             setBlockchainEnvironment(5);
 
             const createQueueResult = createLiquidityQueue(
@@ -1087,15 +1091,15 @@ describe('Liquidity queue tests', () => {
             queue.lastVirtualUpdateBlock = 4;
             queue.virtualSatoshisReserve = 100000;
             queue.virtualTokenReserve = u256.fromU32(10000);
-            queue.deltaTokensBuy = u256.fromU32(11000);
-            queue.deltaSatoshisBuy = 999900001;
+            queue.totalTokensExchangedForSatoshis = u256.fromU32(11000);
+            queue.totalSatoshisExchangedForTokens = 999900001;
             queue.updateVirtualPoolIfNeeded();
 
             expect(queue.virtualSatoshisReserve).toStrictEqual(1000000000);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(1));
         });
 
-        it('should apply the tokens buys to the virtual pool when the deltaTokensBuy >= virtualTokenReserve and incB = deltaSatoshisBuy', () => {
+        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis >= virtualTokenReserve and incB = totalSatoshisExchangedForTokens', () => {
             setBlockchainEnvironment(5);
 
             const createQueueResult = createLiquidityQueue(
@@ -1108,15 +1112,15 @@ describe('Liquidity queue tests', () => {
             queue.lastVirtualUpdateBlock = 4;
             queue.virtualSatoshisReserve = 100000;
             queue.virtualTokenReserve = u256.fromU32(10000);
-            queue.deltaTokensBuy = u256.fromU32(11000);
-            queue.deltaSatoshisBuy = 999990000;
+            queue.totalTokensExchangedForSatoshis = u256.fromU32(11000);
+            queue.totalSatoshisExchangedForTokens = 999990000;
             queue.updateVirtualPoolIfNeeded();
 
             expect(queue.virtualSatoshisReserve).toStrictEqual(1000000000);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(1));
         });
 
-        it('should apply the tokens buys to the virtual pool when the deltaTokensBuy >= virtualTokenReserve and incB > deltaSatoshisBuy', () => {
+        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis >= virtualTokenReserve and incB > totalSatoshisExchangedForTokens', () => {
             setBlockchainEnvironment(5);
 
             const createQueueResult = createLiquidityQueue(
@@ -1129,15 +1133,15 @@ describe('Liquidity queue tests', () => {
             queue.lastVirtualUpdateBlock = 4;
             queue.virtualSatoshisReserve = 10;
             queue.virtualTokenReserve = u256.fromU32(10999);
-            queue.deltaTokensBuy = u256.fromU32(11000);
-            queue.deltaSatoshisBuy = 10;
+            queue.totalTokensExchangedForSatoshis = u256.fromU32(11000);
+            queue.totalSatoshisExchangedForTokens = 10;
             queue.updateVirtualPoolIfNeeded();
 
             expect(queue.virtualSatoshisReserve).toStrictEqual(20);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(5499));
         });
 
-        it('should apply the tokens buys to the virtual pool when the deltaTokensBuy < virtualTokenReserve ', () => {
+        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis < virtualTokenReserve ', () => {
             setBlockchainEnvironment(5);
 
             const createQueueResult = createLiquidityQueue(
@@ -1150,15 +1154,15 @@ describe('Liquidity queue tests', () => {
             queue.lastVirtualUpdateBlock = 4;
             queue.virtualSatoshisReserve = 100000;
             queue.virtualTokenReserve = u256.fromU32(10000);
-            queue.deltaTokensBuy = u256.fromU32(9000);
-            queue.deltaSatoshisBuy = 999900001;
+            queue.totalTokensExchangedForSatoshis = u256.fromU32(9000);
+            queue.totalSatoshisExchangedForTokens = 999900001;
             queue.updateVirtualPoolIfNeeded();
 
             expect(queue.virtualSatoshisReserve).toStrictEqual(1000000);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(1000));
         });
 
-        it('should apply the tokens buys to the virtual pool when the deltaTokensBuy < virtualTokenReserve and incB = deltaSatoshisBuy', () => {
+        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis < virtualTokenReserve and incB = totalSatoshisExchangedForTokens', () => {
             setBlockchainEnvironment(5);
 
             const createQueueResult = createLiquidityQueue(
@@ -1171,15 +1175,15 @@ describe('Liquidity queue tests', () => {
             queue.lastVirtualUpdateBlock = 4;
             queue.virtualSatoshisReserve = 100;
             queue.virtualTokenReserve = u256.fromU32(20);
-            queue.deltaTokensBuy = u256.fromU32(10);
-            queue.deltaSatoshisBuy = 100;
+            queue.totalTokensExchangedForSatoshis = u256.fromU32(10);
+            queue.totalSatoshisExchangedForTokens = 100;
             queue.updateVirtualPoolIfNeeded();
 
             expect(queue.virtualSatoshisReserve).toStrictEqual(200);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(10));
         });
 
-        it('should apply the tokens buys to the virtual pool when the deltaTokensBuy < virtualTokenReserve and incB > deltaSatoshisBuy', () => {
+        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis < virtualTokenReserve and incB > totalSatoshisExchangedForTokens', () => {
             setBlockchainEnvironment(5);
 
             const createQueueResult = createLiquidityQueue(
@@ -1192,8 +1196,8 @@ describe('Liquidity queue tests', () => {
             queue.lastVirtualUpdateBlock = 4;
             queue.virtualSatoshisReserve = 10;
             queue.virtualTokenReserve = u256.fromU32(10);
-            queue.deltaTokensBuy = u256.fromU32(2);
-            queue.deltaSatoshisBuy = 1;
+            queue.totalTokensExchangedForSatoshis = u256.fromU32(2);
+            queue.totalSatoshisExchangedForTokens = 1;
             queue.updateVirtualPoolIfNeeded();
 
             expect(queue.virtualSatoshisReserve).toStrictEqual(11);
@@ -1231,15 +1235,15 @@ describe('Liquidity queue tests', () => {
             queue.lastVirtualUpdateBlock = 4;
             queue.virtualSatoshisReserve = 100000;
             queue.virtualTokenReserve = u256.fromU32(10000);
-            queue.deltaTokensBuy = u256.fromU32(10);
-            queue.deltaSatoshisBuy = 10;
-            queue.deltaTokensAdd = u256.fromU32(2);
+            queue.totalTokensExchangedForSatoshis = u256.fromU32(10);
+            queue.totalSatoshisExchangedForTokens = 10;
+            queue.totalTokensSellActivated = u256.fromU32(2);
 
             queue.updateVirtualPoolIfNeeded();
 
-            expect(queue.deltaSatoshisBuy).toStrictEqual(0);
-            expect(queue.deltaTokensAdd).toStrictEqual(u256.Zero);
-            expect(queue.deltaTokensBuy).toStrictEqual(u256.Zero);
+            expect(queue.totalSatoshisExchangedForTokens).toStrictEqual(0);
+            expect(queue.totalTokensSellActivated).toStrictEqual(u256.Zero);
+            expect(queue.totalTokensExchangedForSatoshis).toStrictEqual(u256.Zero);
         });
 
         it('should update lastVirtualUpdateBlock to the current block', () => {
@@ -1255,9 +1259,9 @@ describe('Liquidity queue tests', () => {
             queue.lastVirtualUpdateBlock = 4;
             queue.virtualSatoshisReserve = 100000;
             queue.virtualTokenReserve = u256.fromU32(10000);
-            queue.deltaTokensBuy = u256.fromU32(10);
-            queue.deltaSatoshisBuy = 10;
-            queue.deltaTokensAdd = u256.fromU32(2);
+            queue.totalTokensExchangedForSatoshis = u256.fromU32(10);
+            queue.totalSatoshisExchangedForTokens = 10;
+            queue.totalTokensSellActivated = u256.fromU32(2);
 
             queue.updateVirtualPoolIfNeeded();
 
@@ -1381,8 +1385,8 @@ describe('Liquidity queue tests', () => {
             const reservation: Reservation = createReservation(tokenAddress1, providerAddress1);
             const reservation2: Reservation = createReservation(tokenAddress1, providerAddress2);
 
-            queue.addActiveReservation(reservation);
-            queue.addActiveReservation(reservation2);
+            queue.addReservation(reservation);
+            queue.addReservation(reservation2);
 
             const createQueueResult2 = createLiquidityQueue(
                 tokenAddress1,
@@ -1398,7 +1402,7 @@ describe('Liquidity queue tests', () => {
             expect(list2.get(1)).toStrictEqual(reservation2.getId());
 
             const list2TokenActive: StoredBooleanArray =
-                createQueueResult2.reservationManager.getActiveReservationListForBlock(1000);
+                createQueueResult2.reservationManager.getActiveListForBlock(1000);
             expect(list2TokenActive.get(0)).toBeTruthy();
             expect(list2TokenActive.get(1)).toBeTruthy();
 
@@ -1423,10 +1427,11 @@ describe('Liquidity queue tests', () => {
                     INITIAL_LIQUIDITY_PROVIDER_INDEX,
                     u128.fromU32(10000),
                     ProviderTypes.Normal,
+                    1000,
                 ),
             );
             reservation.save();
-            queue.addActiveReservation(reservation);
+            queue.addReservation(reservation);
             queue.save();
 
             setBlockchainEnvironment(1001, providerAddress1, providerAddress1);
@@ -1452,10 +1457,11 @@ describe('Liquidity queue tests', () => {
                         INITIAL_LIQUIDITY_PROVIDER_INDEX,
                         u128.fromU32(10000),
                         ProviderTypes.Normal,
+                        1000,
                     ),
                 );
                 reservation.save();
-                queue.addActiveReservation(reservation);
+                queue.addReservation(reservation);
                 queue.save();
 
                 setBlockchainEnvironment(1006, providerAddress1, providerAddress1);
@@ -1552,24 +1558,8 @@ describe('Liquidity queue tests', () => {
 
             expect(createQueueResult2.providerManager.removalQueueLength).toStrictEqual(1);
             expect(
-                createQueueResult2.providerManager.getFromRemovalQueue(
-                    provider.getRemovalQueueIndex(),
-                ),
+                createQueueResult2.providerManager.getFromRemovalQueue(provider.getQueueIndex()),
             ).toStrictEqual(provider.getId());
-        });
-
-        it('should call cleanUpQueues', () => {
-            setBlockchainEnvironment(1000);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
-            queue.cleanUpQueues();
-
-            expect(createQueueResult.providerManager.cleanUpQueuesCalled).toBeTruthy();
         });
 
         it('should call getNextProviderWithLiquidity', () => {
@@ -1602,7 +1592,7 @@ describe('Liquidity queue tests', () => {
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.addToNormalQueue(provider);
 
-            queue.resetProvider(provider);
+            queue.resetProvider(provider, true, false);
 
             expect(createQueueResult.providerManager.resetProviderCalled).toBeTruthy();
         });

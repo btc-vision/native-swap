@@ -147,10 +147,12 @@ describe('SwapOperation tests', () => {
             setBlockchainEnvironment(102, providerAddress2, providerAddress2);
             const transactionOutput: TransactionOutput[] = [];
 
-            transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-            transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+            transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
             transactionOutput.push(
-                new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000),
+                new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000),
+            );
+            transactionOutput.push(
+                new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
             );
 
             Blockchain.mockTransactionOutput(transactionOutput);
@@ -242,8 +244,8 @@ describe('SwapOperation tests', () => {
             u256.fromString(`1000000000000000000000000`),
         );
         expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
-        expect(queue4.liquidityQueue.deltaTokensBuy).toStrictEqual(u256.Zero);
-        expect(queue4.liquidityQueue.deltaSatoshisBuy).toStrictEqual(0);
+        expect(queue4.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(u256.Zero);
+        expect(queue4.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(0);
         expect(TransferHelper.safeTransferCalled).toBeFalsy();
     });
 
@@ -300,17 +302,18 @@ describe('SwapOperation tests', () => {
         setBlockchainEnvironment(102, providerAddress2, providerAddress2);
         const transactionOutput: TransactionOutput[] = [];
 
-        transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
-        transactionOutput.push(new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000));
+        transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(
+            new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput);
 
         const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
         const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
 
-        const reservationActiveList =
-            queue4.reservationManager.getActiveReservationListForBlock(101);
+        const reservationActiveList = queue4.reservationManager.getActiveListForBlock(101);
         const reservationList = queue4.reservationManager.getReservationListForBlock(101);
 
         expect(reservationList.getLength()).toStrictEqual(1);
@@ -374,9 +377,11 @@ describe('SwapOperation tests', () => {
         setBlockchainEnvironment(102, providerAddress2, providerAddress2);
         const transactionOutput: TransactionOutput[] = [];
 
-        transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
-        transactionOutput.push(new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000));
+        transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(
+            new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput);
 
@@ -393,8 +398,8 @@ describe('SwapOperation tests', () => {
             u256.fromString(`999993340000000000000000`),
         );
         expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
-        expect(queue4.liquidityQueue.deltaSatoshisBuy).toStrictEqual(10000);
-        expect(queue4.liquidityQueue.deltaTokensBuy).toStrictEqual(
+        expect(queue4.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(10000);
+        expect(queue4.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
             u256.fromString(`6653333333333333333`),
         );
         expect(TransferHelper.safeTransferCalled).toBeTruthy();
@@ -472,17 +477,18 @@ describe('SwapOperation tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         const transactionOutput: TransactionOutput[] = [];
-        transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
-        transactionOutput.push(new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000));
+        transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(
+            new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput);
 
         const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
         const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
 
-        const reservationActiveList =
-            queue4.reservationManager.getActiveReservationListForBlock(102);
+        const reservationActiveList = queue4.reservationManager.getActiveListForBlock(102);
         const reservationList = queue4.reservationManager.getReservationListForBlock(102);
 
         expect(reservationList.getLength()).toStrictEqual(1);
@@ -493,8 +499,8 @@ describe('SwapOperation tests', () => {
 
         expect(provider2.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
-        expect(queue4.liquidityQueue.deltaSatoshisBuy).toStrictEqual(10000);
-        expect(queue4.liquidityQueue.deltaTokensBuy).toStrictEqual(
+        expect(queue4.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(10000);
+        expect(queue4.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
             u256.fromString(`6653333333333333333`),
         );
         expect(reservationActiveList.get(0)).toBeFalsy();
@@ -571,18 +577,19 @@ describe('SwapOperation tests', () => {
         setBlockchainEnvironment(103, providerAddress3, providerAddress3);
 
         const transactionOutput: TransactionOutput[] = [];
-        transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
-        transactionOutput.push(new TransactionOutput(2, receiverAddress1, 15000));
-        transactionOutput.push(new TransactionOutput(3, initialProvider.getBtcReceiver(), 600));
+        transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(new TransactionOutput(2, 0, null, receiverAddress1, 15000));
+        transactionOutput.push(
+            new TransactionOutput(3, 0, null, initialProvider.getBtcReceiver(), 600),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput);
 
         const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
         const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
 
-        const reservationActiveList =
-            queue4.reservationManager.getActiveReservationListForBlock(102);
+        const reservationActiveList = queue4.reservationManager.getActiveListForBlock(102);
         const reservationList = queue4.reservationManager.getReservationListForBlock(102);
 
         expect(reservationList.getLength()).toStrictEqual(1);
@@ -680,10 +687,14 @@ describe('SwapOperation tests', () => {
         setBlockchainEnvironment(103, providerAddress3, providerAddress3);
         const transactionOutput: TransactionOutput[] = [];
 
-        transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-        transactionOutput.push(new TransactionOutput(2, provider2.getBtcReceiver(), 15000));
-        transactionOutput.push(new TransactionOutput(2, initialProvider.getBtcReceiver(), 600));
+        transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
+        transactionOutput.push(
+            new TransactionOutput(2, 0, null, provider2.getBtcReceiver(), 15000),
+        );
+        transactionOutput.push(
+            new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 600),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput);
         const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -721,15 +732,18 @@ describe('SwapOperation tests', () => {
         setBlockchainEnvironment(106, providerAddress4, providerAddress4);
 
         const transactionOutput2: TransactionOutput[] = [];
-        transactionOutput2.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput2.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
-        transactionOutput2.push(new TransactionOutput(2, provider3.getBtcReceiver(), 15600));
+        transactionOutput2.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput2.push(
+            new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000),
+        );
+        transactionOutput2.push(
+            new TransactionOutput(2, 0, null, provider3.getBtcReceiver(), 15600),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput2);
         const queue7 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        const reservationActiveList =
-            queue7.reservationManager.getActiveReservationListForBlock(105);
+        const reservationActiveList = queue7.reservationManager.getActiveListForBlock(105);
         const reservationList = queue7.reservationManager.getReservationListForBlock(105);
 
         expect(reservationList.getLength()).toStrictEqual(1);
@@ -746,8 +760,8 @@ describe('SwapOperation tests', () => {
                         expect(queue7.liquidityQueue.liquidity).toStrictEqual(
                             u256.fromString(`999999610400000000000000`),
                         );
-                        expect(queue7.liquidityQueue.deltaSatoshisBuy).toStrictEqual(15600);
-                        expect(queue7.liquidityQueue.deltaTokensBuy).toStrictEqual(
+                        expect(queue7.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(15600);
+                        expect(queue7.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
                             u256.fromString(`10379200000000000000`),
                             '2',
                         );
@@ -859,15 +873,16 @@ describe('SwapOperation tests', () => {
         expect(provider3.getReservedAmount()).toStrictEqual(u128.fromString(`6666666666666666666`));
 
         const transactionOutput: TransactionOutput[] = [];
-        transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
-        transactionOutput.push(new TransactionOutput(2, provider3.getBtcReceiver(), 10000));
+        transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(
+            new TransactionOutput(2, 0, null, provider3.getBtcReceiver(), 10000),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput);
 
         const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        const reservationActiveList =
-            queue5.reservationManager.getActiveReservationListForBlock(103);
+        const reservationActiveList = queue5.reservationManager.getActiveListForBlock(103);
         const reservationList = queue5.reservationManager.getReservationListForBlock(103);
 
         expect(reservationList.getLength()).toStrictEqual(1);
@@ -879,8 +894,8 @@ describe('SwapOperation tests', () => {
 
         expect(provider3.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(queue5.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
-        expect(queue5.liquidityQueue.deltaSatoshisBuy).toStrictEqual(10000);
-        expect(queue5.liquidityQueue.deltaTokensBuy).toStrictEqual(
+        expect(queue5.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(10000);
+        expect(queue5.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
             u256.fromString(`6653333333333333333`),
         );
         expect(reservationActiveList.get(0)).toBeFalsy();
@@ -939,9 +954,11 @@ describe('SwapOperation tests', () => {
         setBlockchainEnvironment(102, providerAddress2, providerAddress2);
         const transactionOutput: TransactionOutput[] = [];
 
-        transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
-        transactionOutput.push(new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000));
+        transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(
+            new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput);
 
@@ -970,10 +987,14 @@ describe('SwapOperation tests', () => {
         setBlockchainEnvironment(103, providerAddress3, providerAddress3);
         const transactionOutput2: TransactionOutput[] = [];
         const provider3 = getProvider(providerId3);
-        transactionOutput2.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput2.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-        transactionOutput2.push(new TransactionOutput(2, provider3.getBtcReceiver(), 15000));
-        transactionOutput2.push(new TransactionOutput(2, initialProvider.getBtcReceiver(), 600));
+        transactionOutput2.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput2.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
+        transactionOutput2.push(
+            new TransactionOutput(2, 0, null, provider3.getBtcReceiver(), 15000),
+        );
+        transactionOutput2.push(
+            new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 600),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput2);
         const queue44 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -1006,9 +1027,13 @@ describe('SwapOperation tests', () => {
         setBlockchainEnvironment(109, providerAddress2, providerAddress2);
         const transactionOutput3: TransactionOutput[] = [];
 
-        transactionOutput3.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput3.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
-        transactionOutput3.push(new TransactionOutput(2, provider3.getBtcReceiver(), 10000));
+        transactionOutput3.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput3.push(
+            new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000),
+        );
+        transactionOutput3.push(
+            new TransactionOutput(2, 0, null, provider3.getBtcReceiver(), 10000),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput3);
 

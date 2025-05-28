@@ -48,6 +48,10 @@ export interface IProviderManager {
 
     purgeAndRestoreProvider(data: ReservationProviderData): void;
 
+    removeFromNormalQueue(provider: Provider): void;
+
+    removeFromPriorityQueue(provider: Provider): void;
+
     removeFromPurgeQueue(provider: Provider): void;
 
     removeFromRemovalPurgeQueue(provider: Provider): void;

@@ -72,9 +72,9 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
     private assertQueueSwitchAllowed(): void {
         const switched: boolean = this.usePriorityQueue !== this.provider.isPriority();
-        if (!this.oldLiquidity.isZero() && switched) {
+        if (switched && !this.oldLiquidity.isZero()) {
             throw new Revert(
-                `NATIVE_SWAP: You must cancel your listings before using the priority queue.`,
+                `NATIVE_SWAP: You must cancel your listings before using switching queue type.`,
             );
         }
     }
@@ -202,8 +202,43 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
     }
 
+    private handleInitialLiquidity(): void {
+        this.provider.activate();
+        this.provider.clearPriority();
+    }
+
     private increaseGlobalReserve(): void {
         this.liquidityQueue.increaseTotalReserve(this.amountIn256);
+    }
+
+    private moveProviderToNormal(): void {
+        if (this.provider.isActive()) {
+            this.liquidityQueue.removeFromPriorityQueue(this.provider);
+        } else {
+            this.provider.activate();
+        }
+
+        this.provider.clearPriority();
+        this.liquidityQueue.addToNormalQueue(this.provider);
+    }
+
+    private moveProviderToPriority(): void {
+        if (this.provider.isActive()) {
+            this.liquidityQueue.removeFromNormalQueue(this.provider);
+        } else {
+            this.provider.activate();
+        }
+
+        this.provider.markPriority();
+        this.liquidityQueue.addToPriorityQueue(this.provider);
+    }
+
+    private noProviderMove(): void {
+        if (this.usePriorityQueue) {
+            this.liquidityQueue.addToPriorityQueue(this.provider);
+        } else {
+            this.liquidityQueue.addToNormalQueue(this.provider);
+        }
     }
 
     private pullInTokens(): void {
@@ -232,27 +267,19 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private transitionProviderIfNeeded(): void {
-        // !!!!what if moving queue -> must remove from old queue???
-        const wasNormal =
-            !this.provider.isPriority() && this.provider.isActive() && this.usePriorityQueue;
+        //!!! new logic
+        if (this.isForInitialLiquidity) {
+            this.handleInitialLiquidity();
+        } else {
+            const moveFromNormalToPriority = !this.provider.isPriority() && this.usePriorityQueue;
+            const moveFromPriorityToNormal = this.provider.isPriority() && !this.usePriorityQueue;
 
-        if (wasNormal) {
-            this.provider.activate();
-            this.provider.markPriority();
-            this.liquidityQueue.addToPriorityQueue(this.provider);
-        } else if (!this.provider.isActive()) {
-            if (!this.isForInitialLiquidity) {
-                this.provider.activate();
-                if (this.usePriorityQueue) {
-                    this.provider.markPriority();
-                    this.liquidityQueue.addToPriorityQueue(this.provider);
-                } else {
-                    this.provider.clearPriority();
-                    this.liquidityQueue.addToNormalQueue(this.provider);
-                }
-            } else {
-                this.provider.activate();
-                this.provider.clearPriority();
+            if (moveFromNormalToPriority) {
+                this.moveProviderToPriority();
+            } else if (moveFromPriorityToNormal) {
+                this.moveProviderToNormal();
+            } else if (!this.provider.isActive()) {
+                this.noProviderMove();
             }
         }
     }

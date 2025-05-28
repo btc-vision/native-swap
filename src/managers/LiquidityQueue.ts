@@ -397,6 +397,14 @@ export class LiquidityQueue implements ILiquidityQueue {
         return SafeMath.div(scaled, u256.fromU64(this.virtualSatoshisReserve));
     }
 
+    public removeFromNormalQueue(provider: Provider): void {
+        this.providerManager.removeFromNormalQueue(provider);
+    }
+
+    public removeFromPriorityQueue(provider: Provider): void {
+        this.providerManager.removeFromNormalQueue(provider);
+    }
+
     public removeFromPurgeQueue(provider: Provider): void {
         this.providerManager.removeFromPurgeQueue(provider);
     }

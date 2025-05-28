@@ -9,7 +9,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { getProvider, Provider } from '../models/Provider';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
-import { MAXIMUM_VALID_INDEX } from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
 
 export class ProviderQueue {
     protected readonly token: Address;
@@ -112,12 +112,10 @@ export class ProviderQueue {
         return this.queue;
     }
 
-    /*!!!
-    public removeAt(index: u32): void {
-        this.queue.delete_physical(index);
+    public remove(provider: Provider): void {
+        this.queue.delete_physical(provider.getQueueIndex());
+        provider.setQueueIndex(INDEX_NOT_SET_VALUE);
     }
-
-     */
 
     public resetProvider(
         provider: Provider,

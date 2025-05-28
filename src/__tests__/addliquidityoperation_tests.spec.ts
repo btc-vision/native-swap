@@ -59,7 +59,7 @@ describe('AddLiquidityOperation tests', () => {
 
             const reservation = createReservation(tokenAddress1, msgSender1);
             reservation.addProvider(
-                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal),
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 100),
             );
             reservation.save();
 
@@ -178,10 +178,12 @@ describe('AddLiquidityOperation tests', () => {
             const initialProvider = getProvider(initialProviderId);
             const transactionOutput: TransactionOutput[] = [];
 
-            transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-            transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+            transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
             transactionOutput.push(
-                new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000),
+                new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000),
+            );
+            transactionOutput.push(
+                new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
             );
 
             Blockchain.mockTransactionOutput(transactionOutput);
@@ -250,10 +252,12 @@ describe('AddLiquidityOperation tests', () => {
             const initialProvider = getProvider(initialProviderId);
             const transactionOutput: TransactionOutput[] = [];
 
-            transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-            transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+            transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
             transactionOutput.push(
-                new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000),
+                new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000),
+            );
+            transactionOutput.push(
+                new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
             );
 
             Blockchain.mockTransactionOutput(transactionOutput);
@@ -324,9 +328,11 @@ describe('AddLiquidityOperation tests', () => {
         setBlockchainEnvironment(101, providerAddress2, providerAddress2);
         const transactionOutput: TransactionOutput[] = [];
 
-        transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
-        transactionOutput.push(new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000));
+        transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(
+            new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput);
 
@@ -395,9 +401,11 @@ describe('AddLiquidityOperation tests', () => {
         const initialProvider = getProvider(initialProviderId);
         const transactionOutput: TransactionOutput[] = [];
 
-        transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-        transactionOutput.push(new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000));
+        transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
+        transactionOutput.push(
+            new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput);
 
@@ -483,9 +491,11 @@ describe('AddLiquidityOperation tests', () => {
         const initialProvider = getProvider(initialProviderId);
         const transactionOutput: TransactionOutput[] = [];
 
-        transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-        transactionOutput.push(new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000));
+        transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
+        transactionOutput.push(
+            new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput);
 
@@ -536,9 +546,11 @@ describe('AddLiquidityOperation tests', () => {
         setBlockchainEnvironment(103, providerAddress2, providerAddress2);
         const transactionOutput2: TransactionOutput[] = [];
 
-        transactionOutput2.push(new TransactionOutput(0, 'fakeaddress', 0));
-        transactionOutput2.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-        transactionOutput2.push(new TransactionOutput(2, initialProvider.getBtcReceiver(), 10000));
+        transactionOutput2.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
+        transactionOutput2.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
+        transactionOutput2.push(
+            new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
+        );
 
         Blockchain.mockTransactionOutput(transactionOutput2);
 
@@ -625,10 +637,12 @@ describe('AddLiquidityOperation tests', () => {
             const initialProvider = getProvider(initialProviderId);
             const transactionOutput: TransactionOutput[] = [];
 
-            transactionOutput.push(new TransactionOutput(0, 'fakeaddress', 0));
-            transactionOutput.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
+            transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
             transactionOutput.push(
-                new TransactionOutput(2, initialProvider.getBtcReceiver(), 2000),
+                new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 2000),
+            );
+            transactionOutput.push(
+                new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 2000),
             );
 
             Blockchain.mockTransactionOutput(transactionOutput);

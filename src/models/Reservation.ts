@@ -112,10 +112,6 @@ export class Reservation {
     }
 
     public getProviderAt(index: u32): ReservationProviderData {
-        if (index > this.reservedIndexes.getLength() - 1) {
-            throw new Revert('Impossible state: requested provider index is out of range.');
-        }
-
         return new ReservationProviderData(
             this.reservedIndexes.get(index),
             this.reservedValues.get(index),

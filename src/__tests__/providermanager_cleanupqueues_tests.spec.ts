@@ -12,6 +12,7 @@ import {
 } from './test_helper';
 import { OwedBTCManager } from '../managers/OwedBTCManager';
 import { ENABLE_INDEX_VERIFICATION } from '../constants/Contract';
+import { QuoteManager } from '../managers/QuoteManager';
 
 describe('ProviderManager removal queue cleanUpQueues tests', () => {
     beforeEach(() => {
@@ -23,10 +24,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex = 0, 1 provider', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -48,10 +51,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex = 0, 1 provider in pending removal', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -73,10 +78,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex = 0, 1 provider and 1 provider in pendingRemoval state', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -101,10 +108,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex = 0, 2 provider not in pendingRemoval state', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -129,10 +138,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex = 0, 1 provider in pendingRemoval state and 1 provider', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -157,10 +168,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex = 0, 2 providers in pendingRemoval state', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -185,10 +198,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex <> 0, 1 provider', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -215,10 +230,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex <> 0, 1 provider in pending removal', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -247,10 +264,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex <> 0, 1 provider and 1 provider in pendingRemoval state', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -282,10 +301,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex <> 0, 2 provider not in pendingRemoval state', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -316,10 +337,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex <> 0, 1 provider in pendingRemoval state and 1 provider', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -350,10 +373,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex <> 0, 2 providers in pendingRemoval state', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -384,10 +409,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousRemovalStartingIndex and removal queue state when cleanUpQueues is called, previousRemovalStartingIndex <> 0, 1 provider in pendingRemoval state and 1 provider', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -418,10 +445,12 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
 
     it('should skip a deleted provider and correctly set previousRemovalStartingIndex', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -430,7 +459,7 @@ describe('ProviderManager removal queue cleanUpQueues tests', () => {
         manager.addToRemovalQueue(provider1);
         manager.addToRemovalQueue(provider2);
 
-        manager.removePendingLiquidityProviderFromRemovalQueue(provider1);
+        manager.resetProvider(provider1);
         expect(manager.getFromRemovalQueue(0)).toStrictEqual(u256.Zero);
 
         manager.cleanUpQueues();
@@ -451,10 +480,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex = 0, 1 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -478,10 +509,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex = 0, 1 provider active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -505,10 +538,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex = 0, 1 provider not active and 1 provider active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -538,10 +573,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex = 0, 2 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -571,10 +608,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex = 0, 1 provider active and 1 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -604,10 +643,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex = 0, 2 providers active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -637,10 +678,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex <> 0, 1 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -673,10 +716,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex <> 0, 1 provider active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -710,10 +755,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex <> 0, 1 provider not active and 1 provider active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -753,10 +800,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex <> 0, 2 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -795,10 +844,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex <> 0, 1 provider active and 1 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -837,10 +888,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex <> 0, 2 providers active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -879,10 +932,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex <> 0, 1 provider active state and 1 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -921,10 +976,12 @@ describe('ProviderManager priority queue cleanUpQueues tests', () => {
 
     it('should skip a deleted provider and correctly set previousReservationStartingIndex', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -961,10 +1018,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex = 0, 1 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -988,10 +1047,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex = 0, 1 provider active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -1015,10 +1076,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex = 0, 1 provider not active and 1 provider active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -1048,10 +1111,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex = 0, 2 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -1081,10 +1146,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex = 0, 1 provider active and 1 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -1114,10 +1181,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex = 0, 2 providers active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -1147,10 +1216,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex <> 0, 1 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -1183,10 +1254,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex <> 0, 1 provider active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -1220,10 +1293,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex <> 0, 1 provider not active and 1 provider active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
 
@@ -1263,10 +1338,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex <> 0, 2 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1305,10 +1382,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex <> 0, 1 provider active and 1 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1347,10 +1426,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex <> 0, 2 providers active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1389,10 +1470,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should correctly set previousNormalStartingIndex and queue state when cleanUpQueues is called, previousNormalStartingIndex <> 0, 1 provider active state and 1 provider not active', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1431,10 +1514,12 @@ describe('ProviderManager normal queue cleanUpQueues tests', () => {
 
     it('should skip a deleted provider and correctly set previousNormalStartingIndex', () => {
         const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+        const quoteManager = new QuoteManager(tokenIdUint8Array1);
         const manager: ProviderManager = new ProviderManager(
             tokenAddress1,
             tokenIdUint8Array1,
             owedBTCManager,
+            quoteManager,
             ENABLE_INDEX_VERIFICATION,
         );
         const provider1: Provider = createProvider(providerAddress1, tokenAddress1);

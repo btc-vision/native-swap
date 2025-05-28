@@ -51,7 +51,12 @@ describe('TradeManager tests', () => {
 
             const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
             reservation.addProvider(
-                new ReservationProviderData(0, u128.fromU32(10), ProviderTypes.LiquidityRemoval),
+                new ReservationProviderData(
+                    0,
+                    u128.fromU32(10),
+                    ProviderTypes.LiquidityRemoval,
+                    reservation.getCreationBlock(),
+                ),
             );
 
             queue.tradeManager.executeTrade(reservation);
@@ -93,17 +98,18 @@ describe('TradeManager tests', () => {
                 INITIAL_LIQUIDITY_PROVIDER_INDEX,
                 u128.fromU32(10),
                 ProviderTypes.Normal,
+                reservation.getCreationBlock(),
             ),
         );
         reservation.setPurgeIndex(0);
 
-        const reservationActiveList = queue.reservationManager.getActiveReservationListForBlock(0);
+        const reservationActiveList = queue.reservationManager.getActiveListForBlock(0);
         reservationActiveList.push(true);
         reservationActiveList.save();
 
         const txOut: TransactionOutput[] = [];
 
-        txOut.push(new TransactionOutput(0, provider1.getBtcReceiver(), 100));
+        txOut.push(new TransactionOutput(0, 0, null, provider1.getBtcReceiver(), 100));
 
         Blockchain.mockTransactionOutput(txOut);
 
@@ -149,19 +155,19 @@ describe('TradeManager tests', () => {
                     INITIAL_LIQUIDITY_PROVIDER_INDEX,
                     u128.fromU32(10),
                     ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
                 ),
             );
 
             reservation.setPurgeIndex(0);
 
-            const reservationActiveList =
-                queue.reservationManager.getActiveReservationListForBlock(0);
+            const reservationActiveList = queue.reservationManager.getActiveListForBlock(0);
             reservationActiveList.push(true);
             reservationActiveList.save();
 
             const txOut: TransactionOutput[] = [];
 
-            txOut.push(new TransactionOutput(0, provider1.getBtcReceiver(), 100));
+            txOut.push(new TransactionOutput(0, 0, null, provider1.getBtcReceiver(), 100));
 
             Blockchain.mockTransactionOutput(txOut);
 
@@ -207,13 +213,13 @@ describe('TradeManager tests', () => {
                     INITIAL_LIQUIDITY_PROVIDER_INDEX,
                     u128.fromU32(10),
                     ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
                 ),
             );
             reservation.setPurgeIndex(0);
             reservation.save();
 
-            const reservationActiveList =
-                queue.reservationManager.getActiveReservationListForBlock(1000);
+            const reservationActiveList = queue.reservationManager.getActiveListForBlock(1000);
             reservationActiveList.push(true);
             reservationActiveList.save();
             queue.liquidityQueue.save();
@@ -226,7 +232,7 @@ describe('TradeManager tests', () => {
 
             const txOut: TransactionOutput[] = [];
 
-            txOut.push(new TransactionOutput(0, provider1.getBtcReceiver(), 100));
+            txOut.push(new TransactionOutput(0, 0, null, provider1.getBtcReceiver(), 100));
 
             Blockchain.mockTransactionOutput(txOut);
 
@@ -286,11 +292,10 @@ describe('TradeManager tests', () => {
                     provider2.getQueueIndex(),
                     u128.fromU32(10),
                     ProviderTypes.LiquidityRemoval,
+                    reservation.getCreationBlock(),
                 ),
             );
-            const index = queue.liquidityQueue.addActiveReservation(reservation);
-            reservation.setPurgeIndex(index);
-            reservation.save();
+            queue.liquidityQueue.addReservation(reservation);
             queue.liquidityQueue.save();
 
             setBlockchainEnvironment(1003);
@@ -301,7 +306,7 @@ describe('TradeManager tests', () => {
 
             const txOut: TransactionOutput[] = [];
 
-            txOut.push(new TransactionOutput(0, provider1.getBtcReceiver(), 100));
+            txOut.push(new TransactionOutput(0, 0, null, provider1.getBtcReceiver(), 100));
 
             Blockchain.mockTransactionOutput(txOut);
 
@@ -362,13 +367,13 @@ describe('TradeManager tests', () => {
                 provider2.getQueueIndex(),
                 u128.fromU32(999999),
                 ProviderTypes.LiquidityRemoval,
+                reservation.getCreationBlock(),
             ),
         );
         reservation.setPurgeIndex(0);
         reservation.save();
 
-        const reservationActiveList =
-            queue.reservationManager.getActiveReservationListForBlock(1000);
+        const reservationActiveList = queue.reservationManager.getActiveListForBlock(1000);
         reservationActiveList.push(true);
         reservationActiveList.save();
 
@@ -446,13 +451,13 @@ describe('TradeManager tests', () => {
                 provider.getQueueIndex(),
                 u128.fromU32(5000),
                 ProviderTypes.Normal,
+                reservation.getCreationBlock(),
             ),
         );
 
-        const index = queue3.liquidityQueue.addActiveReservation(reservation);
+        queue3.liquidityQueue.addReservation(reservation);
         queue3.liquidityQueue.increaseTotalReserved(u256.fromU64(5000));
-        reservation.setPurgeIndex(index);
-        reservation.save();
+
         queue3.liquidityQueue.setBlockQuote();
         queue3.liquidityQueue.save();
 
@@ -526,16 +531,16 @@ describe('TradeManager tests', () => {
         const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
         reservation.addProvider(
             new ReservationProviderData(
-                removalProvider.getRemovalQueueIndex(),
+                removalProvider.getQueueIndex(),
                 u128.fromU32(100),
                 ProviderTypes.LiquidityRemoval,
+                reservation.getCreationBlock(),
             ),
         );
 
         queue3.liquidityQueue.setSatoshisOwedReserved(removalProvider.getId(), 1000);
-        const index = queue3.liquidityQueue.addActiveReservation(reservation);
-        reservation.setPurgeIndex(index);
-        reservation.save();
+        queue3.liquidityQueue.addReservation(reservation);
+
         queue3.liquidityQueue.setBlockQuote();
         queue3.liquidityQueue.save();
 
@@ -547,7 +552,7 @@ describe('TradeManager tests', () => {
 
         const txOut: TransactionOutput[] = [];
 
-        txOut.push(new TransactionOutput(0, removalProvider.getBtcReceiver(), 1));
+        txOut.push(new TransactionOutput(0, 0, null, removalProvider.getBtcReceiver(), 1));
 
         Blockchain.mockTransactionOutput(txOut);
 
@@ -615,16 +620,16 @@ describe('TradeManager tests', () => {
         const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
         reservation.addProvider(
             new ReservationProviderData(
-                removalProvider.getRemovalQueueIndex(),
+                removalProvider.getQueueIndex(),
                 u128.fromU32(10000),
                 ProviderTypes.LiquidityRemoval,
+                reservation.getCreationBlock(),
             ),
         );
 
         queue3.liquidityQueue.setSatoshisOwedReserved(removalProvider.getId(), 1000);
-        const index = queue3.liquidityQueue.addActiveReservation(reservation);
-        reservation.setPurgeIndex(index);
-        reservation.save();
+        queue3.liquidityQueue.addReservation(reservation);
+
         queue3.liquidityQueue.setBlockQuote();
         queue3.liquidityQueue.save();
 
@@ -636,7 +641,7 @@ describe('TradeManager tests', () => {
 
         const txOut: TransactionOutput[] = [];
 
-        txOut.push(new TransactionOutput(0, removalProvider.getBtcReceiver(), 100));
+        txOut.push(new TransactionOutput(0, 0, null, removalProvider.getBtcReceiver(), 100));
 
         Blockchain.mockTransactionOutput(txOut);
 
@@ -707,12 +712,12 @@ describe('TradeManager tests', () => {
                     provider.getQueueIndex(),
                     u128.fromU32(100000),
                     ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
                 ),
             );
 
-            const index = queue3.liquidityQueue.addActiveReservation(reservation);
-            reservation.setPurgeIndex(index);
-            reservation.save();
+            queue3.liquidityQueue.addReservation(reservation);
+
             queue3.liquidityQueue.setBlockQuote();
             queue3.liquidityQueue.save();
 
@@ -724,7 +729,7 @@ describe('TradeManager tests', () => {
 
             const txOut: TransactionOutput[] = [];
 
-            txOut.push(new TransactionOutput(0, provider.getBtcReceiver(), 100));
+            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 100));
 
             Blockchain.mockTransactionOutput(txOut);
 
@@ -789,13 +794,13 @@ describe('TradeManager tests', () => {
                     provider.getQueueIndex(),
                     u128.fromU32(5000),
                     ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
                 ),
             );
 
-            const index = queue3.liquidityQueue.addActiveReservation(reservation);
+            queue3.liquidityQueue.addReservation(reservation);
             queue3.liquidityQueue.increaseTotalReserved(u256.fromU64(5000));
-            reservation.setPurgeIndex(index);
-            reservation.save();
+
             queue3.liquidityQueue.setBlockQuote();
             queue3.liquidityQueue.save();
 
@@ -807,7 +812,7 @@ describe('TradeManager tests', () => {
 
             const txOut: TransactionOutput[] = [];
 
-            txOut.push(new TransactionOutput(0, provider.getBtcReceiver(), 100));
+            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 100));
 
             Blockchain.mockTransactionOutput(txOut);
 
@@ -869,16 +874,16 @@ describe('TradeManager tests', () => {
         const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
         reservation.addProvider(
             new ReservationProviderData(
-                removalProvider.getRemovalQueueIndex(),
+                removalProvider.getQueueIndex(),
                 u128.fromU32(100),
                 ProviderTypes.LiquidityRemoval,
+                reservation.getCreationBlock(),
             ),
         );
 
         queue3.liquidityQueue.setSatoshisOwedReserved(removalProvider.getId(), 11000000000);
-        const index = queue3.liquidityQueue.addActiveReservation(reservation);
-        reservation.setPurgeIndex(index);
-        reservation.save();
+        queue3.liquidityQueue.addReservation(reservation);
+
         queue3.quoteManager.setBlockQuote(1003, u256.fromU64(1));
         queue3.liquidityQueue.save();
 
@@ -890,7 +895,7 @@ describe('TradeManager tests', () => {
 
         const txOut: TransactionOutput[] = [];
 
-        txOut.push(new TransactionOutput(0, removalProvider.getBtcReceiver(), 1));
+        txOut.push(new TransactionOutput(0, 0, null, removalProvider.getBtcReceiver(), 1));
 
         Blockchain.mockTransactionOutput(txOut);
 
@@ -957,13 +962,13 @@ describe('TradeManager tests', () => {
                 provider.getQueueIndex(),
                 u128.fromU32(5000),
                 ProviderTypes.Normal,
+                reservation.getCreationBlock(),
             ),
         );
 
-        const index = queue3.liquidityQueue.addActiveReservation(reservation);
+        queue3.liquidityQueue.addReservation(reservation);
         queue3.liquidityQueue.increaseTotalReserved(u256.fromU64(5000));
-        reservation.setPurgeIndex(index);
-        reservation.save();
+
         queue3.quoteManager.setBlockQuote(1003, u256.fromU64(1));
         queue3.liquidityQueue.save();
 
@@ -975,7 +980,7 @@ describe('TradeManager tests', () => {
 
         const txOut: TransactionOutput[] = [];
 
-        txOut.push(new TransactionOutput(0, provider.getBtcReceiver(), 100));
+        txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 100));
 
         Blockchain.mockTransactionOutput(txOut);
 
@@ -1041,13 +1046,13 @@ describe('TradeManager tests', () => {
                 provider.getQueueIndex(),
                 u128.fromU32(5000),
                 ProviderTypes.Normal,
+                reservation.getCreationBlock(),
             ),
         );
 
-        const index = queue3.liquidityQueue.addActiveReservation(reservation);
+        queue3.liquidityQueue.addReservation(reservation);
         queue3.liquidityQueue.increaseTotalReserved(u256.fromU64(5000));
-        reservation.setPurgeIndex(index);
-        reservation.save();
+
         queue3.liquidityQueue.setBlockQuote();
         queue3.liquidityQueue.save();
 
@@ -1059,7 +1064,7 @@ describe('TradeManager tests', () => {
 
         const txOut: TransactionOutput[] = [];
 
-        txOut.push(new TransactionOutput(0, provider.getBtcReceiver(), 100));
+        txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 100));
 
         Blockchain.mockTransactionOutput(txOut);
 
@@ -1122,16 +1127,16 @@ describe('TradeManager tests', () => {
         const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
         reservation.addProvider(
             new ReservationProviderData(
-                removalProvider.getRemovalQueueIndex(),
+                removalProvider.getQueueIndex(),
                 u128.fromU32(100),
                 ProviderTypes.LiquidityRemoval,
+                reservation.getCreationBlock(),
             ),
         );
 
         queue3.liquidityQueue.setSatoshisOwedReserved(removalProvider.getId(), 10);
-        const index = queue3.liquidityQueue.addActiveReservation(reservation);
-        reservation.setPurgeIndex(index);
-        reservation.save();
+        queue3.liquidityQueue.addReservation(reservation);
+
         queue3.liquidityQueue.setBlockQuote();
         queue3.liquidityQueue.save();
 
@@ -1143,16 +1148,16 @@ describe('TradeManager tests', () => {
 
         const txOut: TransactionOutput[] = [];
 
-        txOut.push(new TransactionOutput(0, removalProvider.getBtcReceiver(), 10));
+        txOut.push(new TransactionOutput(0, 0, null, removalProvider.getBtcReceiver(), 10));
 
         Blockchain.mockTransactionOutput(txOut);
 
-        const oldIndex = removalProvider.getRemovalQueueIndex();
+        const oldIndex = removalProvider.getQueueIndex();
         queue4.tradeManager.executeTrade(reservation2);
 
         expect(removalProvider.isFromRemovalQueue()).toBeFalsy();
         expect(removalProvider.isLiquidityProvider()).toBeFalsy();
-        expect(removalProvider.getRemovalQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+        expect(removalProvider.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
         expect(removalProvider.isFromRemovalQueue()).toBeFalsy();
         expect(queue4.providerManager.getFromRemovalQueue(oldIndex)).toStrictEqual(u256.Zero);
     });

@@ -502,7 +502,7 @@ describe('Provider tests', () => {
             provider.setReservedAmount(u128.fromU64(5));
             provider.setQueueIndex(9);
 
-            provider.resetListingValues();
+            provider.resetListingProviderValues();
 
             expect(provider.isActive()).toBeFalsy();
             expect(provider.isPriority()).toBeFalsy();
@@ -518,14 +518,14 @@ describe('Provider tests', () => {
             provider.markLiquidityProvider();
             provider.setLiquidityProvided(u128.fromU64(30));
             provider.markPendingRemoval();
-            provider.setRemovalQueueIndex(5);
+            provider.setQueueIndex(5);
 
             provider.resetLiquidityProviderValues();
 
             expect(provider.isLiquidityProvider()).toBeFalsy();
             expect(provider.getLiquidityProvided()).toStrictEqual(u128.Zero);
             expect(provider.isPendingRemoval()).toBeFalsy();
-            expect(provider.getRemovalQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(provider.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
         });
 
         it('resetAll clears both listing and provider fields', () => {
@@ -641,23 +641,11 @@ describe('Provider tests', () => {
             expect(provider.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
         });
 
-        it('default removal queue index is INDEX_NOT_SET_VALUE', () => {
-            const provider: Provider = new Provider(u256.fromU64(100));
-            expect(provider.getRemovalQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-        });
-
         it('setQueueIndex updates value', () => {
             const provider: Provider = new Provider(u256.fromU64(101));
             const index: u32 = 5;
             provider.setQueueIndex(index);
             expect(provider.getQueueIndex()).toStrictEqual(index);
-        });
-
-        it('setRemovalQueueIndex updates value', () => {
-            const provider: Provider = new Provider(u256.fromU64(101));
-            const index: u32 = 7;
-            provider.setRemovalQueueIndex(index);
-            expect(provider.getRemovalQueueIndex()).toStrictEqual(index);
         });
     });
 });

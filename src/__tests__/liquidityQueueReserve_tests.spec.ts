@@ -21,32 +21,32 @@ describe('CompletedTrade tests', () => {
         expect(reserve.liquidity).toStrictEqual(u256.Zero);
         expect(reserve.reservedLiquidity).toStrictEqual(u256.Zero);
         expect(reserve.availableLiquidity).toStrictEqual(u256.Zero);
-        expect(reserve.deltaTokensAdd).toStrictEqual(u256.Zero);
-        expect(reserve.deltaTokensBuy).toStrictEqual(u256.Zero);
-        expect(reserve.deltaSatoshisBuy).toStrictEqual(0);
+        expect(reserve.totalTokensSellActivated).toStrictEqual(u256.Zero);
+        expect(reserve.totalTokensExchangedForSatoshis).toStrictEqual(u256.Zero);
+        expect(reserve.totalSatoshisExchangedForTokens).toStrictEqual(0);
         expect(reserve.virtualTokenReserve).toStrictEqual(u256.Zero);
         expect(reserve.virtualSatoshisReserve).toStrictEqual(0);
     });
 
-    it('can set and get deltaTokensAdd', () => {
+    it('can set and get totalTokensSellActivated', () => {
         const reserve = new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1);
         const value: u256 = u256.fromU64(123);
-        reserve.deltaTokensAdd = value;
-        expect(reserve.deltaTokensAdd).toStrictEqual(value);
+        reserve.totalTokensSellActivated = value;
+        expect(reserve.totalTokensSellActivated).toStrictEqual(value);
     });
 
-    it('can set and get deltaTokensBuy', () => {
+    it('can set and get totalTokensExchangedForSatoshis', () => {
         const reserve = new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1);
         const value: u256 = u256.fromU64(456);
-        reserve.deltaTokensBuy = value;
-        expect(reserve.deltaTokensBuy).toStrictEqual(value);
+        reserve.totalTokensExchangedForSatoshis = value;
+        expect(reserve.totalTokensExchangedForSatoshis).toStrictEqual(value);
     });
 
-    it('can set and get deltaSatoshisBuy', () => {
+    it('can set and get totalSatoshisExchangedForTokens', () => {
         const reserve = new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1);
         const value: u64 = 789;
-        reserve.deltaSatoshisBuy = value;
-        expect(reserve.deltaSatoshisBuy).toStrictEqual(value);
+        reserve.totalSatoshisExchangedForTokens = value;
+        expect(reserve.totalSatoshisExchangedForTokens).toStrictEqual(value);
     });
 
     it('can set and get virtualTokenReserve', () => {
@@ -63,66 +63,66 @@ describe('CompletedTrade tests', () => {
         expect(reserve.virtualSatoshisReserve).toStrictEqual(value);
     });
 
-    it('addToDeltaTokensAdd increments only deltaTokensAdd', () => {
+    it('addTototalTokensSellActivated increments only totalTokensSellActivated', () => {
         const reserve = new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1);
         const a: u256 = u256.fromU64(10);
         const b: u256 = u256.fromU64(15);
-        reserve.addToDeltaTokensAdd(a);
-        expect(reserve.deltaTokensAdd).toStrictEqual(a);
-        reserve.addToDeltaTokensAdd(b);
-        expect(reserve.deltaTokensAdd).toStrictEqual(u256.fromU64(25));
+        reserve.addToTotalTokensSellActivated(a);
+        expect(reserve.totalTokensSellActivated).toStrictEqual(a);
+        reserve.addToTotalTokensSellActivated(b);
+        expect(reserve.totalTokensSellActivated).toStrictEqual(u256.fromU64(25));
     });
 
-    it('addToDeltaTokensAdd overflows when exceeding u256.MAX', () => {
+    it('addTototalTokensSellActivated overflows when exceeding u256.MAX', () => {
         expect(() => {
             const reserve = new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1);
             const max: u256 = u256.Max;
             const one: u256 = u256.One;
-            reserve.deltaTokensAdd = max;
-            expect(reserve.deltaTokensAdd).toStrictEqual(max);
+            reserve.totalTokensSellActivated = max;
+            expect(reserve.totalTokensSellActivated).toStrictEqual(max);
 
-            reserve.addToDeltaTokensAdd(one);
+            reserve.addToTotalTokensSellActivated(one);
         }).toThrow();
     });
 
-    it('addToDeltaTokensBuy increments only deltaTokensBuy', () => {
+    it('addTototalTokensExchangedForSatoshis increments only totalTokensExchangedForSatoshis', () => {
         const reserve = new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1);
         const value: u256 = u256.fromU64(7);
-        reserve.addToDeltaTokensBuy(value);
-        expect(reserve.deltaTokensBuy).toStrictEqual(value);
+        reserve.addToTotalTokensExchangedForSatoshis(value);
+        expect(reserve.totalTokensExchangedForSatoshis).toStrictEqual(value);
     });
 
-    it('addToDeltaTokensBuy overflows when exceeding u256.MAX', () => {
+    it('addTototalTokensExchangedForSatoshis overflows when exceeding u256.MAX', () => {
         expect(() => {
             const reserve = new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1);
             const max: u256 = u256.Max;
             const one: u256 = u256.One;
-            reserve.deltaTokensBuy = max;
-            expect(reserve.deltaTokensBuy).toStrictEqual(max);
+            reserve.totalTokensExchangedForSatoshis = max;
+            expect(reserve.totalTokensExchangedForSatoshis).toStrictEqual(max);
 
-            reserve.addToDeltaTokensBuy(one);
+            reserve.addToTotalTokensExchangedForSatoshis(one);
         }).toThrow();
     });
 
-    it('addToDeltaSatoshisBuy increments only deltaSatoshisBuy', () => {
+    it('addTototalSatoshisExchangedForTokens increments only totalSatoshisExchangedForTokens', () => {
         const reserve = new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1);
         const x: u64 = 100;
         const y: u64 = 50;
-        reserve.addToDeltaSatoshisBuy(x);
-        expect(reserve.deltaSatoshisBuy).toStrictEqual(x);
-        reserve.addToDeltaSatoshisBuy(y);
-        expect(reserve.deltaSatoshisBuy).toStrictEqual(150);
+        reserve.addToTotalSatoshisExchangedForTokens(x);
+        expect(reserve.totalSatoshisExchangedForTokens).toStrictEqual(x);
+        reserve.addToTotalSatoshisExchangedForTokens(y);
+        expect(reserve.totalSatoshisExchangedForTokens).toStrictEqual(150);
     });
 
-    it('addToDeltaSatoshisBuy overflows when exceeding u64.MAX', () => {
+    it('addTototalSatoshisExchangedForTokens overflows when exceeding u64.MAX', () => {
         expect(() => {
             const reserve = new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1);
             const max64: u64 = u64.MAX_VALUE;
             const one64: u64 = 1;
-            reserve.deltaSatoshisBuy = max64;
-            expect(reserve.deltaSatoshisBuy).toStrictEqual(max64);
+            reserve.totalSatoshisExchangedForTokens = max64;
+            expect(reserve.totalSatoshisExchangedForTokens).toStrictEqual(max64);
 
-            reserve.addToDeltaSatoshisBuy(one64);
+            reserve.addToTotalSatoshisExchangedForTokens(one64);
         }).toThrow();
     });
 
@@ -286,7 +286,7 @@ describe('CompletedTrade tests', () => {
             reserve.addToTotalReserve(u256.fromU64(1000));
             reserve.addToTotalReserved(u256.fromU64(1001));
 
-            reserve.availableLiquidity;
+            const liquidity = reserve.availableLiquidity;
         }).toThrow();
     });
 });

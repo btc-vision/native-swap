@@ -23,6 +23,7 @@ import {
     INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
 } from '../constants/Contract';
+import { QuoteManager } from '../managers/QuoteManager';
 
 describe('ProviderManager tests', () => {
     beforeEach(() => {
@@ -42,10 +43,12 @@ describe('ProviderManager tests', () => {
 
         it('should create a new provider manager and initialize correctly when not exists', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -66,10 +69,12 @@ describe('ProviderManager tests', () => {
 
         it('should create a provider manager, load stored values and initialize correctly when currentIndex = 0', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -83,6 +88,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
             expect(manager2.currentIndexNormal).toStrictEqual(0);
@@ -102,10 +108,12 @@ describe('ProviderManager tests', () => {
 
         it('should create a provider manager, load stored values and initialize correctly when currentIndex > 1', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -211,6 +219,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
             expect(manager2.currentIndexNormal).toStrictEqual(0);
@@ -239,10 +248,12 @@ describe('ProviderManager tests', () => {
 
         it('should get/set the initial liquidity provider correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -255,10 +266,12 @@ describe('ProviderManager tests', () => {
 
         it('should get/set the previous priority starting index correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -269,10 +282,12 @@ describe('ProviderManager tests', () => {
 
         it('should get/set the previous normal starting index correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -283,10 +298,12 @@ describe('ProviderManager tests', () => {
 
         it('should get/set the previous removal starting index correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -297,10 +314,12 @@ describe('ProviderManager tests', () => {
 
         it('should get the priority queue length correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -314,10 +333,12 @@ describe('ProviderManager tests', () => {
 
         it('should get the normal queue length correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -331,10 +352,12 @@ describe('ProviderManager tests', () => {
 
         it('should get the removal queue length correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -348,10 +371,12 @@ describe('ProviderManager tests', () => {
 
         it('should reset all previous starting index to 0', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -368,10 +393,12 @@ describe('ProviderManager tests', () => {
 
         it('should restore the current indexes to the previous value', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -397,10 +424,12 @@ describe('ProviderManager tests', () => {
 
         it('should add/get providers to priority queue correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -424,10 +453,12 @@ describe('ProviderManager tests', () => {
 
         it('should add/get providers to normal queue correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -451,10 +482,12 @@ describe('ProviderManager tests', () => {
 
         it('should add/get providers to removal queue correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -467,21 +500,23 @@ describe('ProviderManager tests', () => {
             manager.addToRemovalQueue(provider2);
 
             expect(manager.removalQueueLength).toStrictEqual(2);
-            expect(manager.getFromRemovalQueue(provider1.getRemovalQueueIndex())).toStrictEqual(
+            expect(manager.getFromRemovalQueue(provider1.getQueueIndex())).toStrictEqual(
                 provider1.getId(),
             );
 
-            expect(manager.getFromRemovalQueue(provider2.getRemovalQueueIndex())).toStrictEqual(
+            expect(manager.getFromRemovalQueue(provider2.getQueueIndex())).toStrictEqual(
                 provider2.getId(),
             );
         });
 
         it('should get providers id by types correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -499,10 +534,7 @@ describe('ProviderManager tests', () => {
             expect(manager.priorityQueueLength).toStrictEqual(1);
 
             expect(
-                manager.getIdFromQueue(
-                    provider1.getRemovalQueueIndex(),
-                    ProviderTypes.LiquidityRemoval,
-                ),
+                manager.getIdFromQueue(provider1.getQueueIndex(), ProviderTypes.LiquidityRemoval),
             ).toStrictEqual(provider1.getId());
 
             expect(
@@ -517,10 +549,12 @@ describe('ProviderManager tests', () => {
         it('should throws when get initial provider from queue but not set', () => {
             expect(() => {
                 const owedBTCManager = new OwedBTCManager();
+                const quoteManager = new QuoteManager(tokenIdUint8Array1);
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
+                    quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                 );
 
@@ -533,10 +567,12 @@ describe('ProviderManager tests', () => {
 
         it('should get initial provider from queue correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -558,10 +594,12 @@ describe('ProviderManager tests', () => {
         it('should throws when get normal provider from queue but not in the list', () => {
             expect(() => {
                 const owedBTCManager = new OwedBTCManager();
+                const quoteManager = new QuoteManager(tokenIdUint8Array1);
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
+                    quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                 );
 
@@ -571,10 +609,12 @@ describe('ProviderManager tests', () => {
 
         it('should get normal provider from queue correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -593,10 +633,12 @@ describe('ProviderManager tests', () => {
         it('should throws when get priority provider from queue but not in the list', () => {
             expect(() => {
                 const owedBTCManager = new OwedBTCManager();
+                const quoteManager = new QuoteManager(tokenIdUint8Array1);
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
+                    quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                 );
 
@@ -606,10 +648,12 @@ describe('ProviderManager tests', () => {
 
         it('should get priority provider from queue correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -628,10 +672,12 @@ describe('ProviderManager tests', () => {
         it('should throws when get removal provider from queue but not in the list', () => {
             expect(() => {
                 const owedBTCManager = new OwedBTCManager();
+                const quoteManager = new QuoteManager(tokenIdUint8Array1);
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
+                    quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                 );
 
@@ -641,10 +687,12 @@ describe('ProviderManager tests', () => {
 
         it('should get removal provider from queue correctly', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -652,22 +700,22 @@ describe('ProviderManager tests', () => {
             manager.addToRemovalQueue(provider);
 
             const resultProvider: Provider = manager.getProviderFromQueue(
-                provider.getRemovalQueueIndex(),
+                provider.getQueueIndex(),
                 ProviderTypes.LiquidityRemoval,
             );
 
             expect(resultProvider.getId()).toStrictEqual(provider.getId());
-            expect(resultProvider.getRemovalQueueIndex()).toStrictEqual(
-                provider.getRemovalQueueIndex(),
-            );
+            expect(resultProvider.getQueueIndex()).toStrictEqual(provider.getQueueIndex());
         });
 
         it('should return 0 when priority queue does not contains the provider index or is empty', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -678,10 +726,12 @@ describe('ProviderManager tests', () => {
 
         it('should return 0 when removal queue does not contains the provider index or is empty', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
             const providerIdOut: u256 = manager.getFromRemovalQueue(22222);
@@ -691,10 +741,12 @@ describe('ProviderManager tests', () => {
 
         it('should return 0 when getFromStandardQueue does not contains the provider index or is empty', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -714,10 +766,12 @@ describe('ProviderManager tests', () => {
 
         it('should remove a pending liquidity provider from the removal queue', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -728,7 +782,7 @@ describe('ProviderManager tests', () => {
 
             expect(manager.getFromRemovalQueue(index)).toStrictEqual(provider1.getId());
 
-            manager.removePendingLiquidityProviderFromRemovalQueue(provider1);
+            manager.resetProvider(provider1);
 
             expect(provider1.isLiquidityProvider()).toBeFalsy();
             expect(provider1.isPendingRemoval()).toBeFalsy();
@@ -747,10 +801,12 @@ describe('ProviderManager tests', () => {
 
         it('should burn the provider funds when burnRemainingFunds is true and liquidity is not 0', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -762,10 +818,12 @@ describe('ProviderManager tests', () => {
 
         it('should not burn the provider funds when burnRemainingFunds is true and liquidity is 0', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -778,10 +836,12 @@ describe('ProviderManager tests', () => {
 
         it('should not burn the provider funds when burnRemainingFunds is false', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -794,10 +854,12 @@ describe('ProviderManager tests', () => {
 
         it('should remove the provider from the priority queue and reset it', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -822,10 +884,12 @@ describe('ProviderManager tests', () => {
 
         it('should remove the provider from the normal queue and reset it', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -850,10 +914,12 @@ describe('ProviderManager tests', () => {
         it('should throws if the provider is removal type', () => {
             expect(() => {
                 const owedBTCManager = new OwedBTCManager();
+                const quoteManager = new QuoteManager(tokenIdUint8Array1);
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     owedBTCManager,
+                    quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                 );
 
@@ -864,10 +930,12 @@ describe('ProviderManager tests', () => {
 
         it('should only reset listing values when initial liquidity provider', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -892,10 +960,12 @@ describe('ProviderManager tests', () => {
 
         it('should correctly persists the values', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -918,6 +988,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -949,10 +1020,12 @@ describe('ProviderManager tests', () => {
 
         it('should correctly persists the value when save is called and currentIndex > 0', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -977,10 +1050,12 @@ describe('ProviderManager tests', () => {
 
         it('should correctly persists the value when save is called and currentIndexPriority > 0', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 
@@ -1011,10 +1086,12 @@ describe('ProviderManager tests', () => {
 
         it('should correctly persists the value when save is called and currentIndexRemoval > 0', () => {
             const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 owedBTCManager,
+                quoteManager,
                 ENABLE_INDEX_VERIFICATION,
             );
 

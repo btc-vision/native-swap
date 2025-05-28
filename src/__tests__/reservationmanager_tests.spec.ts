@@ -4,6 +4,8 @@ import {
     createLiquidityQueue,
     createReservation,
     ownerAddress1,
+    providerAddress1,
+    providerAddress2,
     setBlockchainEnvironment,
     tokenAddress1,
     tokenIdUint8Array1,
@@ -21,7 +23,7 @@ describe('Reservation manager tests', () => {
         TransferHelper.clearMockedResults();
     });
 
-    describe('addActiveReservation', () => {
+    describe('addReservation', () => {
         it('adds a reservation, push block and returns index', () => {
             setBlockchainEnvironment(100);
 
@@ -34,13 +36,14 @@ describe('Reservation manager tests', () => {
             const manager = createLiquidityQueueResult.reservationManager;
 
             const reservationList = manager.getReservationListForBlock(100);
-            const activeReservationList = manager.getActiveReservationListForBlock(100);
+            const activeReservationList = manager.getActiveListForBlock(100);
 
             expect(reservationList.getLength()).toStrictEqual(0);
             expect(activeReservationList.getLength()).toStrictEqual(0);
             expect(manager.lastBlockReservation()).toStrictEqual(u64.MAX_VALUE);
 
-            manager.addActiveReservation(100, u128.fromU32(1000));
+            const reservation = createReservation(tokenAddress1, providerAddress1);
+            manager.addReservation(100, reservation);
 
             setBlockchainEnvironment(101);
 
@@ -53,7 +56,7 @@ describe('Reservation manager tests', () => {
             const manager2 = createLiquidityQueueResult2.reservationManager;
 
             const reservationList2 = manager2.getReservationListForBlock(100);
-            const activeReservationList2 = manager2.getActiveReservationListForBlock(100);
+            const activeReservationList2 = manager2.getActiveListForBlock(100);
 
             expect(reservationList2.getLength()).toStrictEqual(1);
             expect(activeReservationList2.getLength()).toStrictEqual(1);
@@ -72,17 +75,19 @@ describe('Reservation manager tests', () => {
             const manager = createLiquidityQueueResult.reservationManager;
 
             const reservationList = manager.getReservationListForBlock(100);
-            const activeReservationList = manager.getActiveReservationListForBlock(100);
+            const activeReservationList = manager.getActiveListForBlock(100);
 
             expect(reservationList.getLength()).toStrictEqual(0);
             expect(activeReservationList.getLength()).toStrictEqual(0);
             expect(manager.lastBlockReservation()).toStrictEqual(u64.MAX_VALUE);
 
-            manager.addActiveReservation(100, u128.fromU32(1000));
+            const reservation = createReservation(tokenAddress1, providerAddress1);
+            manager.addReservation(100, reservation);
 
             expect(manager.lastBlockReservation()).toStrictEqual(100);
 
-            manager.addActiveReservation(100, u128.fromU32(2000));
+            const reservation2 = createReservation(tokenAddress1, providerAddress2);
+            manager.addReservation(100, reservation2);
 
             expect(manager.lastBlockReservation()).toStrictEqual(100);
 
@@ -97,7 +102,7 @@ describe('Reservation manager tests', () => {
             const manager2 = createLiquidityQueueResult2.reservationManager;
 
             const reservationList2 = manager2.getReservationListForBlock(100);
-            const activeReservationList2 = manager2.getActiveReservationListForBlock(100);
+            const activeReservationList2 = manager2.getActiveListForBlock(100);
 
             expect(reservationList2.getLength()).toStrictEqual(2);
             expect(activeReservationList2.getLength()).toStrictEqual(2);
@@ -117,7 +122,7 @@ describe('Reservation manager tests', () => {
                 const manager = createLiquidityQueueResult.reservationManager;
 
                 const reservationList = manager.getReservationListForBlock(100);
-                const activeReservationList = manager.getActiveReservationListForBlock(100);
+                const activeReservationList = manager.getActiveListForBlock(100);
 
                 expect(reservationList.getLength()).toStrictEqual(0);
                 expect(activeReservationList.getLength()).toStrictEqual(0);
@@ -125,7 +130,8 @@ describe('Reservation manager tests', () => {
 
                 manager.mockAddToListReturn(100);
                 manager.mockAddToActiveListReturn(200);
-                manager.addActiveReservation(100, u128.fromU32(1000));
+                const reservation = createReservation(tokenAddress1, providerAddress1);
+                manager.addReservation(100, reservation);
             }).toThrow();
         });
     });
@@ -149,10 +155,11 @@ describe('Reservation manager tests', () => {
                     INITIAL_LIQUIDITY_PROVIDER_INDEX,
                     u128.fromU32(1000),
                     ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
                 ),
             );
             reservation.save();
-            manager.addActiveReservation(100, reservation.getId());
+            manager.addReservation(100, reservation);
 
             setBlockchainEnvironment(101);
 
@@ -184,7 +191,7 @@ describe('Reservation manager tests', () => {
                 const reservation = createReservation(tokenAddress1, ownerAddress1);
                 reservation.setActivationDelay(0);
                 reservation.save();
-                manager.addActiveReservation(100, reservation.getId());
+                manager.addReservation(100, reservation);
 
                 setBlockchainEnvironment(101);
 
@@ -196,7 +203,7 @@ describe('Reservation manager tests', () => {
 
                 const manager2 = createLiquidityQueueResult2.reservationManager;
 
-                const result = manager2.getReservationWithExpirationChecks(ownerAddress1);
+                manager2.getReservationWithExpirationChecks(ownerAddress1);
             }).toThrow();
         });
 
@@ -219,10 +226,11 @@ describe('Reservation manager tests', () => {
                         INITIAL_LIQUIDITY_PROVIDER_INDEX,
                         u128.fromU32(1000),
                         ProviderTypes.Normal,
+                        reservation.getCreationBlock(),
                     ),
                 );
                 reservation.save();
-                manager.addActiveReservation(100, reservation.getId());
+                manager.addReservation(100, reservation);
 
                 const createLiquidityQueueResult2 = createLiquidityQueue(
                     tokenAddress1,
@@ -255,10 +263,11 @@ describe('Reservation manager tests', () => {
                         INITIAL_LIQUIDITY_PROVIDER_INDEX,
                         u128.fromU32(1000),
                         ProviderTypes.Normal,
+                        reservation.getCreationBlock(),
                     ),
                 );
                 reservation.save();
-                manager.addActiveReservation(100, reservation.getId());
+                manager.addReservation(100, reservation);
 
                 setBlockchainEnvironment(101);
                 const createLiquidityQueueResult2 = createLiquidityQueue(
@@ -325,7 +334,8 @@ describe('Reservation manager tests', () => {
             expect(reservationList.getLength()).toStrictEqual(0);
             expect(manager.lastBlockReservation()).toStrictEqual(u64.MAX_VALUE);
 
-            manager.addActiveReservation(100, u128.fromU32(1000));
+            const reservation = createReservation(tokenAddress1, providerAddress1);
+            manager.addReservation(100, reservation);
 
             setBlockchainEnvironment(101);
 
@@ -354,12 +364,13 @@ describe('Reservation manager tests', () => {
 
             const manager = createLiquidityQueueResult.reservationManager;
 
-            const activeReservationList = manager.getActiveReservationListForBlock(100);
+            const activeReservationList = manager.getActiveListForBlock(100);
 
             expect(activeReservationList.getLength()).toStrictEqual(0);
             expect(manager.lastBlockReservation()).toStrictEqual(u64.MAX_VALUE);
 
-            manager.addActiveReservation(100, u128.fromU32(1000));
+            const reservation = createReservation(tokenAddress1, providerAddress1);
+            manager.addReservation(100, reservation);
 
             setBlockchainEnvironment(101);
 
@@ -371,7 +382,7 @@ describe('Reservation manager tests', () => {
 
             const manager2 = createLiquidityQueueResult2.reservationManager;
 
-            const activeReservationList2 = manager2.getActiveReservationListForBlock(100);
+            const activeReservationList2 = manager2.getActiveListForBlock(100);
 
             expect(activeReservationList2).not.toBeNull();
             expect(activeReservationList2.getLength()).toStrictEqual(1);

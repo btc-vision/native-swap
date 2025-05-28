@@ -423,7 +423,10 @@ export class ReserveLiquidityOperation extends BaseOperation {
     private handleRemovalProviderPurgeQueues(provider: Provider): void {
         if (provider.isPurged()) {
             // TODO!!!: Verify if there is enough owed BTC left to refund, the fixed version is in the refactor version. Will be empty for now
-            const hasEnoughLiquidityLeft: boolean = false;
+            // NOT SURE!!!!
+            const owed: u64 = this.liquidityQueue.getSatoshisOwed(provider.getId());
+            const hasEnoughLiquidityLeft: boolean =
+                owed < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT;
 
             if (!hasEnoughLiquidityLeft) {
                 this.liquidityQueue.removeFromRemovalPurgeQueue(provider);

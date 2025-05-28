@@ -21,8 +21,8 @@ describe('OrderBookUtils tests', () => {
 
     it('should skip the first output (index=0) even if it matches script pubkey', () => {
         const tx: TransactionOutput[] = [];
-        tx.push(new TransactionOutput(0, FEE_COLLECT_SCRIPT_PUBKEY, 5000));
-        tx.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 3000));
+        tx.push(new TransactionOutput(0, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 5000));
+        tx.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 3000));
         Blockchain.mockTransactionOutput(tx);
 
         const fee = getTotalFeeCollected();
@@ -31,9 +31,9 @@ describe('OrderBookUtils tests', () => {
 
     it('should return 0 if none of the outputs (after index=0) match the script pubkey', () => {
         const tx: TransactionOutput[] = [];
-        tx.push(new TransactionOutput(0, 'someOtherPubkey1', 1000));
-        tx.push(new TransactionOutput(1, 'someOtherPubkey2', 2000));
-        tx.push(new TransactionOutput(2, 'someOtherPubkey3', 3000));
+        tx.push(new TransactionOutput(0, 0, null, 'someOtherPubkey1', 1000));
+        tx.push(new TransactionOutput(1, 0, null, 'someOtherPubkey2', 2000));
+        tx.push(new TransactionOutput(2, 0, null, 'someOtherPubkey3', 3000));
         Blockchain.mockTransactionOutput(tx);
 
         const fee = getTotalFeeCollected();
@@ -42,10 +42,10 @@ describe('OrderBookUtils tests', () => {
 
     it('should sum multiple matching outputs from index=1 onward', () => {
         const tx: TransactionOutput[] = [];
-        tx.push(new TransactionOutput(0, FEE_COLLECT_SCRIPT_PUBKEY, 9999));
-        tx.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
-        tx.push(new TransactionOutput(2, FEE_COLLECT_SCRIPT_PUBKEY, 4000));
-        tx.push(new TransactionOutput(3, 'someOtherPubkey', 9999));
+        tx.push(new TransactionOutput(0, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 9999));
+        tx.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 2000));
+        tx.push(new TransactionOutput(2, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 4000));
+        tx.push(new TransactionOutput(3, 0, null, 'someOtherPubkey', 9999));
         Blockchain.mockTransactionOutput(tx);
 
         const fee = getTotalFeeCollected();
@@ -57,9 +57,9 @@ describe('OrderBookUtils tests', () => {
         const bigVal = <u64>2000;
 
         const tx: TransactionOutput[] = [];
-        tx.push(new TransactionOutput(0, 'someOtherPubkey', 100));
-        tx.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, nearMax));
-        tx.push(new TransactionOutput(2, FEE_COLLECT_SCRIPT_PUBKEY, bigVal));
+        tx.push(new TransactionOutput(0, 0, null, 'someOtherPubkey', 100));
+        tx.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, nearMax));
+        tx.push(new TransactionOutput(2, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, bigVal));
         Blockchain.mockTransactionOutput(tx);
 
         const fee = getTotalFeeCollected();
@@ -71,9 +71,9 @@ describe('OrderBookUtils tests', () => {
         const val2 = <u64>2000;
 
         const tx: TransactionOutput[] = [];
-        tx.push(new TransactionOutput(0, 'someOtherPubkey', 1));
-        tx.push(new TransactionOutput(1, FEE_COLLECT_SCRIPT_PUBKEY, largeVal1));
-        tx.push(new TransactionOutput(2, FEE_COLLECT_SCRIPT_PUBKEY, val2));
+        tx.push(new TransactionOutput(0, 0, null, 'someOtherPubkey', 1));
+        tx.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, largeVal1));
+        tx.push(new TransactionOutput(2, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, val2));
         Blockchain.mockTransactionOutput(tx);
 
         const sum = largeVal1 + val2;

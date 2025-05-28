@@ -95,6 +95,10 @@ export interface ILiquidityQueue {
 
     quote(): u256;
 
+    removeFromNormalQueue(provider: Provider): void;
+
+    removeFromPriorityQueue(provider: Provider): void;
+
     removeFromPurgeQueue(provider: Provider): void;
 
     removeFromRemovalPurgeQueue(provider: Provider): void;
