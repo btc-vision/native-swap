@@ -71,7 +71,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.reserve(reservation);
         this.ensureMinimumTokenReserved();
         this.liquidityQueue.increaseTotalReserved(this.reservedTokens);
-        this.finalizeReservation(reservation);
+        this.liquidityQueue.addReservation(reservation);
         this.liquidityQueue.setBlockQuote();
         this.emitReservationCreatedEvent();
     }
@@ -92,9 +92,10 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         reservation.addProvider(
             new ReservationProviderData(
-                provider.getRemovalQueueIndex(),
+                provider.getQueueIndex(),
                 tokens,
                 provider.getProviderType(),
+                reservation.getCreationBlock(),
             ),
         );
 
@@ -119,6 +120,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 provider.getQueueIndex(),
                 tokens,
                 provider.getProviderType(),
+                reservation.getCreationBlock(),
             ),
         );
 
@@ -328,14 +330,13 @@ export class ReserveLiquidityOperation extends BaseOperation {
             return;
         }
 
-        //!!!! expirationBlock???? why createdAt
-        const expirationBlock: u64 = reservation.getCreationBlock();
-        if (expirationBlock <= RESERVATION_EXPIRE_AFTER_IN_BLOCKS) {
+        const creationBlock: u64 = reservation.getCreationBlock();
+        if (creationBlock <= RESERVATION_EXPIRE_AFTER_IN_BLOCKS) {
             return;
         }
 
-        const reservationId = this.liquidityQueue.getReservationIdAtIndex(
-            expirationBlock,
+        const reservationId: u128 = this.liquidityQueue.getReservationIdAtIndex(
+            creationBlock,
             reservation.getPurgeIndex(),
         );
 
@@ -345,12 +346,12 @@ export class ReserveLiquidityOperation extends BaseOperation {
             );
         }
 
-        const activeReservationId = this.liquidityQueue.getActiveReservationAtIndex(
-            expirationBlock,
+        const activeReservation: boolean = this.liquidityQueue.isReservationActiveAtIndex(
+            creationBlock,
             reservation.getPurgeIndex(),
         );
 
-        if (activeReservationId) {
+        if (activeReservation) {
             throw new Revert(
                 `NATIVE_SWAP: You may not reserve at this time. Your previous reservation has not been purged yet. Please try again later.`,
             );
@@ -414,19 +415,13 @@ export class ReserveLiquidityOperation extends BaseOperation {
         }
     }
 
-    private finalizeReservation(reservation: Reservation): void {
-        const index: u32 = this.liquidityQueue.addActiveReservation(reservation);
-        reservation.setPurgeIndex(index);
-        reservation.save();
-    }
-
     private getValidQuote(): void {
         this.currentQuote = this.liquidityQueue.quote();
         this.ensureCurrentQuoteValid();
     }
 
     private handleRemovalProviderPurgeQueues(provider: Provider): void {
-        if (provider.isRemovalPurged()) {
+        if (provider.isPurged()) {
             // TODO!!!: Verify if there is enough owed BTC left to refund, the fixed version is in the refactor version. Will be empty for now
             const hasEnoughLiquidityLeft: boolean = false;
 
@@ -503,8 +498,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
             lastProviderId = provider.getId();
             lastIndex = provider.getQueueIndex();
-            //!!!! Problem here. we can have 2 similar index 1 from removal and 1 from normal.
-            // so this lastIndex things does not works
 
             this.ensureStatesAreValid(provider);
 

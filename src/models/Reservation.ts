@@ -18,7 +18,6 @@ import { u128 } from '@btc-vision/as-bignum/assembly';
 import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReservationData } from './ReservationData';
 import { ReservationProviderData } from './ReservationProdiverData';
-import { MAXIMUM_PROVIDER_COUNT } from '../constants/Contract';
 
 export class Reservation {
     private reservationData: ReservationData;
@@ -60,10 +59,6 @@ export class Reservation {
     }
 
     public addProvider(providerData: ReservationProviderData): void {
-        if (this.reservedIndexes.getLength() === MAXIMUM_PROVIDER_COUNT) {
-            throw new Revert('Impossible state: Too many providers required for reservation.');
-        }
-
         this.reservedIndexes.push(providerData.providerIndex);
         this.reservedValues.push(providerData.providedAmount);
         this.reservedPriority.push(<u8>providerData.providerType);
@@ -117,26 +112,19 @@ export class Reservation {
     }
 
     public getProviderAt(index: u32): ReservationProviderData {
-        if (this.reservedIndexes.getLength() > MAXIMUM_PROVIDER_COUNT) {
-            throw new Revert('Impossible state: reserved indexes count corrupted.');
-        }
-
         if (index > this.reservedIndexes.getLength() - 1) {
-            throw new Revert('Impossible state: requested provider index out of range.');
+            throw new Revert('Impossible state: requested provider index is out of range.');
         }
 
         return new ReservationProviderData(
             this.reservedIndexes.get(index),
             this.reservedValues.get(index),
             this.reservedPriority.get(index),
+            this.getCreationBlock(),
         );
     }
 
     public getProviderCount(): u32 {
-        if (this.reservedIndexes.getLength() > MAXIMUM_PROVIDER_COUNT) {
-            throw new Revert('Impossible state: reserved indexes count corrupted.');
-        }
-
         return this.reservedIndexes.getLength();
     }
 

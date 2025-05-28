@@ -6,6 +6,7 @@ export class ReservationProviderData {
         public readonly providerIndex: u32,
         public readonly providedAmount: u128,
         public readonly providerType: ProviderTypes,
+        public readonly creationBlock: u64,
     ) {}
 
     public isLiquidityRemoval(): boolean {

@@ -6,7 +6,7 @@ import {
     StoredU32Array,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
-import { INDEX_NOT_SET_VALUE, MAXIMUM_PROVIDER_COUNT } from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
 import { getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
@@ -26,7 +26,7 @@ export class PurgedProviderQueue {
         allowDirty: boolean,
     ) {
         this.token = token;
-        this.queue = new StoredU32Array(pointer, subPointer, MAXIMUM_PROVIDER_COUNT);
+        this.queue = new StoredU32Array(pointer, subPointer, INDEX_NOT_SET_VALUE - 1);
         this.enableIndexVerification = enableIndexVerification;
         this.allowDirty = allowDirty;
     }
@@ -40,6 +40,7 @@ export class PurgedProviderQueue {
 
         if (!provider.isInitialLiquidityProvider()) {
             this.ensureProviderNotAlreadyPurged(provider.isPurged());
+            this.ensureProviderNotPendingRemoval(provider);
             this.ensureProviderNotPriority(provider);
             this.ensureProviderQueueIndexIsValid(provider.getQueueIndex());
 
@@ -63,7 +64,6 @@ export class PurgedProviderQueue {
         const provider = getProvider(providerId);
         this.ensureProviderPurged(provider);
 
-        //!!!! WHY THIS???
         provider.setPurgedIndex(this.queue.previousOffset);
 
         return this.returnProvider(provider, providerIndex, quote);
@@ -72,7 +72,7 @@ export class PurgedProviderQueue {
     public remove(provider: Provider): void {
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
 
-        // TODO: Technically, we don't need to remove the provider from the queue because we should theoretically process
+        // TODO:!!!! Technically, we don't need to remove the provider from the queue because we should theoretically process
         // TODO: "dirty" states correctly due to wrap around.
         if (!this.allowDirty) {
             this.queue.delete_physical(provider.getPurgedIndex());
@@ -85,7 +85,49 @@ export class PurgedProviderQueue {
         provider.setPurgedIndex(INDEX_NOT_SET_VALUE);
     }
 
-    public resetProvider(
+    public save(): void {
+        this.queue.save();
+    }
+
+    protected ensureProviderIdIsValid(id: u256): void {
+        if (id.isZero()) {
+            throw new Revert(`Impossible state: providerId cannot be zero.`);
+        }
+    }
+
+    protected ensureProviderNotAlreadyPurged(state: boolean): void {
+        if (state) {
+            throw new Revert('Impossible state: provider has already been purged.');
+        }
+    }
+
+    protected ensureProviderQueueIndexIsValid(index: u32): void {
+        if (index === INDEX_NOT_SET_VALUE) {
+            throw new Revert('Impossible state: provider index is not defined.');
+        }
+    }
+
+    protected ensureProviderNotPendingRemoval(provider: Provider): void {
+        if (provider.isPendingRemoval()) {
+            throw new Revert(`Impossible state: provider cannot be in pending removal state.`);
+        }
+    }
+
+    private ensureProviderPurged(provider: Provider): void {
+        if (!provider.isPurged()) {
+            throw new Revert(`Impossible state: provider has not been purged.`);
+        }
+    }
+
+    private ensureProviderNotPriority(provider: Provider): void {
+        if (provider.isPriority()) {
+            throw new Revert(
+                `Impossible state: only normal provider can be in the normal provider purged queue.`,
+            );
+        }
+    }
+
+    private resetPurgedProvider(
         provider: Provider,
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
@@ -107,42 +149,6 @@ export class PurgedProviderQueue {
         provider.resetListingProviderValues();
 
         Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
-    }
-
-    public save(): void {
-        this.queue.save();
-    }
-
-    protected ensureProviderNotAlreadyPurged(state: boolean): void {
-        if (state) {
-            throw new Revert('Impossible state: provider has already been purged.');
-        }
-    }
-
-    protected ensureProviderQueueIndexIsValid(index: u32): void {
-        if (index === INDEX_NOT_SET_VALUE) {
-            throw new Revert('Impossible state: provider index is not defined.');
-        }
-    }
-
-    protected ensureProviderIdIsValid(id: u256): void {
-        if (id.isZero()) {
-            throw new Revert(`Impossible state: providerId cannot be zero.`);
-        }
-    }
-
-    private ensureProviderPurged(provider: Provider): void {
-        if (!provider.isPurged()) {
-            throw new Revert(`Impossible state: provider has not been purged.`);
-        }
-    }
-
-    private ensureProviderNotPriority(provider: Provider): void {
-        if (provider.isPriority()) {
-            throw new Revert(
-                `Impossible state: only normal provider can be in the normal provider purged queue.`,
-            );
-        }
     }
 
     // TODO:!!! we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
@@ -169,7 +175,7 @@ export class PurgedProviderQueue {
                 provider.clearFromRemovalQueue();
                 result = provider;
             } else if (!provider.hasReservedAmount()) {
-                this.resetProvider(provider);
+                this.resetPurgedProvider(provider);
             }
         }
 

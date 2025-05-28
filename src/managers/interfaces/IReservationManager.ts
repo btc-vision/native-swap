@@ -1,19 +1,17 @@
-import { Address, StoredBooleanArray, StoredU128Array } from '@btc-vision/btc-runtime/runtime';
+import { Address } from '@btc-vision/btc-runtime/runtime';
 import { Reservation } from '../../models/Reservation';
 import { u128 } from '@btc-vision/as-bignum/assembly';
 
 export interface IReservationManager {
-    addActiveReservation(blockNumber: u64, reservationId: u128): u32;
+    addReservation(blockNumber: u64, reservation: Reservation): void;
 
-    purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64;
-
-    getActiveReservationListForBlock(blockNumber: u64): StoredBooleanArray;
-
-    getReservationListForBlock(blockNumber: u64): StoredU128Array;
+    deactivateReservation(reservation: Reservation): void;
 
     getReservationIdAtIndex(blockNumber: u64, index: u32): u128;
 
-    getReservationActiveAtIndex(blockNumber: u64, index: u32): boolean;
+    getReservationWithExpirationChecks(owner: Address): Reservation;
 
-    getReservationWithExpirationChecks(sender: Address): Reservation;
+    isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean;
+
+    purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64;
 }

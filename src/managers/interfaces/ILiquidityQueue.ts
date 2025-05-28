@@ -24,7 +24,7 @@ export interface ILiquidityQueue {
 
     accruePenalty(penalty: u128): void;
 
-    addActiveReservation(reservation: Reservation): u32;
+    addReservation(reservation: Reservation): void;
 
     addToNormalQueue(provider: Provider): void;
 
@@ -46,7 +46,7 @@ export interface ILiquidityQueue {
 
     distributeFee(totalFee: u256, stakingAddress: Address): void;
 
-    getActiveReservationAtIndex(blockNumber: u64, index: u32): boolean;
+    isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean;
 
     getSatoshisOwed(providerId: u256): u64;
 
@@ -99,11 +99,7 @@ export interface ILiquidityQueue {
 
     removeFromRemovalPurgeQueue(provider: Provider): void;
 
-    resetProvider(
-        provider: Provider,
-        burnRemainingFunds: boolean = true,
-        canceled: boolean = false,
-    ): void;
+    resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void; //false,true
 
     save(): void;
 

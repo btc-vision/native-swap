@@ -195,11 +195,8 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
     }
 
-    public addActiveReservation(reservation: Reservation): u32 {
-        return this.reservationManager.addActiveReservation(
-            reservation.getCreationBlock(),
-            reservation.getId(),
-        );
+    public addReservation(reservation: Reservation): void {
+        this.reservationManager.addReservation(reservation.getCreationBlock(), reservation);
     }
 
     public addToNormalQueue(provider: Provider): void {
@@ -259,8 +256,8 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
     }
 
-    public getActiveReservationAtIndex(blockNumber: u64, index: u32): boolean {
-        return this.reservationManager.getReservationActiveAtIndex(blockNumber, index);
+    public isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean {
+        return this.reservationManager.isReservationActiveAtIndex(blockNumber, index);
     }
 
     public getSatoshisOwed(providerId: u256): u64 {
@@ -408,11 +405,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.providerManager.removeFromRemovalPurgeQueue(provider);
     }
 
-    public resetProvider(
-        provider: Provider,
-        burnRemainingFunds: boolean = true,
-        canceled: boolean = false,
-    ): void {
+    public resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void {
         this.providerManager.resetProvider(provider, burnRemainingFunds, canceled);
     }
 
@@ -512,9 +505,8 @@ export class LiquidityQueue implements ILiquidityQueue {
     ): u256 {
         let volatility: u256 = u256.Zero;
 
-        const blockNumber: u64 = currentBlock % <u64>(u32.MAX_VALUE - 1);
-        const currentQuote: u256 = this.quoteManager.getBlockQuote(blockNumber);
-        const oldBlock: u64 = (currentBlock - windowSize) % <u64>(u32.MAX_VALUE - 1);
+        const currentQuote: u256 = this.quoteManager.getBlockQuote(currentBlock);
+        const oldBlock: u64 = currentBlock - windowSize;
         const oldQuote: u256 = this.quoteManager.getBlockQuote(oldBlock);
 
         if (!oldQuote.isZero() && !currentQuote.isZero()) {

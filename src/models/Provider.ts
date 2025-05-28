@@ -419,33 +419,6 @@ export class Provider {
     }
 
     /**
-     * @method isRemovalPurged
-     * @description Gets if the removal provider has been purged.
-     * @returns {boolean} - true if purged; false if not.
-     */
-    public isRemovalPurged(): boolean {
-        return this.providerData.purged;
-    }
-
-    /**
-     * @method markRemovalPurged
-     * @description Mark a removal provider as purged.
-     * @returns {void}
-     */
-    public markRemovalPurged(): void {
-        this.providerData.removalPurged = true;
-    }
-
-    /**
-     * @method clearRemovalPurged
-     * @description Clear the removal purged state.
-     * @returns {void}
-     */
-    public clearRemovalPurged(): void {
-        this.providerData.removalPurged = false;
-    }
-
-    /**
      * @method isPendingRemoval
      * @description Gets if a provider is a pending removal.
      * @returns {boolean} - true if pending removal; false if not.
@@ -492,25 +465,6 @@ export class Provider {
     }
 
     /**
-     * @method getRemovalQueueIndex
-     * @description Gets the provider index in the removal provider queue.
-     * @returns {u32} - The provider index in the removal provider queue.
-     */
-    public getRemovalQueueIndex(): u32 {
-        return this.providerData.removalQueueIndex;
-    }
-
-    /**
-     * @method setRemovalQueueIndex
-     * @description Sets the provider index in the removal provider queue.
-     * @param {u32} value - The provider index in the removal provider queue.
-     * @returns {void}
-     */
-    public setRemovalQueueIndex(value: u32): void {
-        this.providerData.removalQueueIndex = value;
-    }
-
-    /**
      * @method getPurgedIndex
      * @description Gets the provider purged index.
      * @returns {u32} - The provider purged index.
@@ -527,25 +481,6 @@ export class Provider {
      */
     public setPurgedIndex(value: u32): void {
         this.providerData.purgedIndex = value;
-    }
-
-    /**
-     * @method getRemovalPurgedIndex
-     * @description Gets the removal provider purged index.
-     * @returns {u32} - The removal provider purged index.
-     */
-    public getRemovalPurgedIndex(): u32 {
-        return this.providerData.removalPurgedIndex;
-    }
-
-    /**
-     * @method setRemovalPurgedIndex
-     * @description Sets the removal provider purged index.
-     * @param {u32} value - The removal provider purged index.
-     * @returns {void}
-     */
-    public setRemovalPurgedIndex(value: u32): void {
-        this.providerData.removalPurgedIndex = value;
     }
 
     /**

@@ -1,5 +1,5 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Address, Revert, StoredU256, StoredU32 } from '@btc-vision/btc-runtime/runtime';
+import { Address, Revert, SafeMath, StoredU256, StoredU32 } from '@btc-vision/btc-runtime/runtime';
 import {
     INITIAL_LIQUIDITY_PROVIDER_POINTER,
     NORMAL_QUEUE_POINTER,
@@ -21,6 +21,10 @@ import { IProviderManager } from './interfaces/IProviderManager';
 import { PurgedProviderQueue } from './PurgedProviderQueue';
 import { PriorityPurgedProviderQueue } from './PriorityPurgedProviderQueue';
 import { RemovalPurgedProviderQueue } from './RemovalPurgedProviderQueue';
+import { tokensToSatoshis128 } from '../utils/SatoshisConversion';
+import { min64 } from '../utils/MathUtils';
+import { ReservationProviderData } from '../models/ReservationProdiverData';
+import { IQuoteManager } from './interfaces/IQuoteManager';
 
 export class ProviderManager implements IProviderManager {
     protected readonly token: Address;
@@ -32,7 +36,7 @@ export class ProviderManager implements IProviderManager {
     protected readonly priorityPurgedQueue: PriorityPurgedProviderQueue;
     protected readonly removalPurgedQueue: RemovalPurgedProviderQueue;
     protected readonly owedBTCManager: IOwedBTCManager;
-
+    protected readonly quoteManager: IQuoteManager;
     private readonly _startingIndex: StoredU32;
     private readonly _initialLiquidityProviderId: StoredU256;
 
@@ -40,11 +44,13 @@ export class ProviderManager implements IProviderManager {
         token: Address,
         tokenIdUint8Array: Uint8Array,
         owedBTCManager: IOwedBTCManager,
+        quoteManager: IQuoteManager,
         enableIndexVerification: boolean,
     ) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
         this.owedBTCManager = owedBTCManager;
+        this.quoteManager = quoteManager;
         this.normalQueue = new ProviderQueue(
             token,
             NORMAL_QUEUE_POINTER,
@@ -196,16 +202,16 @@ export class ProviderManager implements IProviderManager {
         );
     }
 
+    public getFromNormalQueue(index: u32): u256 {
+        return this.normalQueue.getAt(index);
+    }
+
     public getFromPriorityQueue(index: u32): u256 {
         return this.priorityQueue.getAt(index);
     }
 
     public getFromRemovalQueue(index: u32): u256 {
         return this.removalQueue.getAt(index);
-    }
-
-    public getFromNormalQueue(index: u32): u256 {
-        return this.normalQueue.getAt(index);
     }
 
     public getIdFromQueue(index: u32, type: ProviderTypes): u256 {
@@ -326,6 +332,19 @@ export class ProviderManager implements IProviderManager {
         return result;
     }
 
+    public purgeAndRestoreProvider(data: ReservationProviderData): void {
+        const provider: Provider = this.getProviderFromQueue(data.providerIndex, data.providerType);
+
+        this.ensureRemovalTypeIsValid(data.providerType, provider);
+
+        if (provider.isPendingRemoval() && data.isLiquidityRemoval()) {
+            this.purgeAndRestoreProviderRemovalQueue(provider, data);
+        } else {
+            this.ensureReservedAmountValid(provider, data.providedAmount);
+            this.purgeAndRestoreNormalPriorityProvider(provider, data.providedAmount);
+        }
+    }
+
     public removeFromPurgeQueue(provider: Provider): void {
         if (!provider.isPriority()) {
             this.normalPurgedQueue.remove(provider);
@@ -340,18 +359,14 @@ export class ProviderManager implements IProviderManager {
         }
     }
 
-    public removePendingLiquidityProviderFromRemovalQueue(provider: Provider): void {
-        this.removalQueue.removeFromQueue(provider);
-    }
-
     public resetProvider(
         provider: Provider,
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
-        this.ensureProviderIsNotPendingRemoval(provider);
-
-        if (provider.isPriority()) {
+        if (provider.isPendingRemoval()) {
+            this.removalQueue.resetProvider(provider);
+        } else if (provider.isPriority()) {
             this.priorityQueue.resetProvider(provider, burnRemainingFunds, canceled);
         } else {
             this.normalQueue.resetProvider(provider, burnRemainingFunds, canceled);
@@ -408,9 +423,28 @@ export class ProviderManager implements IProviderManager {
     }
 
     private ensureProviderIsNotPurged(provider: Provider): void {
-        //!!! What about removal
         if (provider.isPurged()) {
             throw new Revert(`Impossible state: Provider is present in purge queue.`);
+        }
+    }
+
+    private ensureRemovalTypeIsValid(queueType: ProviderTypes, provider: Provider): void {
+        if (queueType === ProviderTypes.LiquidityRemoval && !provider.isPendingRemoval()) {
+            throw new Revert(
+                'Impossible state: provider is in removal queue but is not flagged pendingRemoval.',
+            );
+        }
+
+        if (queueType !== ProviderTypes.LiquidityRemoval && provider.isPendingRemoval()) {
+            throw new Revert(
+                'Impossible state: provider is flagged pendingRemoval but is not in removal queue',
+            );
+        }
+    }
+
+    private ensureReservedAmountValid(provider: Provider, reservedAmount: u128): void {
+        if (u128.lt(provider.getReservedAmount(), reservedAmount)) {
+            throw new Revert('Impossible state: reserved amount bigger than provider reserved.');
         }
     }
 
@@ -444,6 +478,40 @@ export class ProviderManager implements IProviderManager {
         }
 
         return initialProvider;
+    }
+
+    private purgeAndRestoreProviderRemovalQueue(
+        provider: Provider,
+        data: ReservationProviderData,
+    ): void {
+        const quote: u256 = this.quoteManager.getValidBlockQuote(data.creationBlock);
+        const reservedAmountSatoshis: u64 = tokensToSatoshis128(data.providedAmount, quote);
+        const actualReservedSatoshis: u64 = this.owedBTCManager.getSatoshisOwedReserved(
+            provider.getId(),
+        );
+        const revertSatoshis: u64 = min64(reservedAmountSatoshis, actualReservedSatoshis);
+        const newOwedReserved: u64 = SafeMath.sub64(actualReservedSatoshis, revertSatoshis);
+
+        this.owedBTCManager.setSatoshisOwedReserved(provider.getId(), newOwedReserved);
+
+        // This is very important that a provider with active liquidity CAN NOT BE A REMOVAL PROVIDER AT THE SAME TIME. OR THIS CHECK WILL FAIL.
+        if (!provider.isPurged()) {
+            this.addToRemovalPurgedQueue(provider);
+        }
+    }
+
+    private purgeAndRestoreNormalPriorityProvider(provider: Provider, reservedAmount: u128): void {
+        provider.subtractFromReservedAmount(reservedAmount);
+
+        this.resetProvider(provider, false, false);
+
+        if (!provider.isPurged()) {
+            if (provider.getProviderType() === ProviderTypes.Normal) {
+                this.addToNormalPurgedQueue(provider);
+            } else {
+                this.addToPriorityPurgedQueue(provider);
+            }
+        }
     }
 
     private verifyProviderRemainingLiquidityAndReset(

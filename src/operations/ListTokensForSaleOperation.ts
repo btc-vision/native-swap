@@ -232,8 +232,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private transitionProviderIfNeeded(): void {
-        //!!!! REDO
-        // what if moving. must remove from old queue
+        // !!!!what if moving queue -> must remove from old queue???
         const wasNormal =
             !this.provider.isPriority() && this.provider.isActive() && this.usePriorityQueue;
 

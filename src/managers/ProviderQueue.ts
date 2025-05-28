@@ -9,7 +9,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { getProvider, Provider } from '../models/Provider';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
-import { MAXIMUM_PROVIDER_COUNT, MAXIMUM_VALID_INDEX } from '../constants/Contract';
+import { MAXIMUM_VALID_INDEX } from '../constants/Contract';
 
 export class ProviderQueue {
     protected readonly token: Address;
@@ -22,7 +22,7 @@ export class ProviderQueue {
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
     ) {
-        this.queue = new StoredU256Array(pointer, subPointer, MAXIMUM_PROVIDER_COUNT);
+        this.queue = new StoredU256Array(pointer, subPointer, MAXIMUM_VALID_INDEX);
         this.token = token;
         this.enableIndexVerification = enableIndexVerification;
     }
@@ -42,17 +42,12 @@ export class ProviderQueue {
     }
 
     public add(provider: Provider): u32 {
-        if (this.queue.getLength() === MAXIMUM_PROVIDER_COUNT) {
-            throw new Revert('Impossible state: Too many providers in the queue.');
-        }
-
         const index: u32 = this.queue.push(provider.getId(), true);
         provider.setQueueIndex(index);
 
         return index;
     }
 
-    // !!! recheck previous.... if all already deleted, maybe loop cause starting index not set???
     public cleanUp(previousStartingIndex: u32): u32 {
         const length: u32 = this.length;
         let index: u32 = previousStartingIndex;
@@ -117,9 +112,12 @@ export class ProviderQueue {
         return this.queue;
     }
 
+    /*!!!
     public removeAt(index: u32): void {
         this.queue.delete_physical(index);
     }
+
+     */
 
     public resetProvider(
         provider: Provider,

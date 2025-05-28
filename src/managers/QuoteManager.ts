@@ -2,7 +2,6 @@ import { Revert, StoredU256Array } from '@btc-vision/btc-runtime/runtime';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { LIQUIDITY_QUOTE_HISTORY_POINTER } from '../constants/StoredPointers';
 import { IQuoteManager } from './interfaces/IQuoteManager';
-import { MAXIMUM_VALID_INDEX } from '../constants/Contract';
 
 export class QuoteManager implements IQuoteManager {
     private readonly _quoteHistory: StoredU256Array;
@@ -20,9 +19,7 @@ export class QuoteManager implements IQuoteManager {
      * @returns {u256} - the quote recorded at that block
      */
     public getBlockQuote(blockNumber: u64): u256 {
-        if (blockNumber > <u64>MAXIMUM_VALID_INDEX) {
-            throw new Revert('Impossible state: Block number too large for maximum array size.');
-        }
+        const blockNumberU32: u64 = blockNumber % <u64>(u32.MAX_VALUE - 1);
 
         return this._quoteHistory.get(<u32>blockNumber);
     }
@@ -33,12 +30,8 @@ export class QuoteManager implements IQuoteManager {
      * @returns {u256} - the quote recorded at that block
      */
     public getValidBlockQuote(blockNumber: u64): u256 {
-        if (blockNumber > <u64>MAXIMUM_VALID_INDEX) {
-            throw new Revert('Impossible state: Block number too large for maximum array size.');
-        }
-
-        const quote: u256 = this._quoteHistory.get(<u32>blockNumber);
-        this.ensureQuoteIsValid(quote, <u32>blockNumber);
+        const quote: u256 = this.getBlockQuote(blockNumber);
+        this.ensureQuoteIsValid(quote, blockNumber);
 
         return quote;
     }
@@ -50,12 +43,13 @@ export class QuoteManager implements IQuoteManager {
      * @returns {void}
      */
     public setBlockQuote(blockNumber: u64, value: u256): void {
-        //!!!! Roll over on blocknumber
-        if (blockNumber > <u64>MAXIMUM_VALID_INDEX) {
+        // !!!! Why this check if rollover???
+        if (<u64>u32.MAX_VALUE - 1 < blockNumber) {
             throw new Revert('Impossible state: Block number too large for maximum array size.');
         }
 
-        const currentQuote: u256 = this._quoteHistory.get(<u32>blockNumber); //!!!!
+        const blockNumberU32: u64 = blockNumber % <u64>(u32.MAX_VALUE - 1);
+        const currentQuote: u256 = this._quoteHistory.get(blockNumberU32);
 
         if (!u256.eq(currentQuote, value)) {
             this._quoteHistory.set(<u32>blockNumber, value);
@@ -70,6 +64,12 @@ export class QuoteManager implements IQuoteManager {
         this._quoteHistory.save();
     }
 
+    /**
+     * Ensure the quote is not 0. If the quote is 0, Revert.
+     * @param {u256} quote — the quote
+     * @param {u64} blockNumber — the block number at which the quote was saved
+     * @returns {void}
+     */
     private ensureQuoteIsValid(quote: u256, blockNumber: u64): void {
         if (quote.isZero()) {
             throw new Revert(

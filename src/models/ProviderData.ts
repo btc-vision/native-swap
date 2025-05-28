@@ -310,7 +310,6 @@ export class ProviderData {
 
     private _purgedIndex: u32 = INDEX_NOT_SET_VALUE;
 
-    //!!! WHAT IF provider is removal & normal/priority???
     /**
      * @method purgedIndex
      * @description Gets the index of the provider purged index.
@@ -357,84 +356,6 @@ export class ProviderData {
         this.ensureValues();
         if (this._queueIndex !== value) {
             this._queueIndex = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _removalPurged: boolean = false;
-
-    /**
-     * @method removalPurged
-     * @description Gets if the removal provider has been purged.
-     * @returns {boolean} - true if purged; false if not.
-     */
-    @inline
-    public get removalPurged(): boolean {
-        this.ensureValues();
-        return this._removalPurged;
-    }
-
-    /**
-     * @method removalPurged
-     * @description Sets the purged removal states.
-     * @param {boolean} value - true if purged; false if not.
-     */
-    public set removalPurged(value: boolean) {
-        this.ensureValues();
-        if (this._removalPurged !== value) {
-            this._removalPurged = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _removalPurgedIndex: u32 = INDEX_NOT_SET_VALUE;
-
-    /**
-     * @method removalPurgedIndex
-     * @description Gets the index of the removal provider purged index.
-     * @returns {u32} - The index of the removal provider purged index.
-     */
-    @inline
-    public get removalPurgedIndex(): u32 {
-        this.ensureValues();
-        return this._removalPurgedIndex;
-    }
-
-    /**
-     * @method removalPurgedIndex
-     * @description Sets the index of the removal provider purged index.
-     * @param {u32} value - The index of the removal provider purged index.
-     */
-    public set removalPurgedIndex(value: u32) {
-        this.ensureValues();
-        if (this._removalPurgedIndex !== value) {
-            this._removalPurgedIndex = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _removalQueueIndex: u32 = INDEX_NOT_SET_VALUE;
-
-    /**
-     * @method removalQueueIndex
-     * @description Gets the index of the provider in the removal queue.
-     * @returns {u32} - The index of the provider in the removal queue.
-     */
-    @inline
-    public get removalQueueIndex(): u32 {
-        this.ensureValues();
-        return this._removalQueueIndex;
-    }
-
-    /**
-     * @method removalQueueIndex
-     * @description Sets the index of the provider in the removal queue.
-     * @param {u32} value - The index of the provider in the removal queue.
-     */
-    public set removalQueueIndex(value: u32) {
-        this.ensureValues();
-        if (this._removalQueueIndex !== value) {
-            this._removalQueueIndex = value;
             this.stateChanged = true;
         }
     }
@@ -504,10 +425,9 @@ export class ProviderData {
         this.liquidityProvided = u128.Zero;
         this.pendingRemoval = false;
         this.liquidityProvider = false;
-        this.removalQueueIndex = INDEX_NOT_SET_VALUE;
-        this.removalPurged = false;
-        this.removalPurgedIndex = INDEX_NOT_SET_VALUE;
-        //!!!!this.listedTokenAtBlock = BLOCK_NOT_SET_VALUE;
+        this.queueIndex = INDEX_NOT_SET_VALUE;
+        this.purged = false;
+        this.purgedIndex = INDEX_NOT_SET_VALUE;
     }
 
     /**
@@ -602,7 +522,7 @@ export class ProviderData {
      */
     private packValues(): Uint8Array {
         const writer: BytesWriter = new BytesWriter(
-            U8_BYTE_LENGTH + 4 * U32_BYTE_LENGTH + U64_BYTE_LENGTH,
+            U8_BYTE_LENGTH + 2 * U32_BYTE_LENGTH + U64_BYTE_LENGTH,
         );
         const flag: u8 =
             (this._active ? 1 : 0) |
@@ -611,14 +531,12 @@ export class ProviderData {
             ((this._liquidityProvider ? 1 : 0) << 3) |
             ((this._pendingRemoval ? 1 : 0) << 4) |
             ((this._initialLiquidityProvider ? 1 : 0) << 5) |
-            ((this._purged ? 1 : 0) << 6) |
-            ((this._removalPurged ? 1 : 0) << 7);
+            ((this._purged ? 1 : 0) << 6);
+
         writer.writeU8(flag);
         writer.writeU32(this._queueIndex);
-        writer.writeU32(this._removalQueueIndex);
         writer.writeU64(this._listedTokenAtBlock);
         writer.writeU32(this._purgedIndex);
-        writer.writeU32(this._removalPurgedIndex);
 
         return writer.getBuffer();
     }
@@ -706,11 +624,9 @@ export class ProviderData {
         this._pendingRemoval = ((flag >> 4) & 1) === 1;
         this._initialLiquidityProvider = ((flag >> 5) & 1) === 1;
         this._purged = ((flag >> 6) & 1) === 1;
-        this._removalPurged = ((flag >> 7) & 1) === 1;
+
         this._queueIndex = reader.readU32();
-        this._removalQueueIndex = reader.readU32();
         this._listedTokenAtBlock = reader.readU64();
         this._purgedIndex = reader.readU32();
-        this._removalPurgedIndex = reader.readU32();
     }
 }

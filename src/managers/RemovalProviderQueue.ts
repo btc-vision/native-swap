@@ -3,11 +3,7 @@ import { ProviderQueue } from './ProviderQueue';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, Blockchain, Potential, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
-import {
-    INDEX_NOT_SET_VALUE,
-    MAXIMUM_PROVIDER_COUNT,
-    STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
-} from '../constants/Contract';
+import { STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT } from '../constants/Contract';
 import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 
 export class RemovalProviderQueue extends ProviderQueue {
@@ -25,12 +21,8 @@ export class RemovalProviderQueue extends ProviderQueue {
     }
 
     public override add(provider: Provider): u32 {
-        if (this.queue.getLength() === MAXIMUM_PROVIDER_COUNT) {
-            throw new Revert('Impossible state: Too many providers required for reservation.');
-        }
-
         const index: u32 = this.queue.push(provider.getId(), true);
-        provider.setRemovalQueueIndex(index);
+        provider.setQueueIndex(index);
 
         return index;
     }
@@ -45,13 +37,12 @@ export class RemovalProviderQueue extends ProviderQueue {
             if (!providerId.isZero()) {
                 const provider: Provider = getProvider(providerId);
 
-                //!!! When this will happen a non pending???
                 if (provider.isPendingRemoval()) {
                     this.queue.setStartingIndex(index);
                     break;
                 } else {
-                    this.ensureProviderNotAlreadyPurged(provider.isRemovalPurged());
-                    this.queue.delete_physical(index); //!!! WHY should never happen
+                    this.ensureProviderNotAlreadyPurged(provider.isPurged());
+                    this.queue.delete_physical(index); //!!! WHY should never happen-> Corrupted
                 }
             } else {
                 this.queue.setStartingIndex(index);
@@ -60,29 +51,19 @@ export class RemovalProviderQueue extends ProviderQueue {
             index++;
         }
 
-        return index === 0 ? index : index - 1; //!!!! Same as other???
-    }
-
-    public removeFromQueue(provider: Provider): void {
-        this.ensureProviderNotAlreadyPurged(provider.isRemovalPurged());
-        this.queue.delete_physical(provider.getRemovalQueueIndex());
-
-        provider.clearPendingRemoval();
-        provider.clearLiquidityProvider();
-        provider.setRemovalQueueIndex(INDEX_NOT_SET_VALUE); //!!!!
-        provider.clearFromRemovalQueue(); //!!!!
-        //!!!! what else to do
-        //!!!!purgedIndex, purged????
-
-        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, true));
+        return index === 0 ? index : index - 1;
     }
 
     public override resetProvider(
-        _provider: Provider,
+        provider: Provider,
         _burnRemainingFunds: boolean = true,
         _canceled: boolean = false,
     ): void {
-        throw new Revert('Impossible state: removal provider cannot be reset.');
+        this.ensureProviderNotAlreadyPurged(provider.isPurged());
+        this.queue.delete_physical(provider.getQueueIndex());
+        provider.resetLiquidityProviderValues();
+
+        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, true));
     }
 
     protected tryNextCandidate(_currentQuote: u256): Provider | null {
@@ -95,7 +76,7 @@ export class RemovalProviderQueue extends ProviderQueue {
         if (provider.isPendingRemoval() && provider.isLiquidityProvider()) {
             result = this.getProviderIfOwedBTC(providerId, provider);
         } else {
-            this.removeFromQueue(provider); //!!! This should not happen???
+            this.resetProvider(provider);
         }
 
         return result;

@@ -42,7 +42,7 @@ export class ReservationData {
 
     /**
      * @method activationDelay
-     * @description Gets the activation delay.
+     * @description Gets the activation delay in blocks.
      * @returns {u8} - The activation delay.
      */
     @inline
@@ -53,7 +53,7 @@ export class ReservationData {
 
     /**
      * @method activationDelay
-     * @description Sets the activation delay.
+     * @description Sets the activation delay in blocks.
      * @param {u8} value - The activation delay.
      */
     public set activationDelay(value: u8) {
@@ -136,7 +136,7 @@ export class ReservationData {
 
     /**
      * @method purgeIndex
-     * @description Gets the purge index.
+     * @description Gets the reservation index in the reservation array.
      * @returns {u32}
      */
     @inline
@@ -147,7 +147,7 @@ export class ReservationData {
 
     /**
      * @method purgeIndex
-     * @description Sets the purge index.
+     * @description Sets the reservation index in the reservation array.
      * @param {u32} value - The purge index.
      */
     public set purgeIndex(value: u32) {
@@ -186,8 +186,8 @@ export class ReservationData {
 
     /**
      * @method userTimeoutExpirationBlock
-     * @description Gets the expiration if the user is timeouted.
-     * @returns {u64} - The user timeout block expiration. 0 if no timeout.
+     * @description Gets the expiration if the user is timed out.
+     * @returns {u64} - The timed out expiration block expiration. 0 if no timeout.
      */
     @inline
     public get userTimeoutExpirationBlock(): u64 {
@@ -203,7 +203,7 @@ export class ReservationData {
     /**
      * @method reset
      * @description Resets all fields to their default values and marks the state as changed.
-     * @param {boolean} isTimeout - true is the reservation is timedout; false if not.
+     * @param {boolean} isTimeout - true is the reservation is timed out; false if not.
      * @returns {void}
      */
     @inline

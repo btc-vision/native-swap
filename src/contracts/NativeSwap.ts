@@ -33,7 +33,12 @@ import { ReentrancyGuard } from '../contracts/ReentrancyGuard';
 import { STAKING_CA_POINTER } from '../constants/StoredPointers';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
-import { ENABLE_INDEX_VERIFICATION, QUOTE_SCALE } from '../constants/Contract';
+import {
+    ALLOW_DIRTY,
+    AT_LEAST_PROVIDERS_TO_PURGE,
+    ENABLE_INDEX_VERIFICATION,
+    QUOTE_SCALE,
+} from '../constants/Contract';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { TradeManager } from '../managers/TradeManager';
@@ -605,14 +610,13 @@ export class NativeSwap extends ReentrancyGuard {
             token,
             tokenId,
             owedBtcManager,
+            quoteManager,
         );
         const reservationManager: IReservationManager = this.getReservationManager(
             token,
             tokenId,
             providerManager,
-            quoteManager,
             liquidityQueueReserve,
-            owedBtcManager,
         );
         const dynamicFee: IDynamicFee = this.getDynamicFee(tokenId);
 
@@ -635,6 +639,7 @@ export class NativeSwap extends ReentrancyGuard {
             providerManager,
             liquidityQueueReserve,
             owedBtcManager,
+            reservationManager,
         );
 
         return new GetLiquidityQueueResult(liquidityQueue, tradeManager);
@@ -648,8 +653,15 @@ export class NativeSwap extends ReentrancyGuard {
         token: Address,
         tokenId: Uint8Array,
         owedBtcManager: IOwedBTCManager,
+        quoteManager: IQuoteManager,
     ): IProviderManager {
-        return new ProviderManager(token, tokenId, owedBtcManager, ENABLE_INDEX_VERIFICATION);
+        return new ProviderManager(
+            token,
+            tokenId,
+            owedBtcManager,
+            quoteManager,
+            ENABLE_INDEX_VERIFICATION,
+        );
     }
 
     private getOwedBtcManager(): IOwedBTCManager {
@@ -664,17 +676,15 @@ export class NativeSwap extends ReentrancyGuard {
         token: Address,
         tokenId: Uint8Array,
         providerManager: IProviderManager,
-        quoteManager: IQuoteManager,
         liquidityQueueReserve: ILiquidityQueueReserve,
-        owedBTCManager: IOwedBTCManager,
     ): IReservationManager {
         return new ReservationManager(
             token,
             tokenId,
             providerManager,
-            quoteManager,
             liquidityQueueReserve,
-            owedBTCManager,
+            AT_LEAST_PROVIDERS_TO_PURGE,
+            ALLOW_DIRTY,
         );
     }
 

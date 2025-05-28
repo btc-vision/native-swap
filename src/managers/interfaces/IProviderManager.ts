@@ -1,6 +1,7 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Provider } from '../../models/Provider';
 import { ProviderTypes } from '../../types/ProviderTypes';
+import { ReservationProviderData } from '../../models/ReservationProdiverData';
 
 export interface IProviderManager {
     readonly currentIndexNormal: u32;
@@ -45,11 +46,11 @@ export interface IProviderManager {
 
     getNextProviderWithLiquidity(quote: u256): Provider | null;
 
+    purgeAndRestoreProvider(data: ReservationProviderData): void;
+
     removeFromPurgeQueue(provider: Provider): void;
 
     removeFromRemovalPurgeQueue(provider: Provider): void;
-
-    removePendingLiquidityProviderFromRemovalQueue(provider: Provider): void;
 
     resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void;
 
