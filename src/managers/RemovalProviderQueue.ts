@@ -3,7 +3,10 @@ import { ProviderQueue } from './ProviderQueue';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, Blockchain, Potential, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
-import { STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT } from '../constants/Contract';
+import {
+    MAXIMUM_NUMBER_OF_PROVIDERS,
+    STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
+} from '../constants/Contract';
 import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 
 export class RemovalProviderQueue extends ProviderQueue {
@@ -21,6 +24,12 @@ export class RemovalProviderQueue extends ProviderQueue {
     }
 
     public override add(provider: Provider): u32 {
+        if (this.queue.getLength() === MAXIMUM_NUMBER_OF_PROVIDERS) {
+            throw new Revert(
+                `Impossible state: maximum number of providers reached for removal queue.`,
+            );
+        }
+
         const index: u32 = this.queue.push(provider.getId(), true);
         provider.setQueueIndex(index);
 
@@ -41,8 +50,9 @@ export class RemovalProviderQueue extends ProviderQueue {
                     this.queue.setStartingIndex(index);
                     break;
                 } else {
-                    this.ensureProviderNotAlreadyPurged(provider.isPurged());
-                    this.queue.delete_physical(index); //!!! WHY should never happen-> Corrupted should revert
+                    throw new Revert(
+                        `Impossible state: provider no longer pending. Should have been removed from removal queue.`,
+                    );
                 }
             } else {
                 this.queue.setStartingIndex(index);
@@ -66,7 +76,7 @@ export class RemovalProviderQueue extends ProviderQueue {
         Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, true));
     }
 
-    protected tryNextCandidate(_currentQuote: u256): Provider | null {
+    protected override tryNextCandidate(_currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
         const providerId: u256 = this.queue.get_physical(this._currentIndex);
         this.ensureProviderIdIsValid(providerId);

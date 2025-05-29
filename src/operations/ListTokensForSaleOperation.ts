@@ -71,7 +71,14 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private assertQueueSwitchAllowed(): void {
+        if (this.provider.isPriority() && this.oldLiquidity.isZero()) {
+            throw new Revert(
+                `Impossible state: Provider has no liquidity but still in the priority queue.`,
+            );
+        }
+
         const switched: boolean = this.usePriorityQueue !== this.provider.isPriority();
+
         if (switched && !this.oldLiquidity.isZero()) {
             throw new Revert(
                 `NATIVE_SWAP: You must cancel your listings before using switching queue type.`,
@@ -202,43 +209,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
     }
 
-    private handleInitialLiquidity(): void {
-        this.provider.activate();
-        this.provider.clearPriority();
-    }
-
     private increaseGlobalReserve(): void {
         this.liquidityQueue.increaseTotalReserve(this.amountIn256);
-    }
-
-    private moveProviderToNormal(): void {
-        if (this.provider.isActive()) {
-            this.liquidityQueue.removeFromPriorityQueue(this.provider);
-        } else {
-            this.provider.activate();
-        }
-
-        this.provider.clearPriority();
-        this.liquidityQueue.addToNormalQueue(this.provider);
-    }
-
-    private moveProviderToPriority(): void {
-        if (this.provider.isActive()) {
-            this.liquidityQueue.removeFromNormalQueue(this.provider);
-        } else {
-            this.provider.activate();
-        }
-
-        this.provider.markPriority();
-        this.liquidityQueue.addToPriorityQueue(this.provider);
-    }
-
-    private noProviderMove(): void {
-        if (this.usePriorityQueue) {
-            this.liquidityQueue.addToPriorityQueue(this.provider);
-        } else {
-            this.liquidityQueue.addToNormalQueue(this.provider);
-        }
     }
 
     private pullInTokens(): void {
@@ -257,7 +229,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private transferToken(): void {
         this.pullInTokens();
         this.assertQueueSwitchAllowed();
-        this.transitionProviderIfNeeded();
+        this.addProviderToQueue();
         this.updateProviderLiquidity();
         this.assignBlockNumber();
         this.assignReceiver();
@@ -266,20 +238,15 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.snapshotBlockQuote();
     }
 
-    private transitionProviderIfNeeded(): void {
-        //!!! new logic
-        if (this.isForInitialLiquidity) {
-            this.handleInitialLiquidity();
-        } else {
-            const moveFromNormalToPriority = !this.provider.isPriority() && this.usePriorityQueue;
-            const moveFromPriorityToNormal = this.provider.isPriority() && !this.usePriorityQueue;
+    private addProviderToQueue(): void {
+        this.provider.activate();
 
-            if (moveFromNormalToPriority) {
-                this.moveProviderToPriority();
-            } else if (moveFromPriorityToNormal) {
-                this.moveProviderToNormal();
-            } else if (!this.provider.isActive()) {
-                this.noProviderMove();
+        if (!this.isForInitialLiquidity) {
+            if (this.usePriorityQueue) {
+                this.provider.markPriority();
+                this.liquidityQueue.addToPriorityQueue(this.provider);
+            } else {
+                this.liquidityQueue.addToNormalQueue(this.provider);
             }
         }
     }

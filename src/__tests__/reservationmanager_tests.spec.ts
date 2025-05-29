@@ -35,8 +35,8 @@ describe('Reservation manager tests', () => {
 
             const manager = createLiquidityQueueResult.reservationManager;
 
-            const reservationList = manager.getReservationListForBlock(100);
-            const activeReservationList = manager.getActiveListForBlock(100);
+            const reservationList = manager.callgetReservationListForBlock(100);
+            const activeReservationList = manager.callgetActiveListForBlock(100);
 
             expect(reservationList.getLength()).toStrictEqual(0);
             expect(activeReservationList.getLength()).toStrictEqual(0);
@@ -55,8 +55,8 @@ describe('Reservation manager tests', () => {
 
             const manager2 = createLiquidityQueueResult2.reservationManager;
 
-            const reservationList2 = manager2.getReservationListForBlock(100);
-            const activeReservationList2 = manager2.getActiveListForBlock(100);
+            const reservationList2 = manager2.callgetReservationListForBlock(100);
+            const activeReservationList2 = manager2.callgetActiveListForBlock(100);
 
             expect(reservationList2.getLength()).toStrictEqual(1);
             expect(activeReservationList2.getLength()).toStrictEqual(1);
@@ -74,8 +74,8 @@ describe('Reservation manager tests', () => {
 
             const manager = createLiquidityQueueResult.reservationManager;
 
-            const reservationList = manager.getReservationListForBlock(100);
-            const activeReservationList = manager.getActiveListForBlock(100);
+            const reservationList = manager.callgetReservationListForBlock(100);
+            const activeReservationList = manager.callgetActiveListForBlock(100);
 
             expect(reservationList.getLength()).toStrictEqual(0);
             expect(activeReservationList.getLength()).toStrictEqual(0);
@@ -101,8 +101,8 @@ describe('Reservation manager tests', () => {
 
             const manager2 = createLiquidityQueueResult2.reservationManager;
 
-            const reservationList2 = manager2.getReservationListForBlock(100);
-            const activeReservationList2 = manager2.getActiveListForBlock(100);
+            const reservationList2 = manager2.callgetReservationListForBlock(100);
+            const activeReservationList2 = manager2.callgetActiveListForBlock(100);
 
             expect(reservationList2.getLength()).toStrictEqual(2);
             expect(activeReservationList2.getLength()).toStrictEqual(2);
@@ -121,8 +121,8 @@ describe('Reservation manager tests', () => {
 
                 const manager = createLiquidityQueueResult.reservationManager;
 
-                const reservationList = manager.getReservationListForBlock(100);
-                const activeReservationList = manager.getActiveListForBlock(100);
+                const reservationList = manager.callgetReservationListForBlock(100);
+                const activeReservationList = manager.callgetActiveListForBlock(100);
 
                 expect(reservationList.getLength()).toStrictEqual(0);
                 expect(activeReservationList.getLength()).toStrictEqual(0);
@@ -329,7 +329,7 @@ describe('Reservation manager tests', () => {
 
             const manager = createLiquidityQueueResult.reservationManager;
 
-            const reservationList = manager.getReservationListForBlock(100);
+            const reservationList = manager.callgetReservationListForBlock(100);
 
             expect(reservationList.getLength()).toStrictEqual(0);
             expect(manager.lastBlockReservation()).toStrictEqual(u64.MAX_VALUE);
@@ -347,7 +347,7 @@ describe('Reservation manager tests', () => {
 
             const manager2 = createLiquidityQueueResult2.reservationManager;
 
-            const reservationList2 = manager2.getReservationListForBlock(100);
+            const reservationList2 = manager2.callgetReservationListForBlock(100);
 
             expect(reservationList2).not.toBeNull();
             expect(reservationList2.getLength()).toStrictEqual(1);
@@ -364,7 +364,7 @@ describe('Reservation manager tests', () => {
 
             const manager = createLiquidityQueueResult.reservationManager;
 
-            const activeReservationList = manager.getActiveListForBlock(100);
+            const activeReservationList = manager.callgetActiveListForBlock(100);
 
             expect(activeReservationList.getLength()).toStrictEqual(0);
             expect(manager.lastBlockReservation()).toStrictEqual(u64.MAX_VALUE);
@@ -382,7 +382,7 @@ describe('Reservation manager tests', () => {
 
             const manager2 = createLiquidityQueueResult2.reservationManager;
 
-            const activeReservationList2 = manager2.getActiveListForBlock(100);
+            const activeReservationList2 = manager2.callgetActiveListForBlock(100);
 
             expect(activeReservationList2).not.toBeNull();
             expect(activeReservationList2.getLength()).toStrictEqual(1);

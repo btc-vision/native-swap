@@ -38,3 +38,6 @@ export const SLASH_GRACE_WINDOW: u64 = 4;
 export const SLASH_RAMP_UP_BLOCKS: u64 = 2_016;
 
 export const ENABLE_INDEX_VERIFICATION: boolean = false;
+
+export const MAXIMUM_QUOTE_INDEX: u64 = 500;
+export const MAXIMUM_NUMBER_OF_PROVIDERS: u32 = u32.MAX_VALUE - 1000;

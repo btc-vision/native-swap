@@ -152,15 +152,15 @@ describe('Reservation tests', () => {
         });
 
         it('addProvider stores and getProviderAt retrieves values', () => {
-            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
             setBlockchainEnvironment(1000);
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.setCreationBlock(1000);
 
             const providerData: ReservationProviderData = new ReservationProviderData(
                 5,
                 u128.fromU64(99),
                 ProviderTypes.Normal,
-                1000,
+                reservation.getCreationBlock(),
             );
             reservation.addProvider(providerData);
 
@@ -172,15 +172,15 @@ describe('Reservation tests', () => {
         });
 
         it('addProvider stores and getProviderAt retrieves values when Reservation saved/loaded', () => {
-            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
             setBlockchainEnvironment(1000);
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.setCreationBlock(1000);
 
             const providerData: ReservationProviderData = new ReservationProviderData(
                 5,
                 u128.fromU64(99),
                 ProviderTypes.Normal,
-                1000,
+                reservation.getCreationBlock(),
             );
             reservation.addProvider(providerData);
             reservation.save();

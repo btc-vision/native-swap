@@ -50,7 +50,7 @@ describe('ProviderQueue tests', () => {
         });
     });
 
-    describe('RemovalProviderQueue – removeFromQueue', () => {
+    describe('RemovalProviderQueue – resetProvider', () => {
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
@@ -70,37 +70,11 @@ describe('ProviderQueue tests', () => {
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1, true, true);
             const index: u32 = queue.add(provider);
-            queue.remove(provider);
+            queue.resetProvider(provider);
             expect(provider.isPendingRemoval()).toBeFalsy();
             expect(provider.isLiquidityProvider()).toBeFalsy();
             expect(provider.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(queue.getAt(index)).toStrictEqual(u256.Zero);
-        });
-    });
-
-    describe('RemovalProviderQueue – resetProvider', () => {
-        beforeEach(() => {
-            clearCachedProviders();
-            Blockchain.clearStorage();
-            Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
-        });
-
-        it('throws on reset attempt', () => {
-            expect(() => {
-                const owedBTCManager = new OwedBTCManager();
-                const queue = new RemovalProviderQueue(
-                    owedBTCManager,
-                    tokenAddress1,
-                    REMOVAL_QUEUE_POINTER,
-                    tokenIdUint8Array1,
-                    ENABLE_INDEX_VERIFICATION,
-                );
-
-                const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
-
-                queue.resetProvider(provider);
-            }).toThrow();
         });
     });
 

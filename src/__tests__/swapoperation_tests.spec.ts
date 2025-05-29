@@ -313,8 +313,8 @@ describe('SwapOperation tests', () => {
         const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
         const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
 
-        const reservationActiveList = queue4.reservationManager.getActiveListForBlock(101);
-        const reservationList = queue4.reservationManager.getReservationListForBlock(101);
+        const reservationActiveList = queue4.reservationManager.callgetActiveListForBlock(101);
+        const reservationList = queue4.reservationManager.callgetReservationListForBlock(101);
 
         expect(reservationList.getLength()).toStrictEqual(1);
         expect(reservationActiveList.get(0)).toBeTruthy();
@@ -488,8 +488,8 @@ describe('SwapOperation tests', () => {
         const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
         const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
 
-        const reservationActiveList = queue4.reservationManager.getActiveListForBlock(102);
-        const reservationList = queue4.reservationManager.getReservationListForBlock(102);
+        const reservationActiveList = queue4.reservationManager.callgetActiveListForBlock(102);
+        const reservationList = queue4.reservationManager.callgetReservationListForBlock(102);
 
         expect(reservationList.getLength()).toStrictEqual(1);
         expect(reservationActiveList.get(0)).toBeTruthy();
@@ -589,8 +589,8 @@ describe('SwapOperation tests', () => {
         const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
         const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
 
-        const reservationActiveList = queue4.reservationManager.getActiveListForBlock(102);
-        const reservationList = queue4.reservationManager.getReservationListForBlock(102);
+        const reservationActiveList = queue4.reservationManager.callgetActiveListForBlock(102);
+        const reservationList = queue4.reservationManager.callgetReservationListForBlock(102);
 
         expect(reservationList.getLength()).toStrictEqual(1);
         expect(reservationActiveList.get(0)).toBeTruthy();
@@ -743,8 +743,8 @@ describe('SwapOperation tests', () => {
         Blockchain.mockTransactionOutput(transactionOutput2);
         const queue7 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-        const reservationActiveList = queue7.reservationManager.getActiveListForBlock(105);
-        const reservationList = queue7.reservationManager.getReservationListForBlock(105);
+        const reservationActiveList = queue7.reservationManager.callgetActiveListForBlock(105);
+        const reservationList = queue7.reservationManager.callgetReservationListForBlock(105);
 
         expect(reservationList.getLength()).toStrictEqual(1);
         expect(reservationActiveList.getLength()).toStrictEqual(1);
@@ -765,7 +765,7 @@ describe('SwapOperation tests', () => {
                             u256.fromString(`10379200000000000000`),
                             '2',
                         );
-                
+
                         expect(provider3.getLiquidityAmount()).toStrictEqual(u128.Zero);
                         expect(provider3.getReservedAmount()).toStrictEqual(u128.Zero);
                         expect(initialProvider.getLiquidityAmount()).toStrictEqual(
@@ -776,7 +776,7 @@ describe('SwapOperation tests', () => {
                         expect(TransferHelper.safeTransferCalled).toBeTruthy();
                         expect(reservationList.getLength()).toStrictEqual(1);
                         expect(reservationActiveList.get(0)).toBeFalsy();
-                        
+
                  */
     });
 
@@ -882,8 +882,8 @@ describe('SwapOperation tests', () => {
         Blockchain.mockTransactionOutput(transactionOutput);
 
         const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        const reservationActiveList = queue5.reservationManager.getActiveListForBlock(103);
-        const reservationList = queue5.reservationManager.getReservationListForBlock(103);
+        const reservationActiveList = queue5.reservationManager.callgetActiveListForBlock(103);
+        const reservationList = queue5.reservationManager.callgetReservationListForBlock(103);
 
         expect(reservationList.getLength()).toStrictEqual(1);
         expect(reservationActiveList.get(0)).toBeTruthy();

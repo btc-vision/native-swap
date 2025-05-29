@@ -1,7 +1,9 @@
-import { Revert } from '../../../btc-runtime/runtime';
+import { Revert } from '@btc-vision/btc-runtime/runtime';
 import { PurgedProviderQueue } from './PurgedProviderQueue';
-import { Provider } from '../models/Provider';
+import { getProvider, Provider } from '../models/Provider';
 import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import { RemovalProviderQueue } from './RemovalProviderQueue';
 
 export class RemovalPurgedProviderQueue extends PurgedProviderQueue {
     public override add(provider: Provider): u32 {
@@ -22,7 +24,7 @@ export class RemovalPurgedProviderQueue extends PurgedProviderQueue {
         return index;
     }
 
-    /*public override get(associatedQueue: RemovalProviderQueue, quote: u256): Provider | null {
+    public override get(associatedQueue: RemovalProviderQueue, _quote: u256): Provider | null {
         const providerIndex = this.queue.next();
         this.ensureProviderQueueIndexIsValid(providerIndex);
 
@@ -33,20 +35,14 @@ export class RemovalPurgedProviderQueue extends PurgedProviderQueue {
         this.ensureProviderPurged(provider);
 
         provider.setPurgedIndex(this.queue.previousOffset);
+        provider.markFromRemovalQueue();
 
-        return this.returnProvider(provider, providerIndex, quote);
-    }*/
+        return provider;
+    }
 
     private ensureProviderIsPendingRemoval(provider: Provider): void {
         if (!provider.isPendingRemoval()) {
             throw new Revert('Impossible state: Provider is not pending removal.');
         }
     }
-
-    /*
-        private ensureProviderPurged(provider: Provider): void {
-            if (!provider.isRemovalPurged()) {
-                throw new Revert(`Impossible state: provider has not been purged.`);
-            }
-        }*/
 }

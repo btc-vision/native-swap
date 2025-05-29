@@ -1,6 +1,6 @@
 import { Provider } from '../models/Provider';
 import { PurgedProviderQueue } from './PurgedProviderQueue';
-import { Revert } from '../../../btc-runtime/runtime';
+import { Revert } from '@btc-vision/btc-runtime/runtime';
 import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
 
 export class PriorityPurgedProviderQueue extends PurgedProviderQueue {

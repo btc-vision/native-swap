@@ -902,8 +902,8 @@ describe('ReserveLiquidityOperation tests', () => {
             u256.fromString(`50000499999999999999998`),
         );
 
-        const reservationList = queue3.reservationManager.getReservationListForBlock(103);
-        const reservationActiveList = queue3.reservationManager.getActiveListForBlock(103);
+        const reservationList = queue3.reservationManager.callgetReservationListForBlock(103);
+        const reservationActiveList = queue3.reservationManager.callgetActiveListForBlock(103);
 
         expect(reservationList.getLength()).toStrictEqual(1);
         expect(reservationList.get(reservation.getPurgeIndex())).toStrictEqual(reservation.getId());
@@ -1134,7 +1134,7 @@ describe('ReserveLiquidityOperation tests', () => {
         reserveOp2.execute();
         queue3.liquidityQueue.save();
 
-        const reservationList = queue3.reservationManager.getReservationListForBlock(103);
+        const reservationList = queue3.reservationManager.callgetReservationListForBlock(103);
         expect(reservationList.getLength()).toStrictEqual(2);
     });
 

@@ -91,7 +91,6 @@ describe('ProviderData tests', () => {
         providerData.initialLiquidityProvider = true;
         providerData.queueIndex = 7;
         providerData.liquidityProvisionAllowed = true;
-        providerData.queueIndex = 1;
         providerData.liquidityAmount = u128.fromU64(90);
         providerData.pendingRemoval = true;
         providerData.priority = true;
@@ -105,7 +104,6 @@ describe('ProviderData tests', () => {
         expect(providerData2.initialLiquidityProvider).toBeTruthy();
         expect(providerData2.queueIndex).toStrictEqual(7);
         expect(providerData2.liquidityProvisionAllowed).toBeTruthy();
-        expect(providerData2.queueIndex).toStrictEqual(1);
         expect(providerData2.liquidityAmount).toStrictEqual(u128.fromU64(90));
         expect(providerData2.pendingRemoval).toBeTruthy();
         expect(providerData2.priority).toBeTruthy();
@@ -121,7 +119,6 @@ describe('ProviderData tests', () => {
         providerData.initialLiquidityProvider = false;
         providerData.queueIndex = 7;
         providerData.liquidityProvisionAllowed = false;
-        providerData.queueIndex = 1;
         providerData.liquidityAmount = u128.fromU64(90);
         providerData.pendingRemoval = false;
         providerData.priority = false;
@@ -135,7 +132,6 @@ describe('ProviderData tests', () => {
         expect(providerData2.initialLiquidityProvider).toBeFalsy();
         expect(providerData2.queueIndex).toStrictEqual(7);
         expect(providerData2.liquidityProvisionAllowed).toBeFalsy();
-        expect(providerData2.queueIndex).toStrictEqual(1);
         expect(providerData2.liquidityAmount).toStrictEqual(u128.fromU64(90));
         expect(providerData2.pendingRemoval).toBeFalsy();
         expect(providerData2.priority).toBeFalsy();

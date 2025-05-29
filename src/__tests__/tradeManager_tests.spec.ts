@@ -103,7 +103,7 @@ describe('TradeManager tests', () => {
         );
         reservation.setPurgeIndex(0);
 
-        const reservationActiveList = queue.reservationManager.getActiveListForBlock(0);
+        const reservationActiveList = queue.reservationManager.callgetActiveListForBlock(0);
         reservationActiveList.push(true);
         reservationActiveList.save();
 
@@ -161,7 +161,7 @@ describe('TradeManager tests', () => {
 
             reservation.setPurgeIndex(0);
 
-            const reservationActiveList = queue.reservationManager.getActiveListForBlock(0);
+            const reservationActiveList = queue.reservationManager.callgetActiveListForBlock(0);
             reservationActiveList.push(true);
             reservationActiveList.save();
 
@@ -219,7 +219,7 @@ describe('TradeManager tests', () => {
             reservation.setPurgeIndex(0);
             reservation.save();
 
-            const reservationActiveList = queue.reservationManager.getActiveListForBlock(1000);
+            const reservationActiveList = queue.reservationManager.callgetActiveListForBlock(1000);
             reservationActiveList.push(true);
             reservationActiveList.save();
             queue.liquidityQueue.save();
@@ -373,7 +373,7 @@ describe('TradeManager tests', () => {
         reservation.setPurgeIndex(0);
         reservation.save();
 
-        const reservationActiveList = queue.reservationManager.getActiveListForBlock(1000);
+        const reservationActiveList = queue.reservationManager.callgetActiveListForBlock(1000);
         reservationActiveList.push(true);
         reservationActiveList.save();
 

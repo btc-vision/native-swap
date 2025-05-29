@@ -1396,18 +1396,18 @@ describe('Liquidity queue tests', () => {
             const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
 
             const list2: StoredU128Array =
-                createQueueResult2.reservationManager.getReservationListForBlock(1000);
+                createQueueResult2.reservationManager.callgetReservationListForBlock(1000);
             expect(list2.getLength()).toStrictEqual(2);
             expect(list2.get(0)).toStrictEqual(reservation.getId());
             expect(list2.get(1)).toStrictEqual(reservation2.getId());
 
             const list2TokenActive: StoredBooleanArray =
-                createQueueResult2.reservationManager.getActiveListForBlock(1000);
+                createQueueResult2.reservationManager.callgetActiveListForBlock(1000);
             expect(list2TokenActive.get(0)).toBeTruthy();
             expect(list2TokenActive.get(1)).toBeTruthy();
 
             const list3: StoredU128Array =
-                createQueueResult2.reservationManager.getReservationListForBlock(1001);
+                createQueueResult2.reservationManager.callgetReservationListForBlock(1001);
             expect(list3.getLength()).toStrictEqual(0);
         });
 

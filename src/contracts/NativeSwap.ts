@@ -11,8 +11,8 @@ import {
     Selector,
     StoredAddress,
     U128_BYTE_LENGTH,
-    U16_BYTE_LENGTH,
     U256_BYTE_LENGTH,
+    U32_BYTE_LENGTH,
     U64_BYTE_LENGTH,
     ZERO_ADDRESS,
 } from '@btc-vision/btc-runtime/runtime';
@@ -216,7 +216,7 @@ export class NativeSwap extends ReentrancyGuard {
         const provider: Provider = getProvider(providerId);
 
         const writer: BytesWriter = new BytesWriter(
-            U128_BYTE_LENGTH * 3 + (U16_BYTE_LENGTH + provider.getBtcReceiver().length),
+            U128_BYTE_LENGTH * 3 + (U32_BYTE_LENGTH + provider.getBtcReceiver().length),
         );
         writer.writeU128(provider.getLiquidityAmount());
         writer.writeU128(provider.getReservedAmount());

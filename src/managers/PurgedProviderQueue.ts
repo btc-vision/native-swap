@@ -55,7 +55,8 @@ export class PurgedProviderQueue {
     }
 
     public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
-        const providerIndex = this.queue.next();
+        const providerIndex: u32 = this.queue.next();
+
         this.ensureProviderQueueIndexIsValid(providerIndex);
 
         const providerId = associatedQueue.getAt(providerIndex);
@@ -113,7 +114,7 @@ export class PurgedProviderQueue {
         }
     }
 
-    private ensureProviderPurged(provider: Provider): void {
+    protected ensureProviderPurged(provider: Provider): void {
         if (!provider.isPurged()) {
             throw new Revert(`Impossible state: provider has not been purged.`);
         }
@@ -127,7 +128,7 @@ export class PurgedProviderQueue {
         }
     }
 
-    private resetPurgedProvider(
+    private resetProvider(
         provider: Provider,
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
@@ -175,7 +176,7 @@ export class PurgedProviderQueue {
                 provider.clearFromRemovalQueue();
                 result = provider;
             } else if (!provider.hasReservedAmount()) {
-                this.resetPurgedProvider(provider);
+                this.resetProvider(provider);
             }
         }
 

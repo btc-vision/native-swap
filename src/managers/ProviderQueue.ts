@@ -9,7 +9,11 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { getProvider, Provider } from '../models/Provider';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
-import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
+import {
+    INDEX_NOT_SET_VALUE,
+    MAXIMUM_NUMBER_OF_PROVIDERS,
+    MAXIMUM_VALID_INDEX,
+} from '../constants/Contract';
 
 export class ProviderQueue {
     protected readonly token: Address;
@@ -42,6 +46,12 @@ export class ProviderQueue {
     }
 
     public add(provider: Provider): u32 {
+        if (this.queue.getLength() === MAXIMUM_NUMBER_OF_PROVIDERS) {
+            throw new Revert(
+                `Impossible state: maximum number of providers reached for normal queue.`,
+            );
+        }
+
         const index: u32 = this.queue.push(provider.getId(), true);
         provider.setQueueIndex(index);
 
@@ -62,8 +72,9 @@ export class ProviderQueue {
                     this.queue.setStartingIndex(index);
                     break;
                 } else {
-                    this.ensureProviderNotAlreadyPurged(provider.isPurged());
-                    this.queue.delete_physical(index);
+                    throw new Revert(
+                        `Impossible state: provider no longer active. Should have been removed from normal/priority queue.`,
+                    );
                 }
             } else {
                 this.queue.setStartingIndex(index);

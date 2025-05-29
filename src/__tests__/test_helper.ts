@@ -445,9 +445,9 @@ export interface ITestReservationManager extends IReservationManager {
 
     mockAddToActiveListReturn(index: u32): void;
 
-    getReservationListForBlock(blockNumber: u64): StoredU128Array;
+    callgetReservationListForBlock(blockNumber: u64): StoredU128Array;
 
-    getActiveListForBlock(blockNumber: u64): StoredBooleanArray;
+    callgetActiveListForBlock(blockNumber: u64): StoredBooleanArray;
 }
 
 export interface ITestLiquidityQueue extends ILiquidityQueue {
@@ -707,11 +707,11 @@ export class TestReservationManager extends ReservationManager implements ITestR
         this._mockedAddToActiveListReturn = index;
     }
 
-    public override getReservationListForBlock(blockNumber: u64): StoredU128Array {
+    public callgetReservationListForBlock(blockNumber: u64): StoredU128Array {
         return super.getReservationListForBlock(blockNumber);
     }
 
-    public override getActiveListForBlock(blockNumber: u64): StoredBooleanArray {
+    public callgetActiveListForBlock(blockNumber: u64): StoredBooleanArray {
         return super.getActiveListForBlock(blockNumber);
     }
 

@@ -420,20 +420,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.ensureCurrentQuoteValid();
     }
 
-    private handleRemovalProviderPurgeQueues(provider: Provider): void {
-        if (provider.isPurged()) {
-            // TODO!!!: Verify if there is enough owed BTC left to refund, the fixed version is in the refactor version. Will be empty for now
-            // NOT SURE!!!!
-            const owed: u64 = this.liquidityQueue.getSatoshisOwed(provider.getId());
-            const hasEnoughLiquidityLeft: boolean =
-                owed < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT;
-
-            if (!hasEnoughLiquidityLeft) {
-                this.liquidityQueue.removeFromRemovalPurgeQueue(provider);
-            }
-        }
-    }
-
     private handleProviderPurgeQueues(provider: Provider): void {
         if (provider.isPurged()) {
             const hasEnoughLiquidityLeft: boolean =
@@ -441,6 +427,18 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
             if (!hasEnoughLiquidityLeft) {
                 this.liquidityQueue.removeFromPurgeQueue(provider);
+            }
+        }
+    }
+
+    private handleRemovalProviderPurgeQueues(provider: Provider): void {
+        if (provider.isPurged()) {
+            const owed: u64 = this.liquidityQueue.getSatoshisOwed(provider.getId());
+            const hasEnoughLiquidityLeft: boolean =
+                owed < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT;
+
+            if (!hasEnoughLiquidityLeft) {
+                this.liquidityQueue.removeFromRemovalPurgeQueue(provider);
             }
         }
     }
@@ -552,6 +550,10 @@ export class ReserveLiquidityOperation extends BaseOperation {
         let targetTokensToReserve: u128;
         const owed: u64 = this.liquidityQueue.getSatoshisOwedLeft(provider.getId());
 
+        if (this.isSmallerThanMinimumReservationAmount(owed)) {
+            throw new Revert(`Impossible state: provider should have been removed from queue.`);
+        }
+
         if (remainingSatoshis > owed) {
             const conversionResult: CappedTokensResult = satoshisToTokens128(
                 owed,
@@ -580,7 +582,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
             );
 
             this.handleRemovalProviderPurgeQueues(provider);
-
             this.reservedProviderCount++;
         }
     }

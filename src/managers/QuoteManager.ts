@@ -2,6 +2,7 @@ import { Revert, StoredU256Array } from '@btc-vision/btc-runtime/runtime';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { LIQUIDITY_QUOTE_HISTORY_POINTER } from '../constants/StoredPointers';
 import { IQuoteManager } from './interfaces/IQuoteManager';
+import { MAXIMUM_QUOTE_INDEX } from '../constants/Contract';
 
 export class QuoteManager implements IQuoteManager {
     private readonly _quoteHistory: StoredU256Array;
@@ -19,9 +20,9 @@ export class QuoteManager implements IQuoteManager {
      * @returns {u256} - the quote recorded at that block
      */
     public getBlockQuote(blockNumber: u64): u256 {
-        const blockNumberU32: u64 = blockNumber % <u64>(u32.MAX_VALUE - 1);
+        const blockNumberU32: u32 = <u32>(blockNumber % MAXIMUM_QUOTE_INDEX);
 
-        return this._quoteHistory.get(<u32>blockNumber);
+        return this._quoteHistory.get(<u32>blockNumberU32);
     }
 
     /**
@@ -43,12 +44,7 @@ export class QuoteManager implements IQuoteManager {
      * @returns {void}
      */
     public setBlockQuote(blockNumber: u64, value: u256): void {
-        // !!!! Why this check if rollover???
-        if (<u64>u32.MAX_VALUE - 1 < blockNumber) {
-            throw new Revert('Impossible state: Block number too large for maximum array size.');
-        }
-
-        const blockNumberU32: u64 = blockNumber % <u64>(u32.MAX_VALUE - 1);
+        const blockNumberU32: u32 = <u32>(blockNumber % MAXIMUM_QUOTE_INDEX);
         const currentQuote: u256 = this._quoteHistory.get(blockNumberU32);
 
         if (!u256.eq(currentQuote, value)) {
