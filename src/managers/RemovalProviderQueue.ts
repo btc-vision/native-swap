@@ -3,10 +3,7 @@ import { ProviderQueue } from './ProviderQueue';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, Blockchain, Potential, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
-import {
-    MAXIMUM_NUMBER_OF_PROVIDERS,
-    STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
-} from '../constants/Contract';
+import { STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT } from '../constants/Contract';
 import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 
 export class RemovalProviderQueue extends ProviderQueue {
@@ -18,17 +15,14 @@ export class RemovalProviderQueue extends ProviderQueue {
         pointer: u16,
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
+        maximumNumberOfProvider: u32,
     ) {
-        super(token, pointer, subPointer, enableIndexVerification);
+        super(token, pointer, subPointer, enableIndexVerification, maximumNumberOfProvider);
         this.owedBTCManager = owedBTCManager;
     }
 
     public override add(provider: Provider): u32 {
-        if (this.queue.getLength() === MAXIMUM_NUMBER_OF_PROVIDERS) {
-            throw new Revert(
-                `Impossible state: maximum number of providers reached for removal queue.`,
-            );
-        }
+        this.ensureMaximumProviderCountNotReached(`removal`);
 
         const index: u32 = this.queue.push(provider.getId(), true);
         provider.setQueueIndex(index);
@@ -69,7 +63,7 @@ export class RemovalProviderQueue extends ProviderQueue {
         _burnRemainingFunds: boolean = true,
         _canceled: boolean = false,
     ): void {
-        this.ensureProviderNotAlreadyPurged(provider.isPurged());
+        this.ensureProviderNotAlreadyPurged(provider);
         this.queue.delete_physical(provider.getQueueIndex());
         provider.resetLiquidityProviderValues();
 
@@ -79,47 +73,54 @@ export class RemovalProviderQueue extends ProviderQueue {
     protected override tryNextCandidate(_currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
         const providerId: u256 = this.queue.get_physical(this._currentIndex);
-        this.ensureProviderIdIsValid(providerId);
 
-        const provider = getProvider(providerId);
+        if (!providerId.isZero()) {
+            const provider = getProvider(providerId);
 
-        if (provider.isPendingRemoval() && provider.isLiquidityProvider()) {
-            result = this.getProviderIfOwedBTC(providerId, provider);
-        } else {
-            this.resetProvider(provider);
+            if (provider.isPendingRemoval() && provider.isLiquidityProvider()) {
+                result = this.getProviderIfOwedSatoshis(providerId, provider);
+            } else {
+                this.resetProvider(provider);
+            }
         }
 
         return result;
     }
 
-    private ensureOwedAboveMinimum(owedBTC: u64): void {
-        if (owedBTC < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
+    private ensureOwedSatoshisAboveMinimum(owedSatoshis: u64, providerId: u256): void {
+        if (owedSatoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
             throw new Revert(
-                `Impossible state: Provider should have been removed from queue during swap operation.`,
+                `Impossible state: Provider should have been removed from removal queue. ProviderId: ${providerId}`,
             );
         }
     }
 
-    private ensureReservedBTCIsValid(reservedBTC: u64, owedBTC: u64): void {
-        if (reservedBTC > owedBTC) {
-            throw new Revert(`Impossible state: reservedBTC cannot be > owedBTC.`);
+    private ensureReservedSatoshisIsValid(
+        reservedSatoshis: u64,
+        owedSatoshis: u64,
+        providerId: u256,
+    ): void {
+        if (reservedSatoshis > owedSatoshis) {
+            throw new Revert(
+                `Impossible state: Reserved satoshis is greater than owed satoshis. ProviderId: ${providerId}.`,
+            );
         }
     }
 
-    private getProviderIfOwedBTC(providerId: u256, provider: Provider): Provider | null {
+    private getProviderIfOwedSatoshis(providerId: u256, provider: Provider): Provider | null {
         let result: Potential<Provider> = null;
-        const owedBTC: u64 = this.owedBTCManager.getSatoshisOwed(providerId);
-        const reservedBTC: u64 = this.owedBTCManager.getSatoshisOwedReserved(providerId);
+        const owedSatoshis: u64 = this.owedBTCManager.getSatoshisOwed(providerId);
+        const reservedSatoshis: u64 = this.owedBTCManager.getSatoshisOwedReserved(providerId);
 
-        this.ensureReservedBTCIsValid(reservedBTC, owedBTC);
+        this.ensureReservedSatoshisIsValid(reservedSatoshis, owedSatoshis, providerId);
 
-        const left = SafeMath.sub64(owedBTC, reservedBTC);
+        const left = SafeMath.sub64(owedSatoshis, reservedSatoshis);
 
         if (left !== 0 && left >= STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
             provider.markFromRemovalQueue();
             result = provider;
         } else {
-            this.ensureOwedAboveMinimum(owedBTC);
+            this.ensureOwedSatoshisAboveMinimum(owedSatoshis, providerId);
         }
 
         return result;

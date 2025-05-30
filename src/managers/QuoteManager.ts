@@ -22,7 +22,7 @@ export class QuoteManager implements IQuoteManager {
     public getBlockQuote(blockNumber: u64): u256 {
         const blockNumberU32: u32 = <u32>(blockNumber % MAXIMUM_QUOTE_INDEX);
 
-        return this._quoteHistory.get(<u32>blockNumberU32);
+        return this._quoteHistory.get(blockNumberU32);
     }
 
     /**
@@ -48,7 +48,7 @@ export class QuoteManager implements IQuoteManager {
         const currentQuote: u256 = this._quoteHistory.get(blockNumberU32);
 
         if (!u256.eq(currentQuote, value)) {
-            this._quoteHistory.set(<u32>blockNumber, value);
+            this._quoteHistory.set(blockNumberU32, value);
         }
     }
 

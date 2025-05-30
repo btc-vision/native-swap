@@ -647,6 +647,18 @@ export class TestProviderManager extends ProviderManager implements ITestProvide
         return this.normalQueue.getQueue();
     }
 
+    public get priorityPurgedQueueLength(): u32 {
+        return this.priorityPurgedQueue.length;
+    }
+
+    public get normalPurgedQueueLength(): u32 {
+        return this.normalPurgedQueue.length;
+    }
+
+    public get removalPurgedQueueLength(): u32 {
+        return this.removalPurgedQueue.length;
+    }
+
     public clearMockedResults(): void {
         this._cleanUpQueuesCalled = false;
         this._getNextProviderWithLiquidityCalled = false;
@@ -674,12 +686,8 @@ export class TestProviderManager extends ProviderManager implements ITestProvide
 }
 
 export class TestProviderQueue extends ProviderQueue {
-    public callInitializeCurrentIndex(): void {
-        this.initializeCurrentIndex();
-    }
-
-    public callEnsureStartingIndexIsValid(): void {
-        this.ensureStartingIndexIsValid();
+    public setStartingIndex(index: u32): void {
+        this.queue.setStartingIndex(index);
     }
 }
 

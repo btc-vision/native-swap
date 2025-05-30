@@ -15,7 +15,11 @@ import { ProviderQueue } from './ProviderQueue';
 import { PriorityProviderQueue } from './PriorityProviderQueue';
 import { RemovalProviderQueue } from './RemovalProviderQueue';
 import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
-import { ALLOW_DIRTY, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    ALLOW_DIRTY,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAXIMUM_NUMBER_OF_PROVIDERS,
+} from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { IProviderManager } from './interfaces/IProviderManager';
 import { PurgedProviderQueue } from './PurgedProviderQueue';
@@ -56,12 +60,14 @@ export class ProviderManager implements IProviderManager {
             NORMAL_QUEUE_POINTER,
             tokenIdUint8Array,
             enableIndexVerification,
+            MAXIMUM_NUMBER_OF_PROVIDERS,
         );
         this.priorityQueue = new PriorityProviderQueue(
             token,
             PRIORITY_QUEUE_POINTER,
             tokenIdUint8Array,
             enableIndexVerification,
+            MAXIMUM_NUMBER_OF_PROVIDERS,
         );
         this.removalQueue = new RemovalProviderQueue(
             owedBTCManager,
@@ -69,6 +75,7 @@ export class ProviderManager implements IProviderManager {
             REMOVAL_QUEUE_POINTER,
             tokenIdUint8Array,
             enableIndexVerification,
+            MAXIMUM_NUMBER_OF_PROVIDERS,
         );
         this.normalPurgedQueue = new PurgedProviderQueue(
             token,

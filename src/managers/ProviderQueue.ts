@@ -9,26 +9,25 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { getProvider, Provider } from '../models/Provider';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
-import {
-    INDEX_NOT_SET_VALUE,
-    MAXIMUM_NUMBER_OF_PROVIDERS,
-    MAXIMUM_VALID_INDEX,
-} from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
 
 export class ProviderQueue {
     protected readonly token: Address;
     protected readonly queue: StoredU256Array;
     protected readonly enableIndexVerification: boolean;
+    protected readonly maximumNumberOfProvider: u32;
 
     constructor(
         token: Address,
         pointer: u16,
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
+        maximumNumberOfProvider: u32,
     ) {
         this.queue = new StoredU256Array(pointer, subPointer, MAXIMUM_VALID_INDEX);
         this.token = token;
         this.enableIndexVerification = enableIndexVerification;
+        this.maximumNumberOfProvider = maximumNumberOfProvider;
     }
 
     protected _currentIndex: u32 = 0;
@@ -46,11 +45,7 @@ export class ProviderQueue {
     }
 
     public add(provider: Provider): u32 {
-        if (this.queue.getLength() === MAXIMUM_NUMBER_OF_PROVIDERS) {
-            throw new Revert(
-                `Impossible state: maximum number of providers reached for normal queue.`,
-            );
-        }
+        this.ensureMaximumProviderCountNotReached(`normal`);
 
         const index: u32 = this.queue.push(provider.getId(), true);
         provider.setQueueIndex(index);
@@ -73,7 +68,7 @@ export class ProviderQueue {
                     break;
                 } else {
                     throw new Revert(
-                        `Impossible state: provider no longer active. Should have been removed from normal/priority queue.`,
+                        `Impossible state: Provider is no longer active and should have been removed from normal/priority queue. ProviderId: ${providerId}`,
                     );
                 }
             } else {
@@ -93,8 +88,8 @@ export class ProviderQueue {
     public getNextWithLiquidity(currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
 
-        this.initializeCurrentIndex();
         this.ensureStartingIndexIsValid();
+        this.initializeCurrentIndex();
 
         const length: u32 = this.length;
 
@@ -105,15 +100,7 @@ export class ProviderQueue {
                 result = candidate;
             }
 
-            if (this._currentIndex === MAXIMUM_VALID_INDEX) {
-                if (result !== null) {
-                    break;
-                } else {
-                    throw new Revert('Impossible state: Index increment overflow.');
-                }
-            } else {
-                this._currentIndex++;
-            }
+            this._currentIndex++;
         }
 
         return result;
@@ -133,7 +120,7 @@ export class ProviderQueue {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
-        this.ensureProviderNotAlreadyPurged(provider.isPurged());
+        this.ensureProviderNotAlreadyPurged(provider);
 
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
             TransferHelper.safeTransfer(
@@ -152,29 +139,33 @@ export class ProviderQueue {
         Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
     }
 
-    public restoreCurrentIndex(previousStartingIndex: u32): void {
-        this._currentIndex = previousStartingIndex;
+    public restoreCurrentIndex(index: u32): void {
+        this._currentIndex = index;
     }
 
     public save(): void {
         this.queue.save();
     }
 
-    protected ensureProviderIdIsValid(providerId: u256): void {
-        if (providerId.isZero()) {
-            throw new Revert(`Impossible state: A provider id cannot be zero.`);
+    protected ensureMaximumProviderCountNotReached(queueName: string): void {
+        if (this.queue.getLength() === this.maximumNumberOfProvider) {
+            throw new Revert(
+                `Impossible state: Maximum number of providers reached for ${queueName} queue.`,
+            );
         }
     }
 
-    protected ensureProviderNotAlreadyPurged(state: boolean): void {
-        if (state) {
-            throw new Revert('Impossible state: provider has already been purged.');
+    protected ensureProviderNotAlreadyPurged(provider: Provider): void {
+        if (provider.isPurged()) {
+            throw new Revert(
+                `Impossible state: Provider has already been purged. ProviderId: ${provider.getId()}`,
+            );
         }
     }
 
     protected ensureStartingIndexIsValid(): void {
         if (this.startingIndex > this.length) {
-            throw new Revert('Impossible state: startingIndex exceeds queue length.');
+            throw new Revert('Impossible state: Starting index exceeds queue length.');
         }
     }
 
@@ -185,31 +176,53 @@ export class ProviderQueue {
     }
 
     protected isEligible(provider: Provider): boolean {
-        if (!provider.isActive()) {
-            return false;
-        }
+        this.ensureProviderIsNotPriority(provider);
 
-        if (provider.isPriority()) {
-            throw new Revert(
-                `Impossible state: priority provider in normal queue (${provider.getId()}).`,
-            );
-        }
-
-        return true;
+        return provider.isActive();
     }
 
     protected tryNextCandidate(currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
         const providerId: u256 = this.queue.get_physical(this._currentIndex);
-        this.ensureProviderIdIsValid(providerId);
 
-        const provider: Provider = getProvider(providerId);
+        if (!providerId.isZero()) {
+            const provider: Provider = getProvider(providerId);
 
-        if (this.isEligible(provider)) {
-            result = this.returnProvider(provider, this._currentIndex, currentQuote);
+            if (this.isEligible(provider)) {
+                result = this.returnProvider(provider, this._currentIndex, currentQuote);
+            }
         }
 
         return result;
+    }
+
+    private ensureProviderIsNotInitialProvider(provider: Provider): void {
+        if (provider.isInitialLiquidityProvider()) {
+            throw new Revert(
+                'Impossible state: Initial liquidity provider cannot be returned from any provider queue.',
+            );
+        }
+    }
+
+    private ensureProviderIsNotPriority(provider: Provider): void {
+        if (provider.isPriority()) {
+            throw new Revert(
+                `Impossible state: Priority provider cannot be in normal queue. ProviderId: ${provider.getId()}.`,
+            );
+        }
+    }
+
+    private ensureQueueIndexMatchIndex(provider: Provider, index: u32): void {
+        if (provider.getQueueIndex() !== index) {
+            throw new Revert(
+                `Impossible state: Provider queue index (${provider.getQueueIndex()}) does not match index (${index}). ProviderId: ${provider.getId()}`,
+            );
+        }
+    }
+
+    private performIndexVerification(provider: Provider, index: u32): void {
+        this.ensureQueueIndexMatchIndex(provider, index);
+        this.ensureProviderIsNotInitialProvider(provider);
     }
 
     // TODO:!!! we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
@@ -222,17 +235,7 @@ export class ProviderQueue {
         }
 
         if (this.enableIndexVerification) {
-            if (provider.getQueueIndex() !== index) {
-                throw new Revert(
-                    `Impossible state: provider.getQueueIndex (${provider.getQueueIndex()}) does not match index (${index}).`,
-                );
-            }
-
-            if (provider.isInitialLiquidityProvider()) {
-                throw new Revert(
-                    'Impossible state: Initial liquidity provider cannot be returned here.',
-                );
-            }
+            this.performIndexVerification(provider, index);
         }
 
         if (Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)) {

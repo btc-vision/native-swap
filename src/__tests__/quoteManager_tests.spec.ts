@@ -3,7 +3,7 @@ import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { QuoteManager } from '../managers/QuoteManager';
 import { tokenIdUint8Array1 } from './test_helper';
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { MAXIMUM_VALID_INDEX } from '../constants/Contract';
+import { MAXIMUM_QUOTE_INDEX } from '../constants/Contract';
 
 describe('QuoteManager tests', () => {
     beforeEach(() => {
@@ -24,30 +24,28 @@ describe('QuoteManager tests', () => {
         expect(manager.getBlockQuote(100)).toStrictEqual(u256.fromU64(888));
     });
 
-    it('getBlockQuote throws if block > MAXIMUM_VALID_INDEX', () => {
-        expect(() => {
-            const manager: QuoteManager = new QuoteManager(tokenIdUint8Array1);
-            manager.getBlockQuote(MAXIMUM_VALID_INDEX + 1);
-        }).toThrow();
-    });
-
-    it('getBlockQuote works at MAXIMUM_VALID_INDEX', () => {
+    it('getBlockQuote works at MAXIMUM_QUOTE_INDEX', () => {
         const manager: QuoteManager = new QuoteManager(tokenIdUint8Array1);
-        manager.setBlockQuote(MAXIMUM_VALID_INDEX, u256.fromU64(77));
-        expect(manager.getBlockQuote(MAXIMUM_VALID_INDEX)).toStrictEqual(u256.fromU64(77));
+        manager.setBlockQuote(MAXIMUM_QUOTE_INDEX, u256.fromU64(77));
+        expect(manager.getBlockQuote(MAXIMUM_QUOTE_INDEX)).toStrictEqual(u256.fromU64(77));
     });
 
-    it('setBlockQuote throws if block > MAXIMUM_VALID_INDEX', () => {
-        expect(() => {
-            const manager: QuoteManager = new QuoteManager(tokenIdUint8Array1);
-            manager.setBlockQuote(MAXIMUM_VALID_INDEX + 1, u256.fromU64(1));
-        }).toThrow();
-    });
-
-    it('setBlockQuote works at MAXIMUM_VALID_INDEX', () => {
+    it('getBlockQuote works at MAXIMUM_QUOTE_INDEX + 1', () => {
         const manager: QuoteManager = new QuoteManager(tokenIdUint8Array1);
-        manager.setBlockQuote(MAXIMUM_VALID_INDEX, u256.fromU64(55));
-        expect(manager.getBlockQuote(MAXIMUM_VALID_INDEX)).toStrictEqual(u256.fromU64(55));
+        manager.setBlockQuote(MAXIMUM_QUOTE_INDEX + 1, u256.fromU64(77));
+        expect(manager.getBlockQuote(MAXIMUM_QUOTE_INDEX + 1)).toStrictEqual(u256.fromU64(77));
+    });
+
+    it('setBlockQuote works at MAXIMUM_QUOTE_INDEX', () => {
+        const manager: QuoteManager = new QuoteManager(tokenIdUint8Array1);
+        manager.setBlockQuote(MAXIMUM_QUOTE_INDEX, u256.fromU64(55));
+        expect(manager.getBlockQuote(MAXIMUM_QUOTE_INDEX)).toStrictEqual(u256.fromU64(55));
+    });
+
+    it('setBlockQuote works at MAXIMUM_QUOTE_INDEX + 1', () => {
+        const manager: QuoteManager = new QuoteManager(tokenIdUint8Array1);
+        manager.setBlockQuote(MAXIMUM_QUOTE_INDEX + 1, u256.fromU64(55));
+        expect(manager.getBlockQuote(MAXIMUM_QUOTE_INDEX + 1)).toStrictEqual(u256.fromU64(55));
     });
 
     it('getValidBlockQuote returns correct value if quote is valid', () => {
@@ -63,27 +61,20 @@ describe('QuoteManager tests', () => {
         }).toThrow();
     });
 
-    it('getValidBlockQuote throws if block > MAXIMUM_VALID_INDEX', () => {
-        expect(() => {
-            const manager: QuoteManager = new QuoteManager(tokenIdUint8Array1);
-            manager.getValidBlockQuote(MAXIMUM_VALID_INDEX + 1);
-        }).toThrow();
-    });
-
-    it('getValidBlockQuote returns valid quote at MAXIMUM_VALID_INDEX', () => {
+    it('getValidBlockQuote returns valid quote at MAXIMUM_QUOTE_INDEX', () => {
         const manager: QuoteManager = new QuoteManager(tokenIdUint8Array1);
-        manager.setBlockQuote(MAXIMUM_VALID_INDEX, u256.fromU64(88));
-        expect(manager.getValidBlockQuote(MAXIMUM_VALID_INDEX)).toStrictEqual(u256.fromU64(88));
+        manager.setBlockQuote(MAXIMUM_QUOTE_INDEX, u256.fromU64(88));
+        expect(manager.getValidBlockQuote(MAXIMUM_QUOTE_INDEX)).toStrictEqual(u256.fromU64(88));
     });
 
     it('save persists all values', () => {
         const manager: QuoteManager = new QuoteManager(tokenIdUint8Array1);
         manager.setBlockQuote(10, u256.fromU64(10));
-        manager.setBlockQuote(MAXIMUM_VALID_INDEX, u256.fromU64(20));
+        manager.setBlockQuote(MAXIMUM_QUOTE_INDEX, u256.fromU64(20));
         manager.save();
 
         const manager2 = new QuoteManager(tokenIdUint8Array1);
         expect(manager2.getBlockQuote(10)).toStrictEqual(u256.fromU64(10));
-        expect(manager2.getBlockQuote(MAXIMUM_VALID_INDEX)).toStrictEqual(u256.fromU64(20));
+        expect(manager2.getBlockQuote(MAXIMUM_QUOTE_INDEX)).toStrictEqual(u256.fromU64(20));
     });
 });

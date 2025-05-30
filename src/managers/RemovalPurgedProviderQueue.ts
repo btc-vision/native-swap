@@ -3,6 +3,7 @@ import { PurgedProviderQueue } from './PurgedProviderQueue';
 import { getProvider, Provider } from '../models/Provider';
 import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
 import { u256 } from '@btc-vision/as-bignum/assembly';
+import { ProviderQueue } from './ProviderQueue';
 import { RemovalProviderQueue } from './RemovalProviderQueue';
 
 export class RemovalPurgedProviderQueue extends PurgedProviderQueue {
@@ -24,11 +25,18 @@ export class RemovalPurgedProviderQueue extends PurgedProviderQueue {
         return index;
     }
 
-    public override get(associatedQueue: RemovalProviderQueue, _quote: u256): Provider | null {
+    public get(associatedQueue: ProviderQueue, _quote: u256): Provider | null {
+        if (!(associatedQueue instanceof RemovalProviderQueue)) {
+            throw new Revert(`Impossible state: Wrong queue type used.`);
+        }
+
+        const associatedRemovalQueue: RemovalProviderQueue =
+            associatedQueue as RemovalProviderQueue;
+
         const providerIndex = this.queue.next();
         this.ensureProviderQueueIndexIsValid(providerIndex);
 
-        const providerId = associatedQueue.getAt(providerIndex);
+        const providerId = associatedRemovalQueue.getAt(providerIndex);
         this.ensureProviderIdIsValid(providerId);
 
         const provider = getProvider(providerId);
