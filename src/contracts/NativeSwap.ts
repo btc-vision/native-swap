@@ -11,6 +11,7 @@ import {
     StoredAddress,
     U128_BYTE_LENGTH,
     U256_BYTE_LENGTH,
+    U32_BYTE_LENGTH,
     U64_BYTE_LENGTH,
     ZERO_ADDRESS,
 } from '@btc-vision/btc-runtime/runtime';
@@ -40,8 +41,6 @@ import { QUOTE_SCALE, satoshisToTokens, tokensToSatoshis } from '../utils/Native
 @final
 export class NativeSwap extends ReentrancyGuard {
     private readonly _stakingContractAddress: StoredAddress;
-
-    //private readonly minimumTradeSize: u256 = u256.fromU32(10_000); // The minimum trade size in satoshis.
 
     public constructor() {
         super();
@@ -189,7 +188,7 @@ export class NativeSwap extends ReentrancyGuard {
         const provider = getProvider(providerId);
 
         const writer = new BytesWriter(
-            U128_BYTE_LENGTH * 2 + (2 + provider.btcReceiver.length) + 32,
+            U128_BYTE_LENGTH * 2 + (U32_BYTE_LENGTH + provider.btcReceiver.length) + 32,
         );
         writer.writeU128(provider.liquidity);
         writer.writeU128(provider.reserved);
@@ -373,7 +372,7 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureValidTokenAddress(token);
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
 
         this.ensurePoolExistsForToken(queue);
 
