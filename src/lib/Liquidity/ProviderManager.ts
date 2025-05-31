@@ -478,6 +478,24 @@ export class ProviderManager {
         provider.purgedAt = IMPOSSIBLE_PURGE_INDEX;
     }
 
+    public verifyProviderRemainingLiquidity(
+        provider: Provider,
+        availableLiquidity: u256,
+        currentQuote: u256,
+        purge: boolean = true,
+    ): bool {
+        const maxCostInSatoshis = tokensToSatoshis(availableLiquidity, currentQuote);
+        if (u256.lt(maxCostInSatoshis, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
+            if (!provider.haveReserved()) {
+                this.resetProvider(provider, purge);
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
     @inline
     private purgeSafetyCheck(provider: Provider): void {
         if (provider.hasBeenPurged()) {
@@ -768,6 +786,26 @@ export class ProviderManager {
         return null;
     }
 
+    /*private binarySearchFirstLive(queue: StoredU256Array, start: u64 = queue.startingIndex()): u64 {
+        let lo: u64 = start;
+        let hi: u64 = queue.getLength();
+
+        while (lo < hi) {
+            const mid: u64 = lo + ((hi - lo) >> 1);
+
+            const pid: u256 = queue.get_physical(mid);
+            const live: bool = !pid.isZero() && getProvider(pid).isActive();
+
+            if (live) {
+                hi = mid;
+            } else {
+                lo = mid + 1;
+            }
+        }
+
+        return lo;
+    }*/
+
     private getNextStandardQueueProvider(currentQuote: u256): Provider | null {
         let provider: Potential<Provider> = null;
         let providerId: u256;
@@ -828,26 +866,6 @@ export class ProviderManager {
         return null;
     }
 
-    /*private binarySearchFirstLive(queue: StoredU256Array, start: u64 = queue.startingIndex()): u64 {
-        let lo: u64 = start;
-        let hi: u64 = queue.getLength();
-
-        while (lo < hi) {
-            const mid: u64 = lo + ((hi - lo) >> 1);
-
-            const pid: u256 = queue.get_physical(mid);
-            const live: bool = !pid.isZero() && getProvider(pid).isActive();
-
-            if (live) {
-                hi = mid;
-            } else {
-                lo = mid + 1;
-            }
-        }
-
-        return lo;
-    }*/
-
     // TODO: we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
     private returnProvider(provider: Provider, i: u64, currentQuote: u256): Provider | null {
         const availableLiquidity: u128 = SafeMath.sub128(provider.liquidity, provider.reserved);
@@ -881,23 +899,6 @@ export class ProviderManager {
         );
 
         return hasEnoughLiquidity ? provider : null;
-    }
-
-    private verifyProviderRemainingLiquidity(
-        provider: Provider,
-        availableLiquidity: u256,
-        currentQuote: u256,
-    ): bool {
-        const maxCostInSatoshis = tokensToSatoshis(availableLiquidity, currentQuote);
-        if (u256.lt(maxCostInSatoshis, LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
-            if (!provider.haveReserved()) {
-                this.resetProvider(provider);
-            }
-
-            return false;
-        }
-
-        return true;
     }
 
     private getInitialProvider(currentQuote: u256): Provider | null {

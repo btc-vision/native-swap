@@ -1067,21 +1067,39 @@ export class LiquidityQueue {
 
         let restoredLiquidity: u256 = u256.Zero;
 
+        const blockNumber: u64 = reservation.createdAt % <u64>(u32.MAX_VALUE - 1);
+        const currentQuoteAtThatTime = this.getBlockQuote(blockNumber);
+        if (currentQuoteAtThatTime.isZero()) {
+            throw new Revert('Impossible state: No quote at block.');
+        }
+
         for (let j = 0; j < reservedIndexes.length; j++) {
             const providerIndex: u64 = reservedIndexes[j];
             const reservedAmount: u128 = reservedValues[j];
             const queueType: u8 = queueTypes[j];
 
             const provider: Provider = this.getProviderFromQueue(providerIndex, queueType);
-            if (provider.pendingRemoval && queueType === LIQUIDITY_REMOVAL_TYPE) {
+
+            if (queueType === LIQUIDITY_REMOVAL_TYPE) {
+                if (!provider.pendingRemoval) {
+                    throw new Revert(
+                        'Impossible state: Removal queue when provider is not flagged pendingRemoval.',
+                    );
+                }
+
                 this.purgeAndRestoreProviderRemovalQueue(
                     provider,
                     reservedAmount,
-                    reservation.createdAt,
+                    currentQuoteAtThatTime,
                 );
             } else {
                 this.ensureValidReservedAmount(provider, reservedAmount);
-                this.purgeAndRestoreProvider(provider, reservedAmount, queueType);
+                this.purgeAndRestoreProvider(
+                    provider,
+                    reservedAmount,
+                    queueType,
+                    currentQuoteAtThatTime,
+                );
             }
 
             restoredLiquidity = SafeMath.add(restoredLiquidity, reservedAmount.toU256());
@@ -1251,15 +1269,8 @@ export class LiquidityQueue {
     private purgeAndRestoreProviderRemovalQueue(
         provider: Provider,
         reservedAmount: u128,
-        createdAt: u64,
+        currentQuoteAtThatTime: u256,
     ): void {
-        const blockNumber: u64 = createdAt % <u64>(u32.MAX_VALUE - 1);
-        const currentQuoteAtThatTime = this.getBlockQuote(blockNumber);
-
-        if (currentQuoteAtThatTime.isZero()) {
-            throw new Revert('Impossible state: No quote at block.');
-        }
-
         // figure out how many sat was associated with 'reservedAmount'
         const costInSats = tokensToSatoshis(reservedAmount.toU256(), currentQuoteAtThatTime);
 
@@ -1277,18 +1288,23 @@ export class LiquidityQueue {
         }
     }
 
-    private purgeAndRestoreProvider(provider: Provider, reservedAmount: u128, queueType: u8): void {
+    private purgeAndRestoreProvider(
+        provider: Provider,
+        reservedAmount: u128,
+        queueType: u8,
+        quote: u256,
+    ): void {
         provider.decreaseReserved(reservedAmount);
 
-        const availableLiquidity = SafeMath.sub128(provider.liquidity, provider.reserved);
-        if (
-            u128.lt(
-                availableLiquidity,
-                LiquidityQueue.STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT.toU128(),
-            )
-        ) {
-            this._providerManager.resetProvider(provider, false);
-        } else if (!provider.hasBeenPurged()) {
+        const availableLiquidity = SafeMath.sub128(provider.liquidity, provider.reserved).toU256();
+        const hasEnoughLiquidityLeft: bool = this._providerManager.verifyProviderRemainingLiquidity(
+            provider,
+            availableLiquidity,
+            quote,
+            false,
+        );
+
+        if (hasEnoughLiquidityLeft && !provider.hasBeenPurged()) {
             if (queueType === NORMAL_TYPE) {
                 this._providerManager.pushToPurgeStandardQueue(provider);
             } else {
