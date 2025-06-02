@@ -434,6 +434,8 @@ export interface ITestProviderManager extends IProviderManager {
     readonly cleanUpQueuesCalled: boolean;
     readonly getNextProviderWithLiquidityCalled: boolean;
     readonly resetProviderCalled: boolean;
+
+    removeFromRemovalQueue(provider: Provider): void;
 }
 
 export interface ITestReservationManager extends IReservationManager {
@@ -657,6 +659,10 @@ export class TestProviderManager extends ProviderManager implements ITestProvide
 
     public get removalPurgedQueueLength(): u32 {
         return this.removalPurgedQueue.length;
+    }
+
+    public removeFromRemovalQueue(provider: Provider): void {
+        this.removalQueue.remove(provider);
     }
 
     public clearMockedResults(): void {

@@ -308,6 +308,7 @@ export class ReservationManager implements IReservationManager {
             // TODO!!!: Check if we can omit reset and just timeout the user, then, once
             //  a new reservation is made, if dirty, we reset it before setting the new values.
             reservation.timeoutUser();
+            reservation.save();
         }
 
         return restoredLiquidity;

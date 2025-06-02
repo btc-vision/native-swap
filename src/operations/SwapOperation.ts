@@ -30,8 +30,6 @@ export class SwapOperation extends BaseOperation {
 
         this.ensureReservationNotForLP(reservation);
 
-        const p = reservation.getProviderAt(0);
-
         const trade: CompletedTrade = this.tradeManager.executeTrade(reservation);
 
         let totalTokensPurchased: u256 = trade.getTotalTokensPurchased();
@@ -65,6 +63,7 @@ export class SwapOperation extends BaseOperation {
             );
 
             newTotalTokensPurchased = SafeMath.sub(totalTokensPurchased, totalFeeTokens);
+
             this.liquidityQueue.distributeFee(totalFeeTokens, this.stakingAddress);
         }
 

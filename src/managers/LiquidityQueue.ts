@@ -453,7 +453,7 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         // apply net "buys"
         const dB_buy: u256 = u256.fromU64(this.totalSatoshisExchangedForTokens);
-        const dT_buy: u256 = this.totalTokensSellActivated;
+        const dT_buy: u256 = this.totalTokensExchangedForSatoshis;
 
         if (!dT_buy.isZero()) {
             let Tprime = T >= dT_buy ? SafeMath.sub(T, dT_buy) : u256.One;

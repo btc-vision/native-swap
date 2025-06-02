@@ -112,10 +112,13 @@ describe('CancelListTokenForSaleOperation tests', () => {
         provider.activate();
         provider.clearPriority();
         provider.setLiquidityAmount(u128.fromU64(10000));
+        provider.setListedTokenAtBlock(100);
 
         const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         queue.liquidityQueue.increaseTotalReserve(u256.fromU64(1000000000));
+        queue.providerManager.addToNormalQueue(provider);
 
+        setBlockchainEnvironment(101);
         const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
         operation.execute();
@@ -124,7 +127,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
         expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(provider.getLiquidityProvided()).toStrictEqual(u128.fromU32(1000));
         expect(TransferHelper.safeTransferCalled).toBeTruthy();
-        expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(1000000000));
+        expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(1000005000));
     });
 
     it("should revert if provider.pendingRemoval => 'cannot cancel listing'", () => {

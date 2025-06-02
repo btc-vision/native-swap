@@ -344,11 +344,11 @@ export class ProviderManager implements IProviderManager {
 
         this.ensureRemovalTypeIsValid(data.providerType, provider);
 
-        if (provider.isPendingRemoval() && data.isLiquidityRemoval()) {
+        if (provider.isPendingRemoval()) {
             this.purgeAndRestoreProviderRemovalQueue(provider, data);
         } else {
             this.ensureReservedAmountValid(provider, data.providedAmount);
-            this.purgeAndRestoreNormalPriorityProvider(provider, data.providedAmount);
+            this.purgeAndRestoreNormalPriorityProvider(provider, data);
         }
     }
 
@@ -431,12 +431,6 @@ export class ProviderManager implements IProviderManager {
         }
     }
 
-    private ensureProviderIsNotPendingRemoval(provider: Provider): void {
-        if (provider.isPendingRemoval()) {
-            throw new Revert('Impossible state: removal provider cannot be reset.');
-        }
-    }
-
     private ensureProviderIsNotPurged(provider: Provider): void {
         if (provider.isPurged()) {
             throw new Revert(`Impossible state: Provider is present in purge queue.`);
@@ -515,12 +509,21 @@ export class ProviderManager implements IProviderManager {
         }
     }
 
-    private purgeAndRestoreNormalPriorityProvider(provider: Provider, reservedAmount: u128): void {
-        provider.subtractFromReservedAmount(reservedAmount);
+    private purgeAndRestoreNormalPriorityProvider(
+        provider: Provider,
+        data: ReservationProviderData,
+    ): void {
+        provider.subtractFromReservedAmount(data.providedAmount);
 
-        this.resetProvider(provider, false, false);
+        const quote: u256 = this.quoteManager.getValidBlockQuote(data.creationBlock);
 
-        if (!provider.isPurged()) {
+        if (
+            !Provider.meetsMinimumReservationAmount(provider.getAvailableLiquidityAmount(), quote)
+        ) {
+            if (!provider.hasReservedAmount()) {
+                this.resetProvider(provider, false, false);
+            }
+        } else if (!provider.isPurged()) {
             if (provider.getProviderType() === ProviderTypes.Normal) {
                 this.addToNormalPurgedQueue(provider);
             } else {

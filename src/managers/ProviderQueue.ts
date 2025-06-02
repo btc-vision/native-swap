@@ -10,6 +10,7 @@ import {
 import { getProvider, Provider } from '../models/Provider';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
 import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
+import { ProviderTypes } from '../types/ProviderTypes';
 
 export class ProviderQueue {
     protected readonly token: Address;
@@ -45,7 +46,7 @@ export class ProviderQueue {
     }
 
     public add(provider: Provider): u32 {
-        this.ensureMaximumProviderCountNotReached(`normal`);
+        this.ensureMaximumProviderCountNotReached(ProviderTypes.Normal);
 
         const index: u32 = this.queue.push(provider.getId(), true);
         provider.setQueueIndex(index);
@@ -147,10 +148,10 @@ export class ProviderQueue {
         this.queue.save();
     }
 
-    protected ensureMaximumProviderCountNotReached(queueName: string): void {
+    protected ensureMaximumProviderCountNotReached(queueType: ProviderTypes): void {
         if (this.queue.getLength() === this.maximumNumberOfProvider) {
             throw new Revert(
-                `Impossible state: Maximum number of providers reached for ${queueName} queue.`,
+                `Impossible state: Maximum number of providers reached for ${queueType} queue.`,
             );
         }
     }

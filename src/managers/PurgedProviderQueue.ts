@@ -65,6 +65,8 @@ export class PurgedProviderQueue {
         const provider = getProvider(providerId);
         this.ensureProviderPurged(provider);
 
+        //!!! why this ??? should  already be saved with push... index is changing?
+        // Test previousOffset is same index as in push
         provider.setPurgedIndex(this.queue.previousOffset);
 
         return this.returnProvider(provider, providerIndex, quote);

@@ -5,6 +5,7 @@ import { Address, Blockchain, Potential, Revert, SafeMath } from '@btc-vision/bt
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
 import { STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT } from '../constants/Contract';
 import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
+import { ProviderTypes } from '../types/ProviderTypes';
 
 export class RemovalProviderQueue extends ProviderQueue {
     private owedBTCManager: IOwedBTCManager;
@@ -22,7 +23,7 @@ export class RemovalProviderQueue extends ProviderQueue {
     }
 
     public override add(provider: Provider): u32 {
-        this.ensureMaximumProviderCountNotReached(`removal`);
+        this.ensureMaximumProviderCountNotReached(ProviderTypes.LiquidityRemoval);
 
         const index: u32 = this.queue.push(provider.getId(), true);
         provider.setQueueIndex(index);

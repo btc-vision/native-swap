@@ -149,6 +149,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         }
 
         reservation.setCreationBlock(Blockchain.block.number);
+        reservation.save();
 
         return reservation;
     }
