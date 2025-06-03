@@ -65,11 +65,11 @@ export class PurgedProviderQueue {
         const provider = getProvider(providerId);
         this.ensureProviderPurged(provider);
 
-        //!!! why this ??? should  already be saved with push... index is changing?
-        // Test previousOffset is same index as in push
-        provider.setPurgedIndex(this.queue.previousOffset);
+        if (provider.getPurgedIndex() !== this.queue.previousOffset) {
+            throw new Revert('provider.getPurgedIndex() !== this.queue.previousOffset');
+        }
 
-        return this.returnProvider(provider, providerIndex, quote);
+        return this.returnProvider(associatedQueue, provider, providerIndex, quote);
     }
 
     public remove(provider: Provider): void {
@@ -77,6 +77,7 @@ export class PurgedProviderQueue {
 
         // TODO:!!!! Technically, we don't need to remove the provider from the queue because we should theoretically process
         // TODO: "dirty" states correctly due to wrap around.
+        // NOT USING physical flag when adding???? is this good???
         if (!this.allowDirty) {
             this.queue.delete_physical(provider.getPurgedIndex());
         }
@@ -130,14 +131,10 @@ export class PurgedProviderQueue {
         }
     }
 
-    private resetProvider(
-        provider: Provider,
-        burnRemainingFunds: boolean = true,
-        canceled: boolean = false,
-    ): void {
-        this.ensureProviderNotAlreadyPurged(provider.isPurged());
+    private resetProvider(provider: Provider, associatedQueue: ProviderQueue): void {
+        this.ensureProviderPurged(provider);
 
-        if (burnRemainingFunds && provider.hasLiquidityAmount()) {
+        if (provider.hasLiquidityAmount()) {
             TransferHelper.safeTransfer(
                 this.token,
                 Address.dead(),
@@ -146,16 +143,21 @@ export class PurgedProviderQueue {
         }
 
         if (!provider.isInitialLiquidityProvider()) {
-            this.queue.delete_physical(provider.getQueueIndex());
+            associatedQueue.remove(provider);
         }
 
         provider.resetListingProviderValues();
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
+        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, false));
     }
 
     // TODO:!!! we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
-    private returnProvider(provider: Provider, index: u32, quote: u256): Provider | null {
+    private returnProvider(
+        associatedQueue: ProviderQueue,
+        provider: Provider,
+        index: u32,
+        quote: u256,
+    ): Provider | null {
         let result: Potential<Provider> = null;
         const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
 
@@ -178,7 +180,7 @@ export class PurgedProviderQueue {
                 provider.clearFromRemovalQueue();
                 result = provider;
             } else if (!provider.hasReservedAmount()) {
-                this.resetProvider(provider);
+                this.resetProvider(provider, associatedQueue);
             }
         }
 

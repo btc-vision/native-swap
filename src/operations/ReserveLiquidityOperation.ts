@@ -513,6 +513,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 break;
             }
         }
+
+        reservation.save();
     }
 
     private reserveFromProvider(reservation: Reservation, provider: Provider): void {
