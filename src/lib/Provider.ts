@@ -183,8 +183,16 @@ export class Provider {
         return this.userLiquidity.getActiveFlag() === 1;
     }
 
-    public setActive(value: bool, priority: bool): void {
+    /*public setActive(value: bool, priority: bool): void {
         this.userLiquidity.setActiveFlag(value ? 1 : 0);
+        this.userLiquidity.setPriorityFlag(priority ? 1 : 0);
+    }*/
+
+    public activate(): void {
+        this.userLiquidity.setActiveFlag(1);
+    }
+
+    public markPriority(priority: boolean): void {
         this.userLiquidity.setPriorityFlag(priority ? 1 : 0);
     }
 

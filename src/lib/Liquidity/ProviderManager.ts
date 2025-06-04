@@ -343,8 +343,6 @@ export class ProviderManager {
         // 2. Then priority queue
         const priorityProvider = this.getNextPriorityListProvider(currentQuote);
         if (priorityProvider !== null) {
-            this.ensureNotInPurgeQueue(priorityProvider);
-
             this.previousReservationStartingIndex =
                 this.currentIndexPriority === 0
                     ? this.currentIndexPriority
@@ -356,8 +354,6 @@ export class ProviderManager {
         // 3. Then normal queue
         const provider = this.getNextStandardQueueProvider(currentQuote);
         if (provider !== null) {
-            this.ensureNotInPurgeQueue(provider);
-
             this.previousReservationStandardStartingIndex =
                 this.currentIndex === 0 ? this.currentIndex : this.currentIndex - 1;
 
@@ -771,6 +767,7 @@ export class ProviderManager {
 
             const providerToReturn = this.returnProvider(provider, i, currentQuote);
             if (providerToReturn) {
+                this.ensureNotInPurgeQueue(providerToReturn); // TODO: Check if we really need this check?
                 this.currentIndexPriority++;
 
                 return providerToReturn;
@@ -851,6 +848,7 @@ export class ProviderManager {
 
             const providerToReturn = this.returnProvider(provider, i, currentQuote);
             if (providerToReturn) {
+                this.ensureNotInPurgeQueue(providerToReturn); // TODO: Check if we really need this check?
                 this.currentIndex++;
 
                 return providerToReturn;

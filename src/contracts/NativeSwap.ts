@@ -128,6 +128,12 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getAntibotSettings(calldata);
             case encodeSelector('getStakingContractAddress()'):
                 return this.getStakingContractAddress(calldata);
+            /*case encodeSelector('getLastPurgedBlock(address)'):
+                return this.getLastPurgedBlock(calldata);
+            case encodeSelector('getBlocksWithReservationsLength(address)'):
+                return this.getBlocksWithReservationsLength(calldata);
+            case encodeSelector('purgeReservationsAndRestoreProviders(address)'):
+                return this.purgeReservationsAndRestoreProviders(calldata);*/
             default:
                 return super.execute(method, calldata);
         }
@@ -446,6 +452,48 @@ export class NativeSwap extends ReentrancyGuard {
         const token: Address = calldata.readAddress();
 
         return this._getReserve(token);
+    }
+
+    private getLastPurgedBlock(calldata: Calldata): BytesWriter {
+        const token: Address = calldata.readAddress();
+        this.ensureValidTokenAddress(token);
+
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
+        this.ensurePoolExistsForToken(queue);
+
+        const writer = new BytesWriter(U64_BYTE_LENGTH);
+        writer.writeU64(queue.lastPurgedBlock);
+
+        return writer;
+    }
+
+    private getBlocksWithReservationsLength(calldata: Calldata): BytesWriter {
+        const token: Address = calldata.readAddress();
+        this.ensureValidTokenAddress(token);
+
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
+        this.ensurePoolExistsForToken(queue);
+
+        const writer = new BytesWriter(U32_BYTE_LENGTH);
+        writer.writeU32(<u32>queue.blockWithReservationsLength());
+
+        return writer;
+    }
+
+    private purgeReservationsAndRestoreProviders(calldata: Calldata): BytesWriter {
+        const token: Address = calldata.readAddress();
+        this.ensureValidTokenAddress(token);
+
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true, true);
+        this.ensurePoolExistsForToken(queue);
+
+        // Save the updated queue
+        queue.save();
+
+        const result = new BytesWriter(1);
+        result.writeBoolean(true);
+
+        return result;
     }
 
     private _getReserve(token: Address): BytesWriter {

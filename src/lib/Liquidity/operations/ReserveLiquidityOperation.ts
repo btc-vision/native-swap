@@ -388,11 +388,10 @@ export class ReserveLiquidityOperation extends BaseOperation {
         }
 
         const satCostTokenRemaining = tokensToSatoshis(tokensRemaining, currentQuote);
-
         if (u256.lt(satCostTokenRemaining, LiquidityQueue.MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
             if (tokensRemaining === maxTokensLeftBeforeCap) {
                 throw new Revert(
-                    `NATIVE_SWAP: Maximum reservation limit reached. Try again later.`,
+                    `NATIVE_SWAP: Maximum reservation limit reached. Try again later. maxTokensLeftBeforeCap: ${maxTokensLeftBeforeCap} - tokensRemaining: ${tokensRemaining} - satCostTokenRemaining: ${satCostTokenRemaining}`,
                 );
             }
 

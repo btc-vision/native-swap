@@ -162,32 +162,13 @@ export class ListTokensForSaleOperation extends BaseOperation {
             : this.amountIn;
 
         const newTax: u128 = SafeMath.sub128(this.amountIn, newLiquidityNet);
-
-        // handle normal->priority
-        const wasNormal =
-            !this.provider.isPriority() && this.provider.isActive() && this.usePriorityQueue;
-
         if (!this.oldLiquidity.isZero() && this.usePriorityQueue !== this.provider.isPriority()) {
             throw new Revert(
                 `NATIVE_SWAP: You must cancel your listings before using the priority queue.`,
             );
         }
 
-        if (wasNormal) {
-            this.provider.setActive(true, true);
-            this.liquidityQueue.addToPriorityQueue(this.providerId);
-        } else if (!this.provider.isActive()) {
-            if (!this.initialLiquidity) {
-                this.provider.setActive(true, this.usePriorityQueue);
-                if (this.usePriorityQueue) {
-                    this.liquidityQueue.addToPriorityQueue(this.providerId);
-                } else {
-                    this.liquidityQueue.addToStandardQueue(this.providerId);
-                }
-            } else {
-                this.provider.setActive(true, false);
-            }
-        }
+        this.addProviderToQueue();
 
         // add to provider
         this.provider.liquidity = SafeMath.add128(this.oldLiquidity, this.amountIn);
@@ -204,6 +185,19 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
 
         this.liquidityQueue.setBlockQuote();
+    }
+
+    private addProviderToQueue(): void {
+        this.provider.activate();
+
+        if (!this.initialLiquidity) {
+            if (this.usePriorityQueue) {
+                this.provider.markPriority(true);
+                this.liquidityQueue.addToPriorityQueue(this.provider.providerId);
+            } else {
+                this.liquidityQueue.addToStandardQueue(this.provider.providerId);
+            }
+        }
     }
 
     private removeTax(provider: Provider, totalTax: u128): void {
