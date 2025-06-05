@@ -23,10 +23,11 @@ export class CancelListingOperation extends BaseOperation {
     }
 
     public execute(): void {
-        this.checkPreConditions();
+        const listedAtBlock: u64 = this.provider.getListedTokenAtBlock();
+        this.checkPreConditions(listedAtBlock);
 
         const initialAmount: u128 = this.provider.getLiquidityAmount();
-        const penaltyAmount: u128 = this.calculatePenalty(initialAmount);
+        const penaltyAmount: u128 = this.calculatePenalty(listedAtBlock, initialAmount);
         const refundAmount: u128 = this.calculateRefund(initialAmount, penaltyAmount);
 
         this.prepareProviderForRefund();
@@ -35,10 +36,7 @@ export class CancelListingOperation extends BaseOperation {
         this.emitListingCanceledEvent(refundAmount);
     }
 
-    private calculatePenalty(amount: u128): u128 {
-        const listedAtBlock: u64 = this.provider.getListedTokenAtBlock();
-        this.ensureListedTokenAtBlock(listedAtBlock);
-
+    private calculatePenalty(listedAtBlock: u64, amount: u128): u128 {
         const delta: u64 = SafeMath.sub64(Blockchain.block.number, listedAtBlock);
         return slash(amount, delta, SLASH_GRACE_WINDOW, SLASH_RAMP_UP_BLOCKS);
     }
@@ -47,7 +45,8 @@ export class CancelListingOperation extends BaseOperation {
         return SafeMath.sub128(amount, penalty);
     }
 
-    private checkPreConditions(): void {
+    private checkPreConditions(listedAtBlock: u64): void {
+        this.ensureListedTokenAtBlock(listedAtBlock);
         this.ensureProviderIsActive();
         this.ensureNoActiveReservation();
         this.ensureLiquidityNotZero();

@@ -388,7 +388,7 @@ describe('ProviderQueue tests', () => {
             }).toThrow();
         });
 
-        it('throws if owedBTC is below minimum', () => {
+        it('throws if owedBTC is below minimum and no reservation', () => {
             expect(() => {
                 const owedBTCManager = new OwedBTCManager();
                 const queue = new RemovalProviderQueue(
@@ -412,6 +412,27 @@ describe('ProviderQueue tests', () => {
 
                 queue.getNextWithLiquidity(QUOTE);
             }).toThrow();
+        });
+
+        it('return null if owedBTC = reservedBTC', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const queue = new RemovalProviderQueue(
+                owedBTCManager,
+                tokenAddress1,
+                REMOVAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
+                MAXIMUM_NUMBER_OF_PROVIDERS,
+            );
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1, true, true);
+            queue.add(provider);
+            owedBTCManager.setSatoshisOwed(provider.getId(), 11000);
+            owedBTCManager.setSatoshisOwedReserved(provider.getId(), 11000);
+
+            const result = queue.getNextWithLiquidity(QUOTE);
+
+            expect(result).toBeNull();
         });
     });
 });

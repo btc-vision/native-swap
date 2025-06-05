@@ -382,7 +382,7 @@ export class Provider {
     }
 
     /**
-     * @method ClearLiquidityProvider
+     * @method clearLiquidityProvider
      * @description Clear the liquidity provider state of a provider.
      * @returns {void}
      */

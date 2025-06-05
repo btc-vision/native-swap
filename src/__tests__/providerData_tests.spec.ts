@@ -3,7 +3,11 @@ import { Blockchain, TransferHelper, u256To30Bytes } from '@btc-vision/btc-runti
 import { ProviderData } from '../models/ProviderData';
 import { PROVIDER_DATA_POINTER } from '../constants/StoredPointers';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    BLOCK_NOT_SET_VALUE,
+    INDEX_NOT_SET_VALUE,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+} from '../constants/Contract';
 
 const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
 describe('ProviderData tests', () => {
@@ -27,6 +31,7 @@ describe('ProviderData tests', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
         expect(providerData.queueIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
     });
+
     it('setter queueIndex marks stateChanged and save writes to storage', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
         providerData.queueIndex = 10;
@@ -50,11 +55,32 @@ describe('ProviderData tests', () => {
         expect(providerData.pendingRemoval).toBeTruthy();
     });
 
+    it('setter/getter for listedTokenAtBlock', () => {
+        const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
+        expect(providerData.listedTokenAtBlock).toStrictEqual(BLOCK_NOT_SET_VALUE);
+        providerData.listedTokenAtBlock = 100;
+        expect(providerData.listedTokenAtBlock).toStrictEqual(100);
+    });
+
     it('setter/getter for active', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
         expect(providerData.active).toBeFalsy();
         providerData.active = true;
         expect(providerData.active).toBeTruthy();
+    });
+
+    it('setter/getter for purged', () => {
+        const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
+        expect(providerData.purged).toBeFalsy();
+        providerData.purged = true;
+        expect(providerData.purged).toBeTruthy();
+    });
+
+    it('setter/getter for purgedIndex', () => {
+        const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
+        expect(providerData.purgedIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
+        providerData.purgedIndex = 100;
+        expect(providerData.purgedIndex).toStrictEqual(100);
     });
 
     it('setter/getter for priority', () => {
@@ -98,6 +124,9 @@ describe('ProviderData tests', () => {
         providerData.reservedAmount = u128.fromU64(100);
         providerData.liquidityProvider = true;
         providerData.liquidityProvided = u128.fromU64(80);
+        providerData.purged = true;
+        providerData.purgedIndex = 100;
+        providerData.listedTokenAtBlock = 101;
         providerData.save();
 
         const providerData2 = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
@@ -108,9 +137,12 @@ describe('ProviderData tests', () => {
         expect(providerData2.pendingRemoval).toBeTruthy();
         expect(providerData2.priority).toBeTruthy();
         expect(providerData2.active).toBeTruthy();
+        expect(providerData2.purged).toBeTruthy();
         expect(providerData2.reservedAmount).toStrictEqual(u128.fromU64(100));
         expect(providerData2.liquidityProvider).toBeTruthy();
         expect(providerData2.liquidityProvided).toStrictEqual(u128.fromU64(80));
+        expect(providerData2.purgedIndex).toStrictEqual(100);
+        expect(providerData2.listedTokenAtBlock).toStrictEqual(101);
     });
 
     it('saves and loads from storage when all flag false', () => {
@@ -126,6 +158,9 @@ describe('ProviderData tests', () => {
         providerData.reservedAmount = u128.fromU64(100);
         providerData.liquidityProvider = false;
         providerData.liquidityProvided = u128.fromU64(80);
+        providerData.purged = false;
+        providerData.purgedIndex = 100;
+        providerData.listedTokenAtBlock = 101;
         providerData.save();
 
         const providerData2 = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
@@ -136,9 +171,12 @@ describe('ProviderData tests', () => {
         expect(providerData2.pendingRemoval).toBeFalsy();
         expect(providerData2.priority).toBeFalsy();
         expect(providerData2.active).toBeFalsy();
+        expect(providerData2.purged).toBeFalsy();
         expect(providerData2.reservedAmount).toStrictEqual(u128.fromU64(100));
         expect(providerData2.liquidityProvider).toBeFalsy();
         expect(providerData2.liquidityProvided).toStrictEqual(u128.fromU64(80));
+        expect(providerData2.purgedIndex).toStrictEqual(100);
+        expect(providerData2.listedTokenAtBlock).toStrictEqual(101);
     });
 
     it('resetListingValues clears listing fields', () => {

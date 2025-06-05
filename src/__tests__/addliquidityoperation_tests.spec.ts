@@ -24,7 +24,11 @@ import { AddLiquidityOperation } from '../operations/AddLiquidityOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
-import { FEE_COLLECT_SCRIPT_PUBKEY, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    FEE_COLLECT_SCRIPT_PUBKEY,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAXIMUM_PROVIDER_PER_RESERVATIONS,
+} from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 
@@ -123,6 +127,7 @@ describe('AddLiquidityOperation tests', () => {
                 u256.Zero,
                 true,
                 0,
+                MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
 
             reserveOp.execute();
@@ -198,6 +203,7 @@ describe('AddLiquidityOperation tests', () => {
                 u256.Zero,
                 true,
                 0,
+                MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
 
             reserveOp.execute();
@@ -272,6 +278,7 @@ describe('AddLiquidityOperation tests', () => {
                 u256.Zero,
                 true,
                 4,
+                MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
 
             reserveOp.execute();
@@ -346,6 +353,7 @@ describe('AddLiquidityOperation tests', () => {
             u256.Zero,
             true,
             0,
+            MAXIMUM_PROVIDER_PER_RESERVATIONS,
         );
 
         reserveOp.execute();
@@ -419,6 +427,7 @@ describe('AddLiquidityOperation tests', () => {
             u256.Zero,
             true,
             0,
+            MAXIMUM_PROVIDER_PER_RESERVATIONS,
         );
 
         reserveOp.execute();
@@ -509,6 +518,7 @@ describe('AddLiquidityOperation tests', () => {
             u256.Zero,
             true,
             0,
+            MAXIMUM_PROVIDER_PER_RESERVATIONS,
         );
 
         reserveOp.execute();
@@ -563,6 +573,7 @@ describe('AddLiquidityOperation tests', () => {
             u256.Zero,
             true,
             0,
+            MAXIMUM_PROVIDER_PER_RESERVATIONS,
         );
 
         reserveOp2.execute();
@@ -657,6 +668,7 @@ describe('AddLiquidityOperation tests', () => {
                 u256.Zero,
                 true,
                 0,
+                MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
 
             reserveOp.execute();

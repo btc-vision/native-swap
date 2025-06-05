@@ -88,14 +88,6 @@ export class RemovalProviderQueue extends ProviderQueue {
         return result;
     }
 
-    private ensureOwedSatoshisAboveMinimum(owedSatoshis: u64, providerId: u256): void {
-        if (owedSatoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
-            throw new Revert(
-                `Impossible state: Provider should have been removed from removal queue. ProviderId: ${providerId}`,
-            );
-        }
-    }
-
     private ensureReservedSatoshisIsValid(
         reservedSatoshis: u64,
         owedSatoshis: u64,
@@ -120,8 +112,10 @@ export class RemovalProviderQueue extends ProviderQueue {
         if (left !== 0 && left >= STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
             provider.markFromRemovalQueue();
             result = provider;
-        } else {
-            this.ensureOwedSatoshisAboveMinimum(owedSatoshis, providerId);
+        } else if (reservedSatoshis === 0) {
+            throw new Revert(
+                `Impossible state: Provider should have been removed from removal queue. ProviderId: ${providerId}`,
+            );
         }
 
         return result;

@@ -14,7 +14,7 @@ import {
     tokenAddress1,
 } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
+import { BLOCK_NOT_SET_VALUE, INDEX_NOT_SET_VALUE } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 
 describe('Provider tests', () => {
@@ -335,6 +335,58 @@ describe('Provider tests', () => {
             expect(provider.isInitialLiquidityProvider()).toBeTruthy();
             provider.clearInitialLiquidityProvider();
             expect(provider.isInitialLiquidityProvider()).toBeFalsy();
+        });
+    });
+
+    describe('Provider – listedTokenAtBlock', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
+
+        it('get/set listed token at block', () => {
+            const provider: Provider = new Provider(u256.fromU64(42));
+
+            expect(provider.getListedTokenAtBlock()).toStrictEqual(BLOCK_NOT_SET_VALUE);
+            provider.setListedTokenAtBlock(999);
+            expect(provider.getListedTokenAtBlock()).toStrictEqual(999);
+        });
+    });
+
+    describe('Provider – purged index', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
+
+        it('get/set purged index', () => {
+            const provider: Provider = new Provider(u256.fromU64(42));
+
+            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+            provider.setPurgedIndex(888);
+            expect(provider.getPurgedIndex()).toStrictEqual(888);
+        });
+    });
+
+    describe('Provider – purged flag', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
+
+        it('mark/clear purged flag', () => {
+            const provider: Provider = new Provider(u256.fromU64(42));
+
+            provider.markPurged();
+            expect(provider.isPurged()).toBeTruthy();
+            provider.clearPurged();
+            expect(provider.isPurged()).toBeFalsy();
         });
     });
 

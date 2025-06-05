@@ -34,6 +34,7 @@ import { ReservationManager } from '../managers/ReservationManager';
 import { DynamicFee } from '../managers/DynamicFee';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
+import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
 
 export const testStackingContractAddress: Address = new Address([
     99, 103, 209, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
@@ -434,8 +435,26 @@ export interface ITestProviderManager extends IProviderManager {
     readonly cleanUpQueuesCalled: boolean;
     readonly getNextProviderWithLiquidityCalled: boolean;
     readonly resetProviderCalled: boolean;
+    readonly getRemovalQueue: StoredU256Array;
+    readonly getPriorityQueue: StoredU256Array;
+    readonly getNormalQueue: StoredU256Array;
+    readonly priorityPurgedQueueLength: u32;
+    readonly normalPurgedQueueLength: u32;
+    readonly removalPurgedQueueLength: u32;
 
     removeFromRemovalQueue(provider: Provider): void;
+
+    clearMockedResults(): void;
+
+    cleanUpQueues(): void;
+
+    getNextProviderWithLiquidity(currentQuote: u256): Provider | null;
+
+    resetProvider(
+        provider: Provider,
+        burnRemainingFunds: boolean = true,
+        canceled: boolean = false,
+    ): void;
 }
 
 export interface ITestReservationManager extends IReservationManager {
@@ -761,5 +780,54 @@ export class TestReservationManager extends ReservationManager implements ITestR
         } else {
             return super.pushToActiveList(blockNumber);
         }
+    }
+}
+
+export class TestReserveLiquidityOperation extends ReserveLiquidityOperation {
+    private mockedLimitByAvailableLiquidity: u256 = u256.Zero;
+    private isLimitByAvailableLiquidityMocked: boolean = false;
+
+    public setRemainingTokens(value: u256): void {
+        this.remainingTokens = value;
+    }
+
+    public setCurrentQuote(quote: u256): void {
+        this.currentQuote = quote;
+    }
+
+    public getReservedProviderCount(): u8 {
+        return this.reservedProviderCount;
+    }
+
+    public callReserveFromRemovalProvider(
+        reservation: Reservation,
+        provider: Provider,
+        remainingSatoshis: u64,
+        quote: u256,
+    ): void {
+        this.currentQuote = quote;
+        super.reserveFromRemovalProvider(reservation, provider, remainingSatoshis);
+    }
+
+    public callReserveFromProvider(
+        reservation: Reservation,
+        provider: Provider,
+        quote: u256,
+    ): void {
+        this.currentQuote = quote;
+        super.reserveFromProvider(reservation, provider);
+    }
+
+    public mockLimitByAvailableLiquidity(tokensToReturn: u256): void {
+        this.isLimitByAvailableLiquidityMocked = true;
+        this.mockedLimitByAvailableLiquidity = tokensToReturn;
+    }
+
+    protected override limitByAvailableLiquidity(tokens: u256): u256 {
+        if (this.isLimitByAvailableLiquidityMocked) {
+            return this.mockedLimitByAvailableLiquidity;
+        }
+
+        return super.limitByAvailableLiquidity(tokens);
     }
 }

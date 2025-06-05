@@ -256,10 +256,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
     }
 
-    public isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean {
-        return this.reservationManager.isReservationActiveAtIndex(blockNumber, index);
-    }
-
     public getSatoshisOwed(providerId: u256): u64 {
         return this.owedBTCManager.getSatoshisOwed(providerId);
     }
@@ -273,6 +269,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         const totalScaled = SafeMath.mul(this.liquidity, QUOTE_SCALE);
         const reservedScaled = SafeMath.mul(this.reservedLiquidity, QUOTE_SCALE);
         const capScaled = SafeMath.div(SafeMath.mul(totalScaled, maxPercentage), u256.fromU32(100));
+
         let availableScaled = u256.Zero;
 
         if (reservedScaled < capScaled) {
@@ -373,6 +370,10 @@ export class LiquidityQueue implements ILiquidityQueue {
             floorPrice,
         );
         this.maxReserves5BlockPercent = maxReserves5BlockPercent;
+    }
+
+    public isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean {
+        return this.reservationManager.isReservationActiveAtIndex(blockNumber, index);
     }
 
     public purgeReservationsAndRestoreProviders(): void {

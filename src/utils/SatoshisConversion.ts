@@ -38,7 +38,6 @@ export function satoshisToTokens128(
         SafeMath.mul(u256.fromU64(satoshis), scaledPrice),
         QUOTE_SCALE,
     );
-
     const result: CappedTokensResult = new CappedTokensResult();
 
     if (u256.gt(tokens, u128.Max.toU256())) {

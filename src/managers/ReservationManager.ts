@@ -82,7 +82,7 @@ export class ReservationManager implements IReservationManager {
     public getReservationIdAtIndex(blockNumber: u64, index: u32): u128 {
         const reservationList: StoredU128Array = this.getReservationListForBlock(blockNumber);
 
-        return reservationList.get(index);
+        return reservationList.get(index); //!!! no check if index >= length???
     }
 
     public getReservationWithExpirationChecks(owner: Address): Reservation {
@@ -247,7 +247,6 @@ export class ReservationManager implements IReservationManager {
 
                 const freed: u256 = this.restoreReservation(reservation);
                 totalFreed = SafeMath.add(totalFreed, freed);
-
                 totalProvidersPurged += reservation.getProviderCount();
 
                 actives.set(index, false);
@@ -260,8 +259,6 @@ export class ReservationManager implements IReservationManager {
 
         const finished = index >= reservationsLength;
         if (finished) {
-            reservations.reset();
-            actives.reset();
             this.writePurgeCursor(blockNumber, 0);
         } else {
             this.writePurgeCursor(blockNumber, index);

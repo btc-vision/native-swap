@@ -42,7 +42,10 @@ export class RemovalPurgedProviderQueue extends PurgedProviderQueue {
         const provider = getProvider(providerId);
         this.ensureProviderPurged(provider);
 
-        provider.setPurgedIndex(this.queue.previousOffset);
+        if (provider.getPurgedIndex() !== this.queue.previousOffset) {
+            throw new Revert('provider.getPurgedIndex() !== this.queue.previousOffset');
+        }
+        
         provider.markFromRemovalQueue();
 
         return provider;

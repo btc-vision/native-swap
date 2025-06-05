@@ -19,7 +19,6 @@ import {
     INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAX_ACTIVATION_DELAY,
-    MAXIMUM_PROVIDER_PER_RESERVATIONS,
     MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
     MINIMUM_TRADE_SIZE_IN_SAT,
     RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
@@ -29,17 +28,18 @@ import { Provider } from '../models/Provider';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 
 export class ReserveLiquidityOperation extends BaseOperation {
+    protected currentQuote: u256 = u256.Zero;
+    protected remainingTokens: u256 = u256.Zero;
+    protected reservedProviderCount: u8 = 0;
     private readonly buyer: Address;
     private readonly maximumAmountInSats: u64;
     private readonly minimumAmountOutTokens: u256;
     private readonly providerId: u256;
     private readonly forLP: boolean;
     private readonly activationDelay: u8;
-    private remainingTokens: u256 = u256.Zero;
     private reservedTokens: u256 = u256.Zero;
     private satoshisSpent: u64 = 0;
-    private currentQuote: u256 = u256.Zero;
-    private reservedProviderCount: u8 = 0;
+    private readonly maximumProvidersPerReservation: u8;
 
     constructor(
         liquidityQueue: ILiquidityQueue,
@@ -49,6 +49,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         minimumAmountOutTokens: u256,
         forLP: boolean,
         activationDelay: u8,
+        maximumProvidersPerReservation: u8,
     ) {
         super(liquidityQueue);
 
@@ -58,6 +59,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.minimumAmountOutTokens = minimumAmountOutTokens;
         this.forLP = forLP;
         this.activationDelay = activationDelay;
+        this.maximumProvidersPerReservation = maximumProvidersPerReservation;
     }
 
     public execute(): void {
@@ -74,6 +76,80 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.liquidityQueue.addReservation(reservation);
         this.liquidityQueue.setBlockQuote();
         this.emitReservationCreatedEvent();
+    }
+
+    protected reserveFromRemovalProvider(
+        reservation: Reservation,
+        provider: Provider,
+        remainingSatoshis: u64,
+    ): void {
+        let targetSatoshisToReserve: u64;
+        let targetTokensToReserve: u128;
+        const owed: u64 = this.liquidityQueue.getSatoshisOwedLeft(provider.getId());
+
+        if (remainingSatoshis > owed) {
+            const conversionResult: CappedTokensResult = satoshisToTokens128(
+                owed,
+                this.currentQuote,
+            );
+
+            targetSatoshisToReserve = conversionResult.satoshis;
+            targetTokensToReserve = conversionResult.tokens;
+        } else {
+            const conversionResult: CappedTokensResult = capTokensU256ToU128(
+                this.remainingTokens,
+                remainingSatoshis,
+                this.currentQuote,
+            );
+
+            targetSatoshisToReserve = conversionResult.satoshis;
+            targetTokensToReserve = conversionResult.tokens;
+        }
+
+        if (!targetTokensToReserve.isZero()) {
+            this.applyRemovalReservation(
+                provider,
+                reservation,
+                targetTokensToReserve,
+                targetSatoshisToReserve,
+            );
+
+            this.handleRemovalProviderPurgeQueues(provider);
+            this.reservedProviderCount++;
+        }
+    }
+
+    protected reserveFromProvider(reservation: Reservation, provider: Provider): void {
+        const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
+        const tokensToAttempt: u128 = this.computeTokensToReserve(availableLiquidity);
+
+        const satoshis: u64 = this.computeSatoshisWithMinimumCheck(
+            tokensToAttempt,
+            availableLiquidity,
+        );
+
+        // It is possible to lose 1 token due to round down.
+        const finalTokensToReserve: CappedTokensResult = satoshisToTokens128(
+            satoshis,
+            this.currentQuote,
+        );
+
+        if (!finalTokensToReserve.tokens.isZero()) {
+            this.applyReservation(
+                reservation,
+                provider,
+                finalTokensToReserve.tokens,
+                finalTokensToReserve.satoshis,
+            );
+
+            this.handleProviderPurgeQueues(provider);
+
+            this.reservedProviderCount++;
+        }
+    }
+
+    protected limitByAvailableLiquidity(tokens: u256): u256 {
+        return SafeMath.min(this.liquidityQueue.availableLiquidity, tokens);
     }
 
     private applyRemovalReservation(
@@ -139,8 +215,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
     private createReservation(): Reservation {
         const reservation: Reservation = new Reservation(this.liquidityQueue.token, this.buyer);
         this.ensureUserNotTimedOut(reservation);
-        this.ensureReservationNotValid(reservation);
         this.ensureReservationPurged(reservation);
+        this.ensureNoActiveReservation(reservation);
 
         reservation.setActivationDelay(this.activationDelay);
 
@@ -314,7 +390,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         }
     }
 
-    private ensureReservationNotValid(reservation: Reservation): void {
+    private ensureNoActiveReservation(reservation: Reservation): void {
         if (reservation.isExpired()) {
             if (reservation.isDirty()) {
                 reservation.delete(false); // Ensure this is always before a timeout check.
@@ -421,17 +497,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.ensureCurrentQuoteValid();
     }
 
-    private handleProviderPurgeQueues(provider: Provider): void {
-        if (provider.isPurged()) {
-            const hasEnoughLiquidityLeft: boolean =
-                this.liquidityQueue.hasEnoughLiquidityLeftProvider(provider, this.currentQuote);
-
-            if (!hasEnoughLiquidityLeft) {
-                this.liquidityQueue.removeFromPurgeQueue(provider);
-            }
-        }
-    }
-
+    //!!! the provider always have owed > minimum as getNextWith... always return a provider > minimum
+    // !!!!Should check available btc instead here
     private handleRemovalProviderPurgeQueues(provider: Provider): void {
         if (provider.isPurged()) {
             const owed: u64 = this.liquidityQueue.getSatoshisOwed(provider.getId());
@@ -440,6 +507,17 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
             if (!hasEnoughLiquidityLeft) {
                 this.liquidityQueue.removeFromRemovalPurgeQueue(provider);
+            }
+        }
+    }
+
+    private handleProviderPurgeQueues(provider: Provider): void {
+        if (provider.isPurged()) {
+            const hasEnoughLiquidityLeft: boolean =
+                this.liquidityQueue.hasEnoughLiquidityLeftProvider(provider, this.currentQuote);
+
+            if (!hasEnoughLiquidityLeft) {
+                this.liquidityQueue.removeFromPurgeQueue(provider);
             }
         }
     }
@@ -456,10 +534,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
         return satoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT;
     }
 
-    private limitByAvailableLiquidity(tokens: u256): u256 {
-        return SafeMath.min(this.liquidityQueue.availableLiquidity, tokens);
-    }
-
     private limitByReservationCap(tokens: u256): u256 {
         return SafeMath.min(tokens, this.liquidityQueue.getMaximumTokensLeftBeforeCap());
     }
@@ -473,7 +547,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 this.remainingTokens,
                 this.currentQuote,
             );
-
             if (this.isSmallerThanMinimumReservationAmount(remainingSatoshis)) {
                 break;
             }
@@ -504,88 +577,18 @@ export class ReserveLiquidityOperation extends BaseOperation {
             this.ensureStatesAreValid(provider);
 
             if (provider.isPendingRemoval()) {
+                console.log('ispending');
                 this.reserveFromRemovalProvider(reservation, provider, remainingSatoshis);
             } else {
+                console.log('prov');
                 this.reserveFromProvider(reservation, provider);
             }
 
-            if (this.reservedProviderCount === MAXIMUM_PROVIDER_PER_RESERVATIONS) {
+            if (this.reservedProviderCount === this.maximumProvidersPerReservation) {
                 break;
             }
         }
 
         reservation.save();
-    }
-
-    private reserveFromProvider(reservation: Reservation, provider: Provider): void {
-        const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
-        const tokensToAttempt: u128 = this.computeTokensToReserve(availableLiquidity);
-        const satoshis: u64 = this.computeSatoshisWithMinimumCheck(
-            tokensToAttempt,
-            availableLiquidity,
-        );
-
-        const finalTokensToReserve: CappedTokensResult = satoshisToTokens128(
-            satoshis,
-            this.currentQuote,
-        );
-
-        if (!finalTokensToReserve.tokens.isZero()) {
-            this.applyReservation(
-                reservation,
-                provider,
-                finalTokensToReserve.tokens,
-                finalTokensToReserve.satoshis,
-            );
-
-            this.handleProviderPurgeQueues(provider);
-
-            this.reservedProviderCount++;
-        }
-    }
-
-    private reserveFromRemovalProvider(
-        reservation: Reservation,
-        provider: Provider,
-        remainingSatoshis: u64,
-    ): void {
-        let targetSatoshisToReserve: u64;
-        let targetTokensToReserve: u128;
-        const owed: u64 = this.liquidityQueue.getSatoshisOwedLeft(provider.getId());
-
-        if (this.isSmallerThanMinimumReservationAmount(owed)) {
-            throw new Revert(`Impossible state: provider should have been removed from queue.`);
-        }
-
-        if (remainingSatoshis > owed) {
-            const conversionResult: CappedTokensResult = satoshisToTokens128(
-                owed,
-                this.currentQuote,
-            );
-
-            targetSatoshisToReserve = conversionResult.satoshis;
-            targetTokensToReserve = conversionResult.tokens;
-        } else {
-            const conversionResult: CappedTokensResult = capTokensU256ToU128(
-                this.remainingTokens,
-                remainingSatoshis,
-                this.currentQuote,
-            );
-
-            targetSatoshisToReserve = conversionResult.satoshis;
-            targetTokensToReserve = conversionResult.tokens;
-        }
-
-        if (!targetTokensToReserve.isZero()) {
-            this.applyRemovalReservation(
-                provider,
-                reservation,
-                targetTokensToReserve,
-                targetSatoshisToReserve,
-            );
-
-            this.handleRemovalProviderPurgeQueues(provider);
-            this.reservedProviderCount++;
-        }
     }
 }

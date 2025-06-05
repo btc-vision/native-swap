@@ -55,6 +55,8 @@ export class PurgedProviderQueue {
     }
 
     public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
+        // !!!! What if we don't use all the liquidity for the reservation
+        // provider will never be picked up again
         const providerIndex: u32 = this.queue.next();
 
         this.ensureProviderQueueIndexIsValid(providerIndex);

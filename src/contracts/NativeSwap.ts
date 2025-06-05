@@ -37,6 +37,7 @@ import {
     ALLOW_DIRTY,
     AT_LEAST_PROVIDERS_TO_PURGE,
     ENABLE_INDEX_VERIFICATION,
+    MAXIMUM_PROVIDER_PER_RESERVATIONS,
     QUOTE_SCALE,
 } from '../constants/Contract';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
@@ -440,6 +441,7 @@ export class NativeSwap extends ReentrancyGuard {
             minimumAmountOut,
             forLP,
             activationDelay,
+            MAXIMUM_PROVIDER_PER_RESERVATIONS,
         );
 
         operation.execute();
