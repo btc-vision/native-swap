@@ -82,7 +82,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private static get DEPLOYER_SELECTOR(): Selector {
-        return encodeSelector('deployer');
+        return encodeSelector('deployer()');
     }
 
     private static get APPROVE_FROM_SELECTOR(): Selector {
@@ -145,14 +145,21 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getQuote(calldata);
             case encodeSelector('getProviderDetails(address)'):
                 return this.getProviderDetails(calldata);
-            case encodeSelector('getPriorityQueueCost'):
+            case encodeSelector('getPriorityQueueCost()'):
                 return this.getPriorityQueueCost();
-            case encodeSelector('getFees'):
+            case encodeSelector('getFees()'):
                 return this.getFees();
             case encodeSelector('getAntibotSettings(address)'):
                 return this.getAntibotSettings(calldata);
-            case encodeSelector('getStakingContractAddress'):
+            case encodeSelector('getStakingContractAddress()'):
                 return this.getStakingContractAddress(calldata);
+            /*case encodeSelector('getLastPurgedBlock(address)'):
+                return this.getLastPurgedBlock(calldata);
+            case encodeSelector('getBlocksWithReservationsLength(address)'):
+                return this.getBlocksWithReservationsLength(calldata);
+            case encodeSelector('purgeReservationsAndRestoreProviders(address)'):
+                return this.purgeReservationsAndRestoreProviders(calldata);
+            */
             default:
                 return super.execute(method, calldata);
         }
@@ -533,6 +540,63 @@ export class NativeSwap extends ReentrancyGuard {
         result.writeU256(liquidityQueueResult.liquidityQueue.reservedLiquidity);
         result.writeU64(liquidityQueueResult.liquidityQueue.virtualSatoshisReserve);
         result.writeU256(liquidityQueueResult.liquidityQueue.virtualTokenReserve);
+
+        return result;
+    }
+
+    private getLastPurgedBlock(calldata: Calldata): BytesWriter {
+        const token: Address = calldata.readAddress();
+        this.ensureValidTokenAddress(token);
+
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            this.addressToPointer(token),
+            false,
+        );
+
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
+        const writer = new BytesWriter(U64_BYTE_LENGTH);
+        writer.writeU64(liquidityQueueResult.liquidityQueue.lastPurgedBlock);
+
+        return writer;
+    }
+
+    private getBlocksWithReservationsLength(calldata: Calldata): BytesWriter {
+        const token: Address = calldata.readAddress();
+        this.ensureValidTokenAddress(token);
+
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            this.addressToPointer(token),
+            false,
+        );
+
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
+        const writer = new BytesWriter(U32_BYTE_LENGTH);
+        writer.writeU32(<u32>liquidityQueueResult.liquidityQueue.blockWithReservationsLength());
+
+        return writer;
+    }
+
+    private purgeReservationsAndRestoreProviders(calldata: Calldata): BytesWriter {
+        const token: Address = calldata.readAddress();
+        this.ensureValidTokenAddress(token);
+
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            this.addressToPointer(token),
+            true,
+            true,
+        );
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
+        // Save the updated queue
+        liquidityQueueResult.liquidityQueue.save();
+
+        const result = new BytesWriter(1);
+        result.writeBoolean(true);
 
         return result;
     }

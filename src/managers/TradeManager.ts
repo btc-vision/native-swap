@@ -61,7 +61,7 @@ export class TradeManager implements ITradeManager {
         this.ensureReservationIsValid(reservation);
         this.ensurePurgeIndexIsValid(reservation.getPurgeIndex());
         this.getValidBlockQuote(reservation.getCreationBlock());
-        this.removeReservationFromActiveList(reservation);
+        this.deactivateReservation(reservation);
         this.resetTotals();
 
         const providerCount: u32 = reservation.getProviderCount();
@@ -325,7 +325,7 @@ export class TradeManager implements ITradeManager {
         }
     }
 
-    private removeReservationFromActiveList(reservation: Reservation): void {
+    private deactivateReservation(reservation: Reservation): void {
         this.reservationManager.deactivateReservation(reservation);
     }
 

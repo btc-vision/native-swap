@@ -32,6 +32,8 @@ export interface ILiquidityQueue {
 
     addToRemovalQueue(provider: Provider): void;
 
+    blockWithReservationsLength(): u64;
+
     buyTokens(tokensOut: u256, satoshisIn: u64): void;
 
     computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256;

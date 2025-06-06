@@ -577,10 +577,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
             this.ensureStatesAreValid(provider);
 
             if (provider.isPendingRemoval()) {
-                console.log('ispending');
                 this.reserveFromRemovalProvider(reservation, provider, remainingSatoshis);
             } else {
-                console.log('prov');
                 this.reserveFromProvider(reservation, provider);
             }
 

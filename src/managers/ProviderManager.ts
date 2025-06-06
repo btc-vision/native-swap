@@ -270,6 +270,7 @@ export class ProviderManager implements IProviderManager {
             this.removalQueue.getNextWithLiquidity(currentQuote);
 
         if (removalProvider !== null) {
+            // WHY NOT REMOVE THIS ONE????
             this.ensureProviderIsNotPurged(removalProvider);
 
             this.previousRemovalStartingIndex =
@@ -284,8 +285,6 @@ export class ProviderManager implements IProviderManager {
             this.priorityQueue.getNextWithLiquidity(currentQuote);
 
         if (priorityProvider !== null) {
-            this.ensureProviderIsNotPurged(priorityProvider);
-
             this.previousPriorityStartingIndex =
                 this.currentIndexPriority === 0
                     ? this.currentIndexPriority
@@ -297,8 +296,6 @@ export class ProviderManager implements IProviderManager {
         const provider: Provider | null = this.normalQueue.getNextWithLiquidity(currentQuote);
 
         if (provider !== null) {
-            this.ensureProviderIsNotPurged(provider);
-
             this.previousNormalStartingIndex =
                 this.currentIndexNormal === 0
                     ? this.currentIndexNormal

@@ -29,6 +29,6 @@ export function slash(amount: u128, delta: u64, delta0: u64, rampUp: u64): u128 
         penaltyBps = GRACE_PENALTY_BPS + incr;
     }
 
-    const num: u128 = SafeMath.mul128(amount.toU128(), u128.fromU64(penaltyBps));
+    const num: u128 = SafeMath.mul128(amount, u128.fromU64(penaltyBps));
     return SafeMath.div128(num, u128.fromU64(BPS_SCALE));
 }

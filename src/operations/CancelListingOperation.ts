@@ -50,7 +50,7 @@ export class CancelListingOperation extends BaseOperation {
         this.ensureProviderIsActive();
         this.ensureNoActiveReservation();
         this.ensureLiquidityNotZero();
-        this.ensureProviderCannotProvideLiquidity();
+        this.ensureProviderNotProvideLiquidity();
         this.ensureNotInitialProvider();
         this.ensureProviderNotPendingRemoval();
     }
@@ -85,7 +85,7 @@ export class CancelListingOperation extends BaseOperation {
         }
     }
 
-    private ensureProviderCannotProvideLiquidity(): void {
+    private ensureProviderNotProvideLiquidity(): void {
         if (this.provider.isLiquidityProvisionAllowed()) {
             throw new Revert(
                 'NATIVE_SWAP: You can no longer cancel this listing. Provider is providing liquidity.',

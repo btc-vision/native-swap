@@ -72,10 +72,15 @@ export class ReservationManager implements IReservationManager {
         reservation.save();
     }
 
+    public blockWithReservationsLength(): u64 {
+        return this.blocksWithReservations.getLength();
+    }
+
     public deactivateReservation(reservation: Reservation): void {
         const reservationActiveList = this.getActiveListForBlock(reservation.getCreationBlock());
 
-        reservationActiveList.delete(reservation.getPurgeIndex());
+        //!!! new test here
+        reservationActiveList.set(reservation.getPurgeIndex(), false);
         reservationActiveList.save();
     }
 
@@ -101,7 +106,7 @@ export class ReservationManager implements IReservationManager {
     public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
         const currentBlockNumber: u64 = Blockchain.block.number;
 
-        if (RESERVATION_EXPIRE_AFTER_IN_BLOCKS > currentBlockNumber) {
+        if (currentBlockNumber <= RESERVATION_EXPIRE_AFTER_IN_BLOCKS) {
             return lastPurgedBlock;
         }
 
@@ -112,46 +117,68 @@ export class ReservationManager implements IReservationManager {
             return lastPurgedBlock;
         }
 
+        if (this.blocksWithReservations.getLength() == 0) {
+            this.providerManager.restoreCurrentIndex();
+            return maxBlockToPurge;
+        }
+
         let freed: u256 = u256.Zero;
         let providersPurged: u32 = 0;
+        let touched = false; // deleted at least one reservation
+        let shifted = false; // dropped at least one whole block
 
         while (
             this.blocksWithReservations.getLength() > 0 &&
             providersPurged < this.atLeastProvidersToPurge
         ) {
-            const blockNumber: u64 = this.blocksWithReservations.get(0);
+            const blk = this.blocksWithReservations.get(0);
 
-            if (blockNumber >= maxBlockToPurge) {
+            // block must be strictly older than the grace window
+            if (blk >= maxBlockToPurge) {
                 break;
             }
 
-            const remaining: u32 = this.atLeastProvidersToPurge - providersPurged;
-            const purgeResult: PurgedResult = this.purgeBlockIncremental(blockNumber, remaining);
+            const budget = this.atLeastProvidersToPurge - providersPurged;
+            const res = this.purgeBlockIncremental(blk, budget);
+            providersPurged += res.providersPurged;
+            freed = SafeMath.add(freed, res.freed);
+            touched = touched || res.providersPurged > 0;
 
-            providersPurged += purgeResult.providersPurged;
-            freed = SafeMath.add(freed, purgeResult.freed);
-
-            if (!purgeResult.finished) {
-                break;
+            if (res.finished) {
+                this.blocksWithReservations.shift();
+                shifted = true;
+                continue;
             }
 
-            this.blocksWithReservations.shift();
+            if (res.providersPurged === 0) {
+                // nothing more to do this round
+                break;
+            }
         }
 
-        this.blocksWithReservations.save();
+        if (shifted || touched) {
+            this.blocksWithReservations.save();
+        }
+
         this.providerManager.cleanUpQueues();
 
-        if (providersPurged > 0) {
+        if (touched) {
             this.liquidityQueueReserve.subFromTotalReserved(freed);
             this.providerManager.resetStartingIndex();
         } else {
             this.providerManager.restoreCurrentIndex();
         }
 
-        const newLastPurgedBlock: u64 =
-            this.blocksWithReservations.getLength() > 0
-                ? this.blocksWithReservations.get(0) - 1
-                : maxBlockToPurge;
+        let newLastPurgedBlock: u64 = lastPurgedBlock;
+
+        if (shifted) {
+            if (this.blocksWithReservations.getLength() == 0) {
+                newLastPurgedBlock = maxBlockToPurge; // queue empty
+            } else {
+                const head = this.blocksWithReservations.get(0); // > maxBlock
+                newLastPurgedBlock = head > 0 ? head - 1 : 0; // under-flow guard
+            }
+        }
 
         return newLastPurgedBlock;
     }
@@ -242,6 +269,9 @@ export class ReservationManager implements IReservationManager {
                 const reservationId: u128 = reservations.get(index);
                 const reservation = Reservation.load(reservationId);
 
+                // !!! TODO: We need to track if a reservation was purged in the reservation itself
+                //  so someone can not reserve again if his reservation was not purged yet.
+
                 this.ensureReservationIsExpired(reservation);
                 this.ensureReservationPurgeIndexMatch(reservation, index);
 
@@ -259,6 +289,18 @@ export class ReservationManager implements IReservationManager {
 
         const finished = index >= reservationsLength;
         if (finished) {
+            //!!!! WHAT ???? idx always < len
+            /*for (let k: u64 = idx; k < len; k++) {
+                if (active.get(k)) {
+                    throw new Revert(
+                        `Impossible state: Purge index ${idx} is not at the end of active list for block ${blockNumber}.`,
+                    );
+                    // found an un-purged reservation
+                    //finished = false;
+                    //break;
+                }
+            }*/
+
             this.writePurgeCursor(blockNumber, 0);
         } else {
             this.writePurgeCursor(blockNumber, index);

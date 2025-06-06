@@ -79,6 +79,7 @@ export class ProviderQueue {
             index++;
         }
 
+        ///!!!! What we do here???? -1 or not see PR
         return index === 0 ? index : index - 1;
     }
 
@@ -177,9 +178,14 @@ export class ProviderQueue {
     }
 
     protected isEligible(provider: Provider): boolean {
-        this.ensureProviderIsNotPriority(provider);
+        const isActive: boolean = provider.isActive();
 
-        return provider.isActive();
+        if (isActive) {
+            this.ensureProviderIsNotPriority(provider);
+            this.ensureProviderLiquidityIsValid(provider);
+        }
+
+        return isActive;
     }
 
     protected tryNextCandidate(currentQuote: u256): Provider | null {
@@ -197,6 +203,14 @@ export class ProviderQueue {
         return result;
     }
 
+    protected ensureProviderLiquidityIsValid(provider: Provider): void {
+        if (u128.lt(provider.getLiquidityAmount(), provider.getReservedAmount())) {
+            throw new Revert(
+                `Impossible state: Provider liquidity < reserved. ProviderId: ${provider.getId()}.`,
+            );
+        }
+    }
+
     private ensureProviderIsNotInitialProvider(provider: Provider): void {
         if (provider.isInitialLiquidityProvider()) {
             throw new Revert(
@@ -209,6 +223,14 @@ export class ProviderQueue {
         if (provider.isPriority()) {
             throw new Revert(
                 `Impossible state: Priority provider cannot be in normal queue. ProviderId: ${provider.getId()}.`,
+            );
+        }
+    }
+
+    private ensureProviderIsNotInPurgeQueue(provider: Provider): void {
+        if (provider.isPurged()) {
+            throw new Revert(
+                `Impossible state: Provider is in purge queue but purge queue is empty. ProviderId: ${provider.getId()} (indexed at ${provider.getQueueIndex()}, purgedAt: ${provider.getPurgedIndex()}).`,
             );
         }
     }
@@ -240,6 +262,8 @@ export class ProviderQueue {
         }
 
         if (Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)) {
+            //!!! Why not check this also in removal????
+            this.ensureProviderIsNotInPurgeQueue(provider);
             provider.clearFromRemovalQueue();
             result = provider;
         } else if (!provider.hasReservedAmount()) {

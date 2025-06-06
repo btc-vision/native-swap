@@ -289,4 +289,10 @@ describe('CompletedTrade tests', () => {
             const liquidity = reserve.availableLiquidity;
         }).toThrow();
     });
+
+    it('should get/set liquidity correctly', () => {
+        const reserve = new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1);
+        reserve.liquidity = u256.fromU64(1000);
+        expect(reserve.liquidity).toStrictEqual(u256.fromU64(1000));
+    });
 });

@@ -211,6 +211,10 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.providerManager.addToRemovalQueue(provider);
     }
 
+    public blockWithReservationsLength(): u64 {
+        return this.reservationManager.blockWithReservationsLength();
+    }
+
     public buyTokens(tokensOut: u256, satoshisIn: u64): void {
         this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
         this.increaseTotalTokensExchangedForSatoshis(tokensOut);
@@ -464,11 +468,17 @@ export class LiquidityQueue implements ILiquidityQueue {
             if (incB > dB_buy) {
                 Bprime = SafeMath.add(B, dB_buy);
                 Tprime = SafeMath.div(SafeMath.mul(B, T), Bprime);
-                if (Tprime < u256.One) Tprime = u256.One;
+
+                if (Tprime < u256.One) {
+                    Tprime = u256.One;
+                }
             } else if (incB < dB_buy) {
                 Bprime = SafeMath.add(B, dB_buy);
                 Tprime = SafeMath.div(SafeMath.mul(B, T), Bprime);
-                if (Tprime < u256.One) Tprime = u256.One;
+
+                if (Tprime < u256.One) {
+                    Tprime = u256.One;
+                }
             }
 
             B = Bprime;
