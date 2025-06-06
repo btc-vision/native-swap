@@ -7,6 +7,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
+import { IMPOSSIBLE_PURGE_INDEX } from './Constants';
 
 @final
 export class UserReservation {
@@ -14,7 +15,7 @@ export class UserReservation {
 
     private expirationBlock: u64 = 0;
     private priorityIndex: u64 = 0;
-    private purgeIndex: u32 = u32.MAX_VALUE;
+    private purgeIndex: u32 = IMPOSSIBLE_PURGE_INDEX;
     private activationDelay: u8 = 0;
 
     private isTimeout: bool = false;

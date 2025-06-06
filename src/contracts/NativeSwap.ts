@@ -11,6 +11,7 @@ import {
     StoredAddress,
     U128_BYTE_LENGTH,
     U256_BYTE_LENGTH,
+    U32_BYTE_LENGTH,
     U64_BYTE_LENGTH,
     ZERO_ADDRESS,
 } from '@btc-vision/btc-runtime/runtime';
@@ -40,8 +41,6 @@ import { QUOTE_SCALE, satoshisToTokens, tokensToSatoshis } from '../utils/Native
 @final
 export class NativeSwap extends ReentrancyGuard {
     private readonly _stakingContractAddress: StoredAddress;
-
-    //private readonly minimumTradeSize: u256 = u256.fromU32(10_000); // The minimum trade size in satoshis.
 
     public constructor() {
         super();
@@ -129,6 +128,12 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getAntibotSettings(calldata);
             case encodeSelector('getStakingContractAddress()'):
                 return this.getStakingContractAddress(calldata);
+            /*case encodeSelector('getLastPurgedBlock(address)'):
+                return this.getLastPurgedBlock(calldata);
+            case encodeSelector('getBlocksWithReservationsLength(address)'):
+                return this.getBlocksWithReservationsLength(calldata);
+            case encodeSelector('purgeReservationsAndRestoreProviders(address)'):
+                return this.purgeReservationsAndRestoreProviders(calldata);*/
             default:
                 return super.execute(method, calldata);
         }
@@ -189,7 +194,7 @@ export class NativeSwap extends ReentrancyGuard {
         const provider = getProvider(providerId);
 
         const writer = new BytesWriter(
-            U128_BYTE_LENGTH * 2 + (2 + provider.btcReceiver.length) + 32,
+            U128_BYTE_LENGTH * 2 + (U32_BYTE_LENGTH + provider.btcReceiver.length) + 32,
         );
         writer.writeU128(provider.liquidity);
         writer.writeU128(provider.reserved);
@@ -373,7 +378,7 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureValidTokenAddress(token);
 
         const providerId = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true);
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
 
         this.ensurePoolExistsForToken(queue);
 
@@ -447,6 +452,48 @@ export class NativeSwap extends ReentrancyGuard {
         const token: Address = calldata.readAddress();
 
         return this._getReserve(token);
+    }
+
+    private getLastPurgedBlock(calldata: Calldata): BytesWriter {
+        const token: Address = calldata.readAddress();
+        this.ensureValidTokenAddress(token);
+
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
+        this.ensurePoolExistsForToken(queue);
+
+        const writer = new BytesWriter(U64_BYTE_LENGTH);
+        writer.writeU64(queue.lastPurgedBlock);
+
+        return writer;
+    }
+
+    private getBlocksWithReservationsLength(calldata: Calldata): BytesWriter {
+        const token: Address = calldata.readAddress();
+        this.ensureValidTokenAddress(token);
+
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), false);
+        this.ensurePoolExistsForToken(queue);
+
+        const writer = new BytesWriter(U32_BYTE_LENGTH);
+        writer.writeU32(<u32>queue.blockWithReservationsLength());
+
+        return writer;
+    }
+
+    private purgeReservationsAndRestoreProviders(calldata: Calldata): BytesWriter {
+        const token: Address = calldata.readAddress();
+        this.ensureValidTokenAddress(token);
+
+        const queue = this.getLiquidityQueue(token, this.addressToPointer(token), true, true);
+        this.ensurePoolExistsForToken(queue);
+
+        // Save the updated queue
+        queue.save();
+
+        const result = new BytesWriter(1);
+        result.writeBoolean(true);
+
+        return result;
     }
 
     private _getReserve(token: Address): BytesWriter {
