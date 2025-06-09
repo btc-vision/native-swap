@@ -236,16 +236,14 @@ describe('Reservation tests', () => {
 
         it('throws if not valid', () => {
             expect(() => {
+                setBlockchainEnvironment(999);
                 const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-                reservation.addProvider(
-                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
-                );
+
+                reservation.setCreationBlock(999);
 
                 setBlockchainEnvironment(1000);
 
                 const reservation1 = new Reservation(tokenAddress2, providerAddress2);
-                reservation1.setActivationDelay(3);
-                reservation.setCreationBlock(Blockchain.block.number);
 
                 reservation.ensureCanBeConsumed();
             }).toThrow();
@@ -401,6 +399,20 @@ describe('Reservation tests', () => {
             reservation.setActivationDelay(1);
 
             expect(reservation.getActivationDelay()).toStrictEqual(1);
+        });
+
+        it('should return true if reservation is dirty', () => {
+            setBlockchainEnvironment(1000);
+
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+            expect(reservation.isDirty()).toBeFalsy();
+
+            reservation.addProvider(
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
+            );
+
+            expect(reservation.isDirty()).toBeTruthy();
         });
     });
 

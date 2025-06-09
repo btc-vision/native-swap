@@ -24,7 +24,7 @@ import { IProviderManager } from './interfaces/IProviderManager';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 
-class PurgedResult {
+export class PurgedResult {
     constructor(
         public readonly freed: u256,
         public readonly providersPurged: u32,
@@ -35,11 +35,11 @@ class PurgedResult {
 export class ReservationManager implements IReservationManager {
     protected readonly blocksWithReservations: StoredU64Array;
     protected readonly tokenIdUint8Array: Uint8Array;
+    protected atLeastProvidersToPurge: u32;
+    protected allowDirty: boolean;
     private readonly token: Address;
     private readonly providerManager: IProviderManager;
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
-    private readonly atLeastProvidersToPurge: u32;
-    private readonly allowDirty: boolean;
 
     constructor(
         token: Address,
@@ -78,8 +78,6 @@ export class ReservationManager implements IReservationManager {
 
     public deactivateReservation(reservation: Reservation): void {
         const reservationActiveList = this.getActiveListForBlock(reservation.getCreationBlock());
-
-        //!!! new test here
         reservationActiveList.set(reservation.getPurgeIndex(), false);
         reservationActiveList.save();
     }
@@ -117,7 +115,7 @@ export class ReservationManager implements IReservationManager {
             return lastPurgedBlock;
         }
 
-        if (this.blocksWithReservations.getLength() == 0) {
+        if (this.blocksWithReservations.getLength() === 0) {
             this.providerManager.restoreCurrentIndex();
             return maxBlockToPurge;
         }
@@ -138,8 +136,9 @@ export class ReservationManager implements IReservationManager {
                 break;
             }
 
-            const budget = this.atLeastProvidersToPurge - providersPurged;
-            const res = this.purgeBlockIncremental(blk, budget);
+            const budget: u32 = this.atLeastProvidersToPurge - providersPurged;
+            const res: PurgedResult = this.purgeBlockIncremental(blk, budget);
+
             providersPurged += res.providersPurged;
             freed = SafeMath.add(freed, res.freed);
             touched = touched || res.providersPurged > 0;

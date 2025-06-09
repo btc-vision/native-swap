@@ -521,6 +521,7 @@ export class ProviderManager implements IProviderManager {
                 this.resetProvider(provider, false, false);
             }
         } else if (!provider.isPurged()) {
+            //!!! We also put initial provider to purge queue????
             if (provider.getProviderType() === ProviderTypes.Normal) {
                 this.addToNormalPurgedQueue(provider);
             } else {

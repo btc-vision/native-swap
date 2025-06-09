@@ -175,7 +175,10 @@ export class Reservation {
         this.reservationData.timeout = true;
     }
 
+    /* !!! remove if not needed
     public toString(): string {
         return `Reservation ${this.getId().toString()} (getExpirationBlock: ${this.getExpirationBlock()} - block: ${Blockchain.block.number} - index length: ${this.reservedIndexes.getLength()})`;
     }
+
+     */
 }

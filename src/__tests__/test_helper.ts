@@ -469,6 +469,10 @@ export interface ITestReservationManager extends IReservationManager {
     callgetReservationListForBlock(blockNumber: u64): StoredU128Array;
 
     callgetActiveListForBlock(blockNumber: u64): StoredBooleanArray;
+
+    setAtLeastProvidersToPurge(value: u32): void;
+
+    setAllowDirty(value: boolean): void;
 }
 
 export interface ITestLiquidityQueue extends ILiquidityQueue {
@@ -520,9 +524,7 @@ export function createLiquidityQueue(
         token,
         tokenId,
         providerManager,
-        quoteManager,
         liquidityQueueReserve,
-        owedBtcManager,
     );
     const dynamicFee: IDynamicFee = getDynamicFee(tokenId);
 
@@ -591,9 +593,7 @@ export function getReservationManager(
     token: Address,
     tokenId: Uint8Array,
     providerManager: IProviderManager,
-    quoteManager: IQuoteManager,
     liquidityQueueReserve: ILiquidityQueueReserve,
-    owedBTCManager: IOwedBTCManager,
 ): ITestReservationManager {
     return new TestReservationManager(
         token,
@@ -762,6 +762,14 @@ export class TestReservationManager extends ReservationManager implements ITestR
         }
 
         return u64.MAX_VALUE;
+    }
+
+    public setAtLeastProvidersToPurge(value: u32): void {
+        this.atLeastProvidersToPurge = value;
+    }
+
+    public setAllowDirty(value: boolean): void {
+        this.allowDirty = value;
     }
 
     protected override pushToReservationList(blockNumber: u64, reservationId: u128): u32 {

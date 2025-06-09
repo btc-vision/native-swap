@@ -525,9 +525,27 @@ describe('Liquidity queue tests', () => {
             const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
             expect(queue2.timeOutEnabled).toBeTruthy();
         });
+
+        it('should get the length of the block with reservation queue', () => {
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+
+            expect(queue.blockWithReservationsLength()).toStrictEqual(0);
+        });
     });
 
     describe('Math operations', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
+
         it('should correctly increase total reserved value', () => {
             setBlockchainEnvironment(1);
             const createQueueResult = createLiquidityQueue(
@@ -953,7 +971,43 @@ describe('Liquidity queue tests', () => {
         });
     });
 
+    describe('Penalty', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
+
+        it('should increase token reserve with penalty', () => {
+            setBlockchainEnvironment(1);
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+            queue.decreaseTotalReserved(queue.liquidity);
+            queue.decreaseVirtualTokenReserve(queue.virtualTokenReserve);
+
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
+            expect(queue.liquidity).toStrictEqual(u256.Zero);
+
+            queue.accruePenalty(u128.fromU64(10000));
+
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000));
+            expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
+        });
+    });
+
     describe('Fees', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
+
         it('should correctly compute the fees', () => {
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,

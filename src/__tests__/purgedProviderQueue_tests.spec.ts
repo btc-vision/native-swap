@@ -20,12 +20,15 @@ import { ProviderQueue } from '../managers/ProviderQueue';
 
 const QUOTE = u256.fromU64(100000000);
 
-function createNormalPurgedQueue(allowDirty: boolean = ALLOW_DIRTY): PurgedProviderQueue {
+function createNormalPurgedQueue(
+    allowDirty: boolean = ALLOW_DIRTY,
+    enableIndexVerification: boolean = ENABLE_INDEX_VERIFICATION,
+): PurgedProviderQueue {
     const queue: PurgedProviderQueue = new PurgedProviderQueue(
         tokenAddress1,
         NORMAL_QUEUE_PURGED_RESERVATION,
         tokenIdUint8Array1,
-        ENABLE_INDEX_VERIFICATION,
+        enableIndexVerification,
         allowDirty,
     );
 
@@ -203,6 +206,57 @@ describe('PurgedProviderQueue tests', () => {
             }
         });
 
+        it('should revert when purge index and previous offset does not match', () => {
+            expect(() => {
+                const queue: ProviderQueue = createNormalQueue();
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+
+                const providers = createProviders(10);
+                for (let i = 0; i < providers.length; i++) {
+                    queue.add(providers[i]);
+                    purgedQueue.add(providers[i]);
+                }
+
+                providers[0].setPurgedIndex(100);
+
+                purgedQueue.get(queue, u256.fromU32(10000));
+            }).toThrow();
+        });
+
+        it('should revert when enableIndexVerification and queue index does not match', () => {
+            expect(() => {
+                const queue: ProviderQueue = createNormalQueue();
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+
+                const providers = createProviders(10);
+                for (let i = 0; i < providers.length; i++) {
+                    queue.add(providers[i]);
+                    purgedQueue.add(providers[i]);
+                }
+
+                providers[0].setQueueIndex(100);
+
+                purgedQueue.get(queue, u256.fromU32(10000));
+            }).toThrow();
+        });
+
+        it('should revert if returned provider is initial provider', () => {
+            expect(() => {
+                const queue: ProviderQueue = createNormalQueue();
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+
+                const providers = createProviders(10);
+                for (let i = 0; i < providers.length; i++) {
+                    queue.add(providers[i]);
+                    purgedQueue.add(providers[i]);
+                }
+
+                providers[0].markInitialLiquidityProvider();
+
+                purgedQueue.get(queue, u256.fromU32(10000));
+            }).toThrow();
+        });
+
         it('should return null when available liquidity is 0', () => {
             const queue: ProviderQueue = createNormalQueue();
             const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
@@ -348,21 +402,17 @@ describe('PurgedProviderQueue tests', () => {
         });
 
         it('should properly remove the provider and delete it from the queue if dirty not allowed', () => {
-            /*
-            const queue: PurgedProviderQueue = createNormalPurgedQueue(false);
+            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(false);
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             provider.setQueueIndex(0);
 
-            const index = queue.add(provider);
+            purgedQueue.add(provider);
 
-            queue.remove(provider);
+            purgedQueue.remove(provider);
 
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(provider.isPurged()).toBeFalsy();
-            expect(queue.length).toStrictEqual(0);
-
-            
-             */
+            expect(purgedQueue.length).toStrictEqual(0);
         });
     });
 
