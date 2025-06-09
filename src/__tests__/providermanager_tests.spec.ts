@@ -2040,26 +2040,26 @@ describe('ProviderManager tests', () => {
             expect(provider1).toBe(provider);
         });
 
-        it('should revert with should have  be removed from the removal queue when the provider states are valid but (owedBTC - reservedBTC) < strictMinimumProviderReservationAmount and owedBTC < strictMinimumProviderReservationAmount', () => {
-            expect(() => {
-                const owedBTCManager: OwedBTCManager = new OwedBTCManager();
-                const quoteManager = new QuoteManager(tokenIdUint8Array1);
-                const manager: ProviderManager = new ProviderManager(
-                    tokenAddress1,
-                    tokenIdUint8Array1,
-                    owedBTCManager,
-                    quoteManager,
-                    ENABLE_INDEX_VERIFICATION,
-                );
+        it('should return null and not reset the provider when the provider states are valid but (owedBTC - reservedBTC) < strictMinimumProviderReservationAmount', () => {
+            const owedBTCManager: OwedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+                quoteManager,
+                ENABLE_INDEX_VERIFICATION,
+            );
 
-                const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
-                manager.addToRemovalQueue(provider);
-                owedBTCManager.setSatoshisOwedReserved(provider.getId(), 450);
-                owedBTCManager.setSatoshisOwed(provider.getId(), 550);
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
+            manager.addToRemovalQueue(provider);
+            owedBTCManager.setSatoshisOwedReserved(provider.getId(), 450);
+            owedBTCManager.setSatoshisOwed(provider.getId(), 550);
 
-                const currentQuote = u256.fromU32(1000);
-                manager.getNextProviderWithLiquidity(currentQuote);
-            }).toThrow();
+            const currentQuote = u256.fromU32(1000);
+            const result = manager.getNextProviderWithLiquidity(currentQuote);
+            expect(result).toBeNull();
+            expect(provider.isActive()).toBeTruthy();
         });
 
         it('should revert when startingIndex() > getLength()', () => {

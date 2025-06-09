@@ -13,6 +13,7 @@ import {
     createProviders,
     createReservation,
     ITestLiquidityQueue,
+    ITestProviderManager,
     providerAddress1,
     providerAddress2,
     setBlockchainEnvironment,
@@ -26,7 +27,7 @@ import { Reservation } from '../models/Reservation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
-import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 
 describe('Liquidity queue tests', () => {
@@ -1524,6 +1525,99 @@ describe('Liquidity queue tests', () => {
                 expect(reservation2).not.toBeNull();
             }).toThrow();
         });
+
+        it('should get a reservation id at a given index for a block', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const reservation: Reservation = createReservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(
+                    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+                    u128.fromU32(10000),
+                    ProviderTypes.Normal,
+                    1000,
+                ),
+            );
+            reservation.save();
+            queue.addReservation(reservation);
+            queue.save();
+
+            setBlockchainEnvironment(1001, providerAddress1, providerAddress1);
+            const reservationId: u128 = queue.getReservationIdAtIndex(
+                1000,
+                reservation.getPurgeIndex(),
+            );
+
+            expect(reservationId).toStrictEqual(reservation.getId());
+        });
+
+        it('should get a 0 as reservation id when a reservation does not exists at a given index for a block', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const reservation: Reservation = createReservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(
+                    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+                    u128.fromU32(10000),
+                    ProviderTypes.Normal,
+                    1000,
+                ),
+            );
+            reservation.save();
+            queue.addReservation(reservation);
+            queue.save();
+
+            setBlockchainEnvironment(1001, providerAddress1, providerAddress1);
+            const reservationId: u128 = queue.getReservationIdAtIndex(
+                1001,
+                reservation.getPurgeIndex(),
+            );
+
+            expect(reservationId).toStrictEqual(u128.Zero);
+        });
+
+        it('should get if a reservation is active at a given index for a block', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const reservation: Reservation = createReservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(
+                    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+                    u128.fromU32(10000),
+                    ProviderTypes.Normal,
+                    1000,
+                ),
+            );
+            reservation.save();
+            queue.addReservation(reservation);
+            queue.save();
+
+            setBlockchainEnvironment(1001, providerAddress1, providerAddress1);
+            const isActive = queue.isReservationActiveAtIndex(1000, reservation.getPurgeIndex());
+
+            expect(isActive).toBeTruthy();
+        });
     });
 
     describe('Provider', () => {
@@ -1649,6 +1743,150 @@ describe('Liquidity queue tests', () => {
             queue.resetProvider(provider, true, false);
 
             expect(createQueueResult.providerManager.resetProviderCalled).toBeTruthy();
+        });
+
+        it('should correctly remove from normal queue', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            queue.addToNormalQueue(provider);
+            provider.save();
+            queue.save();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+            queue2.removeFromNormalQueue(provider);
+            queue2.save();
+
+            expect(provider.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+        });
+
+        it('should correctly remove from priority queue', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            provider.markPriority();
+            queue.addToPriorityQueue(provider);
+            queue.save();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+            queue2.removeFromPriorityQueue(provider);
+            queue2.save();
+
+            expect(provider.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+        });
+
+        it('should correctly remove from purged queue', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+            const manager: ITestProviderManager = createQueueResult.providerManager;
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            queue.addToNormalQueue(provider);
+            manager.addToNormalPurgedQueue(provider);
+            provider.save();
+            queue.save();
+
+            expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+            queue2.removeFromPurgeQueue(provider);
+            queue2.save();
+
+            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+        });
+
+        it('should correctly remove from pending removal purged queue', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+            const manager: ITestProviderManager = createQueueResult.providerManager;
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
+            queue.addToRemovalQueue(provider);
+            manager.addToRemovalPurgedQueue(provider);
+            provider.save();
+            queue.save();
+
+            expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+            queue2.removeFromRemovalPurgeQueue(provider);
+            queue2.save();
+
+            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+        });
+
+        it('should return true if provider has enough liquidity left', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            provider.setLiquidityAmount(u128.fromU32(200000));
+            provider.setReservedAmount(u128.fromU32(20000));
+            provider.save();
+            queue.save();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+            const result = queue2.hasEnoughLiquidityLeftProvider(provider, u256.fromU64(666666666));
+
+            expect(result).toBeTruthy();
         });
     });
 

@@ -24,6 +24,7 @@ import {
 import { IOwedBTCManager } from '../managers/interfaces/IOwedBTCManager';
 import { OwedBTCManager } from '../managers/OwedBTCManager';
 import { ProviderQueue } from '../managers/ProviderQueue';
+import { PurgedProviderQueue } from '../managers/PurgedProviderQueue';
 
 const QUOTE = u256.fromU64(100000000);
 
@@ -224,6 +225,23 @@ describe('RemovalPurgedProviderQueue tests', () => {
                 expect(provider1.getPurgedIndex()).toStrictEqual(0);
                 expect(provider1.isFromRemovalQueue()).toBeTruthy();
             }
+        });
+
+        it('should revert when purge index and previous offset does not match', () => {
+            expect(() => {
+                const queue: ProviderQueue = createRemovalQueue();
+                const purgedQueue: PurgedProviderQueue = createRemovalPurgedQueue(ALLOW_DIRTY);
+
+                const providers = createProviders(10, 0, true);
+                for (let i = 0; i < providers.length; i++) {
+                    queue.add(providers[i]);
+                    purgedQueue.add(providers[i]);
+                }
+
+                providers[0].setPurgedIndex(100);
+
+                purgedQueue.get(queue, u256.fromU32(10000));
+            }).toThrow();
         });
     });
 
