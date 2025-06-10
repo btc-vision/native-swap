@@ -27,7 +27,11 @@ import { Reservation } from '../models/Reservation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
-import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    INDEX_NOT_SET_VALUE,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAX_TOTAL_SATOSHIS,
+} from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 
 describe('Liquidity queue tests', () => {
@@ -1321,6 +1325,26 @@ describe('Liquidity queue tests', () => {
             queue.updateVirtualPoolIfNeeded();
 
             expect(queue.lastVirtualUpdateBlock).toStrictEqual(5);
+        });
+
+        it('should revert when virtualSatoshisReserve > MAX_TOTAL_SATOSHIS', () => {
+            expect(() => {
+                setBlockchainEnvironment(5);
+
+                const createQueueResult = createLiquidityQueue(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    false,
+                );
+                const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+
+                queue.lastVirtualUpdateBlock = 4;
+                queue.virtualSatoshisReserve = MAX_TOTAL_SATOSHIS.toU64() + 1;
+                queue.virtualTokenReserve = u256.fromU32(1);
+                queue.totalTokensExchangedForSatoshis = u256.Zero;
+                queue.totalSatoshisExchangedForTokens = 0;
+                queue.updateVirtualPoolIfNeeded();
+            }).toThrow();
         });
     });
 
