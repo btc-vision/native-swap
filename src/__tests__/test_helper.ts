@@ -452,7 +452,9 @@ export interface ITestProviderManager extends IProviderManager {
 
     resetProvider(
         provider: Provider,
+        // @ts-expect-error valid in assembly script but not in typescript
         burnRemainingFunds: boolean = true,
+        // @ts-expect-error valid in assembly script but not in typescript
         canceled: boolean = false,
     ): void;
 }

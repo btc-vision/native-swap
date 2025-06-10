@@ -118,21 +118,27 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.listLiquidity(calldata);
             case encodeSelector('cancelListing(address)'):
                 return this.cancelListing(calldata);
+            /* Version 1 does not support liquidity provider
             case encodeSelector('addLiquidity(address,string)'):
                 return this.addLiquidity(calldata);
             case encodeSelector('removeLiquidity(address)'):
                 return this.removeLiquidity(calldata);
+
+             */
             case encodeSelector(
                 'createPool(address,uint256,uint128,string,uint16,uint256,uint16)',
             ): {
                 const token: Address = calldata.readAddress();
                 return this.createPool(calldata, token);
             }
+            /* Disable for version 1. Will be reworked later.
             case encodeSelector(
                 'createPoolWithSignature(bytes,uint256,uint256,address,uint256,uint128,string,uint16,uint256,uint16)',
             ): {
                 return this.createPoolWithSignature(calldata);
             }
+
+             */
             case encodeSelector('setFees(uint64,uint64)'):
                 return this.setFees(calldata);
             case encodeSelector('setStakingContractAddress(address)'):

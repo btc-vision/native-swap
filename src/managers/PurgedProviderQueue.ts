@@ -55,8 +55,6 @@ export class PurgedProviderQueue {
     }
 
     public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
-        // !!!! What if we don't use all the liquidity for the reservation
-        // provider will never be picked up again
         const providerIndex: u32 = this.queue.next();
 
         this.ensureProviderQueueIndexIsValid(providerIndex);
@@ -77,11 +75,10 @@ export class PurgedProviderQueue {
     public remove(provider: Provider): void {
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
 
-        // TODO:!!!! Technically, we don't need to remove the provider from the queue because we should theoretically process
-        // TODO: "dirty" states correctly due to wrap around.
-        // NOT USING physical flag when adding???? is this good???
+        // Technically, we don't need to remove the provider from the queue because we should theoretically process
+        // "dirty" states correctly due to wrap around.
         if (!this.allowDirty) {
-            this.queue.delete_physical(provider.getPurgedIndex());
+            this.queue.delete(provider.getPurgedIndex());
         }
 
         this.queue.removeItemFromLength();
@@ -153,7 +150,7 @@ export class PurgedProviderQueue {
         Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, false));
     }
 
-    // TODO:!!! we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
+    // TODO: Potential optimization. we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
     private returnProvider(
         associatedQueue: ProviderQueue,
         provider: Provider,

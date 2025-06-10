@@ -268,9 +268,6 @@ export class ReservationManager implements IReservationManager {
                 const reservationId: u128 = reservations.get(index);
                 const reservation = Reservation.load(reservationId);
 
-                // !!! TODO: We need to track if a reservation was purged in the reservation itself
-                //  so someone can not reserve again if his reservation was not purged yet.
-
                 this.ensureReservationIsExpired(reservation);
                 this.ensureReservationPurgeIndexMatch(reservation, index);
 
@@ -288,18 +285,6 @@ export class ReservationManager implements IReservationManager {
 
         const finished = index >= reservationsLength;
         if (finished) {
-            //!!!! WHAT ???? idx always < len
-            /*for (let k: u64 = idx; k < len; k++) {
-                if (active.get(k)) {
-                    throw new Revert(
-                        `Impossible state: Purge index ${idx} is not at the end of active list for block ${blockNumber}.`,
-                    );
-                    // found an un-purged reservation
-                    //finished = false;
-                    //break;
-                }
-            }*/
-
             this.writePurgeCursor(blockNumber, 0);
         } else {
             this.writePurgeCursor(blockNumber, index);
@@ -338,13 +323,9 @@ export class ReservationManager implements IReservationManager {
             restoredLiquidity = SafeMath.add(restoredLiquidity, data.providedAmount.toU256());
         }
 
-        // TODO!!!!: VERY IMPORTANT: Make sure that removing the delete does not cause critical issues.
-
         if (!this.allowDirty) {
             reservation.delete(true);
         } else {
-            // TODO!!!: Check if we can omit reset and just timeout the user, then, once
-            //  a new reservation is made, if dirty, we reset it before setting the new values.
             reservation.timeoutUser();
             reservation.save();
         }

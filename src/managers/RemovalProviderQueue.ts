@@ -110,6 +110,7 @@ export class RemovalProviderQueue extends ProviderQueue {
         const left = SafeMath.sub64(owedSatoshis, reservedSatoshis);
 
         if (left !== 0 && left >= STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
+            this.ensureProviderIsNotInPurgeQueue(provider);
             provider.markFromRemovalQueue();
             result = provider;
         } else if (reservedSatoshis === 0) {

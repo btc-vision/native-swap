@@ -79,7 +79,6 @@ export class ProviderQueue {
             index++;
         }
 
-        ///!!!! What we do here???? -1 or not see PR
         return index === 0 ? index : index - 1;
     }
 
@@ -211,6 +210,14 @@ export class ProviderQueue {
         }
     }
 
+    protected ensureProviderIsNotInPurgeQueue(provider: Provider): void {
+        if (provider.isPurged()) {
+            throw new Revert(
+                `Impossible state: Provider is in purge queue but purge queue is empty. ProviderId: ${provider.getId()} (indexed at ${provider.getQueueIndex()}, purgedAt: ${provider.getPurgedIndex()}).`,
+            );
+        }
+    }
+
     private ensureProviderIsNotInitialProvider(provider: Provider): void {
         if (provider.isInitialLiquidityProvider()) {
             throw new Revert(
@@ -223,14 +230,6 @@ export class ProviderQueue {
         if (provider.isPriority()) {
             throw new Revert(
                 `Impossible state: Priority provider cannot be in normal queue. ProviderId: ${provider.getId()}.`,
-            );
-        }
-    }
-
-    private ensureProviderIsNotInPurgeQueue(provider: Provider): void {
-        if (provider.isPurged()) {
-            throw new Revert(
-                `Impossible state: Provider is in purge queue but purge queue is empty. ProviderId: ${provider.getId()} (indexed at ${provider.getQueueIndex()}, purgedAt: ${provider.getPurgedIndex()}).`,
             );
         }
     }
@@ -248,7 +247,7 @@ export class ProviderQueue {
         this.ensureProviderIsNotInitialProvider(provider);
     }
 
-    // TODO:!!! we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
+    // TODO: Possible optimization. we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
     private returnProvider(provider: Provider, index: u32, currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
         const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
@@ -262,7 +261,6 @@ export class ProviderQueue {
         }
 
         if (Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)) {
-            //!!! Why not check this also in removal????
             this.ensureProviderIsNotInPurgeQueue(provider);
             provider.clearFromRemovalQueue();
             result = provider;

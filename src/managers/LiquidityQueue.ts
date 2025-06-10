@@ -489,7 +489,6 @@ export class LiquidityQueue implements ILiquidityQueue {
             T = u256.One;
         }
 
-        //!!!
         if (B > MAX_TOTAL_SATOSHIS) {
             throw new Revert(`Impossible state: New virtual satoshis reserve out of range.`);
         }
