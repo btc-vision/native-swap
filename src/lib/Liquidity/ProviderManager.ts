@@ -2,6 +2,7 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Address,
     Blockchain,
+    BytesWriter,
     Potential,
     Revert,
     SafeMath,
@@ -10,6 +11,7 @@ import {
     StoredU32Array,
     StoredU64,
     TransferHelper,
+    U32_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import {
     INITIAL_LIQUIDITY,
@@ -160,6 +162,25 @@ export class ProviderManager {
 
     public get priorityQueueStartingIndex(): u64 {
         return this._priorityQueue.startingIndex();
+    }
+
+    public queueData(): Uint8Array {
+        const writer = new BytesWriter(U32_BYTE_LENGTH * 6 + 3 * U32_BYTE_LENGTH);
+
+        writer.writeU32(<u32>this._removalQueue.getLength());
+        writer.writeU32(<u32>this._removalQueue.startingIndex());
+
+        writer.writeU32(<u32>this._priorityQueue.getLength());
+        writer.writeU32(<u32>this._priorityQueue.startingIndex());
+
+        writer.writeU32(<u32>this._queue.getLength());
+        writer.writeU32(<u32>this._queue.startingIndex());
+
+        writer.writeU32(<u32>this._purgedProviderQueuePriority.getLength());
+        writer.writeU32(<u32>this._purgedProviderQueueStandard.getLength());
+        writer.writeU32(<u32>this._purgedProviderQueueRemoval.getLength());
+
+        return writer.getBuffer();
     }
 
     public getCurrentIndex(): u64 {
