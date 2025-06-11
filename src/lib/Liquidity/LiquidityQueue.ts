@@ -288,10 +288,12 @@ export class LiquidityQueue {
         // we have to subtract the 50% we already applied to the pool.
         const penalityLeft = SafeMath.sub(penality, half);
 
-        // slashed tokens instantly become pool inventory, in this version they are sent to the staking address since
-        // the pool doesn't have liquidity providers enabled.
-        this.increaseTotalTokenSellActivated(penalityLeft); //increaseVirtualTokenReserve
-        this.decreaseTotalReserve(penalityLeft); // we are sending the tokens out of the contract.
+        if (!penalityLeft.isZero()) {
+            // slashed tokens instantly become pool inventory, in this version they are sent to the staking address since
+            // the pool doesn't have liquidity providers enabled.
+            this.increaseVirtualTokenReserve(penalityLeft);
+            this.decreaseTotalReserve(penalityLeft); // we are sending the tokens out of the contract.
+        }
 
         // TODO: When adding lp, remove this and use this.increaseTotalReserve(penality);
         TransferHelper.safeTransfer(this.token, stakingAddress, penality);

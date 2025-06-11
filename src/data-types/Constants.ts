@@ -17,10 +17,10 @@ export const SLASH_GRACE_WINDOW: u64 = 4;
 export const SLASH_RAMP_UP_BLOCKS: u64 = 2_016;
 
 export const ENABLE_INDEX_VERIFICATION: bool = false;
-export const RESERVATION_EXPIRE_AFTER: u64 = 5;
-
-//export const FEE_COLLECT_SCRIPT_PUBKEY: string =
-//    'tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c';
+export const RESERVATION_EXPIRE_AFTER: u64 = 11;
 
 export const FEE_COLLECT_SCRIPT_PUBKEY: string =
-    'bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh';
+    'tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c';
+
+//export const FEE_COLLECT_SCRIPT_PUBKEY: string =
+//    'bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh';

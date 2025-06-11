@@ -185,7 +185,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
             this.removeTax(newTax);
         }
 
-        if (this.initialLiquidity) {
+        if (!this.initialLiquidity) {
             this.activateSlashing(u256AmountIn);
         }
 
@@ -208,7 +208,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         // Credit only the delta (never negative)
         const deltaHalf: u256 = SafeMath.sub(newHalfCred, oldHalfCred);
         if (!deltaHalf.isZero()) {
-            this.liquidityQueue.increaseTotalTokenSellActivated(deltaHalf);
+            this.liquidityQueue.increaseVirtualTokenReserve(deltaHalf);
         }
     }
 
