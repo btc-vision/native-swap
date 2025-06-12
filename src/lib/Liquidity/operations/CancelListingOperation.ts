@@ -1,7 +1,13 @@
 import { BaseOperation } from './BaseOperation';
 import { LiquidityQueue } from '../LiquidityQueue';
 import { getProvider, Provider } from '../../Provider';
-import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import {
+    Address,
+    Blockchain,
+    Revert,
+    SafeMath,
+    TransferHelper,
+} from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ListingCanceledEvent } from '../../../events/ListingCanceledEvent';
 import { slash } from '../Slashing';
@@ -11,7 +17,11 @@ export class CancelListingOperation extends BaseOperation {
     private readonly providerId: u256;
     private readonly provider: Provider;
 
-    constructor(liquidityQueue: LiquidityQueue, providerId: u256) {
+    constructor(
+        liquidityQueue: LiquidityQueue,
+        providerId: u256,
+        private readonly stakingAddress: Address,
+    ) {
         super(liquidityQueue);
 
         this.providerId = providerId;
@@ -37,22 +47,35 @@ export class CancelListingOperation extends BaseOperation {
         }
 
         const delta: u64 = SafeMath.sub64(Blockchain.block.number, listedAt);
-        const penalty: u256 = slash(amount, delta, SLASH_GRACE_WINDOW, SLASH_RAMP_UP_BLOCKS);
-        const refund: u256 = SafeMath.sub(amount, penalty);
+        let penalty: u256 = slash(amount, delta, SLASH_GRACE_WINDOW, SLASH_RAMP_UP_BLOCKS);
+        if (u256.gt(penalty, amount)) penalty = amount; // never over-slash
 
-        // reset provider state before any transfers
+        /* Half already credited to pool
+         * Listing path in this repo credits CEIL(amount / 2),
+         * so we must mirror that exact rounding.
+         */
+        const halfFloor = SafeMath.div(amount, u256.fromU32(2)); // n/2
+        const halfCred = u256.add(halfFloor, u256.and(amount, u256.One)); // +1 if odd
+
+        /* Amount that still has to be booked into pool inventory */
+        const halfToCharge = u256.lt(penalty, halfCred) ? penalty : halfCred;
+        const refund: u256 = SafeMath.sub(amount, penalty); // invariant: ≤ amount
+
         this.liquidityQueue.resetProvider(this.provider, false, true);
 
-        // Transfer tokens back to the provider
         if (!refund.isZero()) {
             TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, refund);
         }
 
         if (!penalty.isZero()) {
-            this.liquidityQueue.accruePenalty(penalty);
+            this.liquidityQueue.accruePenalty(
+                penalty,
+                halfToCharge, // guaranteed ≤ penalty
+                this.stakingAddress,
+            );
         }
 
-        this.emitListingCanceledEvent(amount.toU128());
+        this.emitListingCanceledEvent(amount.toU128(), penalty.toU128());
     }
 
     private ensureProviderIsActive(): void {
@@ -95,7 +118,7 @@ export class CancelListingOperation extends BaseOperation {
         }
     }
 
-    private emitListingCanceledEvent(amount: u128): void {
-        Blockchain.emit(new ListingCanceledEvent(amount));
+    private emitListingCanceledEvent(amount: u128, penality: u128): void {
+        Blockchain.emit(new ListingCanceledEvent(amount, penality));
     }
 }
