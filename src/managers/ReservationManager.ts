@@ -23,6 +23,7 @@ import { RESERVATION_EXPIRE_AFTER_IN_BLOCKS } from '../constants/Contract';
 import { IProviderManager } from './interfaces/IProviderManager';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
+import { ReservationPurgedEvent } from '../events/ReservationPurgedEvent';
 
 export class PurgedResult {
     constructor(
@@ -72,7 +73,7 @@ export class ReservationManager implements IReservationManager {
         reservation.save();
     }
 
-    public blockWithReservationsLength(): u64 {
+    public blockWithReservationsLength(): u32 {
         return this.blocksWithReservations.getLength();
     }
 
@@ -271,11 +272,22 @@ export class ReservationManager implements IReservationManager {
                 this.ensureReservationIsExpired(reservation);
                 this.ensureReservationPurgeIndexMatch(reservation, index);
 
+                const providerCount: u32 = reservation.getProviderCount();
                 const freed: u256 = this.restoreReservation(reservation);
                 totalFreed = SafeMath.add(totalFreed, freed);
                 totalProvidersPurged += reservation.getProviderCount();
 
                 actives.set(index, false);
+
+                Blockchain.emit(
+                    new ReservationPurgedEvent(
+                        reservationId,
+                        index,
+                        Blockchain.block.number,
+                        blockNumber,
+                        providerCount,
+                    ),
+                );
             }
 
             index++;

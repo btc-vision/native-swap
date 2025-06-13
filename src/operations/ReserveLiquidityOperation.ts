@@ -62,7 +62,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.maximumProvidersPerReservation = maximumProvidersPerReservation;
     }
 
-    public execute(): void {
+    public override execute(): void {
         this.checkPreConditions();
 
         const reservation: Reservation = this.createReservation();
@@ -497,8 +497,9 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.ensureCurrentQuoteValid();
     }
 
-    //!!! the provider always have owed > minimum as getNextWith... always return a provider > minimum
-    // !!!!Should check available btc instead here
+    // TODO: !!! the provider always have owed > minimum as getNextWith... always return a provider > minimum
+    // TODO: !!!Should check available btc instead here.
+    // TODO: !!! Redo when removal are back in scope
     private handleRemovalProviderPurgeQueues(provider: Provider): void {
         if (provider.isPurged()) {
             const owed: u64 = this.liquidityQueue.getSatoshisOwed(provider.getId());
@@ -547,6 +548,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 this.remainingTokens,
                 this.currentQuote,
             );
+
             if (this.isSmallerThanMinimumReservationAmount(remainingSatoshis)) {
                 break;
             }

@@ -17,7 +17,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.provider = getProvider(providerId);
     }
 
-    public execute(): void {
+    public override execute(): void {
         this.checkPreConditions();
         const satoshisOwed: u64 = this.getSatoshisOwed();
         const tokenAmount: u128 = this.getLiquidityProvided();

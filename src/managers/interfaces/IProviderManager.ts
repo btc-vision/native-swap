@@ -46,6 +46,8 @@ export interface IProviderManager {
 
     getNextProviderWithLiquidity(quote: u256): Provider | null;
 
+    getQueueData(): Uint8Array;
+
     purgeAndRestoreProvider(data: ReservationProviderData): void;
 
     removeFromNormalQueue(provider: Provider): void;

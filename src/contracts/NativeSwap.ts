@@ -2,6 +2,7 @@ import {
     Address,
     ADDRESS_BYTE_LENGTH,
     Blockchain,
+    BOOLEAN_BYTE_LENGTH,
     BytesReader,
     BytesWriter,
     Calldata,
@@ -20,14 +21,11 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
 import { getProvider, Provider, saveAllProviders } from '../models/Provider';
 import { FeeManager } from '../managers/FeeManager';
-import { AddLiquidityOperation } from '../operations/AddLiquidityOperation';
-import { RemoveLiquidityOperation } from '../operations/RemoveLiquidityOperation';
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
 import { CancelListingOperation } from '../operations/CancelListingOperation';
 import { SwapOperation } from '../operations/SwapOperation';
-import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReentrancyGuard } from '../contracts/ReentrancyGuard';
 import { STAKING_CA_POINTER } from '../constants/StoredPointers';
@@ -151,6 +149,8 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getQuote(calldata);
             case encodeSelector('getProviderDetails(address)'):
                 return this.getProviderDetails(calldata);
+            case encodeSelector('getQueueDetails(address)'):
+                return this.getQueueDetails(calldata);
             case encodeSelector('getPriorityQueueCost()'):
                 return this.getPriorityQueueCost();
             case encodeSelector('getFees()'):
@@ -230,12 +230,38 @@ export class NativeSwap extends ReentrancyGuard {
         const provider: Provider = getProvider(providerId);
 
         const writer: BytesWriter = new BytesWriter(
-            U128_BYTE_LENGTH * 3 + (U32_BYTE_LENGTH + provider.getBtcReceiver().length),
+            U128_BYTE_LENGTH * 3 +
+                (U32_BYTE_LENGTH + provider.getBtcReceiver().length) +
+                U32_BYTE_LENGTH +
+                BOOLEAN_BYTE_LENGTH,
         );
+
         writer.writeU128(provider.getLiquidityAmount());
         writer.writeU128(provider.getReservedAmount());
         writer.writeU128(provider.getLiquidityProvided());
         writer.writeStringWithLength(provider.getBtcReceiver());
+        writer.writeU32(provider.getQueueIndex());
+        writer.writeBoolean(provider.isPriority());
+
+        return writer;
+    }
+
+    private getQueueDetails(calldata: Calldata): BytesWriter {
+        const token: Address = calldata.readAddress();
+
+        //!!! pourquoi purge a true dans des getter?
+        const getQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            this.addressToPointer(token),
+            true,
+        );
+        this.ensurePoolExistsForToken(getQueueResult.liquidityQueue);
+
+        const writer = new BytesWriter(U64_BYTE_LENGTH + 10 * U32_BYTE_LENGTH);
+
+        writer.writeU64(getQueueResult.liquidityQueue.lastPurgedBlock);
+        writer.writeU32(getQueueResult.liquidityQueue.blockWithReservationsLength());
+        writer.writeBytes(getQueueResult.liquidityQueue.getProviderQueueData());
 
         return writer;
     }
@@ -249,83 +275,84 @@ export class NativeSwap extends ReentrancyGuard {
         return writer;
     }
 
-    private addLiquidity(calldata: Calldata): BytesWriter {
-        const token: Address = calldata.readAddress();
-        const receiver: string = calldata.readStringWithLength();
-        const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
-            token,
-            this.addressToPointer(token),
-            false,
-        );
-
-        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
-
-        const operation: AddLiquidityOperation = new AddLiquidityOperation(
-            liquidityQueueResult.liquidityQueue,
-            liquidityQueueResult.tradeManager,
-            providerId,
-            receiver,
-        );
-
-        operation.execute();
-        liquidityQueueResult.liquidityQueue.save();
-
-        const result: BytesWriter = new BytesWriter(1);
-        result.writeBoolean(true);
-
-        return result;
-    }
-
-    private removeLiquidity(calldata: Calldata): BytesWriter {
-        const token: Address = calldata.readAddress();
-        const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
-            token,
-            this.addressToPointer(token),
-            true,
-        );
-
-        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
-
-        const operation: RemoveLiquidityOperation = new RemoveLiquidityOperation(
-            liquidityQueueResult.liquidityQueue,
-            providerId,
-        );
-
-        operation.execute();
-        liquidityQueueResult.liquidityQueue.save();
-
-        const result: BytesWriter = new BytesWriter(1);
-        result.writeBoolean(true);
-
-        return result;
-    }
-
-    private createPoolWithSignature(calldata: Calldata): BytesWriter {
-        const signature: Uint8Array = calldata.readBytesWithLength();
-        this.ensureValidSignatureLength(signature);
-
-        const amount: u256 = calldata.readU256();
-        const nonce: u256 = calldata.readU256();
-
-        const calldataSend: BytesWriter = new BytesWriter(
-            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH + U256_BYTE_LENGTH + 68,
-        );
-
-        calldataSend.writeSelector(NativeSwap.APPROVE_FROM_SELECTOR);
-        calldataSend.writeAddress(this.address);
-        calldataSend.writeU256(amount);
-        calldataSend.writeU256(nonce);
-        calldataSend.writeBytesWithLength(signature);
-
-        const token: Address = calldata.readAddress();
-
-        Blockchain.call(token, calldataSend);
-
-        return this.createPool(calldata, token);
-    }
-
+    /*
+        private addLiquidity(calldata: Calldata): BytesWriter {
+            const token: Address = calldata.readAddress();
+            const receiver: string = calldata.readStringWithLength();
+            const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
+            const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+                token,
+                this.addressToPointer(token),
+                false,
+            );
+    
+            this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+    
+            const operation: AddLiquidityOperation = new AddLiquidityOperation(
+                liquidityQueueResult.liquidityQueue,
+                liquidityQueueResult.tradeManager,
+                providerId,
+                receiver,
+            );
+    
+            operation.execute();
+            liquidityQueueResult.liquidityQueue.save();
+    
+            const result: BytesWriter = new BytesWriter(1);
+            result.writeBoolean(true);
+    
+            return result;
+        }
+    
+        private removeLiquidity(calldata: Calldata): BytesWriter {
+            const token: Address = calldata.readAddress();
+            const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
+            const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+                token,
+                this.addressToPointer(token),
+                true,
+            );
+    
+            this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+    
+            const operation: RemoveLiquidityOperation = new RemoveLiquidityOperation(
+                liquidityQueueResult.liquidityQueue,
+                providerId,
+            );
+    
+            operation.execute();
+            liquidityQueueResult.liquidityQueue.save();
+    
+            const result: BytesWriter = new BytesWriter(1);
+            result.writeBoolean(true);
+    
+            return result;
+        }
+    
+        private createPoolWithSignature(calldata: Calldata): BytesWriter {
+            const signature: Uint8Array = calldata.readBytesWithLength();
+            this.ensureValidSignatureLength(signature);
+    
+            const amount: u256 = calldata.readU256();
+            const nonce: u256 = calldata.readU256();
+    
+            const calldataSend: BytesWriter = new BytesWriter(
+                SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH + U256_BYTE_LENGTH + 68,
+            );
+    
+            calldataSend.writeSelector(NativeSwap.APPROVE_FROM_SELECTOR);
+            calldataSend.writeAddress(this.address);
+            calldataSend.writeU256(amount);
+            calldataSend.writeU256(nonce);
+            calldataSend.writeBytesWithLength(signature);
+    
+            const token: Address = calldata.readAddress();
+    
+            Blockchain.call(token, calldataSend);
+    
+            return this.createPool(calldata, token);
+        }
+    */
     private createPool(calldata: Calldata, token: Address): BytesWriter {
         const tokenOwner: Address = this.getDeployer(token);
 
@@ -487,6 +514,7 @@ export class NativeSwap extends ReentrancyGuard {
         const operation: CancelListingOperation = new CancelListingOperation(
             liquidityQueueResult.liquidityQueue,
             providerId,
+            this.stakingContractAddress,
         );
 
         operation.execute();
@@ -550,6 +578,7 @@ export class NativeSwap extends ReentrancyGuard {
         return result;
     }
 
+    /*
     private getLastPurgedBlock(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
         this.ensureValidTokenAddress(token);
@@ -606,7 +635,7 @@ export class NativeSwap extends ReentrancyGuard {
 
         return result;
     }
-
+*/
     private getQuote(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
         const satoshisIn: u64 = calldata.readU64();

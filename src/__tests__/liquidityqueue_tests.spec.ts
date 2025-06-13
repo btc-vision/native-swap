@@ -6,6 +6,7 @@ import {
     StoredBooleanArray,
     StoredU128Array,
     TransferHelper,
+    U32_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import {
     createLiquidityQueue,
@@ -984,7 +985,7 @@ describe('Liquidity queue tests', () => {
             TransferHelper.clearMockedResults();
         });
 
-        it('should increase token reserve with penalty', () => {
+        it('should increase token reserve with penalty, decrease total reserve with half and call safetransfer', () => {
             setBlockchainEnvironment(1);
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
@@ -997,11 +998,62 @@ describe('Liquidity queue tests', () => {
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
             expect(queue.liquidity).toStrictEqual(u256.Zero);
+            queue.increaseTotalReserve(u256.fromU64(10000));
 
-            queue.accruePenalty(u128.fromU64(10000));
+            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(5000), Address.dead());
 
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000));
-            expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(5000));
+            expect(queue.liquidity).toStrictEqual(u256.fromU64(5000));
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+        });
+
+        it('should revert when penalty is less than half value', () => {
+            expect(() => {
+                setBlockchainEnvironment(1);
+                const createQueueResult = createLiquidityQueue(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    false,
+                );
+                const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+                queue.decreaseTotalReserved(queue.liquidity);
+                queue.decreaseVirtualTokenReserve(queue.virtualTokenReserve);
+
+                expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
+                expect(queue.liquidity).toStrictEqual(u256.Zero);
+                queue.increaseTotalReserve(u256.fromU64(10000));
+
+                queue.accruePenalty(u128.fromU64(10000), u128.fromU64(15000), Address.dead());
+            }).toThrow();
+        });
+    });
+
+    describe('Queue data', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
+
+        it('should return the provider queue data', () => {
+            setBlockchainEnvironment(1000);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            provider.markPriority();
+            queue.addToPriorityQueue(provider);
+            queue.save();
+
+            const data = queue.getProviderQueueData();
+
+            expect(data.byteLength).toStrictEqual(U32_BYTE_LENGTH * 9);
         });
     });
 

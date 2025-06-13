@@ -1,6 +1,12 @@
 import { BaseOperation } from './BaseOperation';
 import { getProvider, Provider } from '../models/Provider';
-import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import {
+    Address,
+    Blockchain,
+    Revert,
+    SafeMath,
+    TransferHelper,
+} from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ListingCanceledEvent } from '../events/ListingCanceledEvent';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
@@ -14,31 +20,54 @@ import { slash } from '../utils/Slashing';
 export class CancelListingOperation extends BaseOperation {
     private readonly providerId: u256;
     private readonly provider: Provider;
+    private readonly stakingAddress: Address;
 
-    constructor(liquidityQueue: ILiquidityQueue, providerId: u256) {
+    constructor(liquidityQueue: ILiquidityQueue, providerId: u256, stakingAddress: Address) {
         super(liquidityQueue);
 
         this.providerId = providerId;
         this.provider = getProvider(providerId);
+        this.stakingAddress = stakingAddress;
     }
 
-    public execute(): void {
+    public override execute(): void {
         const listedAtBlock: u64 = this.provider.getListedTokenAtBlock();
         this.checkPreConditions(listedAtBlock);
 
         const initialAmount: u128 = this.provider.getLiquidityAmount();
         const penaltyAmount: u128 = this.calculatePenalty(listedAtBlock, initialAmount);
+        const halfToCharge: u128 = this.calculateHalfToCharge(initialAmount, penaltyAmount);
         const refundAmount: u128 = this.calculateRefund(initialAmount, penaltyAmount);
 
         this.prepareProviderForRefund();
         this.transferLiquidityBack(refundAmount);
-        this.postProcessQueues(penaltyAmount);
-        this.emitListingCanceledEvent(refundAmount);
+        this.postProcessQueues(penaltyAmount, halfToCharge);
+        this.emitListingCanceledEvent(initialAmount, penaltyAmount);
     }
 
-    private calculatePenalty(listedAtBlock: u64, amount: u128): u128 {
+    protected calculatePenalty(listedAtBlock: u64, amount: u128): u128 {
         const delta: u64 = SafeMath.sub64(Blockchain.block.number, listedAtBlock);
-        return slash(amount, delta, SLASH_GRACE_WINDOW, SLASH_RAMP_UP_BLOCKS);
+        let penalty: u128 = slash(amount, delta, SLASH_GRACE_WINDOW, SLASH_RAMP_UP_BLOCKS);
+
+        if (u128.gt(penalty, amount)) {
+            penalty = amount;
+        }
+
+        return penalty;
+    }
+
+    private calculateHalfToCharge(initialAmount: u128, penaltyAmount: u128): u128 {
+        /* Half already credited to pool
+         * Listing path in this repo credits CEIL(amount / 2),
+         * so we must mirror that exact rounding.
+         */
+        const halfFloor: u128 = SafeMath.div128(initialAmount, u128.fromU32(2));
+        const halfCred: u128 = u128.add(halfFloor, u128.and(initialAmount, u128.One)); // +1 if odd
+
+        /* Amount that still has to be booked into pool inventory */
+        const halfToCharge: u128 = u128.lt(penaltyAmount, halfCred) ? penaltyAmount : halfCred;
+
+        return halfToCharge;
     }
 
     private calculateRefund(amount: u128, penalty: u128): u128 {
@@ -55,8 +84,8 @@ export class CancelListingOperation extends BaseOperation {
         this.ensureProviderNotPendingRemoval();
     }
 
-    private emitListingCanceledEvent(amount: u128): void {
-        Blockchain.emit(new ListingCanceledEvent(amount));
+    private emitListingCanceledEvent(amount: u128, penalty: u128): void {
+        Blockchain.emit(new ListingCanceledEvent(amount, penalty));
     }
 
     private ensureLiquidityNotZero(): void {
@@ -105,9 +134,9 @@ export class CancelListingOperation extends BaseOperation {
         }
     }
 
-    private postProcessQueues(penaltyAmount: u128): void {
+    private postProcessQueues(penaltyAmount: u128, halfToCharge: u128): void {
         if (!penaltyAmount.isZero()) {
-            this.liquidityQueue.accruePenalty(penaltyAmount);
+            this.liquidityQueue.accruePenalty(penaltyAmount, halfToCharge, this.stakingAddress);
         }
     }
 

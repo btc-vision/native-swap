@@ -5,7 +5,7 @@ import { u128 } from '@btc-vision/as-bignum/assembly';
 export interface IReservationManager {
     addReservation(blockNumber: u64, reservation: Reservation): void;
 
-    blockWithReservationsLength(): u64;
+    blockWithReservationsLength(): u32;
 
     deactivateReservation(reservation: Reservation): void;
 

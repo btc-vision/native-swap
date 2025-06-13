@@ -22,7 +22,7 @@ export interface ILiquidityQueue {
     virtualSatoshisReserve: u64;
     virtualTokenReserve: u256;
 
-    accruePenalty(penalty: u128): void;
+    accruePenalty(penalty: u128, half: u128, stakingAddress: Address): void;
 
     addReservation(reservation: Reservation): void;
 
@@ -32,7 +32,7 @@ export interface ILiquidityQueue {
 
     addToRemovalQueue(provider: Provider): void;
 
-    blockWithReservationsLength(): u64;
+    blockWithReservationsLength(): u32;
 
     buyTokens(tokensOut: u256, satoshisIn: u64): void;
 
@@ -50,19 +50,21 @@ export interface ILiquidityQueue {
 
     isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean;
 
+    getMaximumTokensLeftBeforeCap(): u256;
+
+    getNextProviderWithLiquidity(quote: u256): Provider | null;
+
+    getProviderQueueData(): Uint8Array;
+
+    getReservationIdAtIndex(blockNumber: u64, index: u32): u128;
+
+    getReservationWithExpirationChecks(): Reservation;
+
     getSatoshisOwed(providerId: u256): u64;
 
     getSatoshisOwedLeft(providerId: u256): u64;
 
     getSatoshisOwedReserved(providerId: u256): u64;
-
-    getMaximumTokensLeftBeforeCap(): u256;
-
-    getNextProviderWithLiquidity(quote: u256): Provider | null;
-
-    getReservationIdAtIndex(blockNumber: u64, index: u32): u128;
-
-    getReservationWithExpirationChecks(): Reservation;
 
     getUtilizationRatio(): u256;
 

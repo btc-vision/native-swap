@@ -1236,7 +1236,7 @@ describe('ReserveLiquidityOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId1,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`6667000000000000000`),
                 receiverAddress1,
                 Address.dead(),
                 false,
@@ -1254,7 +1254,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 queue3.liquidityQueue,
                 providerId2,
                 providerAddress2,
-                110010,
+                10001,
                 u256.Zero,
                 false,
                 0,
@@ -1264,11 +1264,8 @@ describe('ReserveLiquidityOperation tests', () => {
             reserveOp.execute();
             queue3.liquidityQueue.save();
 
-            // The exact number of tokens to reserve should be 73339999999999999999 but
-            // tokensRemainingInSatoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT is met,
-            // so reserved number is 73339999999999999998
             expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`73339999999999999998`),
+                u256.fromString(`6666688890000000000`),
             );
         });
 
@@ -1347,7 +1344,7 @@ describe('ReserveLiquidityOperation tests', () => {
             expect(reservation.getProviderCount()).toStrictEqual(1);
 
             const values = reservation.getProviderAt(0);
-            expect(values.providedAmount).toStrictEqual(u128.fromString(`9999999999999999999`));
+            expect(values.providedAmount).toStrictEqual(u128.fromString(`9999383330000000000`));
         });
 
         it('should revert when provider queue index is not set', () => {
@@ -2113,11 +2110,10 @@ describe('ReserveLiquidityOperation tests', () => {
             expect(value1.providerIndex).toStrictEqual(0);
             expect(value2.providerIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
 
-            expect(value1.providedAmount).toStrictEqual(u128.fromString(`9999999999999999999`));
-            expect(value2.providedAmount).toStrictEqual(u128.fromString(`49990499999999999999999`));
-
+            expect(value1.providedAmount).toStrictEqual(u128.fromString(`9999383330000000000`));
+            expect(value2.providedAmount).toStrictEqual(u128.fromString(`49990499951250000000000`));
             expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`50000499999999999999998`),
+                u256.fromString(`50000499334580000000000`),
             );
 
             const reservationList = queue3.reservationManager.callgetReservationListForBlock(103);

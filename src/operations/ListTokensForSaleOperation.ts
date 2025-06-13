@@ -52,10 +52,34 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.oldLiquidity = provider.getLiquidityAmount();
     }
 
-    public execute(): void {
+    public override execute(): void {
         this.checkPreConditions();
         this.transferToken();
         this.emitLiquidityListedEvent();
+    }
+
+    private activateSlashing(): void {
+        const newTotal: u128 = SafeMath.add128(this.oldLiquidity, this.amountIn);
+        const oldHalfCred: u128 = this.half(this.oldLiquidity);
+        const newHalfCred: u128 = this.half(newTotal);
+        const deltaHalf: u128 = SafeMath.sub128(newHalfCred, oldHalfCred);
+
+        if (!deltaHalf.isZero()) {
+            this.liquidityQueue.increaseVirtualTokenReserve(deltaHalf.toU256());
+        }
+    }
+
+    private addProviderToQueue(): void {
+        this.provider.activate();
+
+        if (!this.isForInitialLiquidity) {
+            if (this.usePriorityQueue) {
+                this.provider.markPriority();
+                this.liquidityQueue.addToPriorityQueue(this.provider);
+            } else {
+                this.liquidityQueue.addToNormalQueue(this.provider);
+            }
+        }
     }
 
     private assignBlockNumber(): void {
@@ -121,10 +145,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
                 const tax256: u256 = tax.toU256();
 
                 this.provider.subtractFromLiquidityAmount(tax);
-
-                this.liquidityQueue.buyTokens(tax256, 0);
                 this.liquidityQueue.decreaseTotalReserve(tax256);
-
+                this.liquidityQueue.increaseVirtualTokenReserve(tax256);
                 TransferHelper.safeTransfer(this.liquidityQueue.token, this.stakingAddress, tax256);
             }
         }
@@ -209,7 +231,12 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
     }
 
-    private increaseGlobalReserve(): void {
+    private half(value: u128): u128 {
+        const halfFloor = SafeMath.div128(value, u128.fromU32(2));
+        return u128.add(halfFloor, u128.and(value, u128.One));
+    }
+
+    private increaseTotalReserve(): void {
         this.liquidityQueue.increaseTotalReserve(this.amountIn256);
     }
 
@@ -233,22 +260,14 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.updateProviderLiquidity();
         this.assignBlockNumber();
         this.assignReceiver();
-        this.increaseGlobalReserve();
+        this.increaseTotalReserve();
         this.deductTaxIfPriority();
-        this.snapshotBlockQuote();
-    }
-
-    private addProviderToQueue(): void {
-        this.provider.activate();
 
         if (!this.isForInitialLiquidity) {
-            if (this.usePriorityQueue) {
-                this.provider.markPriority();
-                this.liquidityQueue.addToPriorityQueue(this.provider);
-            } else {
-                this.liquidityQueue.addToNormalQueue(this.provider);
-            }
+            this.activateSlashing();
         }
+
+        this.snapshotBlockQuote();
     }
 
     private updateProviderLiquidity(): void {

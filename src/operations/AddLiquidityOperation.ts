@@ -28,7 +28,7 @@ export class AddLiquidityOperation extends BaseOperation {
         this.provider = getProvider(providerId);
     }
 
-    public execute(): void {
+    public override execute(): void {
         this.checkPreConditions();
 
         const reservation: Reservation = this.getReservation();

@@ -17,7 +17,7 @@ import {
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../managers/FeeManager';
-import { FEE_COLLECT_SCRIPT_PUBKEY } from '../constants/Contract';
+import { FEE_COLLECT_SCRIPT_PUBKEY, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 
 describe('ListTokenForSaleOperation tests', () => {
     beforeEach(() => {
@@ -695,7 +695,7 @@ describe('ListTokenForSaleOperation tests', () => {
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(100000000));
         });
 
-        it('should deduct tax if priority queue', () => {
+        it('should deduct tax and apply slashing if priority queue', () => {
             setBlockchainEnvironment(100);
             FeeManager.onDeploy();
 
@@ -726,12 +726,98 @@ describe('ListTokenForSaleOperation tests', () => {
             operation.execute();
 
             // Tax should be:3000000
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(97010000));
-            expect(queue.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(0);
-            expect(queue.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
-                u256.fromU64(3000000),
-            );
+            expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(54000000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(97000000));
+        });
+
+        it('should apply slashing if normal queue', () => {
+            setBlockchainEnvironment(100);
+            FeeManager.onDeploy();
+
+            const txOut: TransactionOutput[] = [];
+            txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
+            txOut.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 100000));
+            Blockchain.mockTransactionOutput(txOut);
+
+            const provider = createProvider(providerAddress1, tokenAddress1);
+            provider.deactivate();
+            provider.clearPriority();
+            provider.setLiquidityAmount(u128.fromU32(10000));
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
+            queue.liquidityQueue.virtualSatoshisReserve = 100;
+
+            const operation = new ListTokensForSaleOperation(
+                queue.liquidityQueue,
+                provider.getId(),
+                u128.fromU64(100000000),
+                receiverAddress1,
+                Address.dead(),
+                false,
+                false,
+            );
+
+            operation.execute();
+
+            expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(100010000));
+            expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(51000000));
+            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(100000000));
+        });
+
+        it('should not apply slashing if initial liquidity', () => {
+            setBlockchainEnvironment(100);
+            FeeManager.onDeploy();
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            const initialProvider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                true,
+                false,
+                '3e3223e233e',
+                u128.Zero,
+                u128.Zero,
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            initialProvider.save();
+
+            queue.liquidityQueue.initializeInitialLiquidity(
+                u256.fromU64(66666666666),
+                initialProvider.getId(),
+                u128.fromString(`1000000000000000000`),
+                70,
+            );
+
+            const operation = new ListTokensForSaleOperation(
+                queue.liquidityQueue,
+                initialProvider.getId(),
+                u128.fromString(`1000000000000000000`),
+                receiverAddress1,
+                Address.dead(),
+                false,
+                true,
+            );
+
+            operation.execute();
+
+            expect(initialProvider.getLiquidityAmount()).toStrictEqual(
+                u128.fromString(`1000000000000000000`),
+            );
+            expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(
+                u256.fromString(`1000000000000000000`),
+            );
+            expect(queue.liquidityQueue.liquidity).toStrictEqual(
+                u256.fromString(`1000000000000000000`),
+            );
         });
     });
 });

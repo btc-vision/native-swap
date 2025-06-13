@@ -27,7 +27,7 @@ export const ALLOW_DIRTY: boolean = true;
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
  */
-export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 150;
+export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 100;
 
 export const AT_LEAST_PROVIDERS_TO_PURGE: u32 = 150;
 

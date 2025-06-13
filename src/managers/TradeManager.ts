@@ -27,12 +27,12 @@ import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 import { IReservationManager } from './interfaces/IReservationManager';
 
 export class TradeManager implements ITradeManager {
+    protected readonly consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
     private readonly providerManager: IProviderManager;
     private readonly reservationManager: IReservationManager;
     private readonly quoteManager: IQuoteManager;
     private readonly owedBTCManager: IOwedBTCManager;
     private readonly tokenIdUint8Array: Uint8Array;
-    private readonly consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
     private totalTokensPurchased: u256 = u256.Zero;
     private totalTokensRefunded: u256 = u256.Zero;
@@ -100,6 +100,41 @@ export class TradeManager implements ITradeManager {
             this.totalSatoshisRefunded,
             this.totalTokensRefunded,
         );
+    }
+
+    protected reportUTXOUsed(address: string, value: u64): void {
+        const consumedAlready = this.consumedOutputsFromUTXOs.has(address)
+            ? this.consumedOutputsFromUTXOs.get(address)
+            : 0;
+
+        if (consumedAlready === 0) {
+            this.consumedOutputsFromUTXOs.set(address, value);
+        } else {
+            this.consumedOutputsFromUTXOs.set(address, SafeMath.add64(value, consumedAlready));
+        }
+    }
+
+    protected getSatoshisSent(address: string): u64 {
+        let totalSatoshis: u64 = 0;
+        const outputs = Blockchain.tx.outputs;
+
+        for (let i = 0; i < outputs.length; i++) {
+            const output = outputs[i];
+
+            if (output.to === address) {
+                totalSatoshis = SafeMath.add64(totalSatoshis, output.value);
+            }
+        }
+
+        const consumedSatoshis: u64 = this.consumedOutputsFromUTXOs.has(address)
+            ? this.consumedOutputsFromUTXOs.get(address)
+            : 0;
+
+        if (totalSatoshis < consumedSatoshis) {
+            throw new Revert('Impossible state: Double spend detected.');
+        }
+
+        return totalSatoshis - consumedSatoshis;
     }
 
     private emitActivateProviderEvent(provider: Provider): void {
@@ -226,9 +261,19 @@ export class TradeManager implements ITradeManager {
                 provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX
             ) {
                 provider.allowLiquidityProvision();
-                this.liquidityQueueReserve.addToTotalTokensSellActivated(
-                    provider.getLiquidityAmount().toU256(),
+                const totalLiquidity: u128 = provider.getLiquidityAmount();
+
+                // floor(totalLiquidity / 2)
+                const halfFloor: u128 = SafeMath.div128(totalLiquidity, u128.fromU32(2));
+
+                // CEIL = floor + (totalLiquidity & 1)
+                const halfCred: u128 = u128.add(
+                    halfFloor,
+                    u128.and(totalLiquidity, u128.One), // adds 1 iff odd
                 );
+
+                // track that we virtually added those tokens to the pool
+                this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
                 this.emitActivateProviderEvent(provider);
             }
 
@@ -253,29 +298,6 @@ export class TradeManager implements ITradeManager {
         this.ensureRemovalTypeIsValid(providerData.providerType, provider);
 
         return provider;
-    }
-
-    private getSatoshisSent(address: string): u64 {
-        let totalSatoshis: u64 = 0;
-        const outputs = Blockchain.tx.outputs;
-
-        for (let i = 0; i < outputs.length; i++) {
-            const output = outputs[i];
-
-            if (output.to === address) {
-                totalSatoshis = SafeMath.add64(totalSatoshis, output.value);
-            }
-        }
-
-        const consumedSatoshis: u64 = this.consumedOutputsFromUTXOs.has(address)
-            ? this.consumedOutputsFromUTXOs.get(address)
-            : 0;
-
-        if (totalSatoshis < consumedSatoshis) {
-            throw new Revert('Impossible state: Double spend detected.');
-        }
-
-        return totalSatoshis - consumedSatoshis;
     }
 
     private getTargetTokens(satoshis: u64, requestedTokens: u128, providerLiquidity: u128): u128 {
@@ -327,18 +349,6 @@ export class TradeManager implements ITradeManager {
 
     private deactivateReservation(reservation: Reservation): void {
         this.reservationManager.deactivateReservation(reservation);
-    }
-
-    private reportUTXOUsed(address: string, value: u64): void {
-        const consumedAlready = this.consumedOutputsFromUTXOs.has(address)
-            ? this.consumedOutputsFromUTXOs.get(address)
-            : 0;
-
-        if (consumedAlready === 0) {
-            this.consumedOutputsFromUTXOs.set(address, value);
-        } else {
-            this.consumedOutputsFromUTXOs.set(address, SafeMath.add64(value, consumedAlready));
-        }
     }
 
     private resetProviderOnDust(provider: Provider): void {

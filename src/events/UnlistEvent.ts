@@ -8,6 +8,8 @@ import {
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
 @final
+
+//!!! Not used????
 export class UnlistEvent extends NetEvent {
     constructor(token: Address, amount: u256, remainingLiquidity: u256) {
         const data = new BytesWriter(ADDRESS_BYTE_LENGTH + 2 * U256_BYTE_LENGTH);

@@ -186,12 +186,23 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.liquidityQueueReserve.virtualTokenReserve = value;
     }
 
-    public accruePenalty(penalty: u128): void {
+    public accruePenalty(penalty: u128, half: u128, stakingAddress: Address): void {
         if (!penalty.isZero()) {
-            const penaltyU256 = u256.fromU128(penalty);
+            this.ensurePenaltyNotLessThanHalf(penalty, half);
 
-            this.increaseVirtualTokenReserve(penaltyU256);
-            this.increaseTotalReserve(penaltyU256);
+            // we have to subtract the 50% we already applied to the pool.
+            const penaltyLeft = SafeMath.sub128(penalty, half);
+            const penaltyLeftU256: u256 = penaltyLeft.toU256();
+
+            if (!penaltyLeftU256.isZero()) {
+                // slashed tokens instantly become pool inventory, in this version they are sent to the staking address since
+                // the pool doesn't have liquidity providers enabled.
+                this.increaseVirtualTokenReserve(penaltyLeftU256);
+                this.decreaseTotalReserve(penaltyLeftU256); // we are sending the tokens out of the contract.
+            }
+
+            // TODO: When adding lp, remove this and use this.increaseTotalReserve(penalty);
+            TransferHelper.safeTransfer(this.token, stakingAddress, penalty.toU256());
         }
     }
 
@@ -211,7 +222,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.providerManager.addToRemovalQueue(provider);
     }
 
-    public blockWithReservationsLength(): u64 {
+    public blockWithReservationsLength(): u32 {
         return this.reservationManager.blockWithReservationsLength();
     }
 
@@ -285,6 +296,10 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     public getNextProviderWithLiquidity(quote: u256): Provider | null {
         return this.providerManager.getNextProviderWithLiquidity(quote);
+    }
+
+    public getProviderQueueData(): Uint8Array {
+        return this.providerManager.getQueueData();
     }
 
     public getReservationIdAtIndex(blockNumber: u64, index: u32): u128 {
@@ -490,7 +505,9 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
 
         if (B > MAX_TOTAL_SATOSHIS) {
-            throw new Revert(`Impossible state: New virtual satoshis reserve out of range.`);
+            throw new Revert(
+                `Impossible state: New virtual satoshis reserve out of range. Value: ${B}`,
+            );
         }
 
         this.virtualSatoshisReserve = B.toU64();
@@ -510,7 +527,7 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         if (u256.gt(reserve, MAX_TOTAL_SATOSHIS)) {
             throw new Revert(
-                'Impossible state: Satoshis reserve out of range. Please adjust initial liquidity or floor price.',
+                `Impossible state: Satoshis reserve out of range. Please adjust initial liquidity or floor price. Value: ${reserve}`,
             );
         }
 
@@ -538,6 +555,14 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
 
         return volatility;
+    }
+
+    private ensurePenaltyNotLessThanHalf(penalty: u128, half: u128): void {
+        if (u128.lt(penalty, half)) {
+            throw new Revert(
+                `Penalty is less than half: ${penalty.toString()} < ${half.toString()}`,
+            );
+        }
     }
 
     private resetAccumulators(): void {

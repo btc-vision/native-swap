@@ -1,4 +1,4 @@
-import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, BytesReader, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders, Provider } from '../models/Provider';
 import { ProviderManager } from '../managers/ProviderManager';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
@@ -35,7 +35,7 @@ describe('ProviderManager tests', () => {
         TransferHelper.clearMockedResults();
     });
 
-    describe('Constructor', () => {
+    describe('ProviderManager Constructor', () => {
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
@@ -240,7 +240,7 @@ describe('ProviderManager tests', () => {
         });
     });
 
-    describe('Getters amd Setters', () => {
+    describe('ProviderManager Getters amd Setters', () => {
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
@@ -509,9 +509,61 @@ describe('ProviderManager tests', () => {
             expect(result).toBeFalsy();
             expect(provider.isActive()).toBeTruthy();
         });
+
+        it('should get the queue data', () => {
+            const owedBTCManager = new OwedBTCManager();
+            const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const manager: ProviderManager = new ProviderManager(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                owedBTCManager,
+                quoteManager,
+                ENABLE_INDEX_VERIFICATION,
+            );
+
+            const provider1: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
+            manager.addToPriorityQueue(provider1);
+            manager.addToPriorityPurgedQueue(provider1);
+            provider1.save();
+
+            const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
+            manager.addToNormalQueue(provider2);
+            manager.addToNormalPurgedQueue(provider2);
+            provider2.save();
+
+            const provider3: Provider = createProvider(providerAddress3, tokenAddress1, true);
+            manager.addToRemovalQueue(provider3);
+            manager.addToRemovalPurgedQueue(provider3);
+            provider3.save();
+            manager.save();
+
+            const queueData = manager.getQueueData();
+
+            const reader = new BytesReader(queueData);
+
+            const removalQueueLength = reader.readU32();
+            const removalQueueStartingIndex = reader.readU32();
+            const priorityQueueLength = reader.readU32();
+            const priorityQueueStartingIndex = reader.readU32();
+            const normalQueueLength = reader.readU32();
+            const normalQueueStartingIndex = reader.readU32();
+            const priorityPurgedQueueLength = reader.readU32();
+            const normalPurgedQueueLength = reader.readU32();
+            const removalPurgedQueueLength = reader.readU32();
+
+            expect(removalQueueLength).toStrictEqual(1);
+            expect(removalQueueStartingIndex).toStrictEqual(0);
+            expect(priorityQueueLength).toStrictEqual(1);
+            expect(priorityQueueStartingIndex).toStrictEqual(0);
+            expect(normalQueueLength).toStrictEqual(1);
+            expect(normalQueueStartingIndex).toStrictEqual(0);
+            expect(priorityPurgedQueueLength).toStrictEqual(1);
+            expect(normalPurgedQueueLength).toStrictEqual(1);
+            expect(removalPurgedQueueLength).toStrictEqual(1);
+        });
     });
 
-    describe('Add/Get/Remove providers to/from queue', () => {
+    describe('ProviderManager Add/Get/Remove providers to/from queue', () => {
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
@@ -897,7 +949,7 @@ describe('ProviderManager tests', () => {
         });
     });
 
-    describe('Add/Get/Remove providers to/from purged queues', () => {
+    describe('ProviderManager Add/Get/Remove providers to/from purged queues', () => {
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
@@ -1091,7 +1143,7 @@ describe('ProviderManager tests', () => {
         });
     });
 
-    describe('Purge/Restore Provider', () => {
+    describe('ProviderManager Purge/Restore Provider', () => {
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
@@ -1338,7 +1390,7 @@ describe('ProviderManager tests', () => {
         });
     });
 
-    describe('Reset', () => {
+    describe('ProviderManager Reset', () => {
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();
@@ -1501,7 +1553,7 @@ describe('ProviderManager tests', () => {
         });
     });
 
-    describe('Save', () => {
+    describe('ProviderManager Save', () => {
         beforeEach(() => {
             clearCachedProviders();
             Blockchain.clearStorage();

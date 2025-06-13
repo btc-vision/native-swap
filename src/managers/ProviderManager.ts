@@ -1,5 +1,13 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Address, Revert, SafeMath, StoredU256, StoredU32 } from '@btc-vision/btc-runtime/runtime';
+import {
+    Address,
+    BytesWriter,
+    Revert,
+    SafeMath,
+    StoredU256,
+    StoredU32,
+    U32_BYTE_LENGTH,
+} from '@btc-vision/btc-runtime/runtime';
 import {
     INITIAL_LIQUIDITY_PROVIDER_POINTER,
     NORMAL_QUEUE_POINTER,
@@ -270,9 +278,6 @@ export class ProviderManager implements IProviderManager {
             this.removalQueue.getNextWithLiquidity(currentQuote);
 
         if (removalProvider !== null) {
-            // WHY NOT REMOVE THIS ONE????
-            this.ensureProviderIsNotPurged(removalProvider);
-
             this.previousRemovalStartingIndex =
                 this.currentIndexRemoval === 0
                     ? this.currentIndexRemoval
@@ -319,6 +324,25 @@ export class ProviderManager implements IProviderManager {
         this.ensureProviderExists(providerId, index, type);
 
         return getProvider(providerId);
+    }
+
+    public getQueueData(): Uint8Array {
+        const writer = new BytesWriter(U32_BYTE_LENGTH * 9);
+
+        writer.writeU32(this.removalQueue.length);
+        writer.writeU32(this.removalQueue.startingIndex);
+
+        writer.writeU32(this.priorityQueue.length);
+        writer.writeU32(this.priorityQueue.startingIndex);
+
+        writer.writeU32(this.normalQueue.length);
+        writer.writeU32(this.normalQueue.startingIndex);
+
+        writer.writeU32(this.priorityPurgedQueue.length);
+        writer.writeU32(this.normalPurgedQueue.length);
+        writer.writeU32(this.removalPurgedQueue.length);
+
+        return writer.getBuffer();
     }
 
     public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
@@ -425,12 +449,6 @@ export class ProviderManager implements IProviderManager {
             throw new Revert(
                 `Impossible state: Cannot load provider. Index: ${index} Type: ${type}. Pool corrupted.`,
             );
-        }
-    }
-
-    private ensureProviderIsNotPurged(provider: Provider): void {
-        if (provider.isPurged()) {
-            throw new Revert(`Impossible state: Provider is present in purge queue.`);
         }
     }
 

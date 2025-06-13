@@ -1,11 +1,11 @@
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 
-export class BaseOperation {
+export abstract class BaseOperation {
     protected liquidityQueue: ILiquidityQueue;
 
     constructor(liquidityQueue: ILiquidityQueue) {
         this.liquidityQueue = liquidityQueue;
     }
 
-    public execute(): void {}
+    public abstract execute(): void;
 }

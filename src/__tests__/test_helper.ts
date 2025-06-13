@@ -485,16 +485,26 @@ export interface ITestLiquidityQueue extends ILiquidityQueue {
     setLiquidity(value: u256): void;
 }
 
+export interface ITestTradeManager extends ITradeManager {
+    callReportUTXOUsed(address: string, value: u64): void;
+
+    callGetSatoshisSent(address: string): u64;
+
+    getConsumedOutputsFromUTXOsMap(key: string): u64;
+
+    addToConsumedOutputsFromUTXOsMap(key: string, value: u64): void;
+}
+
 export class CreateLiquidityQueueResult {
     public liquidityQueue: ITestLiquidityQueue;
-    public tradeManager: ITradeManager;
+    public tradeManager: ITestTradeManager;
     public providerManager: ITestProviderManager;
     public quoteManager: IQuoteManager;
     public reservationManager: ITestReservationManager;
 
     constructor(
         liquidityQueue: ITestLiquidityQueue,
-        tradeManager: ITradeManager,
+        tradeManager: ITestTradeManager,
         providerManager: ITestProviderManager,
         quoteManager: IQuoteManager,
         reservationManager: ITestReservationManager,
@@ -543,7 +553,7 @@ export function createLiquidityQueue(
         timeoutEnabled,
     );
 
-    const tradeManager: ITradeManager = new TradeManager(
+    const tradeManager: ITestTradeManager = new TestTradeManager(
         tokenId,
         quoteManager,
         providerManager,
@@ -839,5 +849,23 @@ export class TestReserveLiquidityOperation extends ReserveLiquidityOperation {
         }
 
         return super.limitByAvailableLiquidity(tokens);
+    }
+}
+
+export class TestTradeManager extends TradeManager implements ITestTradeManager {
+    public addToConsumedOutputsFromUTXOsMap(key: string, value: u64): void {
+        this.consumedOutputsFromUTXOs.set(key, value);
+    }
+
+    public getConsumedOutputsFromUTXOsMap(key: string): u64 {
+        return this.consumedOutputsFromUTXOs.get(key);
+    }
+
+    public callReportUTXOUsed(address: string, value: u64): void {
+        super.reportUTXOUsed(address, value);
+    }
+
+    public callGetSatoshisSent(address: string): u64 {
+        return super.getSatoshisSent(address);
     }
 }

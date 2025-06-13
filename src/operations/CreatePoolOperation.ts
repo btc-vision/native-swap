@@ -37,7 +37,7 @@ export class CreatePoolOperation extends BaseOperation {
         this.maxReservesIn5BlocksPercent = maxReservesIn5BlocksPercent;
     }
 
-    public execute(): void {
+    public override execute(): void {
         this.checkPreConditions();
         this.initializeInitialProvider();
         this.listTokenForSale();
