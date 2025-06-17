@@ -357,6 +357,10 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private ensureMinimumTokenReserved(): void {
+        if (this.reservedTokens.isZero()) {
+            throw new Revert(`NATIVE_SWAP: No liquidity reserved; no more liquidity available.`);
+        }
+
         if (u256.lt(this.reservedTokens, this.minimumAmountOutTokens)) {
             throw new Revert(
                 `NATIVE_SWAP: Not enough liquidity reserved; wanted ${this.minimumAmountOutTokens}, got ${this.reservedTokens}, spent ${this.satoshisSpent}, leftover tokens: ${this.remainingTokens}, quote: ${this.currentQuote}.`,
