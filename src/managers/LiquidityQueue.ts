@@ -298,6 +298,14 @@ export class LiquidityQueue implements ILiquidityQueue {
         return this.providerManager.getNextProviderWithLiquidity(quote);
     }
 
+    public getNormalQueueStartingIndex(): u32 {
+        return this.providerManager.normalQueueStartingIndex;
+    }
+
+    public getPriorityQueueStartingIndex(): u32 {
+        return this.providerManager.priorityQueueStartingIndex;
+    }
+
     public getProviderQueueData(): Uint8Array {
         return this.providerManager.getQueueData();
     }

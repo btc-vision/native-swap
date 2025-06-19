@@ -14,6 +14,7 @@ import { LiquidityListedEvent } from '../events/LiquidityListedEvent';
 import { FeeManager } from '../managers/FeeManager';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import {
+    INDEX_NOT_SET_VALUE,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
     PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
     PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX,
@@ -73,11 +74,28 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.provider.activate();
 
         if (!this.isForInitialLiquidity) {
+            // In case the provider is already in the queue, do not add it another time.
+            // This can be the case when listing tokens with already listed tokens
+            const queueIndex: u32 = this.provider.getQueueIndex();
+
             if (this.usePriorityQueue) {
                 this.provider.markPriority();
-                this.liquidityQueue.addToPriorityQueue(this.provider);
+
+                if (
+                    queueIndex === INDEX_NOT_SET_VALUE ||
+                    (queueIndex !== INDEX_NOT_SET_VALUE &&
+                        queueIndex < this.liquidityQueue.getPriorityQueueStartingIndex())
+                ) {
+                    this.liquidityQueue.addToPriorityQueue(this.provider);
+                }
             } else {
-                this.liquidityQueue.addToNormalQueue(this.provider);
+                if (
+                    queueIndex === INDEX_NOT_SET_VALUE ||
+                    (queueIndex !== INDEX_NOT_SET_VALUE &&
+                        queueIndex < this.liquidityQueue.getNormalQueueStartingIndex())
+                ) {
+                    this.liquidityQueue.addToNormalQueue(this.provider);
+                }
             }
         }
     }

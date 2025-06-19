@@ -1,4 +1,4 @@
-import { clearCachedProviders } from '../models/Provider';
+import { clearCachedProviders, getProvider } from '../models/Provider';
 import {
     Address,
     Blockchain,
@@ -483,6 +483,299 @@ describe('ListTokenForSaleOperation tests', () => {
             expect(provider.isActive()).toBeTruthy();
             expect(provider.isPriority()).toBeTruthy();
             expect(queue.providerManager.priorityQueueLength).toStrictEqual(1);
+        });
+
+        it('should add the liquidity to the existing one and not re-add to the queue when listing tokens and there is already tokens listed in priority queue', () => {
+            setBlockchainEnvironment(100);
+            FeeManager.onDeploy();
+
+            const txOut: TransactionOutput[] = [];
+            txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
+            txOut.push(
+                new TransactionOutput(
+                    1,
+                    0,
+                    null,
+                    FEE_COLLECT_SCRIPT_PUBKEY,
+                    FeeManager.priorityQueueBaseFee,
+                ),
+            );
+            Blockchain.mockTransactionOutput(txOut);
+
+            const provider = createProvider(providerAddress1, tokenAddress1);
+            provider.deactivate();
+            provider.clearPriority();
+            provider.setLiquidityAmount(u128.Zero);
+            provider.setLiquidityProvided(u128.Zero);
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
+            queue.liquidityQueue.virtualSatoshisReserve = 100;
+
+            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
+            expect(provider.isPriority()).toBeFalsy();
+            expect(provider.isActive()).toBeFalsy();
+
+            const operation = new ListTokensForSaleOperation(
+                queue.liquidityQueue,
+                provider.getId(),
+                u128.fromU64(100000000),
+                receiverAddress1,
+                Address.dead(),
+                true,
+                false,
+            );
+
+            operation.execute();
+            provider.save();
+            queue.liquidityQueue.save();
+
+            expect(provider.isActive()).toBeTruthy();
+            expect(provider.isPriority()).toBeTruthy();
+            expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(97000000));
+            expect(queue.providerManager.priorityQueueLength).toStrictEqual(1);
+            const queueIndex = provider.getQueueIndex();
+
+            setBlockchainEnvironment(104);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const provider2 = getProvider(provider.getId());
+
+            const operation2 = new ListTokensForSaleOperation(
+                queue2.liquidityQueue,
+                provider2.getId(),
+                u128.fromU64(10000000000),
+                receiverAddress1,
+                Address.dead(),
+                true,
+                false,
+            );
+
+            operation2.execute();
+            provider2.save();
+            queue2.liquidityQueue.save();
+
+            expect(provider2.isActive()).toBeTruthy();
+            expect(provider2.isPriority()).toBeTruthy();
+            expect(provider2.getQueueIndex()).toStrictEqual(queueIndex);
+            expect(provider2.getLiquidityAmount()).toStrictEqual(u128.fromU64(9797000000));
+            expect(queue2.providerManager.priorityQueueLength).toStrictEqual(1);
+        });
+
+        it('should add the liquidity, re-add to the queue at a new index  when listing from priority queue as been purged', () => {
+            setBlockchainEnvironment(100);
+            FeeManager.onDeploy();
+
+            const txOut: TransactionOutput[] = [];
+            txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
+            txOut.push(
+                new TransactionOutput(
+                    1,
+                    0,
+                    null,
+                    FEE_COLLECT_SCRIPT_PUBKEY,
+                    FeeManager.priorityQueueBaseFee,
+                ),
+            );
+            Blockchain.mockTransactionOutput(txOut);
+
+            const provider = createProvider(providerAddress1, tokenAddress1);
+            provider.deactivate();
+            provider.clearPriority();
+            provider.setLiquidityAmount(u128.Zero);
+            provider.setLiquidityProvided(u128.Zero);
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
+            queue.liquidityQueue.virtualSatoshisReserve = 100;
+
+            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
+            expect(provider.isPriority()).toBeFalsy();
+            expect(provider.isActive()).toBeFalsy();
+
+            const operation = new ListTokensForSaleOperation(
+                queue.liquidityQueue,
+                provider.getId(),
+                u128.fromU64(100000000),
+                receiverAddress1,
+                Address.dead(),
+                true,
+                false,
+            );
+
+            operation.execute();
+            provider.save();
+            queue.liquidityQueue.save();
+
+            expect(provider.isActive()).toBeTruthy();
+            expect(provider.isPriority()).toBeTruthy();
+            expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(97000000));
+            expect(queue.providerManager.priorityQueueLength).toStrictEqual(1);
+            const queueIndex = provider.getQueueIndex();
+
+            setBlockchainEnvironment(103);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const provider2 = getProvider(provider.getId());
+            provider2.setLiquidityAmount(u128.Zero);
+            provider2.clearPriority();
+            provider2.save();
+            queue2.providerManager.getPriorityQueue.setStartingIndex(3);
+            queue2.providerManager.getPriorityQueue.save();
+            queue2.liquidityQueue.save();
+
+            setBlockchainEnvironment(104);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const provider3 = getProvider(provider.getId());
+
+            const operation2 = new ListTokensForSaleOperation(
+                queue3.liquidityQueue,
+                provider3.getId(),
+                u128.fromU64(10000000000),
+                receiverAddress1,
+                Address.dead(),
+                true,
+                false,
+            );
+
+            operation2.execute();
+            provider3.save();
+            queue3.liquidityQueue.save();
+            expect(provider3.isActive()).toBeTruthy();
+            expect(provider3.isPriority()).toBeTruthy();
+            expect(provider3.getQueueIndex()).not.toStrictEqual(queueIndex);
+            expect(provider3.getLiquidityAmount()).toStrictEqual(u128.fromU64(9700000000));
+            expect(queue3.providerManager.priorityQueueLength).toStrictEqual(2);
+        });
+
+        it('should add the liquidity to the existing one and not re-add to the queue when listing tokens and there is already tokens listed in normal queue', () => {
+            setBlockchainEnvironment(100);
+
+            const provider = createProvider(providerAddress1, tokenAddress1);
+            provider.deactivate();
+            provider.clearPriority();
+            provider.setLiquidityAmount(u128.Zero);
+            provider.setLiquidityProvided(u128.Zero);
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
+            queue.liquidityQueue.virtualSatoshisReserve = 100;
+
+            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
+            expect(provider.isPriority()).toBeFalsy();
+            expect(provider.isActive()).toBeFalsy();
+
+            const operation = new ListTokensForSaleOperation(
+                queue.liquidityQueue,
+                provider.getId(),
+                u128.fromU64(100000000),
+                receiverAddress1,
+                Address.dead(),
+                false,
+                false,
+            );
+
+            operation.execute();
+            provider.save();
+            queue.liquidityQueue.save();
+
+            expect(provider.isActive()).toBeTruthy();
+            expect(provider.isPriority()).toBeFalsy();
+            expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(100000000));
+            expect(queue.providerManager.normalQueueLength).toStrictEqual(1);
+            const queueIndex = provider.getQueueIndex();
+
+            setBlockchainEnvironment(104);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const provider2 = getProvider(provider.getId());
+
+            const operation2 = new ListTokensForSaleOperation(
+                queue2.liquidityQueue,
+                provider2.getId(),
+                u128.fromU64(10000000000),
+                receiverAddress1,
+                Address.dead(),
+                false,
+                false,
+            );
+
+            operation2.execute();
+            provider2.save();
+            queue2.liquidityQueue.save();
+
+            expect(provider2.isActive()).toBeTruthy();
+            expect(provider2.isPriority()).toBeFalsy();
+            expect(provider2.getQueueIndex()).toStrictEqual(queueIndex);
+            expect(provider2.getLiquidityAmount()).toStrictEqual(u128.fromU64(10100000000));
+            expect(queue2.providerManager.normalQueueLength).toStrictEqual(1);
+        });
+
+        it('should add the liquidity, re-add to the queue at a new index when listing has been purged', () => {
+            setBlockchainEnvironment(100);
+
+            const provider = createProvider(providerAddress1, tokenAddress1);
+            provider.deactivate();
+            provider.clearPriority();
+            provider.setLiquidityAmount(u128.Zero);
+            provider.setLiquidityProvided(u128.Zero);
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
+            queue.liquidityQueue.virtualSatoshisReserve = 100;
+
+            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
+            expect(provider.isPriority()).toBeFalsy();
+            expect(provider.isActive()).toBeFalsy();
+
+            const operation = new ListTokensForSaleOperation(
+                queue.liquidityQueue,
+                provider.getId(),
+                u128.fromU64(100000000),
+                receiverAddress1,
+                Address.dead(),
+                false,
+                false,
+            );
+
+            operation.execute();
+            provider.save();
+            queue.liquidityQueue.save();
+
+            expect(provider.isActive()).toBeTruthy();
+            expect(provider.isPriority()).toBeFalsy();
+            expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(100000000));
+            expect(queue.providerManager.normalQueueLength).toStrictEqual(1);
+            const queueIndex = provider.getQueueIndex();
+
+            setBlockchainEnvironment(103);
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const provider2 = getProvider(provider.getId());
+            provider2.setLiquidityAmount(u128.Zero);
+            provider2.save();
+            queue2.providerManager.getNormalQueue.setStartingIndex(3);
+            queue2.providerManager.getNormalQueue.save();
+            queue2.liquidityQueue.save();
+
+            setBlockchainEnvironment(104);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const provider3 = getProvider(provider.getId());
+
+            const operation2 = new ListTokensForSaleOperation(
+                queue3.liquidityQueue,
+                provider3.getId(),
+                u128.fromU64(10000000000),
+                receiverAddress1,
+                Address.dead(),
+                false,
+                false,
+            );
+
+            operation2.execute();
+            provider3.save();
+            queue3.liquidityQueue.save();
+            expect(provider3.isActive()).toBeTruthy();
+            expect(provider3.isPriority()).toBeFalsy();
+            expect(provider3.getQueueIndex()).not.toStrictEqual(queueIndex);
+            expect(provider3.getLiquidityAmount()).toStrictEqual(u128.fromU64(10000000000));
+            expect(queue3.providerManager.normalQueueLength).toStrictEqual(2);
         });
 
         it('should activate, and add to normal queue when not for initial liquidity', () => {

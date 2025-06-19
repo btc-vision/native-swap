@@ -54,6 +54,10 @@ export interface ILiquidityQueue {
 
     getNextProviderWithLiquidity(quote: u256): Provider | null;
 
+    getNormalQueueStartingIndex(): u32;
+
+    getPriorityQueueStartingIndex(): u32;
+
     getProviderQueueData(): Uint8Array;
 
     getReservationIdAtIndex(blockNumber: u64, index: u32): u128;
