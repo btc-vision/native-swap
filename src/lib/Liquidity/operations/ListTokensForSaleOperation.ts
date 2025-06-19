@@ -12,6 +12,7 @@ import {
 import { getTotalFeeCollected, tokensToSatoshis } from '../../../utils/NativeSwapUtils';
 import { LiquidityListedEvent } from '../../../events/LiquidityListedEvent';
 import { FeeManager } from '../../FeeManager';
+import { NOT_DEFINED_PROVIDER_INDEX } from '../../../data-types/Constants';
 
 export class ListTokensForSaleOperation extends BaseOperation {
     private readonly providerId: u256;
@@ -191,11 +192,28 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.provider.activate();
 
         if (!this.initialLiquidity) {
+            // In case the provider is already in the queue, do not add it another time.
+            this.provider.loadIndexedAt();
+            const queueIndex: u64 = this.provider.indexedAt;
+
             if (this.usePriorityQueue) {
                 this.provider.markPriority(true);
-                this.liquidityQueue.addToPriorityQueue(this.provider.providerId);
+
+                if (
+                    queueIndex === NOT_DEFINED_PROVIDER_INDEX ||
+                    (queueIndex !== NOT_DEFINED_PROVIDER_INDEX &&
+                        queueIndex < this.liquidityQueue.getPriorityQueueStartingIndex())
+                ) {
+                    this.liquidityQueue.addToPriorityQueue(this.provider.providerId);
+                }
             } else {
-                this.liquidityQueue.addToStandardQueue(this.provider.providerId);
+                if (
+                    queueIndex === NOT_DEFINED_PROVIDER_INDEX ||
+                    (queueIndex !== NOT_DEFINED_PROVIDER_INDEX &&
+                        queueIndex < this.liquidityQueue.getStandardQueueStartingIndex())
+                ) {
+                    this.liquidityQueue.addToStandardQueue(this.provider.providerId);
+                }
             }
         }
     }

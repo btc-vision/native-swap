@@ -343,6 +343,14 @@ export class LiquidityQueue {
         this._providerManager.addToRemovalQueue(providerId);
     }
 
+    public getPriorityQueueStartingIndex():u64{
+        return this._providerManager.priorityQueueStartingIndex;
+    }
+
+    public getStandardQueueStartingIndex():u64{
+        return this._providerManager.standardQueueStartingIndex;
+    }
+
     public initializeInitialLiquidity(
         floorPrice: u256,
         providerId: u256,
