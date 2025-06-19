@@ -12,6 +12,13 @@ import {
     satoshisToTokens,
     tokensToSatoshis,
 } from '../../../utils/NativeSwapUtils';
+import { Provider } from '../../Provider';
+import {
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAXIMUM_PROVIDER_PER_RESERVATIONS,
+    NOT_DEFINED_PROVIDER_INDEX,
+    RESERVATION_EXPIRE_AFTER,
+} from '../../../data-types/Constants';
 
 export class ReserveLiquidityOperation extends BaseOperation {
     public static MaxActivationDelay: u8 = 3;
@@ -52,20 +59,26 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.ensureSufficientFeesCollected(totalFee);
 
         const reservation = new Reservation(this.liquidityQueue.token, this.buyer);
-        this.ensureReservationValid(reservation);
         this.ensureUserNotTimedOut(reservation);
+        this.ensureReservationPurged(reservation);
+        this.ensureReservationNotValid(reservation);
 
         const currentQuote = this.liquidityQueue.quote();
         this.ensureCurrentQuoteIsValid(currentQuote);
 
         this.ensureNoBots();
+
+        // Manually purge once everything is checked and valid
+        this.liquidityQueue.purgeReservationsAndRestoreProviders();
+
         this.ensureEnoughLiquidity();
 
         let tokensRemaining: u256 = this.computeTokenRemaining(currentQuote);
         let tokensReserved: u256 = u256.Zero;
         let satSpent: u256 = u256.Zero;
-        let lastIndex: u64 = <u64>u32.MAX_VALUE + <u64>1; // Impossible value
+        let lastIndex: u64 = <u64>NOT_DEFINED_PROVIDER_INDEX;
         let lastProviderId: u256 = u256.Zero;
+        let reservedProviders: u8 = 0;
 
         // Loop over providers while tokensRemaining > 0
         let i: u32 = 0;
@@ -86,8 +99,17 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 break;
             }
 
+            if (provider.indexedAt === NOT_DEFINED_PROVIDER_INDEX) {
+                throw new Revert(
+                    `Impossible state: provider ${provider.providerId} has NOT_DEFINED_PROVIDER_INDEX index`,
+                );
+            }
+
             // If we see repeated MAX_VALUE => break
-            if (provider.indexedAt === u32.MAX_VALUE && lastIndex === u32.MAX_VALUE) {
+            if (
+                provider.indexedAt === INITIAL_LIQUIDITY_PROVIDER_INDEX &&
+                lastIndex === INITIAL_LIQUIDITY_PROVIDER_INDEX
+            ) {
                 break;
             }
 
@@ -126,7 +148,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 );
 
                 let reserveAmount = satoshisToTokens(tokensRemainingInSatoshis, currentQuote);
-
                 if (reserveAmount.isZero()) {
                     continue;
                 }
@@ -147,6 +168,9 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     reserveAmount.toU128(),
                     LIQUIDITY_REMOVAL_TYPE,
                 );
+
+                // Handle purge queue
+                this.handleProviderPurgeQueues(provider, currentQuote, LIQUIDITY_REMOVAL_TYPE);
 
                 this.emitLiquidityReservedEvent(
                     provider.providerId,
@@ -193,17 +217,23 @@ export class ReserveLiquidityOperation extends BaseOperation {
                     tokensRemaining = u256.Zero;
                 }
 
-                reservation.reserveAtIndex(
-                    <u32>provider.indexedAt,
-                    reserveAmountU128,
-                    provider.isPriority() ? PRIORITY_TYPE : NORMAL_TYPE,
-                );
+                const type = provider.isPriority() ? PRIORITY_TYPE : NORMAL_TYPE;
+                reservation.reserveAtIndex(<u32>provider.indexedAt, reserveAmountU128, type);
+
+                // Handle purge queue
+                this.handleProviderPurgeQueues(provider, currentQuote, type);
 
                 this.emitLiquidityReservedEvent(
                     provider.providerId,
                     provider.btcReceiver,
                     costInSatoshis.toU128(),
                 );
+            }
+
+            // Verify hard constraint of maximum providers per reservation
+            reservedProviders++;
+            if (MAXIMUM_PROVIDER_PER_RESERVATIONS === reservedProviders) {
+                break;
             }
         }
 
@@ -218,9 +248,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         reservation.setActivationDelay(this.activationDelay);
         reservation.reservedLP = this.forLP;
-        reservation.setExpirationBlock(
-            Blockchain.block.number + LiquidityQueue.RESERVATION_EXPIRE_AFTER,
-        );
+        reservation.setExpirationBlock(Blockchain.block.number + RESERVATION_EXPIRE_AFTER);
 
         const index: u32 = this.liquidityQueue.addActiveReservationToList(
             Blockchain.block.number,
@@ -232,6 +260,28 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         this.liquidityQueue.setBlockQuote();
         this.emitReservationCreatedEvent(tokensReserved, satSpent);
+    }
+
+    private handleProviderPurgeQueues(provider: Provider, currentQuote: u256, type: u8): void {
+        if (!provider.hasBeenPurged()) {
+            return;
+        }
+
+        let hasEnoughLiquidityLeft: bool = false;
+        if (type === LIQUIDITY_REMOVAL_TYPE) {
+            // TODO: Verify if there is enough owed BTC left to refund, the fixed version is in the refactor version. Will be empty for now
+        } else {
+            hasEnoughLiquidityLeft = this.liquidityQueue.hasEnoughLiquidityLeftProvider(
+                provider,
+                currentQuote,
+            );
+        }
+
+        if (!hasEnoughLiquidityLeft) {
+            this.liquidityQueue.removeFromPurgeQueue(provider);
+        }
+
+        return;
     }
 
     private emitReservationCreatedEvent(tokensReserved: u256, satSpent: u256): void {
@@ -246,10 +296,44 @@ export class ReserveLiquidityOperation extends BaseOperation {
         Blockchain.emit(new LiquidityReservedEvent(btcReceiver, costInSatoshis, providerId));
     }
 
-    private ensureReservationValid(reservation: Reservation): void {
-        if (reservation.valid()) {
+    private ensureReservationNotValid(reservation: Reservation): void {
+        if (reservation.expired()) {
+            if (reservation.isDirty()) {
+                reservation.delete(false); // Ensure this is always before a timeout check.
+            }
+        } else {
             throw new Revert(
                 'NATIVE_SWAP: You already have an active reservation. Swap or wait for expiration before creating another',
+            );
+        }
+    }
+
+    private ensureReservationPurged(reservation: Reservation): void {
+        if (!reservation.expired()) {
+            return;
+        }
+
+        const expirationBlock: u64 = reservation.createdAt;
+        if (expirationBlock <= RESERVATION_EXPIRE_AFTER) {
+            return;
+        }
+
+        const reservations = this.liquidityQueue.getReservationListForBlock(expirationBlock);
+        const id = reservation.getPurgeIndex();
+        const reservationId = reservations.get(id);
+
+        if (!u128.eq(reservationId, reservation.reservationId)) {
+            throw new Revert(
+                `NATIVE_SWAP: Invalid reservationId ${reservationId} != ${reservation.reservationId}`,
+            );
+        }
+
+        const active = this.liquidityQueue.getActiveReservationListForBlock(expirationBlock);
+        const activeReservationId = active.get(id);
+
+        if (activeReservationId) {
+            throw new Revert(
+                `NATIVE_SWAP: You may not reserve at this time. Your previous reservation has not been purged yet. Please try again later.`,
             );
         }
     }
@@ -304,11 +388,10 @@ export class ReserveLiquidityOperation extends BaseOperation {
         }
 
         const satCostTokenRemaining = tokensToSatoshis(tokensRemaining, currentQuote);
-
         if (u256.lt(satCostTokenRemaining, LiquidityQueue.MINIMUM_PROVIDER_RESERVATION_AMOUNT)) {
             if (tokensRemaining === maxTokensLeftBeforeCap) {
                 throw new Revert(
-                    `NATIVE_SWAP: Maximum reservation limit reached. Try again later.`,
+                    `NATIVE_SWAP: Maximum reservation limit reached. Try again later. maxTokensLeftBeforeCap: ${maxTokensLeftBeforeCap} - tokensRemaining: ${tokensRemaining} - satCostTokenRemaining: ${satCostTokenRemaining}`,
                 );
             }
 

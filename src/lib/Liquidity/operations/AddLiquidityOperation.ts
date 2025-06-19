@@ -65,9 +65,6 @@ export class AddLiquidityOperation extends BaseOperation {
         // Mark the provider as an LP
         this.markProviderAsLPProvider(tokensBoughtFromQueue);
 
-        // Clean up providers
-        this.liquidityQueue.cleanUpQueues();
-
         this.emitLiquidityAddedEvent(tokensBoughtFromQueue, btcSpent);
     }
 

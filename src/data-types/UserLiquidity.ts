@@ -25,6 +25,7 @@ export class UserLiquidity {
     private canProvide: u8 = 0;
     private isLiquidityProvider: u8 = 0;
     private isPendingRemoval: u8 = 0;
+    private pushedToExpiredReservationQueue: u8 = 0;
 
     private liquidityAmount: u128 = u128.Zero;
     private reservedAmount: u128 = u128.Zero;
@@ -74,6 +75,34 @@ export class UserLiquidity {
     public getActiveFlag(): u8 {
         this.ensureValues();
         return this.activeFlag;
+    }
+
+    /**
+     * @method hasBeenPurged
+     * @description Checks if the reservation has been purged.
+     * @returns {bool} - True if purged, false otherwise.
+     */
+    @inline
+    public hasBeenPurged(): boolean {
+        this.ensureValues();
+
+        return this.pushedToExpiredReservationQueue === 1;
+    }
+
+    /**
+     * @method setPurged
+     * @param {bool} flag - The purged flag value (true or false).
+     * @description Sets the purged flag.
+     */
+    @inline
+    public setPurged(flag: bool): void {
+        this.ensureValues();
+
+        const n: u8 = flag ? 1 : 0;
+        if (this.pushedToExpiredReservationQueue != n) {
+            this.pushedToExpiredReservationQueue = n;
+            this.isChanged = true;
+        }
     }
 
     /**
@@ -295,6 +324,7 @@ export class UserLiquidity {
             this.canProvide = (flag >> 2) & 0b1;
             this.isLiquidityProvider = (flag >> 3) & 0b1;
             this.isPendingRemoval = (flag >> 4) & 0b1;
+            this.pushedToExpiredReservationQueue = (flag >> 5) & 0b1;
 
             // Unpack liquidityAmount (16 bytes, little endian)
             this.liquidityAmount = reader.readU128();
@@ -326,7 +356,8 @@ export class UserLiquidity {
             (this.priorityFlag << 1) |
             (this.canProvide << 2) |
             (this.isLiquidityProvider << 3) |
-            (this.isPendingRemoval << 4);
+            (this.isPendingRemoval << 4) |
+            (this.pushedToExpiredReservationQueue << 5);
 
         writer.writeU8(flag);
 

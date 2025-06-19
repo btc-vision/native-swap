@@ -39,3 +39,9 @@ export const REMOVAL_QUEUE_POINTER: u16 = Blockchain.nextPointer;
 export const VOLATILITY_POINTER: u16 = Blockchain.nextPointer;
 export const STARTING_INDEX_POINTER: u16 = Blockchain.nextPointer;
 export const STAKING_CA_POINTER: u16 = Blockchain.nextPointer;
+
+export const QUEUE_PURGED_RESERVATION_STANDARD: u16 = Blockchain.nextPointer;
+export const QUEUE_PURGED_RESERVATION_PRIORITY: u16 = Blockchain.nextPointer;
+export const QUEUE_PURGED_RESERVATION_REMOVAL: u16 = Blockchain.nextPointer;
+export const PURGE_RESERVATION_INDEX_POINTER: u16 = Blockchain.nextPointer;
+export const LISTED_TOKENS_AT_BLOCK_POINTER: u16 = Blockchain.nextPointer;
