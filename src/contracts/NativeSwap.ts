@@ -27,7 +27,7 @@ import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperati
 import { CancelListingOperation } from '../operations/CancelListingOperation';
 import { SwapOperation } from '../operations/SwapOperation';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import { ReentrancyGuard } from '../contracts/ReentrancyGuard';
+import { ReentrancyGuard } from './ReentrancyGuard';
 import { STAKING_CA_POINTER } from '../constants/StoredPointers';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
@@ -108,7 +108,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('reserve(address,uint256,uint256,bool,uint8)'):
+            case encodeSelector('reserve(address,uint64,uint256,bool,uint8)'):
                 return this.reserve(calldata);
             case encodeSelector('swap(address)'):
                 return this.swap(calldata);
@@ -145,7 +145,7 @@ export class NativeSwap extends ReentrancyGuard {
             /** Readable methods */
             case encodeSelector('getReserve(address)'):
                 return this.getReserve(calldata);
-            case encodeSelector('getQuote(address,uint256)'):
+            case encodeSelector('getQuote(address,uint64)'):
                 return this.getQuote(calldata);
             case encodeSelector('getProviderDetails(address)'):
                 return this.getProviderDetails(calldata);
@@ -240,6 +240,7 @@ export class NativeSwap extends ReentrancyGuard {
         writer.writeU128(provider.getReservedAmount());
         writer.writeU128(provider.getLiquidityProvided());
         writer.writeStringWithLength(provider.getBtcReceiver());
+
         writer.writeU32(provider.getQueueIndex());
         writer.writeBoolean(provider.isPriority());
 
@@ -248,17 +249,15 @@ export class NativeSwap extends ReentrancyGuard {
 
     private getQueueDetails(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
-
-        //!!! pourquoi purge a true dans des getter?
         const getQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
             token,
             this.addressToPointer(token),
-            true,
+            false,
         );
+
         this.ensurePoolExistsForToken(getQueueResult.liquidityQueue);
 
         const writer = new BytesWriter(U64_BYTE_LENGTH + 10 * U32_BYTE_LENGTH);
-
         writer.writeU64(getQueueResult.liquidityQueue.lastPurgedBlock);
         writer.writeU32(getQueueResult.liquidityQueue.blockWithReservationsLength());
         writer.writeBytes(getQueueResult.liquidityQueue.getProviderQueueData());
