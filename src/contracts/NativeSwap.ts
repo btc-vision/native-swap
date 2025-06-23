@@ -232,18 +232,18 @@ export class NativeSwap extends ReentrancyGuard {
         const writer: BytesWriter = new BytesWriter(
             U128_BYTE_LENGTH * 3 +
                 (U32_BYTE_LENGTH + provider.getBtcReceiver().length) +
-                U32_BYTE_LENGTH +
-                BOOLEAN_BYTE_LENGTH,
+                2 * U32_BYTE_LENGTH +
+                2 * BOOLEAN_BYTE_LENGTH,
         );
 
         writer.writeU128(provider.getLiquidityAmount());
         writer.writeU128(provider.getReservedAmount());
         writer.writeU128(provider.getLiquidityProvided());
         writer.writeStringWithLength(provider.getBtcReceiver());
-
         writer.writeU32(provider.getQueueIndex());
         writer.writeBoolean(provider.isPriority());
-
+        writer.writeU32(provider.getPurgedIndex());
+        writer.writeBoolean(provider.isActive());
         return writer;
     }
 
@@ -401,7 +401,7 @@ export class NativeSwap extends ReentrancyGuard {
 
         this._listLiquidity(token, receiver, amountIn, priority);
 
-        const result: BytesWriter = new BytesWriter(1);
+        const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
         result.writeBoolean(true);
 
         return result;
@@ -434,7 +434,7 @@ export class NativeSwap extends ReentrancyGuard {
             priority,
             false,
         );
-
+        
         operation.execute();
         liquidityQueueResult.liquidityQueue.save();
     }
@@ -813,43 +813,43 @@ export class NativeSwap extends ReentrancyGuard {
 
     private ensureValidReceiverAddress(receiver: string): void {
         if (Blockchain.validateBitcoinAddress(receiver) == false) {
-            throw new Revert('NATIVE_SWAP: Invalid receiver address');
+            throw new Revert('NATIVE_SWAP: Invalid receiver address.');
         }
     }
 
     private ensureContractDeployer(tokenOwner: Address): void {
         if (Blockchain.tx.origin.equals(tokenOwner) == false) {
-            throw new Revert('NATIVE_SWAP: Only token owner can call createPool');
+            throw new Revert('NATIVE_SWAP: Only token owner can call createPool.');
         }
     }
 
     private ensureValidTokenAddress(token: Address): void {
         if (token.empty() || token.equals(Blockchain.DEAD_ADDRESS)) {
-            throw new Revert('NATIVE_SWAP: Invalid token address');
+            throw new Revert('NATIVE_SWAP: Invalid token address.');
         }
     }
 
     private ensurePoolExistsForToken(queue: ILiquidityQueue): void {
         if (queue.initialLiquidityProviderId.isZero()) {
-            throw new Revert('NATIVE_SWAP: Pool does not exist for token');
+            throw new Revert('NATIVE_SWAP: Pool does not exist for token.');
         }
     }
 
     private ensureMaximumAmountInNotZero(maximumAmountIn: u64): void {
         if (maximumAmountIn === 0) {
-            throw new Revert('NATIVE_SWAP: Maximum amount in cannot be zero');
+            throw new Revert('NATIVE_SWAP: Maximum amount in cannot be zero.');
         }
     }
 
     private ensurePriceNotZeroAndLiquidity(price: u256): void {
         if (price.isZero()) {
-            throw new Revert('NATIVE_SWAP: Price is zero or no liquidity');
+            throw new Revert('NATIVE_SWAP: Price is zero or no liquidity.');
         }
     }
 
     private ensureValidSignatureLength(signature: Uint8Array): void {
         if (signature.length !== 64) {
-            throw new Revert('NATIVE_SWAP: Invalid signature length');
+            throw new Revert('NATIVE_SWAP: Invalid signature length.');
         }
     }
 }
