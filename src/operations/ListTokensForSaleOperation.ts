@@ -123,7 +123,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
         if (switched && !this.oldLiquidity.isZero()) {
             throw new Revert(
-                `NATIVE_SWAP: You must cancel your listings before using switching queue type.`,
+                `NATIVE_SWAP: You must cancel your listings before switching queue type.`,
             );
         }
     }
@@ -178,7 +178,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
     private ensureAmountInIsNotZero(): void {
         if (this.amountIn.isZero()) {
-            throw new Revert('NATIVE_SWAP: Amount in cannot be zero');
+            throw new Revert('NATIVE_SWAP: Amount in cannot be zero.');
         }
     }
 
@@ -236,7 +236,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         const currentPrice: u256 = this.liquidityQueue.quote();
         if (currentPrice.isZero()) {
             throw new Revert(
-                'NATIVE_SWAP: Quote is zero. Please set P0 if you are the owner of the token.',
+                'NATIVE_SWAP: Quote is zero. Please set initial price if you are the owner of the token.',
             );
         }
     }

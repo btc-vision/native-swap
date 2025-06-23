@@ -352,7 +352,9 @@ export class ReserveLiquidityOperation extends BaseOperation {
         const satCost: u64 = tokensToSatoshis(tokens, this.currentQuote);
 
         if (satCost < MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
-            throw new Revert(`NATIVE_SWAP: Minimum liquidity not met (${satCost} sat).`);
+            throw new Revert(
+                `NATIVE_SWAP: Minimum liquidity not met. satoshis: (${satCost}, tokens: ${tokens}, quote: ${this.currentQuote}).`,
+            );
         }
     }
 
