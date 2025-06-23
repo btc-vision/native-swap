@@ -19,7 +19,7 @@ import {
     PURGE_RESERVATION_INDEX_POINTER,
     RESERVATION_IDS_BY_BLOCK_POINTER,
 } from '../constants/StoredPointers';
-import { RESERVATION_EXPIRE_AFTER_IN_BLOCKS } from '../constants/Contract';
+import { EMIT_PURGE_EVENTS, RESERVATION_EXPIRE_AFTER_IN_BLOCKS } from '../constants/Contract';
 import { IProviderManager } from './interfaces/IProviderManager';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
@@ -279,15 +279,17 @@ export class ReservationManager implements IReservationManager {
 
                 actives.set(index, false);
 
-                Blockchain.emit(
-                    new ReservationPurgedEvent(
-                        reservationId,
-                        index,
-                        Blockchain.block.number,
-                        blockNumber,
-                        providerCount,
-                    ),
-                );
+                if (EMIT_PURGE_EVENTS) {
+                    Blockchain.emit(
+                        new ReservationPurgedEvent(
+                            reservationId,
+                            index,
+                            Blockchain.block.number,
+                            blockNumber,
+                            providerCount,
+                        ),
+                    );
+                }
             }
 
             index++;

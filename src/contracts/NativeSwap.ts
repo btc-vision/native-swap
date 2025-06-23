@@ -27,7 +27,7 @@ import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperati
 import { CancelListingOperation } from '../operations/CancelListingOperation';
 import { SwapOperation } from '../operations/SwapOperation';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import { ReentrancyGuard } from '../contracts/ReentrancyGuard';
+import { ReentrancyGuard } from './ReentrancyGuard';
 import { STAKING_CA_POINTER } from '../constants/StoredPointers';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
@@ -108,7 +108,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('reserve(address,uint256,uint256,bool,uint8)'):
+            case encodeSelector('reserve(address,uint64,uint256,bool,uint8)'):
                 return this.reserve(calldata);
             case encodeSelector('swap(address)'):
                 return this.swap(calldata);
@@ -145,7 +145,7 @@ export class NativeSwap extends ReentrancyGuard {
             /** Readable methods */
             case encodeSelector('getReserve(address)'):
                 return this.getReserve(calldata);
-            case encodeSelector('getQuote(address,uint256)'):
+            case encodeSelector('getQuote(address,uint64)'):
                 return this.getQuote(calldata);
             case encodeSelector('getProviderDetails(address)'):
                 return this.getProviderDetails(calldata);
@@ -232,34 +232,32 @@ export class NativeSwap extends ReentrancyGuard {
         const writer: BytesWriter = new BytesWriter(
             U128_BYTE_LENGTH * 3 +
                 (U32_BYTE_LENGTH + provider.getBtcReceiver().length) +
-                2 * U32_BYTE_LENGTH +
-                2 * BOOLEAN_BYTE_LENGTH,
+                U32_BYTE_LENGTH +
+                BOOLEAN_BYTE_LENGTH,
         );
 
         writer.writeU128(provider.getLiquidityAmount());
         writer.writeU128(provider.getReservedAmount());
         writer.writeU128(provider.getLiquidityProvided());
         writer.writeStringWithLength(provider.getBtcReceiver());
+
         writer.writeU32(provider.getQueueIndex());
         writer.writeBoolean(provider.isPriority());
-        writer.writeU32(provider.getPurgedIndex());
-        writer.writeBoolean(provider.isActive());
 
         return writer;
     }
 
     private getQueueDetails(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
-
         const getQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
             token,
             this.addressToPointer(token),
-            true,
+            false,
         );
+
         this.ensurePoolExistsForToken(getQueueResult.liquidityQueue);
 
         const writer = new BytesWriter(U64_BYTE_LENGTH + 10 * U32_BYTE_LENGTH);
-
         writer.writeU64(getQueueResult.liquidityQueue.lastPurgedBlock);
         writer.writeU32(getQueueResult.liquidityQueue.blockWithReservationsLength());
         writer.writeBytes(getQueueResult.liquidityQueue.getProviderQueueData());
@@ -815,43 +813,43 @@ export class NativeSwap extends ReentrancyGuard {
 
     private ensureValidReceiverAddress(receiver: string): void {
         if (Blockchain.validateBitcoinAddress(receiver) == false) {
-            throw new Revert('NATIVE_SWAP: Invalid receiver address.');
+            throw new Revert('NATIVE_SWAP: Invalid receiver address');
         }
     }
 
     private ensureContractDeployer(tokenOwner: Address): void {
         if (Blockchain.tx.origin.equals(tokenOwner) == false) {
-            throw new Revert('NATIVE_SWAP: Only token owner can call createPool.');
+            throw new Revert('NATIVE_SWAP: Only token owner can call createPool');
         }
     }
 
     private ensureValidTokenAddress(token: Address): void {
         if (token.empty() || token.equals(Blockchain.DEAD_ADDRESS)) {
-            throw new Revert('NATIVE_SWAP: Invalid token address.');
+            throw new Revert('NATIVE_SWAP: Invalid token address');
         }
     }
 
     private ensurePoolExistsForToken(queue: ILiquidityQueue): void {
         if (queue.initialLiquidityProviderId.isZero()) {
-            throw new Revert('NATIVE_SWAP: Pool does not exist for token.');
+            throw new Revert('NATIVE_SWAP: Pool does not exist for token');
         }
     }
 
     private ensureMaximumAmountInNotZero(maximumAmountIn: u64): void {
         if (maximumAmountIn === 0) {
-            throw new Revert('NATIVE_SWAP: Maximum amount in cannot be zero.');
+            throw new Revert('NATIVE_SWAP: Maximum amount in cannot be zero');
         }
     }
 
     private ensurePriceNotZeroAndLiquidity(price: u256): void {
         if (price.isZero()) {
-            throw new Revert('NATIVE_SWAP: Price is zero or no liquidity.');
+            throw new Revert('NATIVE_SWAP: Price is zero or no liquidity');
         }
     }
 
     private ensureValidSignatureLength(signature: Uint8Array): void {
         if (signature.length !== 64) {
-            throw new Revert('NATIVE_SWAP: Invalid signature length.');
+            throw new Revert('NATIVE_SWAP: Invalid signature length');
         }
     }
 }

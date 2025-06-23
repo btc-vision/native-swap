@@ -2,6 +2,9 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 export const FEE_COLLECT_SCRIPT_PUBKEY: string =
     'bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh';
+
+// tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c
+
 export const QUOTE_SCALE: u256 = u256.fromU64(100_000_000);
 export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 5;
 export const VOLATILITY_WINDOW_IN_BLOCKS: u32 = 5;
@@ -22,12 +25,14 @@ export const INITIAL_LIQUIDITY_PROVIDER_INDEX: u32 = u32.MAX_VALUE - 1;
 export const MAXIMUM_VALID_INDEX: u32 = u32.MAX_VALUE - 2;
 export const BLOCK_NOT_SET_VALUE: u64 = U64.MAX_VALUE;
 
+export const EMIT_PURGE_EVENTS: boolean = false;
+
 export const ALLOW_DIRTY: boolean = true;
 
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
  */
-export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 100;
+export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 150;
 
 export const AT_LEAST_PROVIDERS_TO_PURGE: u32 = 150;
 
