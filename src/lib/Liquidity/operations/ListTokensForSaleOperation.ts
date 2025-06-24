@@ -162,7 +162,6 @@ export class ListTokensForSaleOperation extends BaseOperation {
             ? this.liquidityQueue.getTokensAfterTax(this.amountIn)
             : this.amountIn;
 
-        const newTax: u128 = SafeMath.sub128(this.amountIn, newLiquidityNet);
         if (!this.oldLiquidity.isZero() && this.usePriorityQueue !== this.provider.isPriority()) {
             throw new Revert(
                 `NATIVE_SWAP: You must cancel your listings before using the priority queue.`,
@@ -170,6 +169,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
 
         this.addProviderToQueue();
+
+        const newTax: u128 = SafeMath.sub128(this.amountIn, newLiquidityNet);
 
         // add to provider
         this.provider.liquidity = SafeMath.add128(this.oldLiquidity, this.amountIn);
@@ -182,10 +183,34 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
         // if priority => remove tax
         if (this.usePriorityQueue) {
-            this.removeTax(this.provider, newTax);
+            this.removeTax(newTax);
+        }
+
+        if (!this.initialLiquidity) {
+            this.activateSlashing(u256AmountIn);
         }
 
         this.liquidityQueue.setBlockQuote();
+    }
+
+    private HALF(n: u256): u256 {
+        const halfFloor = SafeMath.div(n, u256.fromU32(2));
+        return u256.add(halfFloor, u256.and(n, u256.One));
+    }
+
+    private activateSlashing(amountIn: u256): void {
+        // Previous and new total liquidity
+        const oldTotal: u256 = this.oldLiquidity.toU256();
+        const newTotal: u256 = SafeMath.add(oldTotal, amountIn);
+
+        const oldHalfCred: u256 = this.HALF(oldTotal);
+        const newHalfCred: u256 = this.HALF(newTotal);
+
+        // Credit only the delta (never negative)
+        const deltaHalf: u256 = SafeMath.sub(newHalfCred, oldHalfCred);
+        if (!deltaHalf.isZero()) {
+            this.liquidityQueue.increaseVirtualTokenReserve(deltaHalf);
+        }
     }
 
     private addProviderToQueue(): void {
@@ -218,21 +243,21 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
     }
 
-    private removeTax(provider: Provider, totalTax: u128): void {
+    private removeTax(totalTax: u128): void {
         if (totalTax.isZero()) {
             return;
         }
 
-        provider.decreaseLiquidity(totalTax);
+        this.provider.decreaseLiquidity(totalTax);
 
-        this.liquidityQueue.buyTokens(totalTax.toU256(), u256.Zero);
-        this.liquidityQueue.decreaseTotalReserve(totalTax.toU256());
+        this.applyPenality(totalTax.toU256());
+    }
 
-        TransferHelper.safeTransfer(
-            this.liquidityQueue.token,
-            this.stakingAddress,
-            totalTax.toU256(),
-        );
+    private applyPenality(amount: u256): void {
+        this.liquidityQueue.decreaseTotalReserve(amount); // we are sending the tokens out of the contract.
+        this.liquidityQueue.increaseVirtualTokenReserve(amount);
+
+        TransferHelper.safeTransfer(this.liquidityQueue.token, this.stakingAddress, amount);
     }
 
     private setProviderReceiver(provider: Provider): void {

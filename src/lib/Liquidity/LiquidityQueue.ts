@@ -264,6 +264,10 @@ export class LiquidityQueue {
         return this._blocksWithReservations.getLength();
     }
 
+    public getProviderQueueData(): Uint8Array {
+        return this._providerManager.queueData();
+    }
+
     public resetProvider(
         provider: Provider,
         burnRemainingFunds: boolean = true,
@@ -272,12 +276,27 @@ export class LiquidityQueue {
         this._providerManager.resetProvider(provider, burnRemainingFunds, canceled);
     }
 
-    public accruePenalty(penality: u256): void {
+    public accruePenalty(penality: u256, half: u256, stakingAddress: Address): void {
         if (penality.isZero()) return;
 
-        // slashed tokens instantly become pool inventory
-        this.increaseVirtualTokenReserve(penality);
-        this.increaseTotalReserve(penality);
+        if (u256.lt(penality, half)) {
+            throw new Revert(
+                `Penality is less than half: ${penality.toString()} < ${half.toString()}`,
+            );
+        }
+
+        // we have to subtract the 50% we already applied to the pool.
+        const penalityLeft = SafeMath.sub(penality, half);
+
+        if (!penalityLeft.isZero()) {
+            // slashed tokens instantly become pool inventory, in this version they are sent to the staking address since
+            // the pool doesn't have liquidity providers enabled.
+            this.increaseVirtualTokenReserve(penalityLeft);
+            this.decreaseTotalReserve(penalityLeft); // we are sending the tokens out of the contract.
+        }
+
+        // TODO: When adding lp, remove this and use this.increaseTotalReserve(penality);
+        TransferHelper.safeTransfer(this.token, stakingAddress, penality);
     }
 
     public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u256): u256 {
@@ -616,8 +635,19 @@ export class LiquidityQueue {
                 ) {
                     provider.enableLiquidityProvision();
 
-                    // track that we effectively "added" them to the virtual pool
-                    this.increaseTotalTokenSellActivated(provider.liquidity.toU256());
+                    const totalLiquidity: u256 = provider.liquidity.toU256();
+
+                    // floor(totalLiquidity / 2)
+                    const halfFloor: u256 = SafeMath.div(totalLiquidity, u256.fromU32(2));
+
+                    // CEIL = floor + (totalLiquidity & 1)
+                    const halfCred: u256 = u256.add(
+                        halfFloor,
+                        u256.and(totalLiquidity, u256.One), // adds 1 iff odd
+                    );
+
+                    // track that we virtually added those tokens to the pool
+                    this.increaseTotalTokenSellActivated(halfCred);
 
                     this.emitActivateProviderEvent(provider);
                 }
