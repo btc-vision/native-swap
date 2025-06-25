@@ -103,7 +103,7 @@ export class CancelListingOperation extends BaseOperation {
     private ensureNoActiveReservation(): void {
         if (this.provider.hasReservedAmount()) {
             throw new Revert(
-                `NATIVE_SWAP: Someone have active reservations on your liquidity. ${this.provider.getReservedAmount()}.`,
+                `NATIVE_SWAP: You can no longer cancel this listing. Someone have active reservations on your liquidity. ${this.provider.getReservedAmount()}.`,
             );
         }
     }

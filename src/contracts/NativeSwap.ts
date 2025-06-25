@@ -233,7 +233,8 @@ export class NativeSwap extends ReentrancyGuard {
             U128_BYTE_LENGTH * 3 +
                 (U32_BYTE_LENGTH + provider.getBtcReceiver().length) +
                 2 * U32_BYTE_LENGTH +
-                2 * BOOLEAN_BYTE_LENGTH,
+                2 * BOOLEAN_BYTE_LENGTH +
+                U64_BYTE_LENGTH,
         );
 
         writer.writeU128(provider.getLiquidityAmount());
@@ -244,6 +245,7 @@ export class NativeSwap extends ReentrancyGuard {
         writer.writeBoolean(provider.isPriority());
         writer.writeU32(provider.getPurgedIndex());
         writer.writeBoolean(provider.isActive());
+        writer.writeU64(provider.getListedTokenAtBlock());
         return writer;
     }
 
@@ -434,7 +436,7 @@ export class NativeSwap extends ReentrancyGuard {
             priority,
             false,
         );
-        
+
         operation.execute();
         liquidityQueueResult.liquidityQueue.save();
     }

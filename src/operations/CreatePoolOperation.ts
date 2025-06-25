@@ -63,25 +63,25 @@ export class CreatePoolOperation extends BaseOperation {
 
     private ensureAntibotSettingsValid(): void {
         if (this.antiBotEnabledFor !== 0 && this.antiBotMaximumTokensPerReservation.isZero()) {
-            throw new Revert('NATIVE_SWAP: Anti-bot max tokens per reservation cannot be zero');
+            throw new Revert('NATIVE_SWAP: Anti-bot max tokens per reservation cannot be zero.');
         }
     }
 
     private ensureFloorPriceNotZero(): void {
         if (this.floorPrice.isZero()) {
-            throw new Revert('NATIVE_SWAP: Floor price cannot be zero');
+            throw new Revert('NATIVE_SWAP: Floor price cannot be zero.');
         }
     }
 
     private ensureInitialLiquidityNotZero(): void {
         if (this.initialLiquidity.isZero()) {
-            throw new Revert('NATIVE_SWAP: Initial liquidity cannot be zero');
+            throw new Revert('NATIVE_SWAP: Initial liquidity cannot be zero.');
         }
     }
 
     private ensureInitialLiquidityProviderNotAlreadySet(): void {
         if (!this.liquidityQueue.initialLiquidityProviderId.isZero()) {
-            throw new Revert('Base quote already set');
+            throw new Revert('NATIVE_SWAP: Base quote already set.');
         }
     }
 
@@ -95,7 +95,7 @@ export class CreatePoolOperation extends BaseOperation {
 
     private ensureReceiverAddressValid(): void {
         if (Blockchain.validateBitcoinAddress(this.receiver) == false) {
-            throw new Revert('NATIVE_SWAP: Invalid receiver address');
+            throw new Revert('NATIVE_SWAP: Invalid receiver address.');
         }
     }
 
