@@ -190,19 +190,21 @@ export class LiquidityQueue implements ILiquidityQueue {
         if (!penalty.isZero()) {
             this.ensurePenaltyNotLessThanHalf(penalty, half);
 
+            const penaltyU256: u256 = penalty.toU256();
             // we have to subtract the 50% we already applied to the pool.
             const penaltyLeft = SafeMath.sub128(penalty, half);
             const penaltyLeftU256: u256 = penaltyLeft.toU256();
+
+            this.decreaseTotalReserve(penaltyU256); // we are sending the tokens out of the contract.
 
             if (!penaltyLeftU256.isZero()) {
                 // slashed tokens instantly become pool inventory, in this version they are sent to the staking address since
                 // the pool doesn't have liquidity providers enabled.
                 this.increaseVirtualTokenReserve(penaltyLeftU256);
-                this.decreaseTotalReserve(penaltyLeftU256); // we are sending the tokens out of the contract.
             }
 
             // TODO: When adding lp, remove this and use this.increaseTotalReserve(penalty);
-            TransferHelper.safeTransfer(this.token, stakingAddress, penalty.toU256());
+            TransferHelper.safeTransfer(this.token, stakingAddress, penaltyU256);
         }
     }
 

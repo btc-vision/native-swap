@@ -146,10 +146,14 @@ export class CancelListingOperation extends BaseOperation {
 
     private transferLiquidityBack(amount: u128): void {
         if (!amount.isZero()) {
+            const amountU256: u256 = amount.toU256();
+
+            this.liquidityQueue.decreaseTotalReserve(amountU256);
+
             TransferHelper.safeTransfer(
                 this.liquidityQueue.token,
                 Blockchain.tx.sender,
-                amount.toU256(),
+                amountU256,
             );
         }
     }

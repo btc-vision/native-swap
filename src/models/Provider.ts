@@ -534,6 +534,7 @@ export class Provider {
      */
     public resetLiquidityProviderValues(): void {
         this.providerData.resetLiquidityProviderValues();
+        this.setBtcReceiver('');
     }
 
     /**
@@ -543,6 +544,7 @@ export class Provider {
      */
     public resetListingProviderValues(): void {
         this.providerData.resetListingProviderValues();
+        this.setBtcReceiver('');
     }
 
     /**
