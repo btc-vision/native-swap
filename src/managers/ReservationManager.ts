@@ -105,11 +105,17 @@ export class ReservationManager implements IReservationManager {
     public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
         const currentBlockNumber: u64 = Blockchain.block.number;
 
+        Blockchain.log(`purgeReservationsAndRestoreProviders`);
+        Blockchain.log(`------------------------------------`);
+        Blockchain.log(`currentBlockNumber:${currentBlockNumber}`);
+        Blockchain.log(`lastPurgedBlock:${lastPurgedBlock}`);
         if (currentBlockNumber <= RESERVATION_EXPIRE_AFTER_IN_BLOCKS) {
             return lastPurgedBlock;
         }
 
         const maxBlockToPurge: u64 = currentBlockNumber - RESERVATION_EXPIRE_AFTER_IN_BLOCKS;
+
+        Blockchain.log(`maxBlockToPurge:${maxBlockToPurge}`);
 
         if (maxBlockToPurge <= lastPurgedBlock) {
             this.providerManager.restoreCurrentIndex();
@@ -179,6 +185,8 @@ export class ReservationManager implements IReservationManager {
                 newLastPurgedBlock = head > 0 ? head - 1 : 0; // under-flow guard
             }
         }
+
+        Blockchain.log(`newLastPurgedBlock:${newLastPurgedBlock}`);
 
         return newLastPurgedBlock;
     }
@@ -269,6 +277,8 @@ export class ReservationManager implements IReservationManager {
                 const reservationId: u128 = reservations.get(index);
                 const reservation = Reservation.load(reservationId);
 
+                Blockchain.log(`purgeBlockIncremental reservation: ${reservation.getId()}`);
+                Blockchain.log(`purgeBlockIncremental blockNumber: ${blockNumber}`);
                 this.ensureReservationIsExpired(reservation);
                 this.ensureReservationPurgeIndexMatch(reservation, index);
 
@@ -326,6 +336,7 @@ export class ReservationManager implements IReservationManager {
     }
 
     private restoreReservation(reservation: Reservation): u256 {
+        Blockchain.log(`restoreReservation: ${reservation.getId()}`);
         let restoredLiquidity: u256 = u256.Zero;
         const providerCount: u32 = reservation.getProviderCount();
 

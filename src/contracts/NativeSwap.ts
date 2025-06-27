@@ -230,13 +230,16 @@ export class NativeSwap extends ReentrancyGuard {
         const provider: Provider = getProvider(providerId);
 
         const writer: BytesWriter = new BytesWriter(
-            U128_BYTE_LENGTH * 3 +
+            U256_BYTE_LENGTH +
+                U128_BYTE_LENGTH * 3 +
                 (U32_BYTE_LENGTH + provider.getBtcReceiver().length) +
                 2 * U32_BYTE_LENGTH +
                 2 * BOOLEAN_BYTE_LENGTH +
-                U64_BYTE_LENGTH,
+                U64_BYTE_LENGTH +
+                BOOLEAN_BYTE_LENGTH,
         );
 
+        writer.writeU256(provider.getId());
         writer.writeU128(provider.getLiquidityAmount());
         writer.writeU128(provider.getReservedAmount());
         writer.writeU128(provider.getLiquidityProvided());
@@ -246,6 +249,7 @@ export class NativeSwap extends ReentrancyGuard {
         writer.writeU32(provider.getPurgedIndex());
         writer.writeBoolean(provider.isActive());
         writer.writeU64(provider.getListedTokenAtBlock());
+        writer.writeBoolean(provider.isPurged());
         return writer;
     }
 
@@ -259,10 +263,12 @@ export class NativeSwap extends ReentrancyGuard {
 
         this.ensurePoolExistsForToken(getQueueResult.liquidityQueue);
 
-        const writer = new BytesWriter(U64_BYTE_LENGTH + 10 * U32_BYTE_LENGTH);
+        const queueData: Uint8Array = getQueueResult.liquidityQueue.getProviderQueueData();
+
+        const writer = new BytesWriter(U64_BYTE_LENGTH + U32_BYTE_LENGTH + queueData.length);
         writer.writeU64(getQueueResult.liquidityQueue.lastPurgedBlock);
         writer.writeU32(getQueueResult.liquidityQueue.blockWithReservationsLength());
-        writer.writeBytes(getQueueResult.liquidityQueue.getProviderQueueData());
+        writer.writeBytes(queueData);
 
         return writer;
     }

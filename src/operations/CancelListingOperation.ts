@@ -37,11 +37,11 @@ export class CancelListingOperation extends BaseOperation {
         const initialAmount: u128 = this.provider.getLiquidityAmount();
         const penaltyAmount: u128 = this.calculatePenalty(listedAtBlock, initialAmount);
         const halfToCharge: u128 = this.calculateHalfToCharge(initialAmount, penaltyAmount);
-        const refundAmount: u128 = this.calculateRefund(initialAmount, penaltyAmount);
+        const refundAmount: u256 = this.calculateRefund(initialAmount, penaltyAmount);
 
         this.prepareProviderForRefund();
         this.transferLiquidityBack(refundAmount);
-        this.postProcessQueues(penaltyAmount, halfToCharge);
+        this.postProcessQueues(refundAmount, penaltyAmount, halfToCharge);
         this.emitListingCanceledEvent(initialAmount, penaltyAmount);
     }
 
@@ -70,14 +70,15 @@ export class CancelListingOperation extends BaseOperation {
         return halfToCharge;
     }
 
-    private calculateRefund(amount: u128, penalty: u128): u128 {
-        return SafeMath.sub128(amount, penalty);
+    private calculateRefund(amount: u128, penalty: u128): u256 {
+        return SafeMath.sub128(amount, penalty).toU256();
     }
 
     private checkPreConditions(listedAtBlock: u64): void {
         this.ensureListedTokenAtBlock(listedAtBlock);
         this.ensureProviderIsActive();
         this.ensureNoActiveReservation();
+        this.ensureProviderIsNotPurged();
         this.ensureLiquidityNotZero();
         this.ensureProviderNotProvideLiquidity();
         this.ensureNotInitialProvider();
@@ -134,9 +135,21 @@ export class CancelListingOperation extends BaseOperation {
         }
     }
 
-    private postProcessQueues(penaltyAmount: u128, halfToCharge: u128): void {
+    private ensureProviderIsNotPurged(): void {
+        if (this.provider.isPurged()) {
+            throw new Revert(
+                'NATIVE_SWAP: You cannot cancel this listing at the moment. Provider is in the purge queue and needs to be purged first. Try again in a few blocks.',
+            );
+        }
+    }
+
+    private postProcessQueues(refundAmount: u256, penaltyAmount: u128, halfToCharge: u128): void {
         if (!penaltyAmount.isZero()) {
             this.liquidityQueue.accruePenalty(penaltyAmount, halfToCharge, this.stakingAddress);
+        }
+
+        if (!refundAmount.isZero()) {
+            this.liquidityQueue.decreaseTotalReserve(refundAmount);
         }
     }
 
@@ -144,17 +157,9 @@ export class CancelListingOperation extends BaseOperation {
         this.liquidityQueue.resetProvider(this.provider, false, true);
     }
 
-    private transferLiquidityBack(amount: u128): void {
+    private transferLiquidityBack(amount: u256): void {
         if (!amount.isZero()) {
-            const amountU256: u256 = amount.toU256();
-
-            this.liquidityQueue.decreaseTotalReserve(amountU256);
-
-            TransferHelper.safeTransfer(
-                this.liquidityQueue.token,
-                Blockchain.tx.sender,
-                amountU256,
-            );
+            TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
         }
     }
 }

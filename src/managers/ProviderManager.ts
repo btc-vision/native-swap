@@ -1,11 +1,13 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Address,
+    Blockchain,
     BytesWriter,
     Revert,
     SafeMath,
     StoredU256,
     StoredU32,
+    U256_BYTE_LENGTH,
     U32_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import {
@@ -327,7 +329,12 @@ export class ProviderManager implements IProviderManager {
     }
 
     public getQueueData(): Uint8Array {
-        const writer = new BytesWriter(U32_BYTE_LENGTH * 9);
+        const writer = new BytesWriter(
+            U32_BYTE_LENGTH * 9 +
+                (this.priorityPurgedQueue.length + this.normalPurgedQueue.length) *
+                    U32_BYTE_LENGTH +
+                (this.priorityQueue.length + this.normalQueue.length) * U256_BYTE_LENGTH,
+        );
 
         writer.writeU32(this.removalQueue.length);
         writer.writeU32(this.removalQueue.startingIndex);
@@ -341,6 +348,22 @@ export class ProviderManager implements IProviderManager {
         writer.writeU32(this.priorityPurgedQueue.length);
         writer.writeU32(this.normalPurgedQueue.length);
         writer.writeU32(this.removalPurgedQueue.length);
+
+        for (let i: u32 = 0; i < this.priorityPurgedQueue.length; i++) {
+            writer.writeU32(this.priorityPurgedQueue.getAt(i));
+        }
+
+        for (let i: u32 = 0; i < this.normalPurgedQueue.length; i++) {
+            writer.writeU32(this.normalPurgedQueue.getAt(i));
+        }
+
+        for (let i: u32 = 0; i < this.priorityQueue.length; i++) {
+            writer.writeU256(this.priorityQueue.getAt(i));
+        }
+
+        for (let i: u32 = 0; i < this.normalQueue.length; i++) {
+            writer.writeU256(this.normalQueue.getAt(i));
+        }
 
         return writer.getBuffer();
     }
@@ -382,6 +405,8 @@ export class ProviderManager implements IProviderManager {
     }
 
     public removeFromPurgeQueue(provider: Provider): void {
+        Blockchain.log(`removeFromPurgeQueue: ${provider.getId()}`);
+
         if (!provider.isPriority()) {
             this.normalPurgedQueue.remove(provider);
         } else {
@@ -400,6 +425,8 @@ export class ProviderManager implements IProviderManager {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
+        Blockchain.log(`resetProvider: ${provider.getId()}`);
+
         if (provider.isPendingRemoval()) {
             this.removalQueue.resetProvider(provider);
         } else if (provider.isPriority()) {
@@ -528,6 +555,7 @@ export class ProviderManager implements IProviderManager {
         provider: Provider,
         data: ReservationProviderData,
     ): void {
+        Blockchain.log(`purgeAndRestoreNormalPriorityProvider: ${provider.getId()}`);
         provider.subtractFromReservedAmount(data.providedAmount);
 
         const quote: u256 = this.quoteManager.getValidBlockQuote(data.creationBlock);
@@ -539,6 +567,7 @@ export class ProviderManager implements IProviderManager {
                 this.resetProvider(provider, false, false);
             }
         } else if (!provider.isPurged()) {
+            Blockchain.log(`addToPurgedQueue: ${provider.getId()}`);
             if (provider.getProviderType() === ProviderTypes.Normal) {
                 this.addToNormalPurgedQueue(provider);
             } else {

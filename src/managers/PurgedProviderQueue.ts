@@ -54,6 +54,10 @@ export class PurgedProviderQueue {
         return index;
     }
 
+    public getAt(index: u32): u32 {
+        return this.queue.get(index);
+    }
+
     public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
         const providerIndex: u32 = this.queue.next();
 
@@ -66,7 +70,9 @@ export class PurgedProviderQueue {
         this.ensureProviderPurged(provider);
 
         if (provider.getPurgedIndex() !== this.queue.previousOffset) {
-            throw new Revert('provider.getPurgedIndex() !== this.queue.previousOffset');
+            throw new Revert(
+                'Impossible state: provider.getPurgedIndex() !== this.queue.previousOffset',
+            );
         }
 
         return this.returnProvider(associatedQueue, provider, providerIndex, quote);
