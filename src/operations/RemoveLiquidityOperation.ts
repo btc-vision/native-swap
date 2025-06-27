@@ -3,7 +3,7 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { getProvider, Provider } from '../models/Provider';
 import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { LiquidityRemovedEvent } from '../events/LiquidityRemovedEvent';
-import { ActivateProviderEvent } from '../events/ActivateProviderEvent';
+import { ProviderActivatedEvent } from '../events/ProviderActivatedEvent';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 
 export class RemoveLiquidityOperation extends BaseOperation {
@@ -26,7 +26,7 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.pullOutTokens(tokenAmount256);
         this.updateProvider();
         this.updateLiquidityQueue(tokenAmount256, satoshisOwed);
-        this.emitActivateProviderEvent(satoshisOwed);
+        this.emitProviderActivatedEvent(satoshisOwed);
         this.emitLiquidityRemovedEvent(satoshisOwed, tokenAmount);
     }
 
@@ -37,8 +37,8 @@ export class RemoveLiquidityOperation extends BaseOperation {
         this.ensureNotInPendingRemoval();
     }
 
-    private emitActivateProviderEvent(satoshisOwed: u64): void {
-        Blockchain.emit(new ActivateProviderEvent(this.providerId, u128.Zero, satoshisOwed));
+    private emitProviderActivatedEvent(satoshisOwed: u64): void {
+        Blockchain.emit(new ProviderActivatedEvent(this.providerId, u128.Zero, satoshisOwed));
     }
 
     private emitLiquidityRemovedEvent(satoshisOwed: u64, tokenAmount: u128): void {

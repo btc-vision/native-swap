@@ -7,13 +7,13 @@ import {
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
 @final
-export class FulfilledProviderEvent extends NetEvent {
+export class ProviderFulfilledEvent extends NetEvent {
     constructor(providerId: u256, canceled: boolean, removalCompleted: boolean) {
         const data: BytesWriter = new BytesWriter(U256_BYTE_LENGTH + 2 * BOOLEAN_BYTE_LENGTH);
         data.writeU256(providerId);
         data.writeBoolean(canceled);
         data.writeBoolean(removalCompleted);
 
-        super('FulfilledProvider', data);
+        super('ProviderFulfilled', data);
     }
 }
