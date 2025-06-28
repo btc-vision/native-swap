@@ -6,7 +6,6 @@ import {
     SafeMath,
     StoredU256,
     StoredU32,
-    U256_BYTE_LENGTH,
     U32_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import {
@@ -329,10 +328,10 @@ export class ProviderManager implements IProviderManager {
 
     public getQueueData(): Uint8Array {
         const writer = new BytesWriter(
-            U32_BYTE_LENGTH * 9 +
-                (this.priorityPurgedQueue.length + this.normalPurgedQueue.length) *
-                    U32_BYTE_LENGTH +
-                (this.priorityQueue.length + this.normalQueue.length) * U256_BYTE_LENGTH,
+            U32_BYTE_LENGTH * 9, //+
+            //(this.priorityPurgedQueue.length + this.normalPurgedQueue.length) *
+            //   U32_BYTE_LENGTH +
+            //(this.priorityQueue.length + this.normalQueue.length) * U256_BYTE_LENGTH,
         );
 
         writer.writeU32(this.removalQueue.length);
@@ -348,7 +347,7 @@ export class ProviderManager implements IProviderManager {
         writer.writeU32(this.normalPurgedQueue.length);
         writer.writeU32(this.removalPurgedQueue.length);
 
-        for (let i: u32 = 0; i < this.priorityPurgedQueue.length; i++) {
+        /*for (let i: u32 = 0; i < this.priorityPurgedQueue.length; i++) {
             writer.writeU32(this.priorityPurgedQueue.getAt(i));
         }
 
@@ -362,7 +361,7 @@ export class ProviderManager implements IProviderManager {
 
         for (let i: u32 = 0; i < this.normalQueue.length; i++) {
             writer.writeU256(this.normalQueue.getAt(i));
-        }
+        }*/
 
         return writer.getBuffer();
     }
