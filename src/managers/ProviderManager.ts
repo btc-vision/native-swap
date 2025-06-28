@@ -1,7 +1,6 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Address,
-    Blockchain,
     BytesWriter,
     Revert,
     SafeMath,
@@ -405,8 +404,6 @@ export class ProviderManager implements IProviderManager {
     }
 
     public removeFromPurgeQueue(provider: Provider): void {
-        Blockchain.log(`removeFromPurgeQueue: ${provider.getId()}`);
-
         if (!provider.isPriority()) {
             this.normalPurgedQueue.remove(provider);
         } else {
@@ -425,8 +422,6 @@ export class ProviderManager implements IProviderManager {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
-        Blockchain.log(`resetProvider: ${provider.getId()}`);
-
         if (provider.isPendingRemoval()) {
             this.removalQueue.resetProvider(provider);
         } else if (provider.isPriority()) {
@@ -555,7 +550,6 @@ export class ProviderManager implements IProviderManager {
         provider: Provider,
         data: ReservationProviderData,
     ): void {
-        Blockchain.log(`purgeAndRestoreNormalPriorityProvider: ${provider.getId()}`);
         provider.subtractFromReservedAmount(data.providedAmount);
 
         const quote: u256 = this.quoteManager.getValidBlockQuote(data.creationBlock);
@@ -567,7 +561,6 @@ export class ProviderManager implements IProviderManager {
                 this.resetProvider(provider, false, false);
             }
         } else if (!provider.isPurged()) {
-            Blockchain.log(`addToPurgedQueue: ${provider.getId()}`);
             if (provider.getProviderType() === ProviderTypes.Normal) {
                 this.addToNormalPurgedQueue(provider);
             } else {
