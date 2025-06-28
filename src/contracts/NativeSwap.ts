@@ -244,10 +244,13 @@ export class NativeSwap extends ReentrancyGuard {
         writer.writeU128(provider.getReservedAmount());
         writer.writeU128(provider.getLiquidityProvided());
         writer.writeStringWithLength(provider.getBtcReceiver());
+
         writer.writeU32(provider.getQueueIndex());
         writer.writeBoolean(provider.isPriority());
+
         writer.writeU32(provider.getPurgedIndex());
         writer.writeBoolean(provider.isActive());
+
         writer.writeU64(provider.getListedTokenAtBlock());
         writer.writeBoolean(provider.isPurged());
         return writer;
