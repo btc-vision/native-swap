@@ -2,7 +2,7 @@ import { getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, Blockchain, Potential, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
-import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
+import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 import { STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT } from '../constants/Contract';
 import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 import { ProviderTypes } from '../types/ProviderTypes';
@@ -68,7 +68,7 @@ export class RemovalProviderQueue extends ProviderQueue {
         this.queue.delete_physical(provider.getQueueIndex());
         provider.resetLiquidityProviderValues();
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, true));
+        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), false, true));
     }
 
     protected override tryNextCandidate(_currentQuote: u256): Provider | null {

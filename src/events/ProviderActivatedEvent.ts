@@ -8,7 +8,7 @@ import {
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 @final
-export class ActivateProviderEvent extends NetEvent {
+export class ProviderActivatedEvent extends NetEvent {
     constructor(providerId: u256, listingAmount: u128, btcToRemove: u64) {
         const data: BytesWriter = new BytesWriter(
             U256_BYTE_LENGTH + U128_BYTE_LENGTH + U64_BYTE_LENGTH,
@@ -17,6 +17,6 @@ export class ActivateProviderEvent extends NetEvent {
         data.writeU128(listingAmount);
         data.writeU64(btcToRemove);
 
-        super('ActivateProvider', data);
+        super('ProviderActivated', data);
     }
 }
