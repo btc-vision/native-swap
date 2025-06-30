@@ -248,7 +248,7 @@ export class ProviderManager implements IProviderManager {
 
     public getQueueData(): Uint8Array {
         const writer = new BytesWriter(
-            U32_BYTE_LENGTH * 9, //+
+            U32_BYTE_LENGTH * 6, //+
             //(this.priorityPurgedQueue.length + this.normalPurgedQueue.length) *
             //   U32_BYTE_LENGTH +
             //(this.priorityQueue.length + this.normalQueue.length) * U256_BYTE_LENGTH,
