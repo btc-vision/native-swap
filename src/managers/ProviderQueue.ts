@@ -69,7 +69,7 @@ export class ProviderQueue {
                     break;
                 } else {
                     throw new Revert(
-                        `Impossible state: Provider is no longer active and should have been removed from normal/priority queue. ProviderId: ${providerId}`,
+                        `Impossible state: Provider is no longer active and should have been removed from normal/priority queue. ProviderId: ${providerId}, index: ${index}, queueIndex:${provider.getQueueIndex()}`,
                     );
                 }
             } else {
@@ -132,6 +132,7 @@ export class ProviderQueue {
         }
 
         if (!provider.isInitialLiquidityProvider()) {
+            Blockchain.log(`delete: ${provider.getId()}`)
             this.queue.delete_physical(provider.getQueueIndex());
         }
 

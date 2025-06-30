@@ -149,6 +149,8 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getQuote(calldata);
             case encodeSelector('getProviderDetails(address)'):
                 return this.getProviderDetails(calldata);
+            case encodeSelector('getProviderDetailsById(u256)'):
+                return this.getProviderDetailsById(calldata);
             case encodeSelector('getQueueDetails(address)'):
                 return this.getQueueDetails(calldata);
             case encodeSelector('getPriorityQueueCost()'):
@@ -222,6 +224,37 @@ export class NativeSwap extends ReentrancyGuard {
         result.writeBoolean(true);
 
         return result;
+    }
+
+    private getProviderDetailsById(calldata: Calldata): BytesWriter {
+        const providerId: u256 = calldata.readU256();
+        const provider: Provider = getProvider(providerId);
+
+        const writer: BytesWriter = new BytesWriter(
+            U256_BYTE_LENGTH +
+            U128_BYTE_LENGTH * 3 +
+            (U32_BYTE_LENGTH + provider.getBtcReceiver().length) +
+            2 * U32_BYTE_LENGTH +
+            2 * BOOLEAN_BYTE_LENGTH +
+            U64_BYTE_LENGTH +
+            BOOLEAN_BYTE_LENGTH,
+        );
+
+        writer.writeU256(provider.getId());
+        writer.writeU128(provider.getLiquidityAmount());
+        writer.writeU128(provider.getReservedAmount());
+        writer.writeU128(provider.getLiquidityProvided());
+        writer.writeStringWithLength(provider.getBtcReceiver());
+
+        writer.writeU32(provider.getQueueIndex());
+        writer.writeBoolean(provider.isPriority());
+
+        writer.writeU32(provider.getPurgedIndex());
+        writer.writeBoolean(provider.isActive());
+
+        writer.writeU64(provider.getListedTokenAtBlock());
+        writer.writeBoolean(provider.isPurged());
+        return writer;
     }
 
     private getProviderDetails(calldata: Calldata): BytesWriter {

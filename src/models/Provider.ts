@@ -1,6 +1,6 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
-    AdvancedStoredString,
+    AdvancedStoredString, Blockchain,
     Potential,
     Revert,
     SafeMath,
@@ -543,6 +543,7 @@ export class Provider {
      * @returns {void}
      */
     public resetListingProviderValues(): void {
+        Blockchain.log(`reset:${this.getId()}`)
         this.providerData.resetListingProviderValues();
         this.setBtcReceiver('');
     }

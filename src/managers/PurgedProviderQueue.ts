@@ -1,5 +1,5 @@
 import {
-    Address,
+    Address, Block,
     Blockchain,
     Potential,
     Revert,
@@ -148,6 +148,7 @@ export class PurgedProviderQueue {
         }
 
         if (!provider.isInitialLiquidityProvider()) {
+            Blockchain.log(`reset purged: ${provider.getId()}`);
             associatedQueue.remove(provider);
         }
 
