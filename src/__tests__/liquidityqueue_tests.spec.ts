@@ -993,18 +993,65 @@ describe('Liquidity queue tests', () => {
                 false,
             );
             const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            queue.decreaseTotalReserved(queue.liquidity);
+            queue.decreaseTotalReserve(queue.liquidity);
             queue.decreaseVirtualTokenReserve(queue.virtualTokenReserve);
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
             expect(queue.liquidity).toStrictEqual(u256.Zero);
             queue.increaseTotalReserve(u256.fromU64(10000));
+            expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
             queue.accruePenalty(u128.fromU64(10000), u128.fromU64(5000), Address.dead());
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(5000));
-            expect(queue.liquidity).toStrictEqual(u256.fromU64(5000));
+            expect(queue.liquidity).toStrictEqual(u256.Zero);
             expect(TransferHelper.safeTransferCalled).toBeTruthy();
+        });
+
+        it('should not increase token reserve with penalty penaltyLeft is penaltyLeft is Zero', () => {
+            setBlockchainEnvironment(1);
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+            queue.decreaseTotalReserve(queue.liquidity);
+            queue.decreaseVirtualTokenReserve(queue.virtualTokenReserve);
+
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
+            expect(queue.liquidity).toStrictEqual(u256.Zero);
+            queue.increaseTotalReserve(u256.fromU64(10000));
+            expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
+
+            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(10000), Address.dead());
+
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(0));
+            expect(queue.liquidity).toStrictEqual(u256.Zero);
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+        });
+
+        it('should do nothing when penalty is Zero', () => {
+            setBlockchainEnvironment(1);
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+            queue.decreaseTotalReserve(queue.liquidity);
+            queue.decreaseVirtualTokenReserve(queue.virtualTokenReserve);
+
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
+            expect(queue.liquidity).toStrictEqual(u256.Zero);
+            queue.increaseTotalReserve(u256.fromU64(10000));
+            expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
+
+            queue.accruePenalty(u128.Zero, u128.Zero, Address.dead());
+
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(0));
+            expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
+            expect(TransferHelper.safeTransferCalled).toBeFalsy();
         });
 
         it('should revert when penalty is less than half value', () => {
@@ -1016,12 +1063,13 @@ describe('Liquidity queue tests', () => {
                     false,
                 );
                 const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-                queue.decreaseTotalReserved(queue.liquidity);
+                queue.decreaseTotalReserve(queue.liquidity);
                 queue.decreaseVirtualTokenReserve(queue.virtualTokenReserve);
 
                 expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
                 expect(queue.liquidity).toStrictEqual(u256.Zero);
                 queue.increaseTotalReserve(u256.fromU64(10000));
+                expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
                 queue.accruePenalty(u128.fromU64(10000), u128.fromU64(15000), Address.dead());
             }).toThrow();

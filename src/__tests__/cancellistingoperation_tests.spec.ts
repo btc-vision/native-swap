@@ -91,6 +91,29 @@ describe('CancelListTokenForSaleOperation tests', () => {
             }).toThrow();
         });
 
+        it('should revert if provider is in the purge queue', () => {
+            expect(() => {
+                setBlockchainEnvironment(100);
+
+                const provider = createProvider(providerAddress1, tokenAddress1);
+                provider.activate();
+                provider.clearPriority();
+                provider.markPurged();
+                provider.setPurgedIndex(1);
+                provider.setListedTokenAtBlock(100);
+
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const operation = new CancelListingOperation(
+                    queue.liquidityQueue,
+                    provider.getId(),
+                    testStackingContractAddress,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
+
         it('should revert if provider have no liquidity', () => {
             expect(() => {
                 setBlockchainEnvironment(100);
@@ -209,6 +232,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
 
             queue.providerManager.addToNormalQueue(provider);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(10000);
+            queue.liquidityQueue.increaseTotalReserve(u256.fromU64(10000));
 
             setBlockchainEnvironment(101);
             const operation = new CancelListingOperation(
@@ -249,7 +273,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             operation.execute();
 
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10005));
-            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(99995));
+            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(90000));
         });
 
         it('should cap halfToCharge to penaltyAmount', () => {
@@ -278,7 +302,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             operation.execute();
 
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000));
-            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(100000));
+            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(89999));
         });
 
         it('should succeed: set provider liquidity to 0, call resetProvider, safeTransfer, update reserve, cleanUpQueues, emit event', () => {
@@ -309,7 +333,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             expect(provider.isActive()).toBeFalsy();
 
             expect(TransferHelper.safeTransferCalled).toBeTruthy();
-            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(1000000000));
+            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(999990000));
         });
     });
 });
