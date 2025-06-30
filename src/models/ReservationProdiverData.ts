@@ -8,8 +8,4 @@ export class ReservationProviderData {
         public readonly providerType: ProviderTypes,
         public readonly creationBlock: u64,
     ) {}
-
-    public isLiquidityRemoval(): boolean {
-        return this.providerType === ProviderTypes.LiquidityRemoval;
-    }
 }

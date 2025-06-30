@@ -128,7 +128,7 @@ describe('Liquidity queue tests', () => {
                 3,
                 0,
                 false,
-                true,
+                false,
                 true,
                 'kcweojewoj2309',
                 u128.fromU32(100000),
@@ -211,7 +211,7 @@ describe('Liquidity queue tests', () => {
                 3,
                 0,
                 false,
-                true,
+                false,
                 true,
                 'kcweojewoj2309',
                 u128.fromU32(100000),
@@ -448,46 +448,6 @@ describe('Liquidity queue tests', () => {
 
             queue.antiBotExpirationBlock = 25;
             expect(queue.antiBotExpirationBlock).toStrictEqual(25);
-        });
-
-        it('should correctly get/set SatoshisOwed value', () => {
-            setBlockchainEnvironment(1);
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-
-            queue.setSatoshisOwed(u256.fromU32(9), 1000);
-            expect(queue.getSatoshisOwed(u256.fromU32(9))).toStrictEqual(1000);
-        });
-
-        it('should correctly get getSatoshisOwedLeft value', () => {
-            setBlockchainEnvironment(1);
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-
-            queue.setSatoshisOwed(u256.fromU32(9), 1000);
-            queue.setSatoshisOwedReserved(u256.fromU32(9), 100);
-            expect(queue.getSatoshisOwedLeft(u256.fromU32(9))).toStrictEqual(900);
-        });
-
-        it('should correctly get/set SatoshisOwedReserved value', () => {
-            setBlockchainEnvironment(1);
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-
-            queue.setSatoshisOwedReserved(u256.fromU32(10), 2000);
-            expect(queue.getSatoshisOwedReserved(u256.fromU32(10))).toStrictEqual(2000);
         });
 
         it('should correctly set totalSatoshisExchangedForTokens and totalTokensExchangedForSatoshis when calling buyTokens', () => {
@@ -783,62 +743,6 @@ describe('Liquidity queue tests', () => {
                 const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
                 queue.virtualTokenReserve = u256.fromU32(100);
                 queue.increaseVirtualTokenReserve(u256.Max);
-            }).toThrow();
-        });
-
-        it('should correctly increase satoshis owed value', () => {
-            setBlockchainEnvironment(1);
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            queue.setSatoshisOwed(u256.fromU32(9), 100);
-            queue.increaseSatoshisOwed(u256.fromU32(9), 10);
-
-            expect(queue.getSatoshisOwed(u256.fromU32(9))).toStrictEqual(110);
-        });
-
-        it('should throw addition overflow when adding amount that will make satoshis owed over limit', () => {
-            expect(() => {
-                setBlockchainEnvironment(1);
-                const createQueueResult = createLiquidityQueue(
-                    tokenAddress1,
-                    tokenIdUint8Array1,
-                    false,
-                );
-                const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-                queue.setSatoshisOwed(u256.fromU32(9), 100);
-                queue.increaseSatoshisOwed(u256.fromU32(9), u64.MAX_VALUE);
-            }).toThrow();
-        });
-
-        it('should correctly increase satoshis owed reserved value', () => {
-            setBlockchainEnvironment(1);
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            queue.setSatoshisOwedReserved(u256.fromU32(9), 100);
-            queue.increaseSatoshisOwedReserved(u256.fromU32(9), 10);
-
-            expect(queue.getSatoshisOwedReserved(u256.fromU32(9))).toStrictEqual(110);
-        });
-
-        it('should throw addition overflow when adding amount that will make satoshis owed reserved over limit', () => {
-            expect(() => {
-                setBlockchainEnvironment(1);
-                const createQueueResult = createLiquidityQueue(
-                    tokenAddress1,
-                    tokenIdUint8Array1,
-                    false,
-                );
-                const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-                queue.setSatoshisOwedReserved(u256.fromU32(9), 100);
-                queue.increaseSatoshisOwedReserved(u256.fromU32(9), u64.MAX_VALUE);
             }).toThrow();
         });
 
@@ -1807,33 +1711,6 @@ describe('Liquidity queue tests', () => {
             ).toStrictEqual(provider.getId());
         });
 
-        it('should correctly add to removal queue', () => {
-            setBlockchainEnvironment(1000);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
-
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
-            queue.addToRemovalQueue(provider);
-            queue.save();
-
-            const createQueueResult2 = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
-
-            expect(createQueueResult2.providerManager.removalQueueLength).toStrictEqual(1);
-            expect(
-                createQueueResult2.providerManager.getFromRemovalQueue(provider.getQueueIndex()),
-            ).toStrictEqual(provider.getId());
-        });
-
         it('should call getNextProviderWithLiquidity', () => {
             setBlockchainEnvironment(1000);
 
@@ -1949,37 +1826,6 @@ describe('Liquidity queue tests', () => {
             );
             const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
             queue2.removeFromPurgeQueue(provider);
-            queue2.save();
-
-            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-        });
-
-        it('should correctly remove from pending removal purged queue', () => {
-            setBlockchainEnvironment(1000);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
-            const manager: ITestProviderManager = createQueueResult.providerManager;
-
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
-            queue.addToRemovalQueue(provider);
-            manager.addToRemovalPurgedQueue(provider);
-            provider.save();
-            queue.save();
-
-            expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
-
-            const createQueueResult2 = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
-            queue2.removeFromRemovalPurgeQueue(provider);
             queue2.save();
 
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);

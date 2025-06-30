@@ -172,7 +172,7 @@ export class ReservationManager implements IReservationManager {
         let newLastPurgedBlock: u64 = lastPurgedBlock;
 
         if (shifted) {
-            if (this.blocksWithReservations.getLength() == 0) {
+            if (this.blocksWithReservations.getLength() === 0) {
                 newLastPurgedBlock = maxBlockToPurge; // queue empty
             } else {
                 const head = this.blocksWithReservations.get(0); // > maxBlock

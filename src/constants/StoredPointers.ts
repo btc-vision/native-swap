@@ -4,7 +4,6 @@ export const FEE_SETTINGS_POINTER: u16 = Blockchain.nextPointer;
 export const TOTAL_RESERVES_POINTER: u16 = Blockchain.nextPointer;
 
 export const PROVIDER_DATA_POINTER: u16 = Blockchain.nextPointer;
-export const LIQUIDITY_PROVIDED_POINTER: u16 = Blockchain.nextPointer;
 export const AMOUNT_POINTER: u16 = Blockchain.nextPointer;
 export const BTC_RECEIVER_ADDRESS_POINTER: u16 = Blockchain.nextPointer;
 
@@ -32,9 +31,6 @@ export const DELTA_BTC_BUY: u16 = Blockchain.nextPointer;
 export const DELTA_TOKENS_ADD: u16 = Blockchain.nextPointer;
 export const DELTA_TOKENS_BUY: u16 = Blockchain.nextPointer;
 
-export const BTC_OWED_POINTER: u16 = Blockchain.nextPointer;
-export const BTC_OWED_RESERVED_POINTER: u16 = Blockchain.nextPointer;
-
 export const REMOVAL_QUEUE_POINTER: u16 = Blockchain.nextPointer;
 export const VOLATILITY_POINTER: u16 = Blockchain.nextPointer;
 export const STARTING_INDEX_POINTER: u16 = Blockchain.nextPointer;
@@ -44,4 +40,3 @@ export const NORMAL_QUEUE_PURGED_RESERVATION: u16 = Blockchain.nextPointer;
 export const PRIORITY_QUEUE_PURGED_RESERVATION: u16 = Blockchain.nextPointer;
 export const REMOVAL_QUEUE_PURGED_RESERVATION: u16 = Blockchain.nextPointer;
 export const PURGE_RESERVATION_INDEX_POINTER: u16 = Blockchain.nextPointer;
-export const LISTED_TOKENS_AT_BLOCK_POINTER: u16 = Blockchain.nextPointer;

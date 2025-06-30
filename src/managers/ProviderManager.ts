@@ -3,7 +3,6 @@ import {
     Address,
     BytesWriter,
     Revert,
-    SafeMath,
     StoredU256,
     StoredU32,
     U32_BYTE_LENGTH,
@@ -14,15 +13,12 @@ import {
     NORMAL_QUEUE_PURGED_RESERVATION,
     PRIORITY_QUEUE_POINTER,
     PRIORITY_QUEUE_PURGED_RESERVATION,
-    REMOVAL_QUEUE_POINTER,
-    REMOVAL_QUEUE_PURGED_RESERVATION,
     STARTING_INDEX_POINTER,
 } from '../constants/StoredPointers';
 import { getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
 import { PriorityProviderQueue } from './PriorityProviderQueue';
-import { RemovalProviderQueue } from './RemovalProviderQueue';
-import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
+
 import {
     ALLOW_DIRTY,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
@@ -32,9 +28,6 @@ import { ProviderTypes } from '../types/ProviderTypes';
 import { IProviderManager } from './interfaces/IProviderManager';
 import { PurgedProviderQueue } from './PurgedProviderQueue';
 import { PriorityPurgedProviderQueue } from './PriorityPurgedProviderQueue';
-import { RemovalPurgedProviderQueue } from './RemovalPurgedProviderQueue';
-import { tokensToSatoshis128 } from '../utils/SatoshisConversion';
-import { min64 } from '../utils/MathUtils';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 
@@ -43,11 +36,9 @@ export class ProviderManager implements IProviderManager {
     protected readonly tokenIdUint8Array: Uint8Array;
     protected readonly normalQueue: ProviderQueue;
     protected readonly priorityQueue: PriorityProviderQueue;
-    protected readonly removalQueue: RemovalProviderQueue;
     protected readonly normalPurgedQueue: PurgedProviderQueue;
     protected readonly priorityPurgedQueue: PriorityPurgedProviderQueue;
-    protected readonly removalPurgedQueue: RemovalPurgedProviderQueue;
-    protected readonly owedBTCManager: IOwedBTCManager;
+
     protected readonly quoteManager: IQuoteManager;
     private readonly _startingIndex: StoredU32;
     private readonly _initialLiquidityProviderId: StoredU256;
@@ -55,13 +46,11 @@ export class ProviderManager implements IProviderManager {
     constructor(
         token: Address,
         tokenIdUint8Array: Uint8Array,
-        owedBTCManager: IOwedBTCManager,
         quoteManager: IQuoteManager,
         enableIndexVerification: boolean,
     ) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
-        this.owedBTCManager = owedBTCManager;
         this.quoteManager = quoteManager;
         this.normalQueue = new ProviderQueue(
             token,
@@ -73,14 +62,6 @@ export class ProviderManager implements IProviderManager {
         this.priorityQueue = new PriorityProviderQueue(
             token,
             PRIORITY_QUEUE_POINTER,
-            tokenIdUint8Array,
-            enableIndexVerification,
-            MAXIMUM_NUMBER_OF_PROVIDERS,
-        );
-        this.removalQueue = new RemovalProviderQueue(
-            owedBTCManager,
-            token,
-            REMOVAL_QUEUE_POINTER,
             tokenIdUint8Array,
             enableIndexVerification,
             MAXIMUM_NUMBER_OF_PROVIDERS,
@@ -99,13 +80,6 @@ export class ProviderManager implements IProviderManager {
             enableIndexVerification,
             ALLOW_DIRTY,
         );
-        this.removalPurgedQueue = new RemovalPurgedProviderQueue(
-            token,
-            REMOVAL_QUEUE_PURGED_RESERVATION,
-            tokenIdUint8Array,
-            enableIndexVerification,
-            ALLOW_DIRTY,
-        );
         this._initialLiquidityProviderId = new StoredU256(
             INITIAL_LIQUIDITY_PROVIDER_POINTER,
             tokenIdUint8Array,
@@ -119,10 +93,6 @@ export class ProviderManager implements IProviderManager {
 
     public get currentIndexPriority(): u32 {
         return this.priorityQueue.currentIndex;
-    }
-
-    public get currentIndexRemoval(): u32 {
-        return this.removalQueue.currentIndex;
     }
 
     public get initialLiquidityProviderId(): u256 {
@@ -157,28 +127,12 @@ export class ProviderManager implements IProviderManager {
         this._startingIndex.set(1, value);
     }
 
-    public get previousRemovalStartingIndex(): u32 {
-        return this._startingIndex.get(2);
-    }
-
-    public set previousRemovalStartingIndex(value: u32) {
-        this._startingIndex.set(2, value);
-    }
-
     public get priorityQueueLength(): u32 {
         return this.priorityQueue.length;
     }
 
     public get priorityQueueStartingIndex(): u32 {
         return this.priorityQueue.startingIndex;
-    }
-
-    public get removalQueueLength(): u32 {
-        return this.removalQueue.length;
-    }
-
-    public get removalQueueStartingIndex(): u32 {
-        return this.removalQueue.startingIndex;
     }
 
     public addToNormalQueue(provider: Provider): u32 {
@@ -189,10 +143,6 @@ export class ProviderManager implements IProviderManager {
         return this.priorityQueue.add(provider);
     }
 
-    public addToRemovalQueue(provider: Provider): u32 {
-        return this.removalQueue.add(provider);
-    }
-
     public addToNormalPurgedQueue(provider: Provider): u32 {
         return this.normalPurgedQueue.add(provider);
     }
@@ -201,19 +151,12 @@ export class ProviderManager implements IProviderManager {
         return this.priorityPurgedQueue.add(provider);
     }
 
-    public addToRemovalPurgedQueue(provider: Provider): u32 {
-        return this.removalPurgedQueue.add(provider);
-    }
-
     public cleanUpQueues(): void {
         this.previousNormalStartingIndex = this.normalQueue.cleanUp(
             this.previousNormalStartingIndex,
         );
         this.previousPriorityStartingIndex = this.priorityQueue.cleanUp(
             this.previousPriorityStartingIndex,
-        );
-        this.previousRemovalStartingIndex = this.removalQueue.cleanUp(
-            this.previousRemovalStartingIndex,
         );
     }
 
@@ -225,10 +168,6 @@ export class ProviderManager implements IProviderManager {
         return this.priorityQueue.getAt(index);
     }
 
-    public getFromRemovalQueue(index: u32): u256 {
-        return this.removalQueue.getAt(index);
-    }
-
     public getIdFromQueue(index: u32, type: ProviderTypes): u256 {
         switch (type) {
             case ProviderTypes.Normal: {
@@ -236,9 +175,6 @@ export class ProviderManager implements IProviderManager {
             }
             case ProviderTypes.Priority: {
                 return this.priorityQueue.getAt(index);
-            }
-            case ProviderTypes.LiquidityRemoval: {
-                return this.removalQueue.getAt(index);
             }
             default: {
                 throw new Revert('Impossible state: Invalid provider type');
@@ -248,10 +184,6 @@ export class ProviderManager implements IProviderManager {
 
     public getNextFromPurgedProvider(currentQuote: u256): Provider | null {
         let result: Provider | null = null;
-
-        if (this.removalPurgedQueue.length > 0) {
-            result = this.removalPurgedQueue.get(this.removalQueue, currentQuote);
-        }
 
         if (result === null && this.priorityPurgedQueue.length > 0) {
             result = this.priorityPurgedQueue.get(this.priorityQueue, currentQuote);
@@ -272,18 +204,6 @@ export class ProviderManager implements IProviderManager {
         const purgedProvider: Provider | null = this.getNextFromPurgedProvider(currentQuote);
         if (purgedProvider !== null) {
             return purgedProvider;
-        }
-
-        const removalProvider: Provider | null =
-            this.removalQueue.getNextWithLiquidity(currentQuote);
-
-        if (removalProvider !== null) {
-            this.previousRemovalStartingIndex =
-                this.currentIndexRemoval === 0
-                    ? this.currentIndexRemoval
-                    : this.currentIndexRemoval - 1;
-
-            return removalProvider;
         }
 
         const priorityProvider: Provider | null =
@@ -334,9 +254,6 @@ export class ProviderManager implements IProviderManager {
             //(this.priorityQueue.length + this.normalQueue.length) * U256_BYTE_LENGTH,
         );
 
-        writer.writeU32(this.removalQueue.length);
-        writer.writeU32(this.removalQueue.startingIndex);
-
         writer.writeU32(this.priorityQueue.length);
         writer.writeU32(this.priorityQueue.startingIndex);
 
@@ -345,8 +262,8 @@ export class ProviderManager implements IProviderManager {
 
         writer.writeU32(this.priorityPurgedQueue.length);
         writer.writeU32(this.normalPurgedQueue.length);
-        writer.writeU32(this.removalPurgedQueue.length);
 
+        // !!! FOR DEBUG PURPOSE... REMOVE BEFORE MAINNET
         /*for (let i: u32 = 0; i < this.priorityPurgedQueue.length; i++) {
             writer.writeU32(this.priorityPurgedQueue.getAt(i));
         }
@@ -384,14 +301,8 @@ export class ProviderManager implements IProviderManager {
     public purgeAndRestoreProvider(data: ReservationProviderData): void {
         const provider: Provider = this.getProviderFromQueue(data.providerIndex, data.providerType);
 
-        this.ensureRemovalTypeIsValid(data.providerType, provider);
-
-        if (provider.isPendingRemoval()) {
-            this.purgeAndRestoreProviderRemovalQueue(provider, data);
-        } else {
-            this.ensureReservedAmountValid(provider, data.providedAmount);
-            this.purgeAndRestoreNormalPriorityProvider(provider, data);
-        }
+        this.ensureReservedAmountValid(provider, data.providedAmount);
+        this.purgeAndRestoreNormalPriorityProvider(provider, data);
     }
 
     public removeFromNormalQueue(provider: Provider): void {
@@ -410,20 +321,12 @@ export class ProviderManager implements IProviderManager {
         }
     }
 
-    public removeFromRemovalPurgeQueue(provider: Provider): void {
-        if (provider.isPendingRemoval()) {
-            this.removalPurgedQueue.remove(provider);
-        }
-    }
-
     public resetProvider(
         provider: Provider,
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
-        if (provider.isPendingRemoval()) {
-            this.removalQueue.resetProvider(provider);
-        } else if (provider.isPriority()) {
+        if (provider.isPriority()) {
             this.priorityQueue.resetProvider(provider, burnRemainingFunds, canceled);
         } else {
             this.normalQueue.resetProvider(provider, burnRemainingFunds, canceled);
@@ -433,28 +336,23 @@ export class ProviderManager implements IProviderManager {
     public resetStartingIndex(): void {
         const startIndexNormal: u32 = this.normalQueue.startingIndex;
         const startIndexPriority: u32 = this.priorityQueue.startingIndex;
-        const startIndexRemoval: u32 = this.removalQueue.startingIndex;
 
         // Always 1 index behind to be 100% sure we didn't miss a provider
         this.previousPriorityStartingIndex = startIndexPriority === 0 ? 0 : startIndexPriority - 1;
         this.previousNormalStartingIndex = startIndexNormal === 0 ? 0 : startIndexNormal - 1;
-        this.previousRemovalStartingIndex = startIndexRemoval === 0 ? 0 : startIndexRemoval - 1;
     }
 
     public restoreCurrentIndex(): void {
         this.normalQueue.restoreCurrentIndex(this.previousNormalStartingIndex);
         this.priorityQueue.restoreCurrentIndex(this.previousPriorityStartingIndex);
-        this.removalQueue.restoreCurrentIndex(this.previousRemovalStartingIndex);
     }
 
     public save(): void {
         this._startingIndex.save();
         this.normalQueue.save();
         this.priorityQueue.save();
-        this.removalQueue.save();
         this.normalPurgedQueue.save();
         this.priorityPurgedQueue.save();
-        this.removalPurgedQueue.save();
     }
 
     private ensureInitialProviderIsNotPurged(provider: Provider): void {
@@ -469,20 +367,6 @@ export class ProviderManager implements IProviderManager {
         if (providerId.isZero()) {
             throw new Revert(
                 `Impossible state: Cannot load provider. Index: ${index} Type: ${type}. Pool corrupted.`,
-            );
-        }
-    }
-
-    private ensureRemovalTypeIsValid(queueType: ProviderTypes, provider: Provider): void {
-        if (queueType === ProviderTypes.LiquidityRemoval && !provider.isPendingRemoval()) {
-            throw new Revert(
-                'Impossible state: provider is in removal queue but is not flagged pendingRemoval.',
-            );
-        }
-
-        if (queueType !== ProviderTypes.LiquidityRemoval && provider.isPendingRemoval()) {
-            throw new Revert(
-                'Impossible state: provider is flagged pendingRemoval but is not in removal queue',
             );
         }
     }
@@ -523,26 +407,6 @@ export class ProviderManager implements IProviderManager {
         }
 
         return initialProvider;
-    }
-
-    private purgeAndRestoreProviderRemovalQueue(
-        provider: Provider,
-        data: ReservationProviderData,
-    ): void {
-        const quote: u256 = this.quoteManager.getValidBlockQuote(data.creationBlock);
-        const reservedAmountSatoshis: u64 = tokensToSatoshis128(data.providedAmount, quote);
-        const actualReservedSatoshis: u64 = this.owedBTCManager.getSatoshisOwedReserved(
-            provider.getId(),
-        );
-        const revertSatoshis: u64 = min64(reservedAmountSatoshis, actualReservedSatoshis);
-        const newOwedReserved: u64 = SafeMath.sub64(actualReservedSatoshis, revertSatoshis);
-
-        this.owedBTCManager.setSatoshisOwedReserved(provider.getId(), newOwedReserved);
-
-        // This is very important that a provider with active liquidity CAN NOT BE A REMOVAL PROVIDER AT THE SAME TIME. OR THIS CHECK WILL FAIL.
-        if (!provider.isPurged()) {
-            this.addToRemovalPurgedQueue(provider);
-        }
     }
 
     private purgeAndRestoreNormalPriorityProvider(

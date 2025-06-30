@@ -64,10 +64,6 @@ export class Reservation {
         this.reservedPriority.push(<u8>providerData.providerType);
     }
 
-    public clearForLiquidityPool(): void {
-        this.reservationData.forLiquidityPool = false;
-    }
-
     public delete(isTimeout: boolean): void {
         this.reservedIndexes.reset();
         this.reservedValues.reset();
@@ -140,16 +136,8 @@ export class Reservation {
         return Blockchain.block.number > this.reservationData.expirationBlock;
     }
 
-    public isForLiquidityPool(): boolean {
-        return this.reservationData.forLiquidityPool;
-    }
-
     public isValid(): boolean {
         return !this.isExpired() && this.reservedIndexes.getLength() > 0;
-    }
-
-    public markForLiquidityPool(): void {
-        this.reservationData.forLiquidityPool = true;
     }
 
     public save(): void {

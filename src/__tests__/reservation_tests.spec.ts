@@ -44,7 +44,6 @@ describe('Reservation tests', () => {
             );
 
             expect(reservation.getProviderCount()).toStrictEqual(0);
-            expect(reservation.isForLiquidityPool()).toBeFalsy();
             expect(reservation.getExpirationBlock()).toStrictEqual(
                 RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
             );
@@ -61,7 +60,6 @@ describe('Reservation tests', () => {
             const reservation: Reservation = Reservation.load(reservationId);
 
             expect(reservation.getProviderCount()).toStrictEqual(0);
-            expect(reservation.isForLiquidityPool()).toBeFalsy();
             expect(reservation.getExpirationBlock()).toStrictEqual(
                 RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
             );
@@ -80,7 +78,6 @@ describe('Reservation tests', () => {
             expect(reservation.getId()).toStrictEqual(reservationId);
 
             reservation.setCreationBlock(10);
-            reservation.markForLiquidityPool();
             reservation.setPurgeIndex(20);
             reservation.setActivationDelay(2);
             reservation.timeoutUser();
@@ -100,14 +97,6 @@ describe('Reservation tests', () => {
                     reservation.getCreationBlock(),
                 ),
             );
-            reservation.addProvider(
-                new ReservationProviderData(
-                    3,
-                    u128.fromU64(3000),
-                    ProviderTypes.LiquidityRemoval,
-                    reservation.getCreationBlock(),
-                ),
-            );
 
             reservation.save();
 
@@ -118,13 +107,13 @@ describe('Reservation tests', () => {
             expect(reservation2.getExpirationBlock()).toStrictEqual(
                 10 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
             );
-            expect(reservation2.isForLiquidityPool()).toBeTruthy();
+
             expect(reservation2.getPurgeIndex()).toStrictEqual(20);
             expect(reservation2.getActivationDelay()).toStrictEqual(2);
             expect(reservation2.getUserTimeoutBlockExpiration()).toStrictEqual(
                 10 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS + TIMEOUT_AFTER_EXPIRATION_BLOCKS,
             );
-            expect(reservation2.getProviderCount()).toStrictEqual(3);
+            expect(reservation2.getProviderCount()).toStrictEqual(2);
 
             const pd1: ReservationProviderData = reservation2.getProviderAt(0);
             expect(pd1.providerIndex).toStrictEqual(1);
@@ -135,11 +124,6 @@ describe('Reservation tests', () => {
             expect(pd2.providerIndex).toStrictEqual(2);
             expect(pd2.providedAmount).toStrictEqual(u128.fromU64(2000));
             expect(pd2.providerType).toStrictEqual(ProviderTypes.Priority);
-
-            const pd3: ReservationProviderData = reservation2.getProviderAt(2);
-            expect(pd3.providerIndex).toStrictEqual(3);
-            expect(pd3.providedAmount).toStrictEqual(u128.fromU64(3000));
-            expect(pd3.providerType).toStrictEqual(ProviderTypes.LiquidityRemoval);
         });
     });
 
@@ -377,20 +361,6 @@ describe('Reservation tests', () => {
             expect(reservation.getUserTimeoutBlockExpiration()).toStrictEqual(0);
         });
 
-        it('should correctly get/set the reserved for liquidity pool state', () => {
-            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-            setBlockchainEnvironment(1000);
-
-            reservation.markForLiquidityPool();
-
-            expect(reservation.isForLiquidityPool()).toBeTruthy();
-
-            reservation.clearForLiquidityPool();
-
-            expect(reservation.isForLiquidityPool()).toBeFalsy();
-        });
-
         it('should correctly set the activation delay', () => {
             const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
 
@@ -433,7 +403,6 @@ describe('Reservation tests', () => {
             expect(reservation.getId()).toStrictEqual(reservationId);
 
             reservation.setCreationBlock(1000);
-            reservation.markForLiquidityPool();
             reservation.setPurgeIndex(10);
             reservation.setActivationDelay(2);
             reservation.addProvider(
@@ -441,14 +410,6 @@ describe('Reservation tests', () => {
             );
             reservation.addProvider(
                 new ReservationProviderData(2, u128.fromU64(2000), ProviderTypes.Priority, 1000),
-            );
-            reservation.addProvider(
-                new ReservationProviderData(
-                    3,
-                    u128.fromU64(3000),
-                    ProviderTypes.LiquidityRemoval,
-                    1000,
-                ),
             );
             reservation.save();
 
@@ -459,11 +420,10 @@ describe('Reservation tests', () => {
             expect(reservation2.getExpirationBlock()).toStrictEqual(
                 1000 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
             );
-            expect(reservation2.isForLiquidityPool()).toBeTruthy();
             expect(reservation2.getPurgeIndex()).toStrictEqual(10);
             expect(reservation2.getActivationDelay()).toStrictEqual(2);
             expect(reservation2.getUserTimeoutBlockExpiration()).toStrictEqual(0);
-            expect(reservation2.getProviderCount()).toStrictEqual(3);
+            expect(reservation2.getProviderCount()).toStrictEqual(2);
 
             const pd1: ReservationProviderData = reservation2.getProviderAt(0);
             expect(pd1.providerIndex).toStrictEqual(1);
@@ -477,17 +437,10 @@ describe('Reservation tests', () => {
             expect(pd2.providerType).toStrictEqual(ProviderTypes.Priority);
             expect(pd2.creationBlock).toStrictEqual(1000);
 
-            const pd3: ReservationProviderData = reservation2.getProviderAt(2);
-            expect(pd3.providerIndex).toStrictEqual(3);
-            expect(pd3.providedAmount).toStrictEqual(u128.fromU64(3000));
-            expect(pd3.providerType).toStrictEqual(ProviderTypes.LiquidityRemoval);
-            expect(pd3.creationBlock).toStrictEqual(1000);
-
             reservation2.delete(false);
 
             expect(reservation2.getProviderCount()).toStrictEqual(0);
             expect(reservation2.getPurgeIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-            expect(reservation2.isForLiquidityPool()).toBeFalsy();
             expect(reservation2.getExpirationBlock()).toStrictEqual(
                 RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
             );
@@ -499,7 +452,6 @@ describe('Reservation tests', () => {
 
             expect(reservation3.getProviderCount()).toStrictEqual(0);
             expect(reservation3.getPurgeIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-            expect(reservation3.isForLiquidityPool()).toBeFalsy();
             expect(reservation3.getExpirationBlock()).toStrictEqual(
                 RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
             );

@@ -262,7 +262,6 @@ export class ProviderQueue {
 
         if (Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)) {
             this.ensureProviderIsNotInPurgeQueue(provider);
-            provider.clearFromRemovalQueue();
             result = provider;
         } else if (!provider.hasReservedAmount()) {
             this.resetProvider(provider);

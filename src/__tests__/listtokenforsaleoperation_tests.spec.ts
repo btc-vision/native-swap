@@ -85,7 +85,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.activate();
                 provider.clearPriority();
                 provider.setLiquidityAmount(u128.Zero);
-                provider.setLiquidityProvided(u128.Zero);
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
                 queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -159,30 +158,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.activate();
                 provider.markPriority();
-
-                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-                const operation = new ListTokensForSaleOperation(
-                    queue.liquidityQueue,
-                    provider.getId(),
-                    u128.fromU64(100),
-                    receiverAddress1,
-                    Address.dead(),
-                    false,
-                    false,
-                );
-
-                operation.execute();
-            }).toThrow();
-        });
-
-        it('should revert if provider is in the removal queue.', () => {
-            expect(() => {
-                setBlockchainEnvironment(100);
-                FeeManager.onDeploy();
-
-                const provider = createProvider(providerAddress1, tokenAddress1);
-                provider.markPendingRemoval();
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
@@ -332,7 +307,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.activate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -458,7 +432,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -506,7 +479,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -582,7 +554,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -653,7 +624,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -715,7 +685,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -785,7 +754,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -819,7 +787,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -855,7 +822,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU32(10000));
-            provider.setLiquidityProvided(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -882,7 +848,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU32(10000));
-            provider.setLiquidityProvided(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -937,7 +902,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.deactivate();
                 provider.clearPriority();
                 provider.setLiquidityAmount(u128.fromU32(10000));
-                provider.setLiquidityProvided(u128.fromU32(10000));
                 provider.setReservedAmount(u128.fromU32(1000));
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
@@ -965,7 +929,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU32(10000));
-            provider.setLiquidityProvided(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);

@@ -105,33 +105,6 @@ export class ReservationData {
         return this._creationBlock + RESERVATION_EXPIRE_AFTER_IN_BLOCKS;
     }
 
-    private _forLiquidityPool: boolean = false;
-
-    /**
-     * @method forLiquidityPool
-     * @description Gets if the reservation is for a liquidity pool.
-     * @returns {boolean} - true if the reservation is for a liquidity pool; false if not.
-     */
-    @inline
-    public get forLiquidityPool(): boolean {
-        this.ensureValues();
-        return this._forLiquidityPool;
-    }
-
-    /**
-     * @method forLiquidityPool
-     * @description Sets if the reservation is for a liquidity pool.
-     * @param {boolean} value - true if the reservation is for a liquidity pool; false if not.
-     */
-    public set forLiquidityPool(value: boolean) {
-        this.ensureValues();
-
-        if (this._forLiquidityPool !== value) {
-            this._forLiquidityPool = value;
-            this.isChanged = true;
-        }
-    }
-
     private _purgeIndex: u32 = INDEX_NOT_SET_VALUE;
 
     /**
@@ -208,7 +181,6 @@ export class ReservationData {
      */
     @inline
     public reset(isTimeout: boolean): void {
-        this.forLiquidityPool = false;
         this.purgeIndex = INDEX_NOT_SET_VALUE;
         this.activationDelay = 0;
         this.timeout = isTimeout;
@@ -261,8 +233,7 @@ export class ReservationData {
     private packFlags(): u8 {
         let flags: u8 = 0;
 
-        if (this.forLiquidityPool) flags |= 0b1;
-        if (this.timeout) flags |= 0b10;
+        if (this.timeout) flags |= 0b1;
 
         return flags;
     }
@@ -294,8 +265,7 @@ export class ReservationData {
      * @returns {void}
      */
     private unpackFlags(packedFlags: u8): void {
-        this._forLiquidityPool = (packedFlags & 0b1) !== 0;
-        this._timeout = (packedFlags & 0b10) !== 0;
+        this._timeout = (packedFlags & 0b1) !== 0;
     }
 
     /**

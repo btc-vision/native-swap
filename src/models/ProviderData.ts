@@ -5,14 +5,13 @@ import {
     BytesWriter,
     EMPTY_BUFFER,
     encodePointer,
-    U128_BYTE_LENGTH,
     U256_BYTE_LENGTH,
     U32_BYTE_LENGTH,
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
-import { AMOUNT_POINTER, LIQUIDITY_PROVIDED_POINTER } from '../constants/StoredPointers';
+import { AMOUNT_POINTER } from '../constants/StoredPointers';
 import {
     BLOCK_NOT_SET_VALUE,
     INDEX_NOT_SET_VALUE,
@@ -22,13 +21,11 @@ import {
 @final
 export class ProviderData {
     private readonly pointerBuffer: Uint8Array;
-    private readonly liquidityProvidedPointer: Uint8Array;
     private readonly amountPointer: Uint8Array;
     private valueLoaded: boolean = false;
     private stateChanged: boolean = false;
-    private liquidityProvidedLoaded: boolean = false;
+
     private amountLoaded: boolean = false;
-    private liquidityProvidedChanged: boolean = false;
     private amountChanged: boolean = false;
 
     /**
@@ -43,7 +40,6 @@ export class ProviderData {
         );
 
         this.pointerBuffer = encodePointer(pointer, subPointer);
-        this.liquidityProvidedPointer = encodePointer(LIQUIDITY_PROVIDED_POINTER, subPointer);
         this.amountPointer = encodePointer(AMOUNT_POINTER, subPointer);
     }
 
@@ -125,58 +121,6 @@ export class ProviderData {
         }
     }
 
-    private _liquidityProvided: u128 = u128.Zero;
-
-    /**
-     * @method liquidityProvided
-     * @description Gets the liquidity provided in tokens.
-     * @returns {u128} - The liquidity provided in tokens.
-     */
-    @inline
-    public get liquidityProvided(): u128 {
-        this.ensureLiquidityProvided();
-        return this._liquidityProvided;
-    }
-
-    /**
-     * @method liquidityProvided
-     * @description Sets the liquidity provided in tokens.
-     * @param {u128} value - The liquidity provided in tokens.
-     */
-    public set liquidityProvided(value: u128) {
-        this.ensureLiquidityProvided();
-        if (!u128.eq(this._liquidityProvided, value)) {
-            this._liquidityProvided = value;
-            this.liquidityProvidedChanged = true;
-        }
-    }
-
-    private _liquidityProvider: boolean = false;
-
-    /**
-     * @method liquidityProvider
-     * @description Gets if the provider is a liquidity provider.
-     * @returns {boolean} - true if a liquidity provider; false if not.
-     */
-    @inline
-    public get liquidityProvider(): boolean {
-        this.ensureValues();
-        return this._liquidityProvider;
-    }
-
-    /**
-     * @method liquidityProvider
-     * @description Sets if the provider is a liquidity provider.
-     * @param {boolean} value - true if a liquidity provider; false if not.
-     */
-    public set liquidityProvider(value: boolean) {
-        this.ensureValues();
-        if (this._liquidityProvider !== value) {
-            this._liquidityProvider = value;
-            this.stateChanged = true;
-        }
-    }
-
     private _liquidityProvisionAllowed: boolean = false;
 
     /**
@@ -226,32 +170,6 @@ export class ProviderData {
 
         if (this._listedTokenAtBlock !== value) {
             this._listedTokenAtBlock = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _pendingRemoval: boolean = false;
-
-    /**
-     * @method pendingRemoval
-     * @description Gets if the provider is in pending removal state.
-     * @returns {boolean} - true if in pending removal state; false if not.
-     */
-    @inline
-    public get pendingRemoval(): boolean {
-        this.ensureValues();
-        return this._pendingRemoval;
-    }
-
-    /**
-     * @method pendingRemoval
-     * @description Set if the provider is in pending removal state.
-     * @param {boolean} value - true if in pending removal; false if not.
-     */
-    public set pendingRemoval(value: boolean) {
-        this.ensureValues();
-        if (this._pendingRemoval !== value) {
-            this._pendingRemoval = value;
             this.stateChanged = true;
         }
     }
@@ -393,7 +311,6 @@ export class ProviderData {
      */
     public resetAll(): void {
         this.resetListingProviderValues();
-        this.resetLiquidityProviderValues();
     }
 
     /**
@@ -417,27 +334,12 @@ export class ProviderData {
     }
 
     /**
-     * @method resetLiquidityProviderValues
-     * @description Reset only the values used by a liquidity provider.
-     * @returns {void}
-     */
-    public resetLiquidityProviderValues(): void {
-        this.liquidityProvided = u128.Zero;
-        this.pendingRemoval = false;
-        this.liquidityProvider = false;
-        this.queueIndex = INDEX_NOT_SET_VALUE;
-        this.purged = false;
-        this.purgedIndex = INDEX_NOT_SET_VALUE;
-    }
-
-    /**
      * @method save
      * @description Persists the cached values to storage if any have been modified.
      * @returns {void}
      */
     public save(): void {
         this.saveStateIfChanged();
-        this.saveLiquidityProvidedIfChanged();
         this.saveAmountIfChanged();
     }
 
@@ -452,20 +354,6 @@ export class ProviderData {
             const storedData: Uint8Array = Blockchain.getStorageAt(this.amountPointer);
             this.unpackAmounts(storedData);
             this.amountLoaded = true;
-        }
-    }
-
-    /**
-     * @private
-     * @method ensureLiquidityProvided
-     * @description Loads the liquidity provided from storage if needed.
-     * @returns {void}
-     */
-    private ensureLiquidityProvided(): void {
-        if (!this.liquidityProvidedLoaded) {
-            const storedData: Uint8Array = Blockchain.getStorageAt(this.liquidityProvidedPointer);
-            this.unpackLiquidityProvided(storedData);
-            this.liquidityProvidedLoaded = true;
         }
     }
 
@@ -503,19 +391,6 @@ export class ProviderData {
 
     /**
      * @private
-     * @method packLiquidityProvided
-     * @description Packs the liquidity provided data for storage.
-     * @returns {Uint8Array} The packed Uint8Array value.
-     */
-    private packLiquidityProvided(): Uint8Array {
-        const writer: BytesWriter = new BytesWriter(U128_BYTE_LENGTH);
-        writer.writeU128(this._liquidityProvided);
-
-        return writer.getBuffer();
-    }
-
-    /**
-     * @private
      * @method packValues
      * @description Packs the internal data for storage.
      * @returns {Uint8Array} The packed Uint8Array value.
@@ -528,10 +403,8 @@ export class ProviderData {
             (this._active ? 1 : 0) |
             ((this._priority ? 1 : 0) << 1) |
             ((this._liquidityProvisionAllowed ? 1 : 0) << 2) |
-            ((this._liquidityProvider ? 1 : 0) << 3) |
-            ((this._pendingRemoval ? 1 : 0) << 4) |
-            ((this._initialLiquidityProvider ? 1 : 0) << 5) |
-            ((this._purged ? 1 : 0) << 6);
+            ((this._initialLiquidityProvider ? 1 : 0) << 3) |
+            ((this._purged ? 1 : 0) << 4);
 
         writer.writeU8(flag);
         writer.writeU32(this._queueIndex);
@@ -551,19 +424,6 @@ export class ProviderData {
             const packed: Uint8Array = this.packAmounts();
             Blockchain.setStorageAt(this.amountPointer, packed);
             this.amountChanged = false;
-        }
-    }
-
-    /**
-     * @method saveLiquidityProvidedIfChanged
-     * @description Persists the liquidity provided if modified.
-     * @returns {void}
-     */
-    private saveLiquidityProvidedIfChanged(): void {
-        if (this.liquidityProvidedChanged) {
-            const packed: Uint8Array = this.packLiquidityProvided();
-            Blockchain.setStorageAt(this.liquidityProvidedPointer, packed);
-            this.liquidityProvidedChanged = false;
         }
     }
 
@@ -595,18 +455,6 @@ export class ProviderData {
 
     /**
      * @private
-     * @method unpackLiquidityProvided
-     * @description Unpacks the liquidity amount and reserved amount.
-     * @param {Uint8Array} packedData - The data to unpack.
-     * @returns {void}
-     */
-    private unpackLiquidityProvided(packedData: Uint8Array): void {
-        const reader: BytesReader = new BytesReader(packedData);
-        this._liquidityProvided = reader.readU128();
-    }
-
-    /**
-     * @private
      * @method unpackValues
      * @description Unpacks the internal data.
      * @param {Uint8Array} packedData - The data to unpack.
@@ -620,10 +468,8 @@ export class ProviderData {
         this._active = (flag & 1) === 1;
         this._priority = ((flag >> 1) & 1) === 1;
         this._liquidityProvisionAllowed = ((flag >> 2) & 1) === 1;
-        this._liquidityProvider = ((flag >> 3) & 1) === 1;
-        this._pendingRemoval = ((flag >> 4) & 1) === 1;
-        this._initialLiquidityProvider = ((flag >> 5) & 1) === 1;
-        this._purged = ((flag >> 6) & 1) === 1;
+        this._initialLiquidityProvider = ((flag >> 3) & 1) === 1;
+        this._purged = ((flag >> 4) & 1) === 1;
 
         this._queueIndex = reader.readU32();
         this._listedTokenAtBlock = reader.readU64();

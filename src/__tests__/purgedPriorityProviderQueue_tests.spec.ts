@@ -206,7 +206,6 @@ describe('PriorityPurgedProviderQueue tests', () => {
             expect(provider1).not.toBeNull();
             if (provider1 !== null) {
                 expect(provider1.getPurgedIndex()).toStrictEqual(0);
-                expect(provider1.isFromRemovalQueue()).toBeFalsy();
             }
         });
 

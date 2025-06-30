@@ -33,7 +33,6 @@ describe('ReservationData tests', () => {
         expect(reservationData.timeout).toBeFalsy();
         expect(reservationData.activationDelay).toStrictEqual(0);
         expect(reservationData.purgeIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
-        expect(reservationData.forLiquidityPool).toBeFalsy();
         expect(reservationData.creationBlock).toStrictEqual(0);
         expect(reservationData.expirationBlock).toStrictEqual(RESERVATION_EXPIRE_AFTER_IN_BLOCKS);
         expect(reservationData.userTimeoutExpirationBlock).toStrictEqual(0);
@@ -45,7 +44,6 @@ describe('ReservationData tests', () => {
 
         reservationData.activationDelay = 10;
         reservationData.purgeIndex = 20;
-        reservationData.forLiquidityPool = true;
         reservationData.creationBlock = 101;
         reservationData.timeout = true;
         reservationData.save();
@@ -54,7 +52,6 @@ describe('ReservationData tests', () => {
         expect(reservationData2.timeout).toBeTruthy();
         expect(reservationData2.activationDelay).toStrictEqual(10);
         expect(reservationData2.purgeIndex).toStrictEqual(20);
-        expect(reservationData2.forLiquidityPool).toBeTruthy();
         expect(reservationData2.creationBlock).toStrictEqual(101);
         expect(reservationData2.expirationBlock).toStrictEqual(
             101 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
@@ -100,7 +97,6 @@ describe('ReservationData tests', () => {
         const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
         const reservationData = new ReservationData(RESERVATION_DATA_POINTER, providerBuffer);
         reservationData.timeout = true;
-        reservationData.forLiquidityPool = true;
         reservationData.activationDelay = 3;
         reservationData.purgeIndex = 9;
         reservationData.creationBlock = 20;
@@ -108,7 +104,6 @@ describe('ReservationData tests', () => {
         reservationData.reset(false);
 
         expect(reservationData.timeout).toBeFalsy();
-        expect(reservationData.forLiquidityPool).toBeFalsy();
         expect(reservationData.activationDelay).toStrictEqual(0);
         expect(reservationData.purgeIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
         expect(reservationData.creationBlock).toStrictEqual(0);

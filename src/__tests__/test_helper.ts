@@ -20,7 +20,7 @@ import {
     ENABLE_INDEX_VERIFICATION,
 } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
-import { IOwedBTCManager } from '../managers/interfaces/IOwedBTCManager';
+
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
 import { ILiquidityQueueReserve } from '../managers/interfaces/ILiquidityQueueReserve';
 import { IProviderManager } from '../managers/interfaces/IProviderManager';
@@ -28,7 +28,6 @@ import { IReservationManager } from '../managers/interfaces/IReservationManager'
 import { IDynamicFee } from '../managers/interfaces/IDynamicFee';
 import { TradeManager } from '../managers/TradeManager';
 import { QuoteManager } from '../managers/QuoteManager';
-import { OwedBTCManager } from '../managers/OwedBTCManager';
 import { LiquidityQueueReserve } from '../models/LiquidityQueueReserve';
 import { ReservationManager } from '../managers/ReservationManager';
 import { DynamicFee } from '../managers/DynamicFee';
@@ -165,11 +164,11 @@ export function createProviderId(providerAddress: Address, tokenAddress: Address
 export function createProvider(
     providerAddress: Address,
     tokenAddress: Address,
-    pendingRemoval: boolean = false,
-    isLP: boolean = true,
+    _pendingRemoval: boolean = false,
+    _isLP: boolean = false,
     canProvideLiquidity: boolean = false,
     btcReceiver: string = 'e123e2d23d233',
-    liquidityProvided: u128 = u128.fromU64(1000),
+    _liquidityProvided: u128 = u128.Zero,
     liquidity: u128 = u128.fromU64(1000),
     reserved: u128 = u128.fromU64(0),
     isActive: bool = true,
@@ -190,19 +189,6 @@ export function createProvider(
         provider.clearPriority();
     }
 
-    if (pendingRemoval) {
-        provider.markPendingRemoval();
-    } else {
-        provider.clearPendingRemoval();
-    }
-
-    if (isLP) {
-        provider.markLiquidityProvider();
-    } else {
-        provider.clearLiquidityProvider();
-    }
-
-    provider.setLiquidityProvided(liquidityProvided);
     provider.setLiquidityAmount(liquidity);
     provider.setReservedAmount(reserved);
     provider.setBtcReceiver(btcReceiver);
@@ -236,10 +222,10 @@ export function createProviders(
     nbProviderToAdd: u8,
     startIndex: u8 = 0,
     pendingRemoval: boolean = false,
-    isLP: boolean = true,
+    isLP: boolean = false,
     canProvideLiquidity: boolean = true,
     btcReceiver: string = 'e123e2d23d233',
-    liquidityProvided: u128 = u128.fromU64(1000),
+    liquidityProvided: u128 = u128.Zero,
     liquidity: u128 = u128.fromU64(1000),
     reserved: u128 = u128.fromU64(0),
     isActive: bool = true,
@@ -303,85 +289,6 @@ export function createProviders(
     return providers;
 }
 
-export function createMaxProviders(
-    pendingRemoval: boolean = false,
-    isLP: boolean = true,
-    canProvideLiquidity: boolean = true,
-    btcReceiver: string = 'e123e2d23d233',
-    liquidityProvided: u128 = u128.fromU64(1000),
-    liquidity: u128 = u128.fromU64(1000),
-    reserved: u128 = u128.fromU64(0),
-    isActive: bool = true,
-    isPriority: bool = false,
-): Provider[] {
-    const providers: Provider[] = [];
-
-    let i: u32 = 0;
-    while (i < u32.MAX_VALUE) {
-        for (let j: u8 = 0; j <= 255; j++) {
-            for (let k: u8 = 0; k <= 255; k++) {
-                const address: Address = new Address([
-                    68,
-                    153,
-                    66,
-                    199,
-                    127,
-                    168,
-                    221,
-                    199,
-                    156,
-                    120,
-                    43,
-                    34,
-                    88,
-                    0,
-                    29,
-                    93,
-                    123,
-                    133,
-                    101,
-                    220,
-                    185,
-                    192,
-                    64,
-                    105,
-                    97,
-                    112,
-                    200,
-                    3,
-                    234,
-                    133,
-                    j,
-                    k,
-                ]);
-                i++;
-
-                const provider = createProvider(
-                    address,
-                    tokenAddress1,
-                    pendingRemoval,
-                    isLP,
-                    canProvideLiquidity,
-                    btcReceiver,
-                    liquidityProvided,
-                    liquidity,
-                    reserved,
-                    isActive,
-                    isPriority,
-                );
-
-                providers.push(provider);
-
-                if (i == u32.MAX_VALUE) {
-                    break;
-                }
-            }
-        }
-    }
-
-    return providers;
-}
-
 export function createReservationId(tokenAddress: Address, providerAddress: Address): u128 {
     const reservationArrayId: Uint8Array = Reservation.generateId(tokenAddress, providerAddress);
 
@@ -414,15 +321,6 @@ export function setBlockchainEnvironment(
     Blockchain.setEnvironmentVariables(writer.getBuffer());
 }
 
-export function generateReservationId(token: Address, owner: Address): Uint8Array {
-    const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
-    writer.writeAddress(token);
-    writer.writeAddress(owner);
-
-    const hash = ripemd160(writer.getBuffer());
-    return hash.slice(0, 16);
-}
-
 export function createReservation(token: Address, owner: Address): Reservation {
     const reservation: Reservation = new Reservation(token, owner);
 
@@ -435,14 +333,10 @@ export interface ITestProviderManager extends IProviderManager {
     readonly cleanUpQueuesCalled: boolean;
     readonly getNextProviderWithLiquidityCalled: boolean;
     readonly resetProviderCalled: boolean;
-    readonly getRemovalQueue: StoredU256Array;
     readonly getPriorityQueue: StoredU256Array;
     readonly getNormalQueue: StoredU256Array;
     readonly priorityPurgedQueueLength: u32;
     readonly normalPurgedQueueLength: u32;
-    readonly removalPurgedQueueLength: u32;
-
-    removeFromRemovalQueue(provider: Provider): void;
 
     clearMockedResults(): void;
 
@@ -523,15 +417,9 @@ export function createLiquidityQueue(
     purgeOldReservations: boolean,
     timeoutEnabled: boolean = false,
 ): CreateLiquidityQueueResult {
-    const owedBtcManager: IOwedBTCManager = getOwedBtcManager();
     const quoteManager: IQuoteManager = getQuoteManager(tokenId);
     const liquidityQueueReserve: ILiquidityQueueReserve = getLiquidityQueueReserve(token, tokenId);
-    const providerManager: ITestProviderManager = getProviderManager(
-        token,
-        tokenId,
-        owedBtcManager,
-        quoteManager,
-    );
+    const providerManager: ITestProviderManager = getProviderManager(token, tokenId, quoteManager);
     const reservationManager: ITestReservationManager = getReservationManager(
         token,
         tokenId,
@@ -548,7 +436,6 @@ export function createLiquidityQueue(
         quoteManager,
         reservationManager,
         dynamicFee,
-        owedBtcManager,
         purgeOldReservations,
         timeoutEnabled,
     );
@@ -558,7 +445,6 @@ export function createLiquidityQueue(
         quoteManager,
         providerManager,
         liquidityQueueReserve,
-        owedBtcManager,
         reservationManager,
     );
 
@@ -578,20 +464,9 @@ export function getQuoteManager(tokenId: Uint8Array): IQuoteManager {
 export function getProviderManager(
     token: Address,
     tokenId: Uint8Array,
-    owedBtcManager: IOwedBTCManager,
     quoteManager: IQuoteManager,
 ): ITestProviderManager {
-    return new TestProviderManager(
-        token,
-        tokenId,
-        owedBtcManager,
-        quoteManager,
-        ENABLE_INDEX_VERIFICATION,
-    );
-}
-
-export function getOwedBtcManager(): IOwedBTCManager {
-    return new OwedBTCManager();
+    return new TestProviderManager(token, tokenId, quoteManager, ENABLE_INDEX_VERIFICATION);
 }
 
 export function getLiquidityQueueReserve(
@@ -668,10 +543,6 @@ export class TestProviderManager extends ProviderManager implements ITestProvide
         return this._resetProviderCalled;
     }
 
-    public get getRemovalQueue(): StoredU256Array {
-        return this.removalQueue.getQueue();
-    }
-
     public get getPriorityQueue(): StoredU256Array {
         return this.priorityQueue.getQueue();
     }
@@ -686,14 +557,6 @@ export class TestProviderManager extends ProviderManager implements ITestProvide
 
     public get normalPurgedQueueLength(): u32 {
         return this.normalPurgedQueue.length;
-    }
-
-    public get removalPurgedQueueLength(): u32 {
-        return this.removalPurgedQueue.length;
-    }
-
-    public removeFromRemovalQueue(provider: Provider): void {
-        this.removalQueue.remove(provider);
     }
 
     public clearMockedResults(): void {
@@ -817,16 +680,6 @@ export class TestReserveLiquidityOperation extends ReserveLiquidityOperation {
 
     public getReservedProviderCount(): u8 {
         return this.reservedProviderCount;
-    }
-
-    public callReserveFromRemovalProvider(
-        reservation: Reservation,
-        provider: Provider,
-        remainingSatoshis: u64,
-        quote: u256,
-    ): void {
-        this.currentQuote = quote;
-        super.reserveFromRemovalProvider(reservation, provider, remainingSatoshis);
     }
 
     public callReserveFromProvider(

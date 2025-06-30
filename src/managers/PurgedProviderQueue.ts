@@ -40,7 +40,6 @@ export class PurgedProviderQueue {
 
         if (!provider.isInitialLiquidityProvider()) {
             this.ensureProviderNotAlreadyPurged(provider.isPurged());
-            this.ensureProviderNotPendingRemoval(provider);
             this.ensureProviderNotPriority(provider);
             this.ensureProviderQueueIndexIsValid(provider.getQueueIndex());
 
@@ -116,12 +115,6 @@ export class PurgedProviderQueue {
         }
     }
 
-    protected ensureProviderNotPendingRemoval(provider: Provider): void {
-        if (provider.isPendingRemoval()) {
-            throw new Revert(`Impossible state: provider cannot be in pending removal state.`);
-        }
-    }
-
     protected ensureProviderPurged(provider: Provider): void {
         if (!provider.isPurged()) {
             throw new Revert(`Impossible state: provider has not been purged.`);
@@ -182,7 +175,6 @@ export class PurgedProviderQueue {
             }
 
             if (Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
-                provider.clearFromRemovalQueue();
                 result = provider;
             } else if (!provider.hasReservedAmount()) {
                 this.resetProvider(provider, associatedQueue);

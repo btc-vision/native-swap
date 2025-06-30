@@ -27,7 +27,6 @@ import { IProviderManager } from './interfaces/IProviderManager';
 import { IReservationManager } from './interfaces/IReservationManager';
 import { ILiquidityQueue } from './interfaces/ILiquidityQueue';
 import { IDynamicFee } from './interfaces/IDynamicFee';
-import { IOwedBTCManager } from './interfaces/IOwedBTCManager';
 
 const ENABLE_FEES: bool = true;
 
@@ -37,7 +36,6 @@ export class LiquidityQueue implements ILiquidityQueue {
     protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
     protected readonly quoteManager: IQuoteManager;
     protected readonly reservationManager: IReservationManager;
-    protected readonly owedBTCManager: IOwedBTCManager;
     protected readonly dynamicFee: IDynamicFee;
     private readonly settings: StoredU64;
     private readonly _maxTokensPerReservation: StoredU256;
@@ -51,7 +49,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         quoteManager: IQuoteManager,
         reservationManager: IReservationManager,
         dynamicFee: IDynamicFee,
-        owedBTCManager: IOwedBTCManager,
         purgeOldReservations: boolean,
         timeoutEnabled: boolean = false,
     ) {
@@ -61,7 +58,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.liquidityQueueReserve = liquidityQueueReserve;
         this.quoteManager = quoteManager;
         this.reservationManager = reservationManager;
-        this.owedBTCManager = owedBTCManager;
 
         this._maxTokensPerReservation = new StoredU256(
             ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
@@ -220,10 +216,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.providerManager.addToPriorityQueue(provider);
     }
 
-    public addToRemovalQueue(provider: Provider): void {
-        this.providerManager.addToRemovalQueue(provider);
-    }
-
     public blockWithReservationsLength(): u32 {
         return this.reservationManager.blockWithReservationsLength();
     }
@@ -273,10 +265,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
     }
 
-    public getSatoshisOwed(providerId: u256): u64 {
-        return this.owedBTCManager.getSatoshisOwed(providerId);
-    }
-
     public getMaximumTokensLeftBeforeCap(): u256 {
         if (this.liquidity.isZero()) {
             return u256.Zero;
@@ -323,14 +311,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         return reservation;
     }
 
-    public getSatoshisOwedLeft(providerId: u256): u64 {
-        return this.owedBTCManager.getSatoshisOwedLeft(providerId);
-    }
-
-    public getSatoshisOwedReserved(providerId: u256): u64 {
-        return this.owedBTCManager.getSatoshisOwedReserved(providerId);
-    }
-
     public getUtilizationRatio(): u256 {
         if (this.liquidity.isZero()) {
             return u256.Zero;
@@ -344,18 +324,6 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
         return this.providerManager.hasEnoughLiquidityLeftProvider(provider, quote);
-    }
-
-    public increaseSatoshisOwed(providerId: u256, value: u64): void {
-        const owedBefore: u64 = this.getSatoshisOwed(providerId);
-        const owedAfter: u64 = SafeMath.add64(owedBefore, value);
-        this.setSatoshisOwed(providerId, owedAfter);
-    }
-
-    public increaseSatoshisOwedReserved(providerId: u256, value: u64): void {
-        const owedReservedBefore: u64 = this.getSatoshisOwedReserved(providerId);
-        const owedReservedAfter: u64 = SafeMath.add64(owedReservedBefore, value);
-        this.setSatoshisOwedReserved(providerId, owedReservedAfter);
     }
 
     public increaseTotalSatoshisExchangedForTokens(value: u64): void {
@@ -439,10 +407,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.providerManager.removeFromPurgeQueue(provider);
     }
 
-    public removeFromRemovalPurgeQueue(provider: Provider): void {
-        this.providerManager.removeFromRemovalPurgeQueue(provider);
-    }
-
     public resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void {
         this.providerManager.resetProvider(provider, burnRemainingFunds, canceled);
     }
@@ -455,14 +419,6 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     public setBlockQuote(): void {
         this.quoteManager.setBlockQuote(Blockchain.block.number, this.quote());
-    }
-
-    public setSatoshisOwed(providerId: u256, value: u64): void {
-        this.owedBTCManager.setSatoshisOwed(providerId, value);
-    }
-
-    public setSatoshisOwedReserved(providerId: u256, value: u64): void {
-        this.owedBTCManager.setSatoshisOwedReserved(providerId, value);
     }
 
     public updateVirtualPoolIfNeeded(): void {

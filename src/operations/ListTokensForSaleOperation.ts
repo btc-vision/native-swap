@@ -146,7 +146,6 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.ensureNoLiquidityOverflow();
         this.ensureNoActivePositionInPriorityQueue();
         this.ensureProviderNotAlreadyProvidingLiquidity();
-        this.ensureNotInRemovalQueue();
 
         if (!this.isForInitialLiquidity) {
             this.ensurePriceIsNotZero();
@@ -221,14 +220,6 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private ensureNoLiquidityOverflow(): void {
         if (!u128.lt(this.oldLiquidity, SafeMath.sub128(u128.Max, this.amountIn))) {
             throw new Revert('NATIVE_SWAP: Liquidity overflow. Please add a smaller amount.');
-        }
-    }
-
-    private ensureNotInRemovalQueue(): void {
-        if (this.provider.isPendingRemoval()) {
-            throw new Revert(
-                'NATIVE_SWAP: You are in the removal queue. Wait for removal of your liquidity first.',
-            );
         }
     }
 

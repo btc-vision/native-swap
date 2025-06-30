@@ -6,7 +6,6 @@ import { ReservationProviderData } from '../../models/ReservationProdiverData';
 export interface IProviderManager {
     readonly currentIndexNormal: u32;
     readonly currentIndexPriority: u32;
-    readonly currentIndexRemoval: u32;
     initialLiquidityProviderId: u256;
     readonly normalQueueLength: u32;
     readonly normalQueueStartingIndex: u32;
@@ -14,9 +13,6 @@ export interface IProviderManager {
     readonly priorityQueueStartingIndex: u32;
     previousNormalStartingIndex: u32;
     previousPriorityStartingIndex: u32;
-    previousRemovalStartingIndex: u32;
-    readonly removalQueueLength: u32;
-    readonly removalQueueStartingIndex: u32;
 
     addToNormalQueue(provider: Provider): u32;
 
@@ -26,10 +22,6 @@ export interface IProviderManager {
 
     addToPriorityPurgedQueue(provider: Provider): u32;
 
-    addToRemovalQueue(provider: Provider): u32;
-
-    addToRemovalPurgedQueue(provider: Provider): u32;
-
     cleanUpQueues(): void;
 
     getIdFromQueue(index: u32, type: ProviderTypes): u256;
@@ -37,8 +29,6 @@ export interface IProviderManager {
     getFromNormalQueue(index: u32): u256;
 
     getFromPriorityQueue(index: u32): u256;
-
-    getFromRemovalQueue(index: u32): u256;
 
     getProviderFromQueue(index: u32, type: ProviderTypes): Provider;
 
@@ -55,8 +45,6 @@ export interface IProviderManager {
     removeFromPriorityQueue(provider: Provider): void;
 
     removeFromPurgeQueue(provider: Provider): void;
-
-    removeFromRemovalPurgeQueue(provider: Provider): void;
 
     resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void;
 

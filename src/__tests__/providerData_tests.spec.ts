@@ -48,13 +48,6 @@ describe('ProviderData tests', () => {
         expect(providerData.initialLiquidityProvider).toBeTruthy();
     });
 
-    it('setter/getter for pendingRemoval', () => {
-        const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
-        expect(providerData.pendingRemoval).toBeFalsy();
-        providerData.pendingRemoval = true;
-        expect(providerData.pendingRemoval).toBeTruthy();
-    });
-
     it('setter/getter for listedTokenAtBlock', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
         expect(providerData.listedTokenAtBlock).toStrictEqual(BLOCK_NOT_SET_VALUE);
@@ -97,13 +90,6 @@ describe('ProviderData tests', () => {
         expect(providerData.liquidityProvisionAllowed).toBeTruthy();
     });
 
-    it('setter/getter for liquidityProvider', () => {
-        const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
-        expect(providerData.liquidityProvider).toBeFalsy();
-        providerData.liquidityProvider = true;
-        expect(providerData.liquidityProvider).toBeTruthy();
-    });
-
     it('setter/getter for queueIndex', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
         expect(providerData.queueIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
@@ -118,12 +104,9 @@ describe('ProviderData tests', () => {
         providerData.queueIndex = 7;
         providerData.liquidityProvisionAllowed = true;
         providerData.liquidityAmount = u128.fromU64(90);
-        providerData.pendingRemoval = true;
         providerData.priority = true;
         providerData.active = true;
         providerData.reservedAmount = u128.fromU64(100);
-        providerData.liquidityProvider = true;
-        providerData.liquidityProvided = u128.fromU64(80);
         providerData.purged = true;
         providerData.purgedIndex = 100;
         providerData.listedTokenAtBlock = 101;
@@ -134,13 +117,10 @@ describe('ProviderData tests', () => {
         expect(providerData2.queueIndex).toStrictEqual(7);
         expect(providerData2.liquidityProvisionAllowed).toBeTruthy();
         expect(providerData2.liquidityAmount).toStrictEqual(u128.fromU64(90));
-        expect(providerData2.pendingRemoval).toBeTruthy();
         expect(providerData2.priority).toBeTruthy();
         expect(providerData2.active).toBeTruthy();
         expect(providerData2.purged).toBeTruthy();
         expect(providerData2.reservedAmount).toStrictEqual(u128.fromU64(100));
-        expect(providerData2.liquidityProvider).toBeTruthy();
-        expect(providerData2.liquidityProvided).toStrictEqual(u128.fromU64(80));
         expect(providerData2.purgedIndex).toStrictEqual(100);
         expect(providerData2.listedTokenAtBlock).toStrictEqual(101);
     });
@@ -152,12 +132,9 @@ describe('ProviderData tests', () => {
         providerData.queueIndex = 7;
         providerData.liquidityProvisionAllowed = false;
         providerData.liquidityAmount = u128.fromU64(90);
-        providerData.pendingRemoval = false;
         providerData.priority = false;
         providerData.active = false;
         providerData.reservedAmount = u128.fromU64(100);
-        providerData.liquidityProvider = false;
-        providerData.liquidityProvided = u128.fromU64(80);
         providerData.purged = false;
         providerData.purgedIndex = 100;
         providerData.listedTokenAtBlock = 101;
@@ -168,13 +145,10 @@ describe('ProviderData tests', () => {
         expect(providerData2.queueIndex).toStrictEqual(7);
         expect(providerData2.liquidityProvisionAllowed).toBeFalsy();
         expect(providerData2.liquidityAmount).toStrictEqual(u128.fromU64(90));
-        expect(providerData2.pendingRemoval).toBeFalsy();
         expect(providerData2.priority).toBeFalsy();
         expect(providerData2.active).toBeFalsy();
         expect(providerData2.purged).toBeFalsy();
         expect(providerData2.reservedAmount).toStrictEqual(u128.fromU64(100));
-        expect(providerData2.liquidityProvider).toBeFalsy();
-        expect(providerData2.liquidityProvided).toStrictEqual(u128.fromU64(80));
         expect(providerData2.purgedIndex).toStrictEqual(100);
         expect(providerData2.listedTokenAtBlock).toStrictEqual(101);
     });
@@ -219,27 +193,21 @@ describe('ProviderData tests', () => {
         expect(providerData.initialLiquidityProvider).toBeTruthy();
     });
 
-    it('resetLiquidityProviderValues clears provider fields', () => {
-        const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
-        providerData.liquidityProvided = u128.fromU64(30);
-        providerData.pendingRemoval = true;
-        providerData.liquidityProvider = true;
-        providerData.queueIndex = 5;
-
-        providerData.resetLiquidityProviderValues();
-
-        expect(providerData.liquidityProvided).toStrictEqual(u128.Zero);
-        expect(providerData.pendingRemoval).toBeFalsy();
-        expect(providerData.liquidityProvider).toBeFalsy();
-        expect(providerData.queueIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
-    });
-
     it('resetAll calls both resetListingValues and resetLiquidityProviderValues', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
         providerData.active = true;
-        providerData.liquidityProvided = u128.fromU64(40);
+        providerData.priority = true;
+        providerData.liquidityProvisionAllowed = true;
+        providerData.liquidityAmount = u128.fromU64(20);
+        providerData.reservedAmount = u128.fromU64(10);
+        providerData.queueIndex = 2;
+
         providerData.resetAll();
         expect(providerData.active).toBeFalsy();
-        expect(providerData.liquidityProvided).toStrictEqual(u128.Zero);
+        expect(providerData.priority).toBeFalsy();
+        expect(providerData.liquidityProvisionAllowed).toBeFalsy();
+        expect(providerData.liquidityAmount).toStrictEqual(u128.Zero);
+        expect(providerData.reservedAmount).toStrictEqual(u128.Zero);
+        expect(providerData.queueIndex).toBe(INDEX_NOT_SET_VALUE);
     });
 });

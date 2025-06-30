@@ -30,8 +30,6 @@ export interface ILiquidityQueue {
 
     addToPriorityQueue(provider: Provider): void;
 
-    addToRemovalQueue(provider: Provider): void;
-
     blockWithReservationsLength(): u32;
 
     buyTokens(tokensOut: u256, satoshisIn: u64): void;
@@ -64,19 +62,9 @@ export interface ILiquidityQueue {
 
     getReservationWithExpirationChecks(): Reservation;
 
-    getSatoshisOwed(providerId: u256): u64;
-
-    getSatoshisOwedLeft(providerId: u256): u64;
-
-    getSatoshisOwedReserved(providerId: u256): u64;
-
     getUtilizationRatio(): u256;
 
     hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean;
-
-    increaseSatoshisOwed(providerId: u256, value: u64): void;
-
-    increaseSatoshisOwedReserved(providerId: u256, value: u64): void;
 
     increaseTotalSatoshisExchangedForTokens(value: u64): void;
 
@@ -109,17 +97,11 @@ export interface ILiquidityQueue {
 
     removeFromPurgeQueue(provider: Provider): void;
 
-    removeFromRemovalPurgeQueue(provider: Provider): void;
-
     resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void; //false,true
 
     save(): void;
 
     setBlockQuote(): void;
-
-    setSatoshisOwed(providerId: u256, value: u64): void;
-
-    setSatoshisOwedReserved(providerId: u256, value: u64): void;
 
     updateVirtualPoolIfNeeded(): void;
 }

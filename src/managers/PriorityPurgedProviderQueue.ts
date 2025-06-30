@@ -9,7 +9,6 @@ export class PriorityPurgedProviderQueue extends PurgedProviderQueue {
 
         if (!provider.isInitialLiquidityProvider()) {
             this.ensureProviderNotAlreadyPurged(provider.isPurged());
-            this.ensureProviderNotPendingRemoval(provider);
             this.ensureProviderQueueIndexIsValid(provider.getQueueIndex());
             this.ensureProviderIsPriority(provider);
 

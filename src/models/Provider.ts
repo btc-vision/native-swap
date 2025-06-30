@@ -166,8 +166,6 @@ export class Provider {
 
         if (this.isPriority()) {
             providerType = ProviderTypes.Priority;
-        } else if (this.isPendingRemoval()) {
-            providerType = ProviderTypes.LiquidityRemoval;
         }
 
         return providerType;
@@ -332,65 +330,6 @@ export class Provider {
     }
 
     /**
-     * @method getLiquidityProvided
-     * @description Gets the liquidity provided in tokens.
-     * @returns {u128} - The liquidity provided in tokens.
-     */
-    public getLiquidityProvided(): u128 {
-        return this.providerData.liquidityProvided;
-    }
-
-    /**
-     * @method setLiquidityProvided
-     * @description Sets the liquidity provided in tokens.
-     * @param {u128} value - The liquidity provided in tokens.
-     * @returns {void}
-     */
-    public setLiquidityProvided(value: u128): void {
-        this.providerData.liquidityProvided = value;
-    }
-
-    /**
-     * @method addToLiquidityProvided
-     * @description Add a value to the liquidity provided.
-     * @param {u128} value - The value to add in tokens.
-     * @returns {void}
-     */
-    public addToLiquidityProvided(value: u128): void {
-        this.providerData.liquidityProvided = SafeMath.add128(
-            this.providerData.liquidityProvided,
-            value,
-        );
-    }
-
-    /**
-     * @method isLiquidityProvider
-     * @description Gets if the provider is a liquidity provider.
-     * @returns {boolean} - true if a liquidity provider; false if not.
-     */
-    public isLiquidityProvider(): boolean {
-        return this.providerData.liquidityProvider;
-    }
-
-    /**
-     * @method markLiquidityProvider
-     * @description Mark a provider as a liquidity provider.
-     * @returns {void}
-     */
-    public markLiquidityProvider(): void {
-        this.providerData.liquidityProvider = true;
-    }
-
-    /**
-     * @method clearLiquidityProvider
-     * @description Clear the liquidity provider state of a provider.
-     * @returns {void}
-     */
-    public clearLiquidityProvider(): void {
-        this.providerData.liquidityProvider = false;
-    }
-
-    /**
      * @method isPurged
      * @description Gets if the provider has been purged.
      * @returns {boolean} - true if purged; false if not.
@@ -415,33 +354,6 @@ export class Provider {
      */
     public clearPurged(): void {
         this.providerData.purged = false;
-    }
-
-    /**
-     * @method isPendingRemoval
-     * @description Gets if a provider is a pending removal.
-     * @returns {boolean} - true if pending removal; false if not.
-     */
-    public isPendingRemoval(): boolean {
-        return this.providerData.pendingRemoval;
-    }
-
-    /**
-     * @method markPendingRemoval
-     * @description Mark a provider as pending removal.
-     * @returns {void}
-     */
-    public markPendingRemoval(): void {
-        this.providerData.pendingRemoval = true;
-    }
-
-    /**
-     * @method clearPendingRemoval
-     * @description Clear the pending removal state of a provider.
-     * @returns {void}
-     */
-    public clearPendingRemoval(): void {
-        this.providerData.pendingRemoval = false;
     }
 
     /**
@@ -492,49 +404,12 @@ export class Provider {
     }
 
     /**
-     * @method isFromRemovalQueue
-     * @description Gets if a provider is from the removal queue.
-     * @returns {boolean} - true if from the removal queue; false if not.
-     */
-    public isFromRemovalQueue(): boolean {
-        return this.fromRemovalQueue;
-    }
-
-    /**
-     * @method markFromRemovalQueue
-     * @description Marks a provider is from the removal queue.
-     * @returns {void}
-     */
-    public markFromRemovalQueue(): void {
-        this.fromRemovalQueue = true;
-    }
-
-    /**
-     * @method clearFromRemovalQueue
-     * @description Unmarks a provider is from the removal queue.
-     * @returns {void}
-     */
-    public clearFromRemovalQueue(): void {
-        this.fromRemovalQueue = false;
-    }
-
-    /**
      * @method resetAll
      * @description Reset all provider fields.
      * @returns {void}
      */
     public resetAll(): void {
         this.providerData.resetAll();
-    }
-
-    /**
-     * @method resetLiquidityProviderValues
-     * @description Reset all fields related to the liquidity providing.
-     * @returns {void}
-     */
-    public resetLiquidityProviderValues(): void {
-        this.providerData.resetLiquidityProviderValues();
-        this.setBtcReceiver('');
     }
 
     /**

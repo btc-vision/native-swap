@@ -167,7 +167,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
                     providerAddress1,
                     tokenAddress1,
                     false,
-                    true,
+                    false,
                     false,
                 );
                 provider.activate();
@@ -176,29 +176,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 provider.setListedTokenAtBlock(100);
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
                 queue.liquidityQueue.initialLiquidityProviderId = provider.getId();
-
-                const operation = new CancelListingOperation(
-                    queue.liquidityQueue,
-                    provider.getId(),
-                    testStackingContractAddress,
-                );
-
-                operation.execute();
-            }).toThrow();
-        });
-
-        it('should revert if provider is pending removal', () => {
-            expect(() => {
-                setBlockchainEnvironment(100);
-
-                const provider = createProvider(providerAddress1, tokenAddress1);
-                provider.activate();
-                provider.clearPriority();
-                provider.setLiquidityAmount(u128.fromU64(10000));
-                provider.markPendingRemoval();
-                provider.setListedTokenAtBlock(100);
-
-                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
@@ -222,7 +199,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
         it('should apply 50% penalty if in grace period', () => {
             setBlockchainEnvironment(100);
 
-            const provider = createProvider(providerAddress1, tokenAddress1, false, true, false);
+            const provider = createProvider(providerAddress1, tokenAddress1, false, false, false);
             provider.activate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU64(10000));
@@ -250,7 +227,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
         it('should apply more than 50 % penalty if outside of grace period', () => {
             setBlockchainEnvironment(100);
 
-            const provider = createProvider(providerAddress1, tokenAddress1, false, true, false);
+            const provider = createProvider(providerAddress1, tokenAddress1, false, false, false);
             provider.activate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU64(10000));
@@ -279,7 +256,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
         it('should cap halfToCharge to penaltyAmount', () => {
             setBlockchainEnvironment(100);
 
-            const provider = createProvider(providerAddress1, tokenAddress1, false, true, false);
+            const provider = createProvider(providerAddress1, tokenAddress1, false, false, false);
             provider.activate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU64(10001));
@@ -308,11 +285,10 @@ describe('CancelListTokenForSaleOperation tests', () => {
         it('should succeed: set provider liquidity to 0, call resetProvider, safeTransfer, update reserve, cleanUpQueues, emit event', () => {
             setBlockchainEnvironment(100);
 
-            const provider = createProvider(providerAddress1, tokenAddress1, false, true, false);
+            const provider = createProvider(providerAddress1, tokenAddress1, false, false, false);
             provider.activate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU64(10000));
-            provider.setLiquidityProvided(u128.Zero);
             provider.setListedTokenAtBlock(100);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);

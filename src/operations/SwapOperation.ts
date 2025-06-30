@@ -1,11 +1,5 @@
 import { BaseOperation } from './BaseOperation';
-import {
-    Address,
-    Blockchain,
-    Revert,
-    SafeMath,
-    TransferHelper,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { SwapExecutedEvent } from '../events/SwapExecutedEvent';
 import { Reservation } from '../models/Reservation';
 import { u256 } from '@btc-vision/as-bignum/assembly';
@@ -27,9 +21,6 @@ export class SwapOperation extends BaseOperation {
 
     public override execute(): void {
         const reservation: Reservation = this.liquidityQueue.getReservationWithExpirationChecks();
-
-        this.ensureReservationNotForLP(reservation);
-
         const trade: CompletedTrade = this.tradeManager.executeTrade(reservation);
 
         let totalTokensPurchased: u256 = trade.getTotalTokensPurchased();
@@ -76,12 +67,6 @@ export class SwapOperation extends BaseOperation {
         totalTokensPurchased: u256,
     ): void {
         Blockchain.emit(new SwapExecutedEvent(buyer, totalSatoshisSpent, totalTokensPurchased));
-    }
-
-    private ensureReservationNotForLP(reservation: Reservation): void {
-        if (reservation.isForLiquidityPool()) {
-            throw new Revert('NATIVE_SWAP: Reserved for LP; cannot swap.');
-        }
     }
 
     private sendToken(amount: u256): void {

@@ -225,7 +225,6 @@ describe('CreatePoolOperation tests', () => {
             expect(queue2.liquidityQueue.antiBotExpirationBlock).toStrictEqual(110);
             expect(queue2.liquidityQueue.maxTokensPerReservation).toStrictEqual(u256.fromU64(20));
             expect(queue2.providerManager.normalQueueLength).toStrictEqual(0);
-            expect(queue2.providerManager.removalQueueLength).toStrictEqual(0);
             expect(queue2.providerManager.priorityQueueLength).toStrictEqual(0);
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(1000000));
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
