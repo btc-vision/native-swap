@@ -328,25 +328,25 @@ export class NativeSwap extends ReentrancyGuard {
                 this.addressToPointer(token),
                 false,
             );
-    
+
             this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
-    
+
             const operation: AddLiquidityOperation = new AddLiquidityOperation(
                 liquidityQueueResult.liquidityQueue,
                 liquidityQueueResult.tradeManager,
                 providerId,
                 receiver,
             );
-    
+
             operation.execute();
             liquidityQueueResult.liquidityQueue.save();
-    
+
             const result: BytesWriter = new BytesWriter(1);
             result.writeBoolean(true);
-    
+
             return result;
         }
-    
+
         private removeLiquidity(calldata: Calldata): BytesWriter {
             const token: Address = calldata.readAddress();
             const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
@@ -355,44 +355,44 @@ export class NativeSwap extends ReentrancyGuard {
                 this.addressToPointer(token),
                 true,
             );
-    
+
             this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
-    
+
             const operation: RemoveLiquidityOperation = new RemoveLiquidityOperation(
                 liquidityQueueResult.liquidityQueue,
                 providerId,
             );
-    
+
             operation.execute();
             liquidityQueueResult.liquidityQueue.save();
-    
+
             const result: BytesWriter = new BytesWriter(1);
             result.writeBoolean(true);
-    
+
             return result;
         }
-    
+
         private createPoolWithSignature(calldata: Calldata): BytesWriter {
             const signature: Uint8Array = calldata.readBytesWithLength();
             this.ensureValidSignatureLength(signature);
-    
+
             const amount: u256 = calldata.readU256();
             const nonce: u256 = calldata.readU256();
-    
+
             const calldataSend: BytesWriter = new BytesWriter(
                 SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH + U256_BYTE_LENGTH + 68,
             );
-    
+
             calldataSend.writeSelector(NativeSwap.APPROVE_FROM_SELECTOR);
             calldataSend.writeAddress(this.address);
             calldataSend.writeU256(amount);
             calldataSend.writeU256(nonce);
             calldataSend.writeBytesWithLength(signature);
-    
+
             const token: Address = calldata.readAddress();
-    
+
             Blockchain.call(token, calldataSend);
-    
+
             return this.createPool(calldata, token);
         }
     */
