@@ -1,4 +1,4 @@
- import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 export const FEE_COLLECT_SCRIPT_PUBKEY: string =
     'tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c';
@@ -7,12 +7,12 @@ export const FEE_COLLECT_SCRIPT_PUBKEY: string =
 // tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c
 
 export const QUOTE_SCALE: u256 = u256.fromU64(100_000_000);
-export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 9;
-export const VOLATILITY_WINDOW_IN_BLOCKS: u32 = 9;
+export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 10;
+export const VOLATILITY_WINDOW_IN_BLOCKS: u32 = 10;
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT: u64 = 600;
 export const MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT: u64 = 1000;
-export const MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT: u64 = 10_000;
-export const MINIMUM_TRADE_SIZE_IN_SAT: u64 = 10_000;
+export const MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT: u64 = 50_000;
+export const MINIMUM_TRADE_SIZE_IN_SAT: u64 = 50_000;
 export const PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX: u128 = u128.fromU32(30);
 export const PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX: u128 = u128.fromU32(1000);
 export const TIMEOUT_AFTER_EXPIRATION_BLOCKS: u8 = 5;
@@ -33,7 +33,7 @@ export const ALLOW_DIRTY: boolean = true;
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
  */
-export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 150;
+export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 200;
 
 export const AT_LEAST_PROVIDERS_TO_PURGE: u32 = 150;
 
