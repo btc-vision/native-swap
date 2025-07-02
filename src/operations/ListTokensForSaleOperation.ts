@@ -147,6 +147,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.ensureNoActivePositionInPriorityQueue();
         this.ensureProviderNotAlreadyProvidingLiquidity();
         this.ensureNotInRemovalQueue();
+        this.ensureNoReservation();
+        this.ensureNotPurged();
 
         if (!this.isForInitialLiquidity) {
             this.ensurePriceIsNotZero();
@@ -229,6 +231,18 @@ export class ListTokensForSaleOperation extends BaseOperation {
             throw new Revert(
                 'NATIVE_SWAP: You are in the removal queue. Wait for removal of your liquidity first.',
             );
+        }
+    }
+
+    private ensureNoReservation():void {
+        if(this.provider.hasReservedAmount()){
+            throw new Revert(`'NATIVE_SWAP: All active reservations on your listing must be completed before listing again.`)
+        }
+    }
+
+    private ensureNotPurged():void {
+        if(this.provider.isPurged()){
+            throw new Revert(`'NATIVE_SWAP: You are in the purge queue. Your current listing must be bought before listing again.`)
         }
     }
 

@@ -543,7 +543,6 @@ export class Provider {
      * @returns {void}
      */
     public resetListingProviderValues(): void {
-        Blockchain.log(`reset:${this.getId()}`)
         this.providerData.resetListingProviderValues();
         this.setBtcReceiver('');
     }

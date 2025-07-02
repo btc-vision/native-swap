@@ -148,7 +148,6 @@ export class PurgedProviderQueue {
         }
 
         if (!provider.isInitialLiquidityProvider()) {
-            Blockchain.log(`reset purged: ${provider.getId()}`);
             associatedQueue.remove(provider);
         }
 

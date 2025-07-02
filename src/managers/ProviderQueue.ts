@@ -132,7 +132,6 @@ export class ProviderQueue {
         }
 
         if (!provider.isInitialLiquidityProvider()) {
-            Blockchain.log(`delete: ${provider.getId()}`)
             this.queue.delete_physical(provider.getQueueIndex());
         }
 
@@ -238,7 +237,7 @@ export class ProviderQueue {
     private ensureQueueIndexMatchIndex(provider: Provider, index: u32): void {
         if (provider.getQueueIndex() !== index) {
             throw new Revert(
-                `Impossible state: Provider queue index (${provider.getQueueIndex()}) does not match index (${index}). ProviderId: ${provider.getId()}`,
+                `Impossible state: Provider queue index (${provider.getQueueIndex()}) does not match index (${index}). listed at: ${provider.getListedTokenAtBlock()}, ProviderId: ${provider.getId()}`,
             );
         }
     }
