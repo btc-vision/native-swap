@@ -247,12 +247,7 @@ export class ProviderManager implements IProviderManager {
     }
 
     public getQueueData(): Uint8Array {
-        const writer = new BytesWriter(
-            U32_BYTE_LENGTH * 6, //+
-            //(this.priorityPurgedQueue.length + this.normalPurgedQueue.length) *
-            //   U32_BYTE_LENGTH +
-            //(this.priorityQueue.length + this.normalQueue.length) * U256_BYTE_LENGTH,
-        );
+        const writer = new BytesWriter(U32_BYTE_LENGTH * 6);
 
         writer.writeU32(this.priorityQueue.length);
         writer.writeU32(this.priorityQueue.startingIndex);
@@ -262,23 +257,6 @@ export class ProviderManager implements IProviderManager {
 
         writer.writeU32(this.priorityPurgedQueue.length);
         writer.writeU32(this.normalPurgedQueue.length);
-
-        // !!! FOR DEBUG PURPOSE... REMOVE BEFORE MAINNET
-        /*for (let i: u32 = 0; i < this.priorityPurgedQueue.length; i++) {
-            writer.writeU32(this.priorityPurgedQueue.getAt(i));
-        }
-
-        for (let i: u32 = 0; i < this.normalPurgedQueue.length; i++) {
-            writer.writeU32(this.normalPurgedQueue.getAt(i));
-        }
-
-        for (let i: u32 = 0; i < this.priorityQueue.length; i++) {
-            writer.writeU256(this.priorityQueue.getAt(i));
-        }
-
-        for (let i: u32 = 0; i < this.normalQueue.length; i++) {
-            writer.writeU256(this.normalQueue.getAt(i));
-        }*/
 
         return writer.getBuffer();
     }

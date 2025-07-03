@@ -146,6 +146,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.ensureNoLiquidityOverflow();
         this.ensureNoActivePositionInPriorityQueue();
         this.ensureProviderNotAlreadyProvidingLiquidity();
+        this.ensureNoActiveReservation();
+        this.ensureProviderIsNotPurged();
 
         if (!this.isForInitialLiquidity) {
             this.ensurePriceIsNotZero();
@@ -213,6 +215,22 @@ export class ListTokensForSaleOperation extends BaseOperation {
         if (this.provider.isPriority() && !this.usePriorityQueue) {
             throw new Revert(
                 'NATIVE_SWAP: You already have an active position in the priority queue. Please use the priority queue.',
+            );
+        }
+    }
+
+    private ensureNoActiveReservation(): void {
+        if (this.provider.hasReservedAmount()) {
+            throw new Revert(
+                `'NATIVE_SWAP: All active reservations on your listing must be completed before listing again.`,
+            );
+        }
+    }
+
+    private ensureProviderIsNotPurged(): void {
+        if (this.provider.isPurged()) {
+            throw new Revert(
+                `'NATIVE_SWAP: You are in the purge queue. Your current listing must be bought before listing again.`,
             );
         }
     }

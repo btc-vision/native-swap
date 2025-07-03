@@ -276,6 +276,54 @@ describe('ListTokenForSaleOperation tests', () => {
                 operation.execute();
             }).toThrow();
         });
+
+        it('should revert if provider has active reservation', () => {
+            expect(() => {
+                setBlockchainEnvironment(100);
+                FeeManager.onDeploy();
+
+                const provider = createProvider(providerAddress1, tokenAddress1);
+                provider.addToReservedAmount(u128.fromU32(100000));
+
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const operation = new ListTokensForSaleOperation(
+                    queue.liquidityQueue,
+                    provider.getId(),
+                    u128.fromU64(100),
+                    receiverAddress1,
+                    Address.dead(),
+                    false,
+                    false,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
+
+        it('should revert if provider is in purge queue', () => {
+            expect(() => {
+                setBlockchainEnvironment(100);
+                FeeManager.onDeploy();
+
+                const provider = createProvider(providerAddress1, tokenAddress1);
+                provider.markPurged();
+
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const operation = new ListTokensForSaleOperation(
+                    queue.liquidityQueue,
+                    provider.getId(),
+                    u128.fromU64(100),
+                    receiverAddress1,
+                    Address.dead(),
+                    false,
+                    false,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
     });
 
     describe('ListTokenForSaleOperation execute', () => {

@@ -11,6 +11,7 @@ import {
     SafeMath,
     Selector,
     StoredAddress,
+    StoredBoolean,
     U128_BYTE_LENGTH,
     U256_BYTE_LENGTH,
     U32_BYTE_LENGTH,
@@ -28,7 +29,7 @@ import { CancelListingOperation } from '../operations/CancelListingOperation';
 import { SwapOperation } from '../operations/SwapOperation';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReentrancyGuard } from './ReentrancyGuard';
-import { STAKING_CA_POINTER } from '../constants/StoredPointers';
+import { CONTRACT_PAUSED_POINTER, STAKING_CA_POINTER } from '../constants/StoredPointers';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
 import {
@@ -70,11 +71,13 @@ class GetLiquidityQueueResult {
 @final
 export class NativeSwap extends ReentrancyGuard {
     private readonly _stakingContractAddress: StoredAddress;
+    private readonly _isPaused: StoredBoolean;
 
     public constructor() {
         super();
 
         this._stakingContractAddress = new StoredAddress(STAKING_CA_POINTER);
+        this._isPaused = new StoredBoolean(CONTRACT_PAUSED_POINTER, false);
     }
 
     private static get DEPLOYER_SELECTOR(): Selector {
@@ -124,7 +127,13 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.setFees(calldata);
             case encodeSelector('setStakingContractAddress(address)'):
                 return this.setStakingContractAddress(calldata);
+            case encodeSelector('pause()'):
+                return this.pause(calldata);
+            case encodeSelector('unpause()'):
+                return this.unpause(calldata);
             /** Readable methods */
+            case encodeSelector('isPaused()'):
+                return this.isPaused(calldata);
             case encodeSelector('getReserve(address)'):
                 return this.getReserve(calldata);
             case encodeSelector('getQuote(address,uint64)'):
@@ -177,6 +186,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private setFees(calldata: Calldata): BytesWriter {
+        this.ensureNotPaused();
         this.onlyDeployer(Blockchain.tx.sender);
 
         FeeManager.reservationBaseFee = calldata.readU64();
@@ -196,12 +206,51 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private setStakingContractAddress(calldata: Calldata): BytesWriter {
+        this.ensureNotPaused();
         this.onlyDeployer(Blockchain.tx.sender);
 
         this._stakingContractAddress.value = calldata.readAddress();
 
         const result: BytesWriter = new BytesWriter(1);
         result.writeBoolean(true);
+
+        return result;
+    }
+
+    private pause(_calldata: Calldata): BytesWriter {
+        this.onlyDeployer(Blockchain.tx.sender);
+
+        if (!this._isPaused.value) {
+            this._isPaused.value = true;
+        }
+
+        const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
+        result.writeBoolean(true);
+
+        return result;
+    }
+
+    private unpause(_calldata: Calldata): BytesWriter {
+        this.onlyDeployer(Blockchain.tx.sender);
+
+        if (this._isPaused.value) {
+            this._isPaused.value = false;
+        }
+
+        const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
+        result.writeBoolean(true);
+
+        return result;
+    }
+
+    private isPaused(_calldata: Calldata): BytesWriter {
+        const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
+
+        if (this._isPaused.value) {
+            result.writeBoolean(true);
+        } else {
+            result.writeBoolean(false);
+        }
 
         return result;
     }
@@ -216,9 +265,8 @@ export class NativeSwap extends ReentrancyGuard {
                 U128_BYTE_LENGTH * 2 +
                 (U32_BYTE_LENGTH + provider.getBtcReceiver().length) +
                 2 * U32_BYTE_LENGTH +
-                2 * BOOLEAN_BYTE_LENGTH +
-                U64_BYTE_LENGTH +
-                BOOLEAN_BYTE_LENGTH,
+                3 * BOOLEAN_BYTE_LENGTH +
+                U64_BYTE_LENGTH,
         );
 
         writer.writeU256(provider.getId());
@@ -267,6 +315,8 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private createPool(calldata: Calldata, token: Address): BytesWriter {
+        this.ensureNotPaused();
+
         const tokenOwner: Address = this.getDeployer(token);
 
         this.ensureContractDeployer(tokenOwner);
@@ -305,6 +355,8 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private listLiquidity(calldata: Calldata): BytesWriter {
+        this.ensureNotPaused();
+
         const token: Address = calldata.readAddress();
         const receiver: string = calldata.readStringWithLength();
 
@@ -354,6 +406,8 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private reserve(calldata: Calldata): BytesWriter {
+        this.ensureNotPaused();
+
         const token: Address = calldata.readAddress();
         const maximumAmountIn: u64 = calldata.readU64();
         const minimumAmountOut: u256 = calldata.readU256();
@@ -400,6 +454,8 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private cancelListing(calldata: Calldata): BytesWriter {
+        this.ensureNotPaused();
+
         const token: Address = calldata.readAddress();
         this._cancelListing(token);
 
@@ -433,6 +489,8 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private swap(calldata: Calldata): BytesWriter {
+        this.ensureNotPaused();
+
         const token: Address = calldata.readAddress();
         this._swap(token);
 
@@ -489,64 +547,6 @@ export class NativeSwap extends ReentrancyGuard {
         return result;
     }
 
-    /*
-    private getLastPurgedBlock(calldata: Calldata): BytesWriter {
-        const token: Address = calldata.readAddress();
-        this.ensureValidTokenAddress(token);
-
-        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
-            token,
-            this.addressToPointer(token),
-            false,
-        );
-
-        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
-
-        const writer = new BytesWriter(U64_BYTE_LENGTH);
-        writer.writeU64(liquidityQueueResult.liquidityQueue.lastPurgedBlock);
-
-        return writer;
-    }
-
-    private getBlocksWithReservationsLength(calldata: Calldata): BytesWriter {
-        const token: Address = calldata.readAddress();
-        this.ensureValidTokenAddress(token);
-
-        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
-            token,
-            this.addressToPointer(token),
-            false,
-        );
-
-        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
-
-        const writer = new BytesWriter(U32_BYTE_LENGTH);
-        writer.writeU32(<u32>liquidityQueueResult.liquidityQueue.blockWithReservationsLength());
-
-        return writer;
-    }
-
-    private purgeReservationsAndRestoreProviders(calldata: Calldata): BytesWriter {
-        const token: Address = calldata.readAddress();
-        this.ensureValidTokenAddress(token);
-
-        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
-            token,
-            this.addressToPointer(token),
-            true,
-            true,
-        );
-        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
-
-        // Save the updated queue
-        liquidityQueueResult.liquidityQueue.save();
-
-        const result = new BytesWriter(1);
-        result.writeBoolean(true);
-
-        return result;
-    }
-*/
     private getQuote(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
         const satoshisIn: u64 = calldata.readU64();
@@ -743,4 +743,72 @@ export class NativeSwap extends ReentrancyGuard {
             throw new Revert('NATIVE_SWAP: Price is zero or no liquidity.');
         }
     }
+
+    private ensureNotPaused(): void {
+        if (this._isPaused.value) {
+            throw new Revert(`NATIVE_SWAP: Contract is currently paused. Try again later.`);
+        }
+    }
+
+    /*DEBUG FUNCTIONS
+        private getLastPurgedBlock(calldata: Calldata): BytesWriter {
+            this.onlyDeployer(Blockchain.tx.sender);
+            const token: Address = calldata.readAddress();
+            this.ensureValidTokenAddress(token);
+
+            const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+                token,
+                this.addressToPointer(token),
+                false,
+            );
+
+            this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
+            const writer = new BytesWriter(U64_BYTE_LENGTH);
+            writer.writeU64(liquidityQueueResult.liquidityQueue.lastPurgedBlock);
+
+            return writer;
+        }
+
+        private getBlocksWithReservationsLength(calldata: Calldata): BytesWriter {
+            this.onlyDeployer(Blockchain.tx.sender);
+            const token: Address = calldata.readAddress();
+            this.ensureValidTokenAddress(token);
+
+            const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+                token,
+                this.addressToPointer(token),
+                false,
+            );
+
+            this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
+            const writer = new BytesWriter(U32_BYTE_LENGTH);
+            writer.writeU32(<u32>liquidityQueueResult.liquidityQueue.blockWithReservationsLength());
+
+            return writer;
+        }
+
+        private purgeReservationsAndRestoreProviders(calldata: Calldata): BytesWriter {
+        this.onlyDeployer(Blockchain.tx.sender);
+            const token: Address = calldata.readAddress();
+            this.ensureValidTokenAddress(token);
+
+            const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+                token,
+                this.addressToPointer(token),
+                true,
+                true,
+            );
+            this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
+            // Save the updated queue
+            liquidityQueueResult.liquidityQueue.save();
+
+            const result = new BytesWriter(1);
+            result.writeBoolean(true);
+
+            return result;
+        }
+    */
 }
