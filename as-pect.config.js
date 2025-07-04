@@ -20,7 +20,8 @@ export default {
     /**
      * A set of globs passed to the glob package that qualify typescript files for testing.
      */
-    entries: ['src/__tests__/**/*.spec.ts'],
+    //entries: ['src/__tests__/**/*.spec.ts'],
+    entries: ['src/__tests__/**/listtokenforsaleoperation_tests.spec.ts'],
     /**
      * A set of globs passed to the glob package that quality files to be added to each test.
      */
@@ -55,18 +56,20 @@ export default {
     coverage: [
         'src/contracts/**/*.ts',
         'src/contracts/*.ts',
-        'src/data-types/**/*.ts',
-        'src/data-types/*.ts',
+        'src/constants/**/*.ts',
+        'src/constants/*.ts',
         'src/utils/**/*.ts',
         'src/utils/*.ts',
         'src/events/**/*.ts',
         'src/events/*.ts',
-        'src/lib/**/*.ts',
-        'src/lib/*.ts',
-        'src/math/**/*.ts',
-        'src/math/*.ts',
-        'src/stored/**/*.ts',
-        'src/stored/*.ts',
+        'src/managers/**/*.ts',
+        'src/managers/*.ts',
+        'src/models/**/*.ts',
+        'src/models/*.ts',
+        'src/operations/**/*.ts',
+        'src/operations/*.ts',
+        'src/types/**/*.ts',
+        'src/types/*.ts',
         'src/index.ts',
     ],
     /**

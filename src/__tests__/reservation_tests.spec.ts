@@ -1,342 +1,462 @@
-import { Blockchain } from '@btc-vision/btc-runtime/runtime';
-import { clearCachedProviders } from '../lib/Provider';
-import { u128 } from '@btc-vision/as-bignum/assembly';
-import {
-    LIQUIDITY_REMOVAL_TYPE,
-    NORMAL_TYPE,
-    PRIORITY_TYPE,
-    Reservation,
-} from '../lib/Reservation';
-
+import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import { clearCachedProviders } from '../models/Provider';
 import {
     createReservationId,
     providerAddress1,
+    providerAddress2,
     setBlockchainEnvironment,
     tokenAddress1,
+    tokenAddress2,
 } from './test_helper';
-import { LiquidityQueue } from '../lib/Liquidity/LiquidityQueue';
+import { Reservation } from '../models/Reservation';
+import { u128 } from '@btc-vision/as-bignum/assembly';
+import {
+    INDEX_NOT_SET_VALUE,
+    RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+    TIMEOUT_AFTER_EXPIRATION_BLOCKS,
+} from '../constants/Contract';
+import { ReservationProviderData } from '../models/ReservationProdiverData';
+import { ProviderTypes } from '../types/ProviderTypes';
 
 describe('Reservation tests', () => {
     beforeEach(() => {
         clearCachedProviders();
         Blockchain.clearStorage();
         Blockchain.clearMockedResults();
+        TransferHelper.clearMockedResults();
     });
 
-    it('should create a new reservation and initialize correctly', () => {
-        setBlockchainEnvironment(1);
+    describe('Reservation – constructor', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
 
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-        const reservationId = u128.fromBytes(
-            Reservation.generateId(tokenAddress1, providerAddress1),
-            true,
-        );
+        it('should create a new reservation and initialize correctly', () => {
+            setBlockchainEnvironment(1000);
 
-        expect(reservation.reservedIndexes.getLength()).toStrictEqual(0);
-        expect(reservation.reservedValues.getLength()).toStrictEqual(0);
-        expect(reservation.reservedPriority.getLength()).toStrictEqual(0);
-        expect(reservation.reservedLP).toBeFalsy();
-        expect(reservation.expirationBlock()).toStrictEqual(0);
-        expect(reservation.userTimeoutBlockExpiration).toStrictEqual(0);
-        expect(reservation.getPurgeIndex()).toStrictEqual(u32.MAX_VALUE);
-        expect(reservation.reservationId).toStrictEqual(reservationId);
-        expect(reservation.getActivationDelay()).toStrictEqual(0);
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            const reservationId = u128.fromBytes(
+                Reservation.generateId(tokenAddress1, providerAddress1),
+                true,
+            );
+
+            expect(reservation.getProviderCount()).toStrictEqual(0);
+            expect(reservation.getExpirationBlock()).toStrictEqual(
+                RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+            );
+            expect(reservation.getUserTimeoutBlockExpiration()).toStrictEqual(0);
+            expect(reservation.getPurgeIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(reservation.getId()).toStrictEqual(reservationId);
+            expect(reservation.getActivationDelay()).toStrictEqual(0);
+        });
+
+        it('should return an empty reservation when loading a non existing reservationId', () => {
+            setBlockchainEnvironment(1000);
+
+            const reservationId = createReservationId(tokenAddress1, providerAddress1);
+            const reservation: Reservation = Reservation.load(reservationId);
+
+            expect(reservation.getProviderCount()).toStrictEqual(0);
+            expect(reservation.getExpirationBlock()).toStrictEqual(
+                RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+            );
+            expect(reservation.getUserTimeoutBlockExpiration()).toStrictEqual(0);
+            expect(reservation.getPurgeIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(reservation.getId()).toStrictEqual(reservationId);
+            expect(reservation.getActivationDelay()).toStrictEqual(0);
+        });
+
+        it('should correctly load a reservation when loading an existing reservationId', () => {
+            setBlockchainEnvironment(1000);
+
+            const reservationId: u128 = createReservationId(tokenAddress1, providerAddress1);
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+            expect(reservation.getId()).toStrictEqual(reservationId);
+
+            reservation.setCreationBlock(10);
+            reservation.setPurgeIndex(20);
+            reservation.setActivationDelay(2);
+            reservation.timeoutUser();
+            reservation.addProvider(
+                new ReservationProviderData(
+                    1,
+                    u128.fromU64(1000),
+                    ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
+                ),
+            );
+            reservation.addProvider(
+                new ReservationProviderData(
+                    2,
+                    u128.fromU64(2000),
+                    ProviderTypes.Priority,
+                    reservation.getCreationBlock(),
+                ),
+            );
+
+            reservation.save();
+
+            const reservation2: Reservation = Reservation.load(reservationId);
+
+            expect(reservation2.getId()).toStrictEqual(reservationId);
+
+            expect(reservation2.getExpirationBlock()).toStrictEqual(
+                10 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+            );
+
+            expect(reservation2.getPurgeIndex()).toStrictEqual(20);
+            expect(reservation2.getActivationDelay()).toStrictEqual(2);
+            expect(reservation2.getUserTimeoutBlockExpiration()).toStrictEqual(
+                10 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS + TIMEOUT_AFTER_EXPIRATION_BLOCKS,
+            );
+            expect(reservation2.getProviderCount()).toStrictEqual(2);
+
+            const pd1: ReservationProviderData = reservation2.getProviderAt(0);
+            expect(pd1.providerIndex).toStrictEqual(1);
+            expect(pd1.providedAmount).toStrictEqual(u128.fromU64(1000));
+            expect(pd1.providerType).toStrictEqual(ProviderTypes.Normal);
+
+            const pd2: ReservationProviderData = reservation2.getProviderAt(1);
+            expect(pd2.providerIndex).toStrictEqual(2);
+            expect(pd2.providedAmount).toStrictEqual(u128.fromU64(2000));
+            expect(pd2.providerType).toStrictEqual(ProviderTypes.Priority);
+        });
     });
 
-    it('should correctly get/set expiration block when greater than current block number', () => {
-        setBlockchainEnvironment(1);
+    describe('Reservation – Provider managements', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
 
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+        it('addProvider stores and getProviderAt retrieves values', () => {
+            setBlockchainEnvironment(1000);
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.setCreationBlock(1000);
 
-        reservation.setExpirationBlock(10);
+            const providerData: ReservationProviderData = new ReservationProviderData(
+                5,
+                u128.fromU64(99),
+                ProviderTypes.Normal,
+                reservation.getCreationBlock(),
+            );
+            reservation.addProvider(providerData);
 
-        expect(reservation.expirationBlock()).toStrictEqual(10);
+            const fetched: ReservationProviderData = reservation.getProviderAt(0);
+            expect(fetched.providerIndex).toBe(5);
+            expect(fetched.providedAmount).toStrictEqual(u128.fromU64(99));
+            expect(fetched.providerType).toStrictEqual(ProviderTypes.Normal);
+            expect(fetched.creationBlock).toStrictEqual(1000);
+        });
+
+        it('addProvider stores and getProviderAt retrieves values when Reservation saved/loaded', () => {
+            setBlockchainEnvironment(1000);
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.setCreationBlock(1000);
+
+            const providerData: ReservationProviderData = new ReservationProviderData(
+                5,
+                u128.fromU64(99),
+                ProviderTypes.Normal,
+                reservation.getCreationBlock(),
+            );
+            reservation.addProvider(providerData);
+            reservation.save();
+
+            const reservation2 = new Reservation(tokenAddress1, providerAddress1);
+            const fetched: ReservationProviderData = reservation2.getProviderAt(0);
+            expect(fetched.providerIndex).toStrictEqual(5);
+            expect(fetched.providedAmount).toStrictEqual(u128.fromU64(99));
+            expect(fetched.providerType).toStrictEqual(ProviderTypes.Normal);
+            expect(fetched.creationBlock).toStrictEqual(1000);
+        });
     });
 
-    it('should correctly return the createdAt block', () => {
-        setBlockchainEnvironment(1);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+    describe('Reservation – ensureCanBeConsumed timing rules', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
 
-        reservation.setExpirationBlock(10);
+        it('throws if consumed in same block when activationDelay=0', () => {
+            expect(() => {
+                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+                reservation.addProvider(
+                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
+                );
 
-        expect(reservation.createdAt).toStrictEqual(0);
+                setBlockchainEnvironment(1000);
+
+                reservation.setCreationBlock(Blockchain.block.number);
+
+                reservation.ensureCanBeConsumed();
+            }).toThrow();
+        });
+
+        it('throws if activationDelay not elapsed', () => {
+            expect(() => {
+                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+                reservation.addProvider(
+                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
+                );
+
+                setBlockchainEnvironment(1000);
+
+                reservation.setActivationDelay(3);
+                reservation.setCreationBlock(Blockchain.block.number);
+                setBlockchainEnvironment(1002);
+
+                reservation.ensureCanBeConsumed();
+            }).toThrow();
+        });
+
+        it('throws if not valid', () => {
+            expect(() => {
+                setBlockchainEnvironment(999);
+                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+                reservation.setCreationBlock(999);
+
+                setBlockchainEnvironment(1000);
+
+                const reservation1 = new Reservation(tokenAddress2, providerAddress2);
+
+                reservation.ensureCanBeConsumed();
+            }).toThrow();
+        });
+
+        it('passes when activationDelay elapsed', () => {
+            expect(() => {
+                const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+                reservation.addProvider(
+                    new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
+                );
+
+                setBlockchainEnvironment(1000);
+
+                reservation.setActivationDelay(2);
+                reservation.setCreationBlock(Blockchain.block.number); // blk X
+                setBlockchainEnvironment(1003);
+
+                reservation.ensureCanBeConsumed();
+            }).not.toThrow();
+        });
     });
 
-    it('should return 0 for createdAt when expiration block <= LiquidityQueue.RESERVATION_EXPIRE_AFTER', () => {
-        setBlockchainEnvironment(1);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+    describe('Reservation – expiration & validity', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
 
-        reservation.setExpirationBlock(LiquidityQueue.RESERVATION_EXPIRE_AFTER);
+        it('isExpired false before expiration block', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
+            );
 
-        expect(reservation.createdAt).toStrictEqual(0);
+            setBlockchainEnvironment(1000);
+
+            reservation.setCreationBlock(Blockchain.block.number);
+            expect(reservation.isExpired()).toBeFalsy();
+        });
+
+        it('isExpired true after expiration block', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
+            );
+
+            setBlockchainEnvironment(1000);
+            reservation.setCreationBlock(Blockchain.block.number);
+
+            setBlockchainEnvironment(1000 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS + 1);
+            expect(reservation.isExpired()).toBeTruthy();
+        });
+
+        it('isValid false when expired', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
+            );
+
+            setBlockchainEnvironment(1000);
+            reservation.setCreationBlock(Blockchain.block.number);
+
+            setBlockchainEnvironment(1000 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS + 1);
+            expect(reservation.isValid()).toBeFalsy();
+        });
+
+        it('isValid false when no providers', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
+            );
+
+            const reservation1 = new Reservation(tokenAddress2, providerAddress2);
+            expect(reservation.isValid()).toBeFalsy();
+        });
     });
 
-    it('should correctly set the purge index', () => {
-        setBlockchainEnvironment(1);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+    describe('Reservation – Getters/Setters', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
 
-        reservation.setPurgeIndex(10);
+        it('should correctly get/set creation/expiration block when greater than current block number', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
 
-        expect(reservation.getPurgeIndex()).toStrictEqual(10);
+            setBlockchainEnvironment(1000);
+
+            reservation.setCreationBlock(1000);
+
+            expect(reservation.getCreationBlock()).toStrictEqual(1000);
+            expect(reservation.getExpirationBlock()).toStrictEqual(
+                1000 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+            );
+        });
+
+        it('should correctly get/set the purge index', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+            setBlockchainEnvironment(1);
+
+            reservation.setPurgeIndex(10);
+
+            expect(reservation.getPurgeIndex()).toStrictEqual(10);
+        });
+
+        it('should correctly return the user timeout block expiration when user is timeout', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+            setBlockchainEnvironment(1000);
+
+            reservation.setCreationBlock(1000);
+            reservation.timeoutUser();
+            expect(reservation.getUserTimeoutBlockExpiration()).toStrictEqual(
+                1000 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS + TIMEOUT_AFTER_EXPIRATION_BLOCKS,
+            );
+        });
+
+        it('should return 0 as the getUserTimeoutBlockExpiration block when user is not timeout', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+            setBlockchainEnvironment(1000);
+
+            reservation.setCreationBlock(1000);
+
+            expect(reservation.getUserTimeoutBlockExpiration()).toStrictEqual(0);
+        });
+
+        it('should correctly set the activation delay', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+            setBlockchainEnvironment(1000);
+
+            reservation.setActivationDelay(1);
+
+            expect(reservation.getActivationDelay()).toStrictEqual(1);
+        });
+
+        it('should return true if reservation is dirty', () => {
+            setBlockchainEnvironment(1000);
+
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+            expect(reservation.isDirty()).toBeFalsy();
+
+            reservation.addProvider(
+                new ReservationProviderData(0, u128.fromU64(1000), ProviderTypes.Normal, 1000),
+            );
+
+            expect(reservation.isDirty()).toBeTruthy();
+        });
     });
 
-    it('should correctly return the getUserTimeoutBlockExpiration block when timedout', () => {
-        setBlockchainEnvironment(1);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+    describe('Reservation – delete()', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
 
-        reservation.setExpirationBlock(10);
-        reservation.timeout();
-        expect(reservation.userTimeoutBlockExpiration).toStrictEqual(15);
-    });
+        it('delete resets arrays and reservationData', () => {
+            setBlockchainEnvironment(1000);
 
-    it('should return 0 as the getUserTimeoutBlockExpiration block when not timedout', () => {
-        setBlockchainEnvironment(1);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            const reservationId: u128 = createReservationId(tokenAddress1, providerAddress1);
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
 
-        reservation.setExpirationBlock(10);
+            expect(reservation.getId()).toStrictEqual(reservationId);
 
-        expect(reservation.userTimeoutBlockExpiration).toStrictEqual(0);
-    });
+            reservation.setCreationBlock(1000);
+            reservation.setPurgeIndex(10);
+            reservation.setActivationDelay(2);
+            reservation.addProvider(
+                new ReservationProviderData(1, u128.fromU64(1000), ProviderTypes.Normal, 1000),
+            );
+            reservation.addProvider(
+                new ReservationProviderData(2, u128.fromU64(2000), ProviderTypes.Priority, 1000),
+            );
+            reservation.save();
 
-    it('should correctly set the reservedLP state', () => {
-        setBlockchainEnvironment(1);
+            const reservation2: Reservation = Reservation.load(reservationId);
 
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            expect(reservation2.getId()).toStrictEqual(reservationId);
 
-        reservation.reservedLP = true;
+            expect(reservation2.getExpirationBlock()).toStrictEqual(
+                1000 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+            );
+            expect(reservation2.getPurgeIndex()).toStrictEqual(10);
+            expect(reservation2.getActivationDelay()).toStrictEqual(2);
+            expect(reservation2.getUserTimeoutBlockExpiration()).toStrictEqual(0);
+            expect(reservation2.getProviderCount()).toStrictEqual(2);
 
-        expect(reservation.reservedLP).toBeTruthy();
+            const pd1: ReservationProviderData = reservation2.getProviderAt(0);
+            expect(pd1.providerIndex).toStrictEqual(1);
+            expect(pd1.providedAmount).toStrictEqual(u128.fromU64(1000));
+            expect(pd1.providerType).toStrictEqual(ProviderTypes.Normal);
+            expect(pd1.creationBlock).toStrictEqual(1000);
 
-        reservation.reservedLP = false;
+            const pd2: ReservationProviderData = reservation2.getProviderAt(1);
+            expect(pd2.providerIndex).toStrictEqual(2);
+            expect(pd2.providedAmount).toStrictEqual(u128.fromU64(2000));
+            expect(pd2.providerType).toStrictEqual(ProviderTypes.Priority);
+            expect(pd2.creationBlock).toStrictEqual(1000);
 
-        expect(reservation.reservedLP).toBeFalsy();
-    });
+            reservation2.delete(false);
 
-    it('should correctly set the activation delay', () => {
-        setBlockchainEnvironment(1);
+            expect(reservation2.getProviderCount()).toStrictEqual(0);
+            expect(reservation2.getPurgeIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(reservation2.getExpirationBlock()).toStrictEqual(
+                RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+            );
+            expect(reservation2.getUserTimeoutBlockExpiration()).toStrictEqual(0);
+            expect(reservation2.getActivationDelay()).toStrictEqual(0);
 
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+            // Ensure deleted value are persisted
+            const reservation3: Reservation = Reservation.load(reservationId);
 
-        reservation.setActivationDelay(1);
-
-        expect(reservation.getActivationDelay()).toStrictEqual(1);
-    });
-
-    it('should return an empty reservation when loading a non existing reservationId', () => {
-        setBlockchainEnvironment(1);
-
-        const reservationId = createReservationId(tokenAddress1, providerAddress1);
-        const reservation: Reservation = Reservation.load(reservationId);
-
-        expect(reservation.reservedIndexes.getLength()).toStrictEqual(0);
-        expect(reservation.reservedValues.getLength()).toStrictEqual(0);
-        expect(reservation.reservedPriority.getLength()).toStrictEqual(0);
-        expect(reservation.reservedLP).toBeFalsy();
-        expect(reservation.expirationBlock()).toStrictEqual(0);
-        expect(reservation.userTimeoutBlockExpiration).toStrictEqual(0);
-        expect(reservation.getPurgeIndex()).toStrictEqual(u32.MAX_VALUE);
-        expect(reservation.reservationId).toStrictEqual(reservationId);
-        expect(reservation.getActivationDelay()).toStrictEqual(0);
-    });
-
-    it('should correctly load a reservation when loading an existing reservationId', () => {
-        setBlockchainEnvironment(3);
-
-        const reservationId: u128 = createReservationId(tokenAddress1, providerAddress1);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        expect(reservation.reservationId).toStrictEqual(reservationId);
-
-        const amount1: u128 = u128.fromU64(1000);
-        const amount2: u128 = u128.fromU64(2000);
-        const amount3: u128 = u128.fromU64(3000);
-        const expirationBlock: u64 = 10;
-        const reservedLP: bool = true;
-        const purgeIndex: u32 = 10;
-        const activationDelay: u8 = 2;
-
-        reservation.setExpirationBlock(expirationBlock);
-        reservation.reservedLP = reservedLP;
-        reservation.setPurgeIndex(purgeIndex);
-        reservation.setActivationDelay(activationDelay);
-        reservation.reserveAtIndex(1, amount1, LIQUIDITY_REMOVAL_TYPE);
-        reservation.reserveAtIndex(2, amount2, PRIORITY_TYPE);
-        reservation.reserveAtIndex(3, amount3, NORMAL_TYPE);
-        reservation.timeout();
-
-        reservation.save();
-
-        const reservation2: Reservation = Reservation.load(reservationId);
-
-        expect(reservation2.reservationId).toStrictEqual(reservationId);
-
-        expect(reservation2.expirationBlock()).toStrictEqual(expirationBlock);
-        expect(reservation2.reservedLP).toStrictEqual(reservedLP);
-        expect(reservation2.getPurgeIndex()).toStrictEqual(purgeIndex);
-        expect(reservation2.getActivationDelay()).toStrictEqual(activationDelay);
-        expect(reservation2.userTimeoutBlockExpiration).toStrictEqual(expirationBlock + 5);
-        expect(reservation2.reservedIndexes.getLength()).toStrictEqual(3);
-        expect(reservation2.reservedValues.getLength()).toStrictEqual(3);
-        expect(reservation2.reservedPriority.getLength()).toStrictEqual(3);
-        expect(reservation2.getQueueTypes()).toStrictEqual([
-            LIQUIDITY_REMOVAL_TYPE,
-            PRIORITY_TYPE,
-            NORMAL_TYPE,
-        ]);
-        expect(reservation2.getReservedIndexes()).toStrictEqual([1, 2, 3]);
-        expect(reservation2.getReservedValues()).toStrictEqual([amount1, amount2, amount3]);
-    });
-
-    it('should delete existing reservation', () => {
-        setBlockchainEnvironment(3);
-        const reservationId: u128 = createReservationId(tokenAddress1, providerAddress1);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        expect(reservation.reservationId).toStrictEqual(reservationId);
-
-        const amount1: u128 = u128.fromU64(1000);
-        const amount2: u128 = u128.fromU64(2000);
-        const amount3: u128 = u128.fromU64(3000);
-        const expirationBlock: u64 = 10;
-        const reservedLP: bool = true;
-        const purgeIndex: u32 = 10;
-        const activationDelay: u8 = 2;
-
-        reservation.setExpirationBlock(expirationBlock);
-        reservation.reservedLP = reservedLP;
-        reservation.setPurgeIndex(purgeIndex);
-        reservation.setActivationDelay(activationDelay);
-        reservation.reserveAtIndex(1, amount1, LIQUIDITY_REMOVAL_TYPE);
-        reservation.reserveAtIndex(2, amount2, PRIORITY_TYPE);
-        reservation.reserveAtIndex(3, amount3, NORMAL_TYPE);
-
-        reservation.save();
-
-        const reservation2: Reservation = Reservation.load(reservationId);
-
-        expect(reservation2.reservationId).toStrictEqual(reservationId);
-
-        expect(reservation2.expirationBlock()).toStrictEqual(expirationBlock);
-        expect(reservation2.reservedLP).toStrictEqual(reservedLP);
-        expect(reservation2.getPurgeIndex()).toStrictEqual(purgeIndex);
-        expect(reservation2.getActivationDelay()).toStrictEqual(activationDelay);
-        expect(reservation2.userTimeoutBlockExpiration).toStrictEqual(0);
-        expect(reservation2.reservedIndexes.getLength()).toStrictEqual(3);
-        expect(reservation2.reservedValues.getLength()).toStrictEqual(3);
-        expect(reservation2.reservedPriority.getLength()).toStrictEqual(3);
-        expect(reservation2.getQueueTypes()).toStrictEqual([
-            LIQUIDITY_REMOVAL_TYPE,
-            PRIORITY_TYPE,
-            NORMAL_TYPE,
-        ]);
-        expect(reservation2.getReservedIndexes()).toStrictEqual([1, 2, 3]);
-        expect(reservation2.getReservedValues()).toStrictEqual([amount1, amount2, amount3]);
-
-        reservation2.delete(false);
-
-        expect(reservation2.reservedIndexes.getLength()).toStrictEqual(0);
-        expect(reservation2.reservedValues.getLength()).toStrictEqual(0);
-        expect(reservation2.reservedPriority.getLength()).toStrictEqual(0);
-        expect(reservation2.getPurgeIndex()).toStrictEqual(u32.MAX_VALUE);
-        expect(reservation2.reservedLP).toBeFalsy();
-        expect(reservation2.expirationBlock()).toStrictEqual(0);
-        expect(reservation2.userTimeoutBlockExpiration).toStrictEqual(0);
-        expect(reservation2.getActivationDelay()).toStrictEqual(0);
-
-        // Ensure deleted value are persisted
-        const reservation3: Reservation = Reservation.load(reservationId);
-
-        expect(reservation3.reservedIndexes.getLength()).toStrictEqual(0);
-        expect(reservation3.reservedValues.getLength()).toStrictEqual(0);
-        expect(reservation3.reservedPriority.getLength()).toStrictEqual(0);
-        expect(reservation3.getPurgeIndex()).toStrictEqual(u32.MAX_VALUE);
-        expect(reservation3.reservedLP).toBeFalsy();
-        expect(reservation3.expirationBlock()).toStrictEqual(0);
-        expect(reservation3.userTimeoutBlockExpiration).toStrictEqual(0);
-        expect(reservation3.getActivationDelay()).toStrictEqual(0);
-    });
-
-    it('should be expired when current block > expiration block', () => {
-        setBlockchainEnvironment(5);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        reservation.setExpirationBlock(2);
-
-        expect(reservation.expired()).toBeTruthy();
-    });
-
-    it('should not be expired when current block < expiration block', () => {
-        setBlockchainEnvironment(5);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        reservation.setExpirationBlock(20);
-
-        expect(reservation.expired()).toBeFalsy();
-    });
-
-    it('should be valid when not expired and reservedIndexes > 0', () => {
-        setBlockchainEnvironment(5);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        reservation.setExpirationBlock(20);
-        reservation.reserveAtIndex(1, u128.fromU64(1000), LIQUIDITY_REMOVAL_TYPE);
-
-        expect(reservation.valid()).toBeTruthy();
-    });
-
-    it('should be invalid when expired and reservedIndexes > 0', () => {
-        setBlockchainEnvironment(5);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        reservation.setExpirationBlock(2);
-        reservation.reserveAtIndex(1, u128.fromU64(1000), LIQUIDITY_REMOVAL_TYPE);
-
-        expect(reservation.valid()).toBeFalsy();
-    });
-
-    it('should be invalid when expired and reservedIndexes = 0', () => {
-        setBlockchainEnvironment(5);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        reservation.setExpirationBlock(2);
-
-        expect(reservation.valid()).toBeFalsy();
-    });
-
-    it('should be invalid when not expired and reservedIndexes = 0', () => {
-        setBlockchainEnvironment(5);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        reservation.setExpirationBlock(20);
-
-        expect(reservation.valid()).toBeFalsy();
-    });
-
-    it('should correctly reserveAtIndex', () => {
-        setBlockchainEnvironment(3);
-
-        const reservationId: u128 = createReservationId(tokenAddress1, providerAddress1);
-        const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
-
-        expect(reservation.reservationId).toStrictEqual(reservationId);
-
-        const amount1: u128 = u128.fromU64(1000);
-        const amount2: u128 = u128.fromU64(2000);
-        const amount3: u128 = u128.fromU64(3000);
-
-        reservation.reserveAtIndex(1, amount1, LIQUIDITY_REMOVAL_TYPE);
-        reservation.reserveAtIndex(2, amount2, PRIORITY_TYPE);
-        reservation.reserveAtIndex(3, amount3, NORMAL_TYPE);
-
-        expect(reservation.reservedIndexes.getLength()).toStrictEqual(3);
-        expect(reservation.reservedValues.getLength()).toStrictEqual(3);
-        expect(reservation.reservedPriority.getLength()).toStrictEqual(3);
-        expect(reservation.getQueueTypes()).toStrictEqual([
-            LIQUIDITY_REMOVAL_TYPE,
-            PRIORITY_TYPE,
-            NORMAL_TYPE,
-        ]);
-        expect(reservation.getReservedIndexes()).toStrictEqual([1, 2, 3]);
-        expect(reservation.getReservedValues()).toStrictEqual([amount1, amount2, amount3]);
+            expect(reservation3.getProviderCount()).toStrictEqual(0);
+            expect(reservation3.getPurgeIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(reservation3.getExpirationBlock()).toStrictEqual(
+                RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+            );
+            expect(reservation3.getUserTimeoutBlockExpiration()).toStrictEqual(0);
+            expect(reservation3.getActivationDelay()).toStrictEqual(0);
+        });
     });
 });
