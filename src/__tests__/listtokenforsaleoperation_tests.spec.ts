@@ -17,7 +17,10 @@ import {
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../managers/FeeManager';
-import { FEE_COLLECT_SCRIPT_PUBKEY, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    INITIAL_FEE_COLLECT_ADDRESS,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+} from '../constants/Contract';
 
 describe('ListTokenForSaleOperation tests', () => {
     beforeEach(() => {
@@ -41,7 +44,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 FeeManager.onDeploy();
                 const txOut: TransactionOutput[] = [];
                 txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
-                txOut.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 100));
+                txOut.push(new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 100));
                 Blockchain.mockTransactionOutput(txOut);
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.activate();
@@ -75,7 +78,7 @@ describe('ListTokenForSaleOperation tests', () => {
                         1,
                         0,
                         null,
-                        FEE_COLLECT_SCRIPT_PUBKEY,
+                        INITIAL_FEE_COLLECT_ADDRESS,
                         FeeManager.priorityQueueBaseFee,
                     ),
                 );
@@ -345,7 +348,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     1,
                     0,
                     null,
-                    FEE_COLLECT_SCRIPT_PUBKEY,
+                    INITIAL_FEE_COLLECT_ADDRESS,
                     FeeManager.priorityQueueBaseFee,
                 ),
             );
@@ -390,7 +393,7 @@ describe('ListTokenForSaleOperation tests', () => {
                         1,
                         0,
                         null,
-                        FEE_COLLECT_SCRIPT_PUBKEY,
+                        INITIAL_FEE_COLLECT_ADDRESS,
                         FeeManager.priorityQueueBaseFee,
                     ),
                 );
@@ -431,7 +434,7 @@ describe('ListTokenForSaleOperation tests', () => {
                         1,
                         0,
                         null,
-                        FEE_COLLECT_SCRIPT_PUBKEY,
+                        INITIAL_FEE_COLLECT_ADDRESS,
                         FeeManager.priorityQueueBaseFee,
                     ),
                 );
@@ -470,7 +473,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     1,
                     0,
                     null,
-                    FEE_COLLECT_SCRIPT_PUBKEY,
+                    INITIAL_FEE_COLLECT_ADDRESS,
                     FeeManager.priorityQueueBaseFee,
                 ),
             );
@@ -517,7 +520,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     1,
                     0,
                     null,
-                    FEE_COLLECT_SCRIPT_PUBKEY,
+                    INITIAL_FEE_COLLECT_ADDRESS,
                     FeeManager.priorityQueueBaseFee,
                 ),
             );
@@ -592,7 +595,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     1,
                     0,
                     null,
-                    FEE_COLLECT_SCRIPT_PUBKEY,
+                    INITIAL_FEE_COLLECT_ADDRESS,
                     FeeManager.priorityQueueBaseFee,
                 ),
             );
@@ -1005,7 +1008,7 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const txOut: TransactionOutput[] = [];
             txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
-            txOut.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 100000));
+            txOut.push(new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 100000));
             Blockchain.mockTransactionOutput(txOut);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1042,7 +1045,7 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const txOut: TransactionOutput[] = [];
             txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
-            txOut.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 100000));
+            txOut.push(new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 100000));
             Blockchain.mockTransactionOutput(txOut);
 
             const provider = createProvider(providerAddress1, tokenAddress1);

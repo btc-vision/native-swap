@@ -52,7 +52,7 @@ export class SwapOperation extends BaseOperation {
                 totalTokensPurchased,
                 totalSatoshisSpent,
             );
-
+            
             newTotalTokensPurchased = SafeMath.sub(totalTokensPurchased, totalFeeTokens);
 
             this.liquidityQueue.distributeFee(totalFeeTokens, this.stakingAddress);

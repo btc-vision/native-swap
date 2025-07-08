@@ -24,7 +24,7 @@ import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
 import { SwapOperation } from '../operations/SwapOperation';
 import {
-    FEE_COLLECT_SCRIPT_PUBKEY,
+    INITIAL_FEE_COLLECT_ADDRESS,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
 } from '../constants/Contract';
@@ -93,7 +93,7 @@ describe('SwapOperation tests', () => {
 
             transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
             transactionOutput.push(
-                new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000),
+                new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 10000),
             );
             transactionOutput.push(
                 new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
@@ -247,7 +247,9 @@ describe('SwapOperation tests', () => {
         const transactionOutput: TransactionOutput[] = [];
 
         transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(
+            new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 10000),
+        );
         transactionOutput.push(
             new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
         );
@@ -322,7 +324,9 @@ describe('SwapOperation tests', () => {
         const transactionOutput: TransactionOutput[] = [];
 
         transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(
+            new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 10000),
+        );
         transactionOutput.push(
             new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
         );
@@ -422,7 +426,9 @@ describe('SwapOperation tests', () => {
 
         const transactionOutput: TransactionOutput[] = [];
         transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(
+            new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 10000),
+        );
         transactionOutput.push(
             new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
         );
@@ -522,7 +528,9 @@ describe('SwapOperation tests', () => {
 
         const transactionOutput: TransactionOutput[] = [];
         transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(
+            new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 10000),
+        );
         transactionOutput.push(new TransactionOutput(2, 0, null, receiverAddress1, 15000));
         transactionOutput.push(
             new TransactionOutput(3, 0, null, initialProvider.getBtcReceiver(), 600),
@@ -651,7 +659,9 @@ describe('SwapOperation tests', () => {
 
         const transactionOutput: TransactionOutput[] = [];
         transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
-        transactionOutput.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000));
+        transactionOutput.push(
+            new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 10000),
+        );
         transactionOutput.push(
             new TransactionOutput(2, 0, null, provider3.getBtcReceiver(), 10000),
         );
