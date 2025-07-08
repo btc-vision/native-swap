@@ -1,5 +1,5 @@
 import { Blockchain, TransactionOutput } from '@btc-vision/btc-runtime/runtime';
-import { FEE_COLLECT_SCRIPT_PUBKEY } from '../constants/Contract';
+import { FeeManager } from '../managers/FeeManager';
 
 export function getTotalFeeCollected(): u64 {
     const outputs = Blockchain.tx.outputs;
@@ -11,7 +11,7 @@ export function getTotalFeeCollected(): u64 {
         const output: TransactionOutput = outputs[i];
 
         // The output destination must be for the fees
-        if (output.to !== FEE_COLLECT_SCRIPT_PUBKEY) {
+        if (output.to !== FeeManager.feesAddress) {
             continue;
         }
 

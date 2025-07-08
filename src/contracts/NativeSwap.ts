@@ -127,6 +127,8 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.setFees(calldata);
             case encodeSelector('setStakingContractAddress(address)'):
                 return this.setStakingContractAddress(calldata);
+            case encodeSelector('setFeesAddress(string)'):
+                return this.setFeesAddress(calldata);
             case encodeSelector('pause()'):
                 return this.pause(calldata);
             case encodeSelector('unpause()'):
@@ -150,6 +152,8 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getAntibotSettings(calldata);
             case encodeSelector('getStakingContractAddress()'):
                 return this.getStakingContractAddress(calldata);
+            case encodeSelector('getFeesAddress()'):
+                return this.getFeesAddress(calldata);
             /*case encodeSelector('getLastPurgedBlock(address)'):
                 return this.getLastPurgedBlock(calldata);
             case encodeSelector('getBlocksWithReservationsLength(address)'):
@@ -186,7 +190,6 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private setFees(calldata: Calldata): BytesWriter {
-        this.ensureNotPaused();
         this.onlyDeployer(Blockchain.tx.sender);
 
         FeeManager.reservationBaseFee = calldata.readU64();
@@ -206,12 +209,34 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private setStakingContractAddress(calldata: Calldata): BytesWriter {
-        this.ensureNotPaused();
         this.onlyDeployer(Blockchain.tx.sender);
 
         this._stakingContractAddress.value = calldata.readAddress();
 
-        const result: BytesWriter = new BytesWriter(1);
+        const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
+        result.writeBoolean(true);
+
+        return result;
+    }
+
+    private getFeesAddress(_calldata: Calldata): BytesWriter {
+        const response: BytesWriter = new BytesWriter(
+            FeeManager.feesAddress.length + U32_BYTE_LENGTH,
+        );
+        response.writeStringWithLength(FeeManager.feesAddress);
+
+        return response;
+    }
+
+    private setFeesAddress(calldata: Calldata): BytesWriter {
+        this.onlyDeployer(Blockchain.tx.sender);
+
+        const address: string = calldata.readStringWithLength();
+        this.ensureFeesAddressIsValid(address);
+
+        FeeManager.feesAddress = address;
+
+        const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
         result.writeBoolean(true);
 
         return result;
@@ -747,6 +772,16 @@ export class NativeSwap extends ReentrancyGuard {
     private ensureNotPaused(): void {
         if (this._isPaused.value) {
             throw new Revert(`NATIVE_SWAP: Contract is currently paused. Try again later.`);
+        }
+    }
+
+    private ensureFeesAddressIsValid(address: string): void {
+        if (address.length === 0) {
+            throw new Revert('NATIVE_SWAP: Fees address is empty.');
+        }
+
+        if (Blockchain.validateBitcoinAddress(address) == false) {
+            throw new Revert('NATIVE_SWAP: Fees address is an invalid bitcoin address.');
         }
     }
 

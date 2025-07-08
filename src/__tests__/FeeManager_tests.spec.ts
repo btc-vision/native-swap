@@ -1,6 +1,8 @@
 import { clearCachedProviders } from '../models/Provider';
 import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 import { FeeManager } from '../managers/FeeManager';
+import { INITIAL_FEE_COLLECT_ADDRESS } from '../constants/Contract';
+import { setBlockchainEnvironment } from './test_helper';
 
 describe('FeeManagerBase tests', () => {
     beforeEach(() => {
@@ -57,5 +59,19 @@ describe('FeeManagerBase tests', () => {
 
         expect(FeeManager.reservationBaseFee).toStrictEqual(10_000);
         expect(FeeManager.priorityQueueBaseFee).toStrictEqual(50_000);
+        expect(FeeManager.feesAddress).toStrictEqual(INITIAL_FEE_COLLECT_ADDRESS);
+    });
+
+    it('should correctly set new fees address', () => {
+        setBlockchainEnvironment(1000);
+        FeeManager.onDeploy();
+        expect(FeeManager.feesAddress).toStrictEqual(INITIAL_FEE_COLLECT_ADDRESS);
+
+        const newAddress = 'a new address';
+        setBlockchainEnvironment(1001);
+        FeeManager.feesAddress = newAddress;
+
+        setBlockchainEnvironment(1002);
+        expect(FeeManager.feesAddress).toStrictEqual(newAddress);
     });
 });
