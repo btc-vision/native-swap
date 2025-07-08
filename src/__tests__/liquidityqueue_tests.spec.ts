@@ -1005,7 +1005,7 @@ describe('Liquidity queue tests', () => {
 
             const data = queue.getProviderQueueData();
 
-            expect(data.byteLength).toStrictEqual(U32_BYTE_LENGTH * 9);
+            expect(data.byteLength).toStrictEqual(U32_BYTE_LENGTH * 6);
         });
     });
 
