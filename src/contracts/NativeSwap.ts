@@ -29,7 +29,11 @@ import { CancelListingOperation } from '../operations/CancelListingOperation';
 import { SwapOperation } from '../operations/SwapOperation';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReentrancyGuard } from './ReentrancyGuard';
-import { CONTRACT_PAUSED_POINTER, STAKING_CA_POINTER } from '../constants/StoredPointers';
+import {
+    CONTRACT_PAUSED_POINTER,
+    STAKING_CA_POINTER,
+    WITHDRAW_MODE_POINTER,
+} from '../constants/StoredPointers';
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
 import {
@@ -52,6 +56,7 @@ import { IReservationManager } from '../managers/interfaces/IReservationManager'
 import { ReservationManager } from '../managers/ReservationManager';
 import { IDynamicFee } from '../managers/interfaces/IDynamicFee';
 import { DynamicFee } from '../managers/DynamicFee';
+import { WithdrawListingOperation } from '../operations/WithdrawListingOperation';
 
 class GetLiquidityQueueResult {
     public liquidityQueue: ILiquidityQueue;
@@ -72,12 +77,14 @@ class GetLiquidityQueueResult {
 export class NativeSwap extends ReentrancyGuard {
     private readonly _stakingContractAddress: StoredAddress;
     private readonly _isPaused: StoredBoolean;
+    private readonly _withdrawModeActive: StoredBoolean;
 
     public constructor() {
         super();
 
         this._stakingContractAddress = new StoredAddress(STAKING_CA_POINTER);
         this._isPaused = new StoredBoolean(CONTRACT_PAUSED_POINTER, false);
+        this._withdrawModeActive = new StoredBoolean(WITHDRAW_MODE_POINTER, false);
     }
 
     private static get DEPLOYER_SELECTOR(): Selector {
@@ -117,6 +124,8 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.listLiquidity(calldata);
             case encodeSelector('cancelListing(address)'):
                 return this.cancelListing(calldata);
+            case encodeSelector('withdrawListing(address)'):
+                return this.withdrawListing(calldata);
             case encodeSelector(
                 'createPool(address,uint256,uint128,string,uint16,uint256,uint16)',
             ): {
@@ -133,9 +142,13 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.pause(calldata);
             case encodeSelector('unpause()'):
                 return this.unpause(calldata);
+            case encodeSelector('activateWithdrawMode()'):
+                return this.activateWithdrawMode(calldata);
             /** Readable methods */
             case encodeSelector('isPaused()'):
                 return this.isPaused(calldata);
+            case encodeSelector('isWithdrawModeActive()'):
+                return this.isWithdrawModeActive(calldata);
             case encodeSelector('getReserve(address)'):
                 return this.getReserve(calldata);
             case encodeSelector('getQuote(address,uint64)'):
@@ -193,6 +206,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private setFees(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
+        this.ensureWithdrawModeNotActive();
 
         FeeManager.reservationBaseFee = calldata.readU64();
         FeeManager.priorityQueueBaseFee = calldata.readU64();
@@ -212,6 +226,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private setStakingContractAddress(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
+        this.ensureWithdrawModeNotActive();
 
         this._stakingContractAddress.value = calldata.readAddress();
 
@@ -232,6 +247,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private setFeesAddress(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
+        this.ensureWithdrawModeNotActive();
 
         const address: string = calldata.readStringWithLength();
         this.ensureFeesAddressIsValid(address);
@@ -246,6 +262,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private pause(_calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
+        this.ensureWithdrawModeNotActive();
 
         if (!this._isPaused.value) {
             this._isPaused.value = true;
@@ -259,6 +276,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private unpause(_calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
+        this.ensureWithdrawModeNotActive();
 
         if (this._isPaused.value) {
             this._isPaused.value = false;
@@ -274,6 +292,30 @@ export class NativeSwap extends ReentrancyGuard {
         const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
 
         if (this._isPaused.value) {
+            result.writeBoolean(true);
+        } else {
+            result.writeBoolean(false);
+        }
+
+        return result;
+    }
+
+    private activateWithdrawMode(_calldata: Calldata): BytesWriter {
+        this.onlyDeployer(Blockchain.tx.sender);
+        this.ensureWithdrawModeNotActive();
+
+        this._withdrawModeActive.value = true;
+
+        const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
+        result.writeBoolean(true);
+
+        return result;
+    }
+
+    private isWithdrawModeActive(_calldata: Calldata): BytesWriter {
+        const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
+
+        if (this._withdrawModeActive.value) {
             result.writeBoolean(true);
         } else {
             result.writeBoolean(false);
@@ -328,6 +370,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private createPool(calldata: Calldata, token: Address): BytesWriter {
         this.ensureNotPaused();
+        this.ensureWithdrawModeNotActive();
 
         const tokenOwner: Address = this.getDeployer(token);
 
@@ -368,6 +411,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private listLiquidity(calldata: Calldata): BytesWriter {
         this.ensureNotPaused();
+        this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
         const receiver: string = calldata.readStringWithLength();
@@ -419,6 +463,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private reserve(calldata: Calldata): BytesWriter {
         this.ensureNotPaused();
+        this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
         const maximumAmountIn: u64 = calldata.readU64();
@@ -467,6 +512,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private cancelListing(calldata: Calldata): BytesWriter {
         this.ensureNotPaused();
+        this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
         this._cancelListing(token);
@@ -500,8 +546,43 @@ export class NativeSwap extends ReentrancyGuard {
         liquidityQueueResult.liquidityQueue.save();
     }
 
+    private withdrawListing(calldata: Calldata): BytesWriter {
+        this.ensureWithdrawModeActive();
+
+        const token: Address = calldata.readAddress();
+        this._withdrawListing(token);
+
+        const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
+        result.writeBoolean(true);
+
+        return result;
+    }
+
+    private _withdrawListing(token: Address): void {
+        this.ensureValidTokenAddress(token);
+
+        const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
+        const tokenId: Uint8Array = this.addressToPointer(token);
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            tokenId,
+            false,
+        );
+
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
+        const operation: WithdrawListingOperation = new WithdrawListingOperation(
+            liquidityQueueResult.liquidityQueue,
+            providerId,
+        );
+
+        operation.execute();
+        liquidityQueueResult.liquidityQueue.save();
+    }
+
     private swap(calldata: Calldata): BytesWriter {
         this.ensureNotPaused();
+        this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
         this._swap(token);
@@ -785,6 +866,20 @@ export class NativeSwap extends ReentrancyGuard {
     private ensureNotPaused(): void {
         if (this._isPaused.value) {
             throw new Revert(`NATIVE_SWAP: Contract is currently paused. Try again later.`);
+        }
+    }
+
+    private ensureWithdrawModeActive(): void {
+        if (!this._withdrawModeActive.value) {
+            throw new Revert(`NATIVE_SWAP: Withdraw mode is not active.`);
+        }
+    }
+
+    private ensureWithdrawModeNotActive(): void {
+        if (this._withdrawModeActive.value) {
+            throw new Revert(
+                `NATIVE_SWAP: You cannot perform this action when withdraw mode is active.`,
+            );
         }
     }
 
