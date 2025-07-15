@@ -302,7 +302,7 @@ export function setBlockchainEnvironment(
 ): void {
     const medianTimestamp: u64 = 87129871;
     const writer: BytesWriter = new BytesWriter(
-        32 + 2 * U64_BYTE_LENGTH + 4 * ADDRESS_BYTE_LENGTH + txId1.length + txHash1.length,
+        32 + 2 * U64_BYTE_LENGTH + 4 * ADDRESS_BYTE_LENGTH + txId1.length + txHash1.length + 64,
     );
 
     writer.writeBytes(new Uint8Array(32));
@@ -317,6 +317,9 @@ export function setBlockchainEnvironment(
 
     writer.writeAddress(sender);
     writer.writeAddress(origin);
+
+    writer.writeBytes(new Uint8Array(32)); // chain id
+    writer.writeBytes(new Uint8Array(32)); // protocol id
 
     Blockchain.setEnvironmentVariables(writer.getBuffer());
 }
