@@ -86,7 +86,7 @@ export class ReservationManager implements IReservationManager {
     public getReservationIdAtIndex(blockNumber: u64, index: u32): u128 {
         const reservationList: StoredU128Array = this.getReservationListForBlock(blockNumber);
 
-        return reservationList.get(index); //!!! no check if index >= length???
+        return reservationList.get(index);
     }
 
     public getReservationWithExpirationChecks(owner: Address): Reservation {
