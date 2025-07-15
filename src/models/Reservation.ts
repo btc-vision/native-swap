@@ -124,6 +124,10 @@ export class Reservation {
         return this.reservationData.purgeIndex;
     }
 
+    public getSwapped(): boolean {
+        return this.reservationData.swapped;
+    }
+
     public getUserTimeoutBlockExpiration(): u64 {
         return this.reservationData.userTimeoutExpirationBlock;
     }
@@ -157,6 +161,10 @@ export class Reservation {
 
     public setPurgeIndex(index: u32): void {
         this.reservationData.purgeIndex = index;
+    }
+
+    public setSwapped(value: boolean): void {
+        this.reservationData.swapped = value;
     }
 
     public timeoutUser(): void {

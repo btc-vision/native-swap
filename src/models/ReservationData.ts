@@ -131,6 +131,31 @@ export class ReservationData {
         }
     }
 
+    private _swapped: boolean = false;
+    /**
+     * @method swapped
+     * @description Gets the swapped state.
+     * @returns {boolean} true if swapped; false if not.
+     */
+    @inline
+    public get swapped(): boolean {
+        this.ensureValues();
+        return this._swapped;
+    }
+
+    /**
+     * @method swapped
+     * @description Sets the swapped state.
+     * @param {boolean} true if swapped, false if not swapped.
+     */
+    public set swapped(value: boolean) {
+        this.ensureValues();
+        if (this._swapped !== value) {
+            this._swapped = value;
+            this.isChanged = true;
+        }
+    }
+
     private _timeout: boolean = false;
 
     /**
@@ -184,6 +209,8 @@ export class ReservationData {
         this.purgeIndex = INDEX_NOT_SET_VALUE;
         this.activationDelay = 0;
         this.timeout = isTimeout;
+        // Never reset the swapped state here, we want to keep it as it is
+        // Only new reservation should reset this state.
 
         if (!isTimeout) {
             this.creationBlock = 0;
@@ -233,7 +260,13 @@ export class ReservationData {
     private packFlags(): u8 {
         let flags: u8 = 0;
 
-        if (this.timeout) flags |= 0b1;
+        if (this.timeout) {
+            flags |= 0b1;
+        }
+
+        if (this.swapped) {
+            flags |= 0b10;
+        }
 
         return flags;
     }
@@ -266,6 +299,7 @@ export class ReservationData {
      */
     private unpackFlags(packedFlags: u8): void {
         this._timeout = (packedFlags & 0b1) !== 0;
+        this._swapped = (packedFlags & 0b10) !== 0;
     }
 
     /**
