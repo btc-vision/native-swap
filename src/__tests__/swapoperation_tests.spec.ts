@@ -1077,6 +1077,7 @@ describe('SwapOperation tests', () => {
 
             const reservation = new Reservation(tokenAddress1, providerAddress3);
             expect(reservation.getSwapped()).toBeTruthy();
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
         });
     });
 });

@@ -1241,7 +1241,6 @@ describe('TradeManager tests', () => {
 
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
             expect(provider.isActive()).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
         });
     });
 });
