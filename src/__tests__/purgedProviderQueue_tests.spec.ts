@@ -11,7 +11,6 @@ import {
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { PurgedProviderQueue } from '../managers/PurgedProviderQueue';
 import {
-    ALLOW_DIRTY,
     ENABLE_INDEX_VERIFICATION,
     INDEX_NOT_SET_VALUE,
     MAXIMUM_NUMBER_OF_PROVIDERS,
@@ -21,7 +20,6 @@ import { ProviderQueue } from '../managers/ProviderQueue';
 const QUOTE = u256.fromU64(100000000);
 
 function createNormalPurgedQueue(
-    allowDirty: boolean = ALLOW_DIRTY,
     enableIndexVerification: boolean = ENABLE_INDEX_VERIFICATION,
 ): PurgedProviderQueue {
     const queue: PurgedProviderQueue = new PurgedProviderQueue(
@@ -29,7 +27,6 @@ function createNormalPurgedQueue(
         NORMAL_QUEUE_PURGED_RESERVATION,
         tokenIdUint8Array1,
         enableIndexVerification,
-        allowDirty,
     );
 
     return queue;
@@ -208,7 +205,7 @@ describe('PurgedProviderQueue tests', () => {
         it('should revert when purge index and previous offset does not match', () => {
             expect(() => {
                 const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(true);
 
                 const providers = createProviders(10);
                 for (let i = 0; i < providers.length; i++) {
@@ -225,7 +222,7 @@ describe('PurgedProviderQueue tests', () => {
         it('should revert when enableIndexVerification and queue index does not match', () => {
             expect(() => {
                 const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(true);
 
                 const providers = createProviders(10);
                 for (let i = 0; i < providers.length; i++) {
@@ -242,7 +239,7 @@ describe('PurgedProviderQueue tests', () => {
         it('should revert if returned provider is initial provider', () => {
             expect(() => {
                 const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(true);
 
                 const providers = createProviders(10);
                 for (let i = 0; i < providers.length; i++) {
@@ -398,20 +395,6 @@ describe('PurgedProviderQueue tests', () => {
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(provider.isPurged()).toBeFalsy();
             expect(queue.length).toStrictEqual(0);
-        });
-
-        it('should properly remove the provider and delete it from the queue if dirty not allowed', () => {
-            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(false);
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setQueueIndex(0);
-
-            purgedQueue.add(provider);
-
-            purgedQueue.remove(provider);
-
-            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-            expect(provider.isPurged()).toBeFalsy();
-            expect(purgedQueue.length).toStrictEqual(0);
         });
     });
 

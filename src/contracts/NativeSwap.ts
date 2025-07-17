@@ -37,7 +37,6 @@ import {
 import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
 import {
-    ALLOW_DIRTY,
     AT_LEAST_PROVIDERS_TO_PURGE,
     ENABLE_INDEX_VERIFICATION,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
@@ -774,7 +773,6 @@ export class NativeSwap extends ReentrancyGuard {
             providerManager,
             liquidityQueueReserve,
             AT_LEAST_PROVIDERS_TO_PURGE,
-            ALLOW_DIRTY,
         );
     }
 

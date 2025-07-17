@@ -52,6 +52,7 @@ export class TradeManager implements ITradeManager {
     }
 
     public executeTradeExpired(reservation: Reservation, currentQuote: u256): CompletedTrade {
+        this.ensureQuoteIsValid(currentQuote);
         this.quoteToUse = currentQuote;
         this.resetTotals();
 
@@ -167,6 +168,14 @@ export class TradeManager implements ITradeManager {
         }
     }
 
+    private ensureQuoteIsValid(quote: u256): void {
+        if (quote.isZero()) {
+            throw new Revert(
+                `Impossible state: Current quote is zero for block number: ${Blockchain.block.number}`,
+            );
+        }
+    }
+
     private ensureReservationIsValid(reservation: Reservation): void {
         if (!reservation.isValid()) {
             throw new Revert(
@@ -239,9 +248,7 @@ export class TradeManager implements ITradeManager {
     private getMaximumPossibleTargetTokens(satoshis: u64, providerLiquidity: u128): u128 {
         const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.quoteToUse);
 
-        const targetTokens = min128(tokenResult.tokens, providerLiquidity);
-
-        return targetTokens;
+        return min128(tokenResult.tokens, providerLiquidity);
     }
 
     private getProvider(providerData: ReservationProviderData): Provider {
@@ -344,7 +351,7 @@ export class TradeManager implements ITradeManager {
             provider.subtractFromLiquidityAmount(actualTokens);
 
             this.resetProviderOnDust(provider);
-            this.increaseTokenReserved(actualTokens); //!!!!????
+            this.increaseTokenReserved(u128.Zero);
             this.increaseTotalTokensPurchased(actualTokens256);
             this.increaseSatoshisSpent(actualTokensSatoshis);
             this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);

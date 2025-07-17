@@ -14,11 +14,7 @@ import { Reservation } from '../models/Reservation';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
 import { ProviderManager } from '../managers/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import {
-    ALLOW_DIRTY,
-    AT_LEAST_PROVIDERS_TO_PURGE,
-    ENABLE_INDEX_VERIFICATION,
-} from '../constants/Contract';
+import { AT_LEAST_PROVIDERS_TO_PURGE, ENABLE_INDEX_VERIFICATION } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
 
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
@@ -370,8 +366,6 @@ export interface ITestReservationManager extends IReservationManager {
     callgetActiveListForBlock(blockNumber: u64): StoredBooleanArray;
 
     setAtLeastProvidersToPurge(value: u32): void;
-
-    setAllowDirty(value: boolean): void;
 }
 
 export interface ITestLiquidityQueue extends ILiquidityQueue {
@@ -491,7 +485,6 @@ export function getReservationManager(
         providerManager,
         liquidityQueueReserve,
         AT_LEAST_PROVIDERS_TO_PURGE,
-        ALLOW_DIRTY,
     );
 }
 
@@ -644,10 +637,6 @@ export class TestReservationManager extends ReservationManager implements ITestR
 
     public setAtLeastProvidersToPurge(value: u32): void {
         this.atLeastProvidersToPurge = value;
-    }
-
-    public setAllowDirty(value: boolean): void {
-        this.allowDirty = value;
     }
 
     protected override pushToReservationList(blockNumber: u64, reservationId: u128): u32 {

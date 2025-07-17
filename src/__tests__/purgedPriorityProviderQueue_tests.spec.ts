@@ -14,7 +14,6 @@ import {
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { PriorityPurgedProviderQueue } from '../managers/PriorityPurgedProviderQueue';
 import {
-    ALLOW_DIRTY,
     ENABLE_INDEX_VERIFICATION,
     INDEX_NOT_SET_VALUE,
     MAXIMUM_NUMBER_OF_PROVIDERS,
@@ -23,13 +22,12 @@ import { PriorityProviderQueue } from '../managers/PriorityProviderQueue';
 
 const QUOTE = u256.fromU64(100000000);
 
-function createPriorityPurgedQueue(allowDirty: boolean = ALLOW_DIRTY): PriorityPurgedProviderQueue {
+function createPriorityPurgedQueue(): PriorityPurgedProviderQueue {
     const queue: PriorityPurgedProviderQueue = new PriorityPurgedProviderQueue(
         tokenAddress1,
         PRIORITY_QUEUE_PURGED_RESERVATION,
         tokenIdUint8Array1,
         ENABLE_INDEX_VERIFICATION,
-        allowDirty,
     );
 
     return queue;
@@ -358,24 +356,6 @@ describe('PriorityPurgedProviderQueue tests', () => {
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(provider.isPurged()).toBeFalsy();
             expect(queue.length).toStrictEqual(0);
-        });
-
-        it('should properly remove the provider and delete it from the queue if dirty not allowed', () => {
-            /*
-            const queue: PriorityPurgedProviderQueue = createPriorityPurgedQueue(false);
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setQueueIndex(0);
-provider.markPriority();
-            const index = queue.add(provider);
-
-            queue.remove(provider);
-
-            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-            expect(provider.isPurged()).toBeFalsy();
-            expect(queue.length).toStrictEqual(0);
-
-
-             */
         });
     });
 

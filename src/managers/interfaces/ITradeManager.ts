@@ -1,6 +1,6 @@
 import { Reservation } from '../../models/Reservation';
 import { CompletedTrade } from '../../models/CompletedTrade';
-import { u256 } from '@btc-vision/as-bignum';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 
 export interface ITradeManager {
     executeTradeNotExpired(reservation: Reservation): CompletedTrade;

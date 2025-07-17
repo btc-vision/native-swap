@@ -16,19 +16,16 @@ export class PurgedProviderQueue {
     protected readonly token: Address;
     protected readonly queue: StoredU32Array;
     protected readonly enableIndexVerification: boolean;
-    protected readonly allowDirty: boolean;
 
     constructor(
         token: Address,
         pointer: u16,
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
-        allowDirty: boolean,
     ) {
         this.token = token;
         this.queue = new StoredU32Array(pointer, subPointer, INDEX_NOT_SET_VALUE - 1);
         this.enableIndexVerification = enableIndexVerification;
-        this.allowDirty = allowDirty;
     }
 
     public get length(): u32 {
@@ -79,13 +76,6 @@ export class PurgedProviderQueue {
 
     public remove(provider: Provider): void {
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
-
-        // Technically, we don't need to remove the provider from the queue because we should theoretically process
-        // "dirty" states correctly due to wrap around.
-        if (!this.allowDirty) {
-            this.queue.delete(provider.getPurgedIndex());
-        }
-
         this.queue.removeItemFromLength();
         this.queue.applyNextOffsetToStartingIndex();
 

@@ -12,6 +12,7 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
 import { CompletedTrade } from '../models/CompletedTrade';
+import { ReservationFallbackEvent } from '../events/ReservationFallbackEvent';
 
 export class SwapOperation extends BaseOperation {
     private readonly tradeManager: ITradeManager;
@@ -84,6 +85,10 @@ export class SwapOperation extends BaseOperation {
         Blockchain.emit(new SwapExecutedEvent(buyer, totalSatoshisSpent, totalTokensPurchased));
     }
 
+    private emitReservationFallbackEvent(reservation: Reservation): void {
+        Blockchain.emit(new ReservationFallbackEvent(reservation));
+    }
+
     private ensureReservationNotSwapped(reservation: Reservation): void {
         if (reservation.getSwapped()) {
             throw new Revert('NATIVE_SWAP: Reservation already swapped.');
@@ -91,7 +96,7 @@ export class SwapOperation extends BaseOperation {
     }
 
     private ensureReservationHasProvider(reservation: Reservation): void {
-        if (reservation.getProviderCount() > 0) {
+        if (reservation.getProviderCount() === 0) {
             throw new Revert('NATIVE_SWAP: Reservation does not have any providers.');
         }
     }
@@ -99,12 +104,19 @@ export class SwapOperation extends BaseOperation {
     private executeExpired(reservation: Reservation): CompletedTrade {
         this.ensureReservationNotSwapped(reservation);
         this.ensureReservationHasProvider(reservation);
+
         reservation.setSwapped(true);
+
+        this.emitReservationFallbackEvent(reservation);
 
         const tradeResult: CompletedTrade = this.tradeManager.executeTradeExpired(
             reservation,
             this.liquidityQueue.quote(),
         );
+
+        if (tradeResult.totalTokensPurchased === u256.Zero) {
+            throw new Revert('NATIVE_SWAP: Not able to fulfill expired reservation.');
+        }
 
         reservation.save();
 

@@ -26,8 +26,6 @@ export const BLOCK_NOT_SET_VALUE: u64 = U64.MAX_VALUE;
 
 export const EMIT_PURGE_EVENTS: boolean = true;
 
-export const ALLOW_DIRTY: boolean = true;
-
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
  */

@@ -37,7 +37,6 @@ export class ReservationManager implements IReservationManager {
     protected readonly blocksWithReservations: StoredU64Array;
     protected readonly tokenIdUint8Array: Uint8Array;
     protected atLeastProvidersToPurge: u32;
-    protected allowDirty: boolean;
     private readonly token: Address;
     private readonly providerManager: IProviderManager;
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
@@ -48,7 +47,6 @@ export class ReservationManager implements IReservationManager {
         providerManager: IProviderManager,
         liquidityQueueReserve: ILiquidityQueueReserve,
         atLeastProvidersToPurge: u32,
-        allowDirty: boolean,
     ) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
@@ -59,7 +57,6 @@ export class ReservationManager implements IReservationManager {
             tokenIdUint8Array,
         );
         this.atLeastProvidersToPurge = atLeastProvidersToPurge;
-        this.allowDirty = allowDirty;
     }
 
     public addReservation(blockNumber: u64, reservation: Reservation): void {
@@ -337,12 +334,8 @@ export class ReservationManager implements IReservationManager {
             restoredLiquidity = SafeMath.add(restoredLiquidity, data.providedAmount.toU256());
         }
 
-        if (!this.allowDirty) {
-            reservation.delete(true);
-        } else {
-            reservation.timeoutUser();
-            reservation.save();
-        }
+        reservation.timeoutUser();
+        reservation.save();
 
         return restoredLiquidity;
     }

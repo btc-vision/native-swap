@@ -43,7 +43,7 @@ describe('ReserveLiquidityOperation tests', () => {
             FeeManager.reservationBaseFee = 0;
         });
 
-        it("should revert if initial provider try to reserve his own liquidity'", () => {
+        it('should revert if initial provider try to reserve his own liquidity', () => {
             expect(() => {
                 setBlockchainEnvironment(100);
 
@@ -292,7 +292,7 @@ describe('ReserveLiquidityOperation tests', () => {
             }).toThrow();
         });
 
-        it("should revert if there is already an active reservation'", () => {
+        it('should revert if there is already an active reservation', () => {
             expect(() => {
                 setBlockchainEnvironment(100, msgSender1, msgSender1);
                 Blockchain.mockValidateBitcoinAddressResult(true);
@@ -586,6 +586,61 @@ describe('ReserveLiquidityOperation tests', () => {
             const reservation = new Reservation(tokenAddress1, providerAddress2);
             expect(reservation.getCreationBlock()).toStrictEqual(102);
         });
+
+        it('should set the swapped flag to false', () => {
+            setBlockchainEnvironment(100, msgSender1, msgSender1);
+            Blockchain.mockValidateBitcoinAddressResult(true);
+
+            const initialProviderId = createProviderId(msgSender1, tokenAddress1);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            const floorPrice: u256 = SafeMath.div(
+                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
+                u256.fromU32(1500),
+            );
+            const initialLiquidity = SafeMath.mul128(
+                u128.fromU32(1000000),
+                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
+            );
+
+            const createPoolOp = new CreatePoolOperation(
+                queue.liquidityQueue,
+                floorPrice,
+                initialProviderId,
+                initialLiquidity,
+                receiverAddress1,
+                0,
+                u256.Zero,
+                5,
+                Address.dead(),
+            );
+
+            createPoolOp.execute();
+            queue.liquidityQueue.setBlockQuote();
+            queue.liquidityQueue.save();
+
+            setBlockchainEnvironment(102, providerAddress2, providerAddress2);
+            const providerId2 = createProviderId(providerAddress2, tokenAddress1);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const reservation = new Reservation(tokenAddress1, providerAddress2);
+            reservation.setSwapped(true);
+
+            const reserveOp = new ReserveLiquidityOperation(
+                queue3.liquidityQueue,
+                providerId2,
+                providerAddress2,
+                900000000,
+                u256.Zero,
+                2,
+                MAXIMUM_PROVIDER_PER_RESERVATIONS,
+            );
+
+            reserveOp.execute();
+            queue3.liquidityQueue.save();
+
+            const reservation2 = new Reservation(tokenAddress1, providerAddress2);
+            expect(reservation2.getSwapped()).toBeFalsy();
+        });
     });
 
     describe('ReserveLiquidityOperation - other validations', () => {
@@ -597,7 +652,7 @@ describe('ReserveLiquidityOperation tests', () => {
             FeeManager.reservationBaseFee = 0;
         });
 
-        it("should revert if liquidity queue does not have enough available liquidity'", () => {
+        it('should revert if liquidity queue does not have enough available liquidity', () => {
             expect(() => {
                 setBlockchainEnvironment(100, msgSender1, msgSender1);
                 Blockchain.mockValidateBitcoinAddressResult(true);

@@ -20,7 +20,6 @@ import { ProviderQueue } from './ProviderQueue';
 import { PriorityProviderQueue } from './PriorityProviderQueue';
 
 import {
-    ALLOW_DIRTY,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAXIMUM_NUMBER_OF_PROVIDERS,
 } from '../constants/Contract';
@@ -71,14 +70,12 @@ export class ProviderManager implements IProviderManager {
             NORMAL_QUEUE_PURGED_RESERVATION,
             tokenIdUint8Array,
             enableIndexVerification,
-            ALLOW_DIRTY,
         );
         this.priorityPurgedQueue = new PriorityPurgedProviderQueue(
             token,
             PRIORITY_QUEUE_PURGED_RESERVATION,
             tokenIdUint8Array,
             enableIndexVerification,
-            ALLOW_DIRTY,
         );
         this._initialLiquidityProviderId = new StoredU256(
             INITIAL_LIQUIDITY_PROVIDER_POINTER,

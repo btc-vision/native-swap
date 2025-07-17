@@ -222,7 +222,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private ensureNoActiveReservation(): void {
         if (this.provider.hasReservedAmount()) {
             throw new Revert(
-                `'NATIVE_SWAP: All active reservations on your listing must be completed before listing again.`,
+                `NATIVE_SWAP: All active reservations on your listing must be completed before listing again.`,
             );
         }
     }
@@ -230,7 +230,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private ensureProviderIsNotPurged(): void {
         if (this.provider.isPurged()) {
             throw new Revert(
-                `'NATIVE_SWAP: You are in the purge queue. Your current listing must be bought before listing again.`,
+                `NATIVE_SWAP: You are in the purge queue. Your current listing must be bought before listing again.`,
             );
         }
     }

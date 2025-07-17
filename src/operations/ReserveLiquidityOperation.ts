@@ -149,7 +149,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         reservation.setActivationDelay(this.activationDelay);
         reservation.setCreationBlock(Blockchain.block.number);
-        reservation.setSwapped(false); //!!!! Add tests
+        reservation.setSwapped(false);
         reservation.save();
 
         return reservation;
