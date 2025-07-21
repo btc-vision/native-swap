@@ -47,6 +47,7 @@ export class ProviderManager implements IProviderManager {
         tokenIdUint8Array: Uint8Array,
         quoteManager: IQuoteManager,
         enableIndexVerification: boolean,
+        stakingContractAddress: Address,
     ) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
@@ -57,6 +58,7 @@ export class ProviderManager implements IProviderManager {
             tokenIdUint8Array,
             enableIndexVerification,
             MAXIMUM_NUMBER_OF_PROVIDERS,
+            stakingContractAddress,
         );
         this.priorityQueue = new PriorityProviderQueue(
             token,
@@ -64,18 +66,21 @@ export class ProviderManager implements IProviderManager {
             tokenIdUint8Array,
             enableIndexVerification,
             MAXIMUM_NUMBER_OF_PROVIDERS,
+            stakingContractAddress,
         );
         this.normalPurgedQueue = new PurgedProviderQueue(
             token,
             NORMAL_QUEUE_PURGED_RESERVATION,
             tokenIdUint8Array,
             enableIndexVerification,
+            stakingContractAddress,
         );
         this.priorityPurgedQueue = new PriorityPurgedProviderQueue(
             token,
             PRIORITY_QUEUE_PURGED_RESERVATION,
             tokenIdUint8Array,
             enableIndexVerification,
+            stakingContractAddress,
         );
         this._initialLiquidityProviderId = new StoredU256(
             INITIAL_LIQUIDITY_PROVIDER_POINTER,
@@ -182,7 +187,7 @@ export class ProviderManager implements IProviderManager {
     public getNextFromPurgedProvider(currentQuote: u256): Provider | null {
         let result: Provider | null = null;
 
-        if (result === null && this.priorityPurgedQueue.length > 0) {
+        if (this.priorityPurgedQueue.length > 0) {
             result = this.priorityPurgedQueue.get(this.priorityQueue, currentQuote);
         }
 

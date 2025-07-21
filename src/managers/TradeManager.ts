@@ -54,6 +54,7 @@ export class TradeManager implements ITradeManager {
     public executeTradeExpired(reservation: Reservation, currentQuote: u256): CompletedTrade {
         this.ensureQuoteIsValid(currentQuote);
         this.quoteToUse = currentQuote;
+        this.deactivateReservation(reservation);
         this.resetTotals();
 
         const providerCount: u32 = reservation.getProviderCount();
@@ -62,6 +63,8 @@ export class TradeManager implements ITradeManager {
             const providerData: ReservationProviderData = reservation.getProviderAt(index);
             const provider: Provider = this.getProvider(providerData);
             const satoshisSent: u64 = this.getSatoshisSent(provider.getBtcReceiver());
+
+            this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
 
             if (satoshisSent !== 0) {
                 this.tryExecuteNormalOrPriorityTrade(provider, satoshisSent);
@@ -100,7 +103,7 @@ export class TradeManager implements ITradeManager {
                     satoshisSent,
                 );
             } else {
-                this.noStatsSendToProvider(providerData, provider);
+                this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
             }
         }
 
@@ -148,6 +151,24 @@ export class TradeManager implements ITradeManager {
         }
 
         return totalSatoshis - consumedSatoshis;
+    }
+
+    private activateProvider(provider: Provider): void {
+        provider.allowLiquidityProvision();
+        const totalLiquidity: u128 = provider.getLiquidityAmount();
+
+        // floor(totalLiquidity / 2)
+        const halfFloor: u128 = SafeMath.div128(totalLiquidity, u128.fromU32(2));
+
+        // CEIL = floor + (totalLiquidity & 1)
+        const halfCred: u128 = u128.add(
+            halfFloor,
+            u128.and(totalLiquidity, u128.One), // adds 1 iff odd
+        );
+
+        // track that we virtually added those tokens to the pool
+        this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
+        this.emitActivateProviderEvent(provider);
     }
 
     private emitActivateProviderEvent(provider: Provider): void {
@@ -203,37 +224,21 @@ export class TradeManager implements ITradeManager {
             provider.getLiquidityAmount(),
         );
 
-        const actualTokens256: u256 = actualTokens.toU256();
-
         if (!actualTokens.isZero()) {
             this.ensureReservedAmountIsValid(provider, requestedTokens);
             this.ensureProviderHasEnoughLiquidity(provider, actualTokens);
 
+            const actualTokens256: u256 = actualTokens.toU256();
             const actualTokensSatoshis: u64 = tokensToSatoshis(actualTokens256, this.quoteToUse);
             provider.subtractFromReservedAmount(requestedTokens);
+            provider.subtractFromLiquidityAmount(actualTokens);
 
             if (
                 !provider.isLiquidityProvisionAllowed() &&
                 provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX
             ) {
-                provider.allowLiquidityProvision();
-                const totalLiquidity: u128 = provider.getLiquidityAmount();
-
-                // floor(totalLiquidity / 2)
-                const halfFloor: u128 = SafeMath.div128(totalLiquidity, u128.fromU32(2));
-
-                // CEIL = floor + (totalLiquidity & 1)
-                const halfCred: u128 = u128.add(
-                    halfFloor,
-                    u128.and(totalLiquidity, u128.One), // adds 1 iff odd
-                );
-
-                // track that we virtually added those tokens to the pool
-                this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
-                this.emitActivateProviderEvent(provider);
+                this.activateProvider(provider);
             }
-
-            provider.subtractFromLiquidityAmount(actualTokens);
 
             this.resetProviderOnDust(provider);
             this.increaseTokenReserved(requestedTokens);
@@ -285,10 +290,6 @@ export class TradeManager implements ITradeManager {
         this.tokensReserved = SafeMath.add(this.tokensReserved, value.toU256());
     }
 
-    private noStatsSendToProvider(providerData: ReservationProviderData, provider: Provider): void {
-        this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
-    }
-
     private deactivateReservation(reservation: Reservation): void {
         this.reservationManager.deactivateReservation(reservation);
     }
@@ -310,8 +311,10 @@ export class TradeManager implements ITradeManager {
     }
 
     private restoreReservedLiquidityForProvider(provider: Provider, value: u128): void {
-        provider.subtractFromReservedAmount(value);
-        this.liquidityQueueReserve.subFromTotalReserved(value.toU256());
+        if (!value.isZero()) {
+            provider.subtractFromReservedAmount(value);
+            this.liquidityQueueReserve.subFromTotalReserved(value.toU256());
+        }
     }
 
     private tryExecuteNormalOrPriorityTrade(provider: Provider, satoshisSent: u64): void {
@@ -320,41 +323,30 @@ export class TradeManager implements ITradeManager {
             provider.getAvailableLiquidityAmount(),
         );
 
-        const actualTokens256: u256 = actualTokens.toU256();
-
         if (!actualTokens.isZero()) {
             this.ensureProviderHasEnoughLiquidity(provider, actualTokens);
 
+            const actualTokens256: u256 = actualTokens.toU256();
             const actualTokensSatoshis: u64 = tokensToSatoshis(actualTokens256, this.quoteToUse);
 
             if (
                 !provider.isLiquidityProvisionAllowed() &&
                 provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX
             ) {
-                provider.allowLiquidityProvision();
-                const totalLiquidity: u128 = provider.getLiquidityAmount();
-
-                // floor(totalLiquidity / 2)
-                const halfFloor: u128 = SafeMath.div128(totalLiquidity, u128.fromU32(2));
-
-                // CEIL = floor + (totalLiquidity & 1)
-                const halfCred: u128 = u128.add(
-                    halfFloor,
-                    u128.and(totalLiquidity, u128.One), // adds 1 iff odd
-                );
-
-                // track that we virtually added those tokens to the pool
-                this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
-                this.emitActivateProviderEvent(provider);
+                this.activateProvider(provider);
             }
 
             provider.subtractFromLiquidityAmount(actualTokens);
 
-            this.resetProviderOnDust(provider);
             this.increaseTokenReserved(u128.Zero);
             this.increaseTotalTokensPurchased(actualTokens256);
             this.increaseSatoshisSpent(actualTokensSatoshis);
             this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
+        }
+
+        //!!!!
+        if (!provider.isPurged()) {
+            this.resetProviderOnDust(provider);
         }
     }
 }

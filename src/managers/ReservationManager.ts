@@ -270,9 +270,9 @@ export class ReservationManager implements IReservationManager {
                 this.ensureReservationPurgeIndexMatch(reservation, index);
 
                 const providerCount: u32 = reservation.getProviderCount();
-                const freed: u256 = this.restoreReservation(reservation);
+                const freed: u256 = this.restoreReservation(reservation, providerCount);
                 totalFreed = SafeMath.add(totalFreed, freed);
-                totalProvidersPurged += reservation.getProviderCount();
+                totalProvidersPurged += providerCount;
 
                 actives.set(index, false);
 
@@ -322,9 +322,8 @@ export class ReservationManager implements IReservationManager {
         return this.getPurgeIndexStore(blockNumber).get(0);
     }
 
-    private restoreReservation(reservation: Reservation): u256 {
+    private restoreReservation(reservation: Reservation, providerCount: u32): u256 {
         let restoredLiquidity: u256 = u256.Zero;
-        const providerCount: u32 = reservation.getProviderCount();
 
         for (let index: u32 = 0; index < providerCount; index++) {
             const data: ReservationProviderData = reservation.getProviderAt(index);

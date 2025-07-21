@@ -101,6 +101,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
             this.reservedProviderCount++;
         }
+
+        //!!! Even if provider stays in the purge queue it will never be used again
     }
 
     protected limitByAvailableLiquidity(tokens: u256): u256 {
@@ -323,7 +325,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     private ensureNoActiveReservation(reservation: Reservation): void {
         if (reservation.isExpired()) {
             if (reservation.isDirty()) {
-                reservation.delete(false); // Ensure this is always before a timeout check.
+                reservation.delete(false); // Ensure reservation is reset
             }
         } else {
             throw new Revert(
@@ -394,6 +396,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
             const hasEnoughLiquidityLeft: boolean =
                 this.liquidityQueue.hasEnoughLiquidityLeftProvider(provider, this.currentQuote);
 
+            // !!! Even if there is still available liquidity, how will the provider will get picked from the purge queue again?
             if (!hasEnoughLiquidityLeft) {
                 this.liquidityQueue.removeFromPurgeQueue(provider);
             }

@@ -16,16 +16,19 @@ export class PurgedProviderQueue {
     protected readonly token: Address;
     protected readonly queue: StoredU32Array;
     protected readonly enableIndexVerification: boolean;
+    protected readonly stakingContractAddress: Address;
 
     constructor(
         token: Address,
         pointer: u16,
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
+        stakingContractAddress: Address,
     ) {
         this.token = token;
         this.queue = new StoredU32Array(pointer, subPointer, INDEX_NOT_SET_VALUE - 1);
         this.enableIndexVerification = enableIndexVerification;
+        this.stakingContractAddress = stakingContractAddress;
     }
 
     public get length(): u32 {
@@ -50,10 +53,6 @@ export class PurgedProviderQueue {
         return index;
     }
 
-    public getAt(index: u32): u32 {
-        return this.queue.get(index);
-    }
-
     public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
         const providerIndex: u32 = this.queue.next();
 
@@ -74,6 +73,10 @@ export class PurgedProviderQueue {
         return this.returnProvider(associatedQueue, provider, providerIndex, quote);
     }
 
+    /*
+    This remove the provider at current index. Be careful to ensure the provided provider is
+     also the current in the queue.
+     */
     public remove(provider: Provider): void {
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
         this.queue.removeItemFromLength();
@@ -125,7 +128,7 @@ export class PurgedProviderQueue {
         if (provider.hasLiquidityAmount()) {
             TransferHelper.safeTransfer(
                 this.token,
-                Address.dead(),
+                this.stakingContractAddress,
                 provider.getLiquidityAmount().toU256(),
             );
         }
@@ -170,6 +173,9 @@ export class PurgedProviderQueue {
                 this.resetProvider(provider, associatedQueue);
             }
         }
+        // !!! If available liquidity is 0
+        // Provider will remain flagged has being purged
+        // but will never be get from the purge queue
 
         return result;
     }

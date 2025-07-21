@@ -16,14 +16,16 @@ import { ReservationFallbackEvent } from '../events/ReservationFallbackEvent';
 
 export class SwapOperation extends BaseOperation {
     private readonly tradeManager: ITradeManager;
+    private readonly stakingAddress: Address;
 
     public constructor(
         liquidityQueue: ILiquidityQueue,
         tradeManager: ITradeManager,
-        private readonly stakingAddress: Address = Address.dead(),
+        stakingAddress: Address,
     ) {
         super(liquidityQueue);
         this.tradeManager = tradeManager;
+        this.stakingAddress = stakingAddress;
     }
 
     public override execute(): void {

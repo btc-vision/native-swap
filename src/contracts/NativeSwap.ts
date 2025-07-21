@@ -90,10 +90,6 @@ export class NativeSwap extends ReentrancyGuard {
         return encodeSelector('deployer()');
     }
 
-    private static get APPROVE_FROM_SELECTOR(): Selector {
-        return encodeSelector('approveFrom(address,uint256,uint256,bytes)');
-    }
-
     public get stakingContractAddress(): Address {
         const address: Address = this._stakingContractAddress.value;
         if (eqUint(address, ZERO_ADDRESS)) {
@@ -754,7 +750,13 @@ export class NativeSwap extends ReentrancyGuard {
         tokenId: Uint8Array,
         quoteManager: IQuoteManager,
     ): IProviderManager {
-        return new ProviderManager(token, tokenId, quoteManager, ENABLE_INDEX_VERIFICATION);
+        return new ProviderManager(
+            token,
+            tokenId,
+            quoteManager,
+            ENABLE_INDEX_VERIFICATION,
+            this.stakingContractAddress,
+        );
     }
 
     private getLiquidityQueueReserve(token: Address, tokenId: Uint8Array): ILiquidityQueueReserve {
