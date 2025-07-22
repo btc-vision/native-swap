@@ -101,8 +101,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
             this.reservedProviderCount++;
         }
-
-        //!!! Even if provider stays in the purge queue it will never be used again
     }
 
     protected limitByAvailableLiquidity(tokens: u256): u256 {
@@ -396,8 +394,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
             const hasEnoughLiquidityLeft: boolean =
                 this.liquidityQueue.hasEnoughLiquidityLeftProvider(provider, this.currentQuote);
 
-            // !!! Even if there is still available liquidity, how will the provider will get picked from the purge queue again?
             if (!hasEnoughLiquidityLeft) {
+                Blockchain.log(`removeFromPurgeQueue - handleProviderPurgeQueues`);
                 this.liquidityQueue.removeFromPurgeQueue(provider);
             }
         }

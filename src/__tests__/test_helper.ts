@@ -413,10 +413,16 @@ export function createLiquidityQueue(
     tokenId: Uint8Array,
     purgeOldReservations: boolean,
     timeoutEnabled: boolean = false,
+    stakingContract: Address = Address.dead(),
 ): CreateLiquidityQueueResult {
     const quoteManager: IQuoteManager = getQuoteManager(tokenId);
     const liquidityQueueReserve: ILiquidityQueueReserve = getLiquidityQueueReserve(token, tokenId);
-    const providerManager: ITestProviderManager = getProviderManager(token, tokenId, quoteManager);
+    const providerManager: ITestProviderManager = getProviderManager(
+        token,
+        tokenId,
+        quoteManager,
+        stakingContract,
+    );
     const reservationManager: ITestReservationManager = getReservationManager(
         token,
         tokenId,
@@ -462,8 +468,15 @@ export function getProviderManager(
     token: Address,
     tokenId: Uint8Array,
     quoteManager: IQuoteManager,
+    stakingContract: Address,
 ): ITestProviderManager {
-    return new TestProviderManager(token, tokenId, quoteManager, ENABLE_INDEX_VERIFICATION);
+    return new TestProviderManager(
+        token,
+        tokenId,
+        quoteManager,
+        ENABLE_INDEX_VERIFICATION,
+        stakingContract,
+    );
 }
 
 export function getLiquidityQueueReserve(

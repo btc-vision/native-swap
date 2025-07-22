@@ -53,24 +53,56 @@ export class PurgedProviderQueue {
         return index;
     }
 
+    /*
+        public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
+            const providerIndex: u32 = this.queue.next();
+
+            this.ensureProviderQueueIndexIsValid(providerIndex);
+
+            const providerId = associatedQueue.getAt(providerIndex);
+            this.ensureProviderIdIsValid(providerId);
+
+            const provider = getProvider(providerId);
+            this.ensureProviderPurged(provider);
+
+            if (provider.getPurgedIndex() !== this.queue.previousOffset) {
+                throw new Revert(
+                    'Impossible state: provider.getPurgedIndex() !== this.queue.previousOffset',
+                );
+            }
+
+            return this.returnProvider(associatedQueue, provider, providerIndex, quote);
+        }
+    */
+
     public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
-        const providerIndex: u32 = this.queue.next();
+        let result: Potential<Provider> = null;
+        const queueLength: u32 = this.queue.getLength();
+        let count: u32 = 0;
 
-        this.ensureProviderQueueIndexIsValid(providerIndex);
+        Blockchain.log(`queue.getLength: ${this.queue.getLength()}`);
+        while (count < queueLength && result === null) {
+            const providerIndex: u32 = this.queue.next();
 
-        const providerId = associatedQueue.getAt(providerIndex);
-        this.ensureProviderIdIsValid(providerId);
+            this.ensureProviderQueueIndexIsValid(providerIndex);
 
-        const provider = getProvider(providerId);
-        this.ensureProviderPurged(provider);
+            const providerId = associatedQueue.getAt(providerIndex);
+            this.ensureProviderIdIsValid(providerId);
 
-        if (provider.getPurgedIndex() !== this.queue.previousOffset) {
-            throw new Revert(
-                'Impossible state: provider.getPurgedIndex() !== this.queue.previousOffset',
-            );
+            const provider = getProvider(providerId);
+            this.ensureProviderPurged(provider);
+
+            if (provider.getPurgedIndex() !== this.queue.previousOffset) {
+                throw new Revert(
+                    'Impossible state: provider.getPurgedIndex() !== this.queue.previousOffset',
+                );
+            }
+
+            result = this.returnProvider(associatedQueue, provider, providerIndex, quote);
+            count++;
         }
 
-        return this.returnProvider(associatedQueue, provider, providerIndex, quote);
+        return result;
     }
 
     /*
@@ -122,8 +154,30 @@ export class PurgedProviderQueue {
         }
     }
 
+    /*
+        private resetProvider(provider: Provider, associatedQueue: ProviderQueue): void {
+            this.ensureProviderPurged(provider);
+            this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
+
+            if (provider.hasLiquidityAmount()) {
+                TransferHelper.safeTransfer(
+                    this.token,
+                    this.stakingContractAddress,
+                    provider.getLiquidityAmount().toU256(),
+                );
+            }
+
+            // Remove from normal/priority queue
+            associatedQueue.remove(provider);
+
+            provider.resetListingProviderValues();
+
+            Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, false));
+        }*/
+
     private resetProvider(provider: Provider, associatedQueue: ProviderQueue): void {
         this.ensureProviderPurged(provider);
+        this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
 
         if (provider.hasLiquidityAmount()) {
             TransferHelper.safeTransfer(
@@ -133,9 +187,12 @@ export class PurgedProviderQueue {
             );
         }
 
-        if (!provider.isInitialLiquidityProvider()) {
-            associatedQueue.remove(provider);
-        }
+        // Remove from normal/priority queue
+        associatedQueue.remove(provider);
+
+        //!!!! Remove from purge queue
+        this.queue.removeItemFromLength();
+        this.queue.applyNextOffsetToStartingIndex();
 
         provider.resetListingProviderValues();
 
@@ -143,6 +200,7 @@ export class PurgedProviderQueue {
     }
 
     // TODO: Potential optimization. we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
+    /*
     private returnProvider(
         associatedQueue: ProviderQueue,
         provider: Provider,
@@ -170,12 +228,45 @@ export class PurgedProviderQueue {
             if (Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
                 result = provider;
             } else if (!provider.hasReservedAmount()) {
+                Blockchain.log(`resetProvider - purgedQueue`);
                 this.resetProvider(provider, associatedQueue);
             }
         }
-        // !!! If available liquidity is 0
-        // Provider will remain flagged has being purged
-        // but will never be get from the purge queue
+
+        return result;
+    }
+*/
+    private returnProvider(
+        associatedQueue: ProviderQueue,
+        provider: Provider,
+        index: u32,
+        quote: u256,
+    ): Provider | null {
+        let result: Potential<Provider> = null;
+        const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
+
+        if (!availableLiquidity.isZero()) {
+            if (this.enableIndexVerification) {
+                if (provider.getQueueIndex() !== index) {
+                    throw new Revert(
+                        `Impossible state: provider.getQueueIndex (${provider.getQueueIndex()}) does not match index (${index}).`,
+                    );
+                }
+
+                if (provider.isInitialLiquidityProvider()) {
+                    throw new Revert(
+                        'Impossible state: Initial liquidity provider cannot be returned here.',
+                    );
+                }
+            }
+
+            if (Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
+                result = provider;
+            } else if (!provider.hasReservedAmount()) {
+                Blockchain.log(`resetProvider - purgedQueue`);
+                this.resetProvider(provider, associatedQueue);
+            }
+        }
 
         return result;
     }

@@ -64,7 +64,9 @@ export class TradeManager implements ITradeManager {
             const provider: Provider = this.getProvider(providerData);
             const satoshisSent: u64 = this.getSatoshisSent(provider.getBtcReceiver());
 
-            this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
+            if (!provider.isPurged()) {
+                this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
+            }
 
             if (satoshisSent !== 0) {
                 this.tryExecuteNormalOrPriorityTrade(provider, satoshisSent);
@@ -240,7 +242,8 @@ export class TradeManager implements ITradeManager {
                 this.activateProvider(provider);
             }
 
-            this.resetProviderOnDust(provider);
+            //!!!
+            //this.resetProviderOnDust(provider);
             this.increaseTokenReserved(requestedTokens);
             this.increaseTotalTokensPurchased(actualTokens256);
             this.increaseSatoshisSpent(actualTokensSatoshis);
@@ -338,15 +341,12 @@ export class TradeManager implements ITradeManager {
 
             provider.subtractFromLiquidityAmount(actualTokens);
 
+            //!!!!
+            //this.resetProviderOnDust(provider);
             this.increaseTokenReserved(u128.Zero);
             this.increaseTotalTokensPurchased(actualTokens256);
             this.increaseSatoshisSpent(actualTokensSatoshis);
             this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
-        }
-
-        //!!!!
-        if (!provider.isPurged()) {
-            this.resetProviderOnDust(provider);
         }
     }
 }
