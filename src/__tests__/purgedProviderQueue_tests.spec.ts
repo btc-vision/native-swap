@@ -5,6 +5,7 @@ import {
     createProvider,
     createProviders,
     providerAddress1,
+    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -27,6 +28,7 @@ function createNormalPurgedQueue(
         NORMAL_QUEUE_PURGED_RESERVATION,
         tokenIdUint8Array1,
         enableIndexVerification,
+        testStackingContractAddress,
     );
 
     return queue;
@@ -39,6 +41,7 @@ function createNormalQueue(): ProviderQueue {
         tokenIdUint8Array1,
         ENABLE_INDEX_VERIFICATION,
         MAXIMUM_NUMBER_OF_PROVIDERS,
+        testStackingContractAddress,
     );
 
     return queue;

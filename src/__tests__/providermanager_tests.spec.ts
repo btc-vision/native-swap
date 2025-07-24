@@ -12,6 +12,7 @@ import {
     providerAddress4,
     providerAddress5,
     TestProviderManager,
+    testStackingContractAddress,
     tokenAddress1,
     tokenAddress2,
     tokenIdUint8Array1,
@@ -48,6 +49,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             expect(manager.currentIndexNormal).toStrictEqual(0);
@@ -68,6 +70,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             manager.addToNormalQueue(createProvider(providerAddress1, tokenAddress1));
@@ -80,6 +83,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
             expect(manager2.currentIndexNormal).toStrictEqual(0);
             expect(manager2.currentIndexPriority).toStrictEqual(0);
@@ -99,6 +103,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const normalProvider = createProvider(
@@ -173,6 +178,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
             expect(manager2.currentIndexNormal).toStrictEqual(0);
             expect(manager2.currentIndexPriority).toStrictEqual(0);
@@ -201,6 +207,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const initialLiquidityProvider = u256.fromU64(99999);
@@ -217,6 +224,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             manager.previousPriorityStartingIndex = 100;
@@ -231,6 +239,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             manager.previousNormalStartingIndex = 200;
@@ -245,6 +254,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -262,6 +272,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -279,6 +290,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             manager.previousNormalStartingIndex = 100;
@@ -297,6 +309,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             manager.previousNormalStartingIndex = 0;
@@ -318,6 +331,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             manager.previousNormalStartingIndex = 100;
@@ -336,6 +350,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -353,6 +368,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -376,6 +392,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -399,6 +416,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider1: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -446,6 +464,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -473,6 +492,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             expect(manager.normalQueueLength).toStrictEqual(0);
@@ -500,6 +520,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
@@ -528,6 +549,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 manager.getProviderFromQueue(
@@ -544,6 +566,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const initialProvider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -569,6 +592,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 manager.getProviderFromQueue(23, ProviderTypes.Normal);
@@ -582,6 +606,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -604,6 +629,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 manager.getProviderFromQueue(23, ProviderTypes.Priority);
@@ -617,6 +643,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -638,6 +665,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const providerIdOut: u256 = manager.getFromPriorityQueue(22222);
@@ -652,6 +680,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const providerIdOut: u256 = manager.getFromNormalQueue(22222);
@@ -666,6 +695,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -686,6 +716,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -715,6 +746,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider1: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -752,6 +784,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -789,6 +822,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -810,6 +844,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -840,6 +875,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -869,6 +905,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -899,6 +936,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -929,6 +967,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -960,6 +999,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -996,6 +1036,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1011,6 +1052,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1027,6 +1069,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1043,6 +1086,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1071,6 +1115,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1098,6 +1143,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1126,6 +1172,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             manager.initialLiquidityProviderId = u256.fromU32(1);
@@ -1144,6 +1191,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             expect(manager.initialLiquidityProviderId).toStrictEqual(u256.fromU32(1));
@@ -1172,6 +1220,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const providers = createProviders(4, 0);
@@ -1200,6 +1249,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                testStackingContractAddress,
             );
 
             const providers = createProviders(4, 0);
@@ -1242,6 +1292,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const providers = createProviders(3, 0);
@@ -1276,6 +1327,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1296,6 +1348,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1315,6 +1368,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1343,6 +1397,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 // Add 3 providers that will be deleted. This will move the priorityQueue starting index to 3.
@@ -1402,6 +1457,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 // Add 3 providers that will be deleted. This will move the priorityQueue starting index to 3.
@@ -1466,6 +1522,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const providersPriority = createProviders(
@@ -1502,6 +1559,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const providersPriority = createProviders(
@@ -1538,6 +1596,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     const providersPriority = createProviders(
@@ -1573,6 +1632,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     const provider = createProvider(
@@ -1603,6 +1663,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const provider = createProvider(
@@ -1634,6 +1695,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     const provider: Provider = createProvider(
@@ -1666,6 +1728,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 // Add 3 providers that will be deleted. This will move the queue starting index to 3.
@@ -1725,6 +1788,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 // Add 3 providers that will be deleted. This will move the standard queue starting index to 3.
@@ -1790,6 +1854,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const providers = createProviders(
@@ -1826,6 +1891,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const providers = createProviders(
@@ -1862,6 +1928,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     const providers = createProviders(
@@ -1897,6 +1964,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     const provider = createProvider(
@@ -1927,6 +1995,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const provider = createProvider(
@@ -1958,6 +2027,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     const provider: Provider = createProvider(
@@ -1993,6 +2063,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const currentQuote = u256.fromU32(1000);
@@ -2009,6 +2080,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
@@ -2031,6 +2103,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const provider = createProvider(
@@ -2062,6 +2135,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 createProvider(
@@ -2093,6 +2167,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     const provider = createProvider(
@@ -2123,6 +2198,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const provider = createProvider(
@@ -2158,6 +2234,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const provider = createProvider(
@@ -2188,6 +2265,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
@@ -2211,6 +2289,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
@@ -2243,6 +2322,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -2271,6 +2351,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -2295,6 +2376,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -2328,6 +2410,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -2379,6 +2462,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider1.activate();
@@ -2421,6 +2505,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -2448,6 +2533,7 @@ describe('ProviderManager tests', () => {
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        testStackingContractAddress,
                     );
 
                     expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -2471,6 +2557,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -2502,6 +2589,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
 
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -2548,6 +2636,7 @@ describe('ProviderManager tests', () => {
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    testStackingContractAddress,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider1.activate();
