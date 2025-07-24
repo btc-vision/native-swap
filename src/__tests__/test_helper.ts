@@ -66,6 +66,11 @@ export const providerAddress6: Address = new Address([
     209, 126, 10, 49, 77, 37, 107, 101, 67, 88,
 ]);
 
+export const providerAddress7: Address = new Address([
+    210, 23, 12, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
+    209, 126, 10, 49, 77, 37, 107, 101, 67, 88,
+]);
+
 export const msgSender1: Address = new Address([
     56, 172, 228, 82, 23, 145, 109, 98, 102, 186, 35, 65, 115, 253, 83, 104, 64, 71, 143, 47, 250,
     36, 107, 117, 250, 119, 149, 253, 56, 102, 51, 108,
@@ -145,6 +150,7 @@ export const receiverAddress4: string = 'cxdkidw9823yh099';
 export const receiverAddress5: string = 'jiojijoijoji8j23';
 
 export const receiverAddress6: string = 'fded0e32398hhd2i';
+export const receiverAddress7: string = 's328298du2389hd239';
 
 export function addressToPointerU256(address: Address, token: Address): u256 {
     const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);

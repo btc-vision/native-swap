@@ -167,6 +167,22 @@ export class ProviderQueue {
         }
     }
 
+    protected ensureProviderLiquidityIsValid(provider: Provider): void {
+        if (u128.lt(provider.getLiquidityAmount(), provider.getReservedAmount())) {
+            throw new Revert(
+                `Impossible state: Provider liquidity < reserved. ProviderId: ${provider.getId()}.`,
+            );
+        }
+    }
+
+    protected ensureProviderIsNotInPurgeQueue(provider: Provider): void {
+        if (provider.isPurged()) {
+            throw new Revert(
+                `Impossible state: Provider is in purge queue but purge queue is empty. ProviderId: ${provider.getId()} (indexed at ${provider.getQueueIndex()}, purgedAt: ${provider.getPurgedIndex()}).`,
+            );
+        }
+    }
+
     protected ensureStartingIndexIsValid(): void {
         if (this.startingIndex > this.length) {
             throw new Revert('Impossible state: Starting index exceeds queue length.');
@@ -203,22 +219,6 @@ export class ProviderQueue {
         }
 
         return result;
-    }
-
-    protected ensureProviderLiquidityIsValid(provider: Provider): void {
-        if (u128.lt(provider.getLiquidityAmount(), provider.getReservedAmount())) {
-            throw new Revert(
-                `Impossible state: Provider liquidity < reserved. ProviderId: ${provider.getId()}.`,
-            );
-        }
-    }
-
-    protected ensureProviderIsNotInPurgeQueue(provider: Provider): void {
-        if (provider.isPurged()) {
-            throw new Revert(
-                `Impossible state: Provider is in purge queue but purge queue is empty. ProviderId: ${provider.getId()} (indexed at ${provider.getQueueIndex()}, purgedAt: ${provider.getPurgedIndex()}).`,
-            );
-        }
     }
 
     private ensureProviderIsNotInitialProvider(provider: Provider): void {
@@ -268,6 +268,7 @@ export class ProviderQueue {
             result = provider;
         } else if (!provider.hasReservedAmount()) {
             this.resetProvider(provider);
+            Blockchain.log(`returnProvider - resetProvider`);
         }
 
         return result;
