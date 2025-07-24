@@ -9,6 +9,7 @@ import {
     providerAddress2,
     providerAddress3,
     TestProviderQueue,
+    testStackingContractAddress,
     tokenAddress1,
     tokenAddress2,
     tokenIdUint8Array1,
@@ -47,6 +48,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             expect(queue.currentIndex).toStrictEqual(0);
         });
@@ -58,6 +60,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             expect(queue.length).toStrictEqual(0);
         });
@@ -69,6 +72,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             queue.add(createProvider(providerAddress1, tokenAddress1));
             queue.add(createProvider(providerAddress2, tokenAddress1));
@@ -82,6 +86,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             expect(queue.startingIndex).toStrictEqual(0);
         });
@@ -93,6 +98,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             queue.getQueue().setStartingIndex(10);
             expect(queue.startingIndex).toStrictEqual(10);
@@ -105,6 +111,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             queue.restoreCurrentIndex(999);
             expect(queue.currentIndex).toStrictEqual(999);
@@ -128,6 +135,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
@@ -150,6 +158,7 @@ describe('ProviderQueue tests', () => {
                     tokenIdUint8Array1,
                     ENABLE_INDEX_VERIFICATION,
                     5,
+                    testStackingContractAddress,
                 );
                 const providers: Provider[] = createProviders(6, 0);
 
@@ -176,6 +185,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             const p1Index: u32 = queue.add(p1);
@@ -199,6 +209,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(p1);
@@ -236,6 +247,7 @@ describe('ProviderQueue tests', () => {
                     tokenIdUint8Array1,
                     ENABLE_INDEX_VERIFICATION,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
+                    testStackingContractAddress,
                 );
 
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -253,6 +265,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
@@ -279,6 +292,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             provider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
@@ -304,6 +318,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(provider);
@@ -319,6 +334,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             provider.setLiquidityAmount(u128.Zero);
@@ -344,6 +360,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const result: u32 = queue.cleanUp(0);
             expect(result).toStrictEqual(0);
@@ -356,6 +373,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(p1);
@@ -383,6 +401,7 @@ describe('ProviderQueue tests', () => {
                     tokenIdUint8Array1,
                     ENABLE_INDEX_VERIFICATION,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
+                    testStackingContractAddress,
                 );
                 const p1: Provider = createProvider(providerAddress1, tokenAddress1);
                 p1.deactivate();
@@ -399,6 +418,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(p1);
@@ -424,6 +444,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(p1);
@@ -448,6 +469,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             expect(queue.getNextWithLiquidity(QUOTE)).toBeNull();
         });
@@ -460,6 +482,7 @@ describe('ProviderQueue tests', () => {
                     tokenIdUint8Array1,
                     ENABLE_INDEX_VERIFICATION,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
+                    testStackingContractAddress,
                 );
 
                 queue.setStartingIndex(100);
@@ -474,6 +497,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(provider1);
@@ -494,6 +518,7 @@ describe('ProviderQueue tests', () => {
                     tokenIdUint8Array1,
                     ENABLE_INDEX_VERIFICATION,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
+                    testStackingContractAddress,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider1.markPriority();
@@ -511,6 +536,7 @@ describe('ProviderQueue tests', () => {
                     tokenIdUint8Array1,
                     true,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
+                    testStackingContractAddress,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider1);
@@ -528,6 +554,7 @@ describe('ProviderQueue tests', () => {
                     tokenIdUint8Array1,
                     true,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
+                    testStackingContractAddress,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider1);
@@ -544,6 +571,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
@@ -564,6 +592,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
@@ -584,6 +613,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
@@ -607,6 +637,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
@@ -636,6 +667,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
@@ -650,6 +682,7 @@ describe('ProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
 
             expect(queue2.length).toStrictEqual(queue.length);

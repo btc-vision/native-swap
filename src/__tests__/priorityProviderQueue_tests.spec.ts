@@ -4,6 +4,7 @@ import {
     createProvider,
     createProviders,
     providerAddress1,
+    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -37,6 +38,7 @@ describe('PriorityProviderQueue tests', () => {
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                testStackingContractAddress,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -54,6 +56,7 @@ describe('PriorityProviderQueue tests', () => {
                     tokenIdUint8Array1,
                     ENABLE_INDEX_VERIFICATION,
                     5,
+                    testStackingContractAddress,
                 );
 
                 const providers: Provider[] = createProviders(6, 0);
@@ -82,6 +85,7 @@ describe('PriorityProviderQueue tests', () => {
                     tokenIdUint8Array1,
                     ENABLE_INDEX_VERIFICATION,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
+                    testStackingContractAddress,
                 );
 
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
