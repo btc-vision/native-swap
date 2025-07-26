@@ -1,4 +1,11 @@
-import { Blockchain, OP_NET, Revert, StoredBoolean } from '@btc-vision/btc-runtime/runtime';
+import {
+    Blockchain,
+    Calldata,
+    OP_NET,
+    Revert,
+    Selector,
+    StoredBoolean,
+} from '@btc-vision/btc-runtime/runtime';
 
 const statusPointer: u16 = Blockchain.nextPointer;
 
@@ -11,14 +18,14 @@ export class ReentrancyGuard extends OP_NET {
         this._locked = new StoredBoolean(statusPointer, false);
     }
 
-    public override onExecutionCompleted(): void {
-        super.onExecutionCompleted();
+    public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
+        super.onExecutionCompleted(selector, calldata);
 
         this.nonReentrantAfter();
     }
 
-    public override onExecutionStarted(): void {
-        super.onExecutionStarted();
+    public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
+        super.onExecutionStarted(selector, calldata);
 
         this.nonReentrantBefore();
     }

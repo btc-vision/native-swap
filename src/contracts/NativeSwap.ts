@@ -103,8 +103,9 @@ export class NativeSwap extends ReentrancyGuard {
         FeeManager.onDeploy();
     }
 
-    public override onExecutionCompleted(): void {
-        super.onExecutionCompleted();
+    public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
+        super.onExecutionCompleted(selector, calldata);
+
         FeeManager.save();
         saveAllProviders();
     }
