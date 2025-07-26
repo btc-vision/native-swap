@@ -568,22 +568,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         return taylor;
     }
 
-    /*private calculateQueueImpact(): u256 {
-        const queuedTokens = this.liquidity;
-
-        if (queuedTokens.isZero()) {
-            return u256.Zero;
-        }
-
-        // Calculate impact using bit-length logarithm approximation
-        const ratio = SafeMath.add(u256.One, SafeMath.div(queuedTokens, this.virtualTokenReserve));
-
-        const lnValue = SafeMath.approxLog(ratio);
-
-        // Impact = T * ln(1 + Q/T) / 1e6 (since log is scaled)
-        return SafeMath.div(SafeMath.mul(this.virtualTokenReserve, lnValue), u256.fromU64(1000000));
-    }*/
-
     private calculateQueueImpact(): u256 {
         const queuedTokens = this.liquidity;
 
