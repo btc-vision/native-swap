@@ -381,14 +381,14 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     // Return number of tokens per satoshi
     public quote(): u256 {
-        const T: u256 = this.virtualTokenReserve;
-        const B: u64 = this.virtualSatoshisReserve;
+        const TOKEN: u256 = this.virtualTokenReserve;
+        const BTC: u64 = this.virtualSatoshisReserve;
 
-        if (T.isZero()) {
+        if (TOKEN.isZero()) {
             return u256.Zero;
         }
 
-        if (B === 0) {
+        if (BTC === 0) {
             throw new Revert(`Impossible state: Not enough liquidity.`);
         }
 
@@ -396,15 +396,14 @@ export class LiquidityQueue implements ILiquidityQueue {
         const queueImpact = this.calculateQueueImpact();
 
         // Add impact to token reserves ONLY for price calculation
-        const effectiveT = SafeMath.add(T, queueImpact);
-        
+        const effectiveT = SafeMath.add(TOKEN, queueImpact);
+
         // OLD
         // const scaled = SafeMath.mul(T, QUOTE_SCALE);
         // return SafeMath.div(scaled, u256.fromU64(this.virtualSatoshisReserve));
 
-        // scaledQuote = B * QUOTE_SCALE / effectiveT
-        const scaled = SafeMath.mul(u256.fromU64(B), QUOTE_SCALE);
-        return SafeMath.div(scaled, effectiveT);
+        const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
+        return SafeMath.div(scaled, u256.fromU64(BTC));
     }
 
     public removeFromNormalQueue(provider: Provider): void {
