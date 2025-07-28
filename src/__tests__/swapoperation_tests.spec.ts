@@ -156,12 +156,14 @@ describe('SwapOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
             queue.liquidityQueue.setBlockQuote();
             queue.liquidityQueue.save();
+
+            Blockchain.log(`quote: ${queue.liquidityQueue.quote()}`);
 
             const initialProvider = getProvider(initialProviderId);
             setBlockchainEnvironment(101, providerAddress2, providerAddress2);

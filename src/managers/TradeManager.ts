@@ -7,15 +7,10 @@ import {
     CappedTokensResult,
     satoshisToTokens128,
     tokensToSatoshis,
-    tokensToSatoshis128,
 } from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
-import {
-    INDEX_NOT_SET_VALUE,
-    INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
-} from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 import { ActivateProviderEvent } from '../events/ActivateProviderEvent';
 import { ITradeManager } from './interfaces/ITradeManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
@@ -254,6 +249,7 @@ export class TradeManager implements ITradeManager {
 
             const actualTokens256: u256 = actualTokens.toU256();
             const actualTokensSatoshis: u64 = tokensToSatoshis(actualTokens256, this.quoteToUse);
+
             provider.subtractFromReservedAmount(requestedTokens);
             provider.subtractFromLiquidityAmount(actualTokens);
 
@@ -275,6 +271,7 @@ export class TradeManager implements ITradeManager {
             this.increaseSatoshisSpent(actualTokensSatoshis);
             this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
         } else {
+            Blockchain.log(`in7`);
             this.restoreReservedLiquidityForProvider(provider, requestedTokens);
             this.addProviderToPurgeQueue(provider);
             Blockchain.log(`no tokens, go to purge queue: ${provider.getId()}`);
@@ -323,14 +320,6 @@ export class TradeManager implements ITradeManager {
 
     private deactivateReservation(reservation: Reservation): void {
         this.reservationManager.deactivateReservation(reservation);
-    }
-
-    private resetProviderOnDust(provider: Provider): void {
-        const satoshis = tokensToSatoshis128(provider.getLiquidityAmount(), this.quoteToUse);
-
-        if (satoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
-            this.providerManager.resetProvider(provider, false, false);
-        }
     }
 
     private resetTotals(): void {
