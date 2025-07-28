@@ -87,7 +87,7 @@ describe('TradeManager tests', () => {
                 receiverAddress1,
                 u128.fromU64(2000000000),
                 u128.fromU64(2000000000),
-                u128.fromU64(10000),
+                u128.fromU64(10),
             );
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -99,7 +99,7 @@ describe('TradeManager tests', () => {
             );
 
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(2000000000));
-            queue.liquidityQueue.increaseTotalReserved(u256.fromU64(10000));
+            queue.liquidityQueue.increaseTotalReserved(u256.fromU64(10));
             expect(queue.liquidityQueue.quote()).not.toStrictEqual(u256.Zero);
 
             queue.liquidityQueue.setBlockQuote();
@@ -108,7 +108,7 @@ describe('TradeManager tests', () => {
             reservation.addProvider(
                 new ReservationProviderData(
                     INITIAL_LIQUIDITY_PROVIDER_INDEX,
-                    u128.fromU32(10000),
+                    u128.fromU32(10),
                     ProviderTypes.Normal,
                     reservation.getCreationBlock(),
                 ),
@@ -121,7 +121,7 @@ describe('TradeManager tests', () => {
 
             const txOut: TransactionOutput[] = [];
 
-            txOut.push(new TransactionOutput(0, 0, null, provider1.getBtcReceiver(), 90000000000));
+            txOut.push(new TransactionOutput(0, 0, null, provider1.getBtcReceiver(), 100));
 
             Blockchain.mockTransactionOutput(txOut);
 
@@ -288,7 +288,7 @@ describe('TradeManager tests', () => {
 
                 const txOut: TransactionOutput[] = [];
 
-                txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 90000100));
+                txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 100));
 
                 Blockchain.mockTransactionOutput(txOut);
 
@@ -296,7 +296,7 @@ describe('TradeManager tests', () => {
             }).toThrow();
         });
 
-        it('should handle actualTokens is zero for normal provider', () => {
+        it('should handle actualTokens is zero', () => {
             setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
 
             const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
@@ -457,7 +457,7 @@ describe('TradeManager tests', () => {
 
             const txOut: TransactionOutput[] = [];
 
-            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 90000100));
+            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 100));
 
             Blockchain.mockTransactionOutput(txOut);
 
@@ -504,7 +504,7 @@ describe('TradeManager tests', () => {
                 false,
                 'wedwedwdwdw',
                 u128.Zero,
-                u128.fromU64(1000000),
+                u128.fromU64(100000),
                 u128.fromU64(12000),
             );
 
@@ -542,7 +542,7 @@ describe('TradeManager tests', () => {
 
             const txOut: TransactionOutput[] = [];
 
-            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 100100));
+            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 1));
 
             Blockchain.mockTransactionOutput(txOut);
 

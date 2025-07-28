@@ -120,6 +120,10 @@ export class Reservation {
         return this.reservedIndexes.getLength();
     }
 
+    public getPurged(): boolean {
+        return this.reservationData.purged;
+    }
+
     public getPurgeIndex(): u32 {
         return this.reservationData.purgeIndex;
     }
@@ -157,6 +161,10 @@ export class Reservation {
 
     public setCreationBlock(value: u64): void {
         this.reservationData.creationBlock = value;
+    }
+
+    public setPurged(value: boolean): void {
+        this.reservationData.purged = value;
     }
 
     public setPurgeIndex(index: u32): void {

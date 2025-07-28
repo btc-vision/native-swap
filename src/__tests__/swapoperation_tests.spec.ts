@@ -163,8 +163,6 @@ describe('SwapOperation tests', () => {
             queue.liquidityQueue.setBlockQuote();
             queue.liquidityQueue.save();
 
-            Blockchain.log(`quote: ${queue.liquidityQueue.quote()}`);
-
             const initialProvider = getProvider(initialProviderId);
             setBlockchainEnvironment(101, providerAddress2, providerAddress2);
 
@@ -186,11 +184,13 @@ describe('SwapOperation tests', () => {
             setBlockchainEnvironment(102, providerAddress2, providerAddress2);
 
             expect(initialProvider.getReservedAmount()).toStrictEqual(
-                u128.fromString(`13333333333333333333333`),
+                u128.fromString(`22575293333333333333333`),
             );
             expect(initialProvider.getLiquidityAmount()).toStrictEqual(
                 u128.fromString(`1000000000000000000000000`),
             );
+
+            Blockchain.mockTransactionOutput([]);
 
             const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
             const swapOp = new SwapOperation(
@@ -371,15 +371,15 @@ describe('SwapOperation tests', () => {
 
             expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(initialProvider.getLiquidityAmount()).toStrictEqual(
-                u128.fromString(`999993333333333333333334`),
+                u128.fromString(`999988712353333333333334`),
             );
             expect(queue4.liquidityQueue.liquidity).toStrictEqual(
-                u256.fromString(`999993340000000000000000`),
+                u256.fromString(`999988723640980000000000`),
             );
             expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue4.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(10000);
             expect(queue4.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
-                u256.fromString(`6653333333333333333`),
+                u256.fromString(`11265071373333333333`),
             );
             expect(TransferHelper.safeTransferCalled).toBeTruthy();
         });
@@ -423,7 +423,7 @@ describe('SwapOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId2,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
                 Address.dead(),
                 false,
@@ -486,7 +486,7 @@ describe('SwapOperation tests', () => {
             expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue4.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(10000);
             expect(queue4.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
-                u256.fromString(`6653366600000000000`),
+                u256.fromString(`11270703909020000000`),
             );
             expect(reservationActiveList.get(0)).toBeFalsy();
             expect(TransferHelper.safeTransferCalled).toBeTruthy();
@@ -533,7 +533,7 @@ describe('SwapOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId2,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
                 Address.dead(),
                 false,
@@ -591,12 +591,14 @@ describe('SwapOperation tests', () => {
 
             expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue4.liquidityQueue.liquidity).toStrictEqual(
-                u256.fromString(`999999610348052000000000`),
+                u256.fromString(`1000982400084368764400000`),
             );
-            expect(provider2.getLiquidityAmount()).toStrictEqual(u128.Zero);
+            expect(provider2.getLiquidityAmount()).toStrictEqual(
+                u128.fromString(`982382466835600000000`),
+            );
             expect(provider2.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(initialProvider.getLiquidityAmount()).toStrictEqual(
-                u128.fromString(`999999599331330000000000`),
+                u128.fromString(`1000000000000000000000000`),
             );
             expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(TransferHelper.safeTransferCalled).toBeTruthy();
@@ -647,7 +649,7 @@ describe('SwapOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId2,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
                 Address.dead(),
                 false,
@@ -664,7 +666,7 @@ describe('SwapOperation tests', () => {
             const listOp2 = new ListTokensForSaleOperation(
                 queue3.liquidityQueue,
                 providerId3,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`1000000000000000000000`),
                 receiverAddress2,
                 Address.dead(),
                 true,
@@ -695,7 +697,7 @@ describe('SwapOperation tests', () => {
             expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(provider2.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(provider3.getReservedAmount()).toStrictEqual(
-                u128.fromString(`6666735333333333333`),
+                u128.fromString(`11299272942733333333`),
             );
 
             const transactionOutput: TransactionOutput[] = [];
@@ -728,7 +730,7 @@ describe('SwapOperation tests', () => {
             expect(queue5.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue5.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(10000);
             expect(queue5.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
-                u256.fromString(`6653401862666666667`),
+                u256.fromString(`11276674396847866667`),
             );
             expect(reservationActiveList.get(0)).toBeFalsy();
             expect(TransferHelper.safeTransferCalled).toBeTruthy();
@@ -1088,7 +1090,7 @@ describe('SwapOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId2,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
                 Address.dead(),
                 false,

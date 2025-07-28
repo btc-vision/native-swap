@@ -1,7 +1,6 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Address,
-    Blockchain,
     BytesWriter,
     Revert,
     StoredU256,
@@ -206,7 +205,6 @@ export class ProviderManager implements IProviderManager {
 
         const purgedProvider: Provider | null = this.getNextFromPurgedProvider(currentQuote);
         if (purgedProvider !== null) {
-            Blockchain.log(`From purge: ${purgedProvider.getId()}`);
             return purgedProvider;
         }
 
@@ -214,7 +212,6 @@ export class ProviderManager implements IProviderManager {
             this.priorityQueue.getNextWithLiquidity(currentQuote);
 
         if (priorityProvider !== null) {
-            Blockchain.log(`From priority: ${priorityProvider.getId()}`);
             this.previousPriorityStartingIndex =
                 this.currentIndexPriority === 0
                     ? this.currentIndexPriority
@@ -226,7 +223,6 @@ export class ProviderManager implements IProviderManager {
         const provider: Provider | null = this.normalQueue.getNextWithLiquidity(currentQuote);
 
         if (provider !== null) {
-            Blockchain.log(`From normal: ${provider.getId()}`);
             this.previousNormalStartingIndex =
                 this.currentIndexNormal === 0
                     ? this.currentIndexNormal
@@ -408,7 +404,6 @@ export class ProviderManager implements IProviderManager {
                 this.resetProvider(provider, false, false);
             }
         } else if (!provider.isPurged()) {
-            Blockchain.log(`purgeandrestore add to purged ${provider.getId()}`);
             if (provider.getProviderType() === ProviderTypes.Normal) {
                 this.addToNormalPurgedQueue(provider);
             } else {

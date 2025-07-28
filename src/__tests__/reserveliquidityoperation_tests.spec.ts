@@ -414,9 +414,9 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const value1 = reservation.getProviderAt(0);
             expect(value1.providerIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
-            expect(value1.providedAmount).toStrictEqual(u128.fromString(`49999999999999999999999`));
+            expect(value1.providedAmount).toStrictEqual(u128.fromString(`49999998972775999999999`));
             expect(queue2.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`49999999999999999999999`),
+                u256.fromString(`49999998972775999999999`),
             );
 
             for (let i: u64 = 105; i < 110; i++) {
@@ -831,7 +831,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             if (result !== null) {
                 expect(result.providedAmount).toStrictEqual(
-                    u128.fromString(`9999999999999999999999`),
+                    u128.fromString(`9999999343049333333333`),
                 );
             }
         });
@@ -1100,7 +1100,7 @@ describe('ReserveLiquidityOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId1,
-                u128.fromString(`6667000000000000000`),
+                u128.fromString(`66670000000000000000`),
                 receiverAddress1,
                 Address.dead(),
                 false,
@@ -1118,7 +1118,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 queue3.liquidityQueue,
                 providerId2,
                 providerAddress2,
-                10001,
+                59080,
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
@@ -1128,7 +1128,7 @@ describe('ReserveLiquidityOperation tests', () => {
             queue3.liquidityQueue.save();
 
             expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`6666688890000000000`),
+                u256.fromString(`66669321090403253460`),
             );
         });
 
@@ -1171,7 +1171,7 @@ describe('ReserveLiquidityOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId1,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`20000000000000000000`),
                 receiverAddress1,
                 Address.dead(),
                 false,
@@ -1206,7 +1206,7 @@ describe('ReserveLiquidityOperation tests', () => {
             expect(reservation.getProviderCount()).toStrictEqual(1);
 
             const values = reservation.getProviderAt(0);
-            expect(values.providedAmount).toStrictEqual(u128.fromString(`9999383330000000000`));
+            expect(values.providedAmount).toStrictEqual(u128.fromString(`19999652358523639999`));
         });
 
         it('should revert when provider queue index is not set', () => {
@@ -1311,7 +1311,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 receiverAddress1,
                 0,
                 u256.Zero,
-                5,
+                100,
                 Address.dead(),
             );
 
@@ -1324,7 +1324,7 @@ describe('ReserveLiquidityOperation tests', () => {
             const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             initProvider.setReservedAmount(
-                SafeMath.sub128(initProvider.getLiquidityAmount(), u128.fromU64(1000000000000000)),
+                SafeMath.sub128(initProvider.getLiquidityAmount(), u128.fromU64(5000000000000000)),
             );
             initProvider.save();
             queue3.liquidityQueue.mockgetNextProviderWithLiquidity(initProvider);
@@ -1587,7 +1587,7 @@ describe('ReserveLiquidityOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId1,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
                 Address.dead(),
                 false,
@@ -1676,7 +1676,7 @@ describe('ReserveLiquidityOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId1,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
                 Address.dead(),
                 false,
@@ -1716,11 +1716,10 @@ describe('ReserveLiquidityOperation tests', () => {
 
             expect(value1.providerIndex).toStrictEqual(0);
             expect(value2.providerIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
-
-            expect(value1.providedAmount).toStrictEqual(u128.fromString(`9999383330000000000`));
-            expect(value2.providedAmount).toStrictEqual(u128.fromString(`49990499951250000000000`));
+            expect(value1.providedAmount).toStrictEqual(u128.fromString(`999999415637569000000`));
+            expect(value2.providedAmount).toStrictEqual(u128.fromString(`49049999513782532000000`));
             expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`50000499334580000000000`),
+                u256.fromString(`50049998929420101000000`),
             );
 
             const reservationList = queue3.reservationManager.callgetReservationListForBlock(103);

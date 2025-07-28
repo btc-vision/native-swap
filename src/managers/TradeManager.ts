@@ -60,18 +60,14 @@ export class TradeManager implements ITradeManager {
             const provider: Provider = this.getProvider(providerData);
             const satoshisSent: u64 = this.getSatoshisSent(provider.getBtcReceiver());
 
-            if (!provider.isPurged()) {
-                Blockchain.log(`restore provider: ${provider.getId()}`);
+            if (!reservation.getPurged()) {
                 this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
-                Blockchain.log(`getLiquidityAmount: ${provider.getLiquidityAmount()}`);
-                Blockchain.log(`getReservedAmount: ${provider.getReservedAmount()}`);
             }
 
             if (satoshisSent !== 0) {
                 this.tryExecuteNormalOrPriorityTrade(provider, satoshisSent);
             } else {
                 this.addProviderToPurgeQueue(provider);
-                Blockchain.log(`no satoshis, go to purge queue: ${provider.getId()}`);
             }
         }
 
@@ -109,7 +105,6 @@ export class TradeManager implements ITradeManager {
             } else {
                 this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
                 this.addProviderToPurgeQueue(provider);
-                Blockchain.log(`no satoshis, go to purge queue: ${provider.getId()}`);
             }
         }
 
@@ -179,14 +174,11 @@ export class TradeManager implements ITradeManager {
 
     private addProviderToPurgeQueue(provider: Provider): void {
         if (!provider.isPurged()) {
-            Blockchain.log(`Add to purge: ${provider.getId()}`);
             if (provider.getProviderType() === ProviderTypes.Normal) {
                 this.providerManager.addToNormalPurgedQueue(provider);
             } else {
                 this.providerManager.addToPriorityPurgedQueue(provider);
             }
-        } else {
-            Blockchain.log(`Skip add to purge: ${provider.getId()}`);
         }
     }
 
@@ -262,7 +254,6 @@ export class TradeManager implements ITradeManager {
 
             // If partial fill, provider liquidity must be available again
             if (u128.lt(actualTokens, requestedTokens)) {
-                Blockchain.log(`partial fill, go to purge queue: ${provider.getId()}`);
                 this.addProviderToPurgeQueue(provider);
             }
 
@@ -271,10 +262,8 @@ export class TradeManager implements ITradeManager {
             this.increaseSatoshisSpent(actualTokensSatoshis);
             this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
         } else {
-            Blockchain.log(`in7`);
             this.restoreReservedLiquidityForProvider(provider, requestedTokens);
             this.addProviderToPurgeQueue(provider);
-            Blockchain.log(`no tokens, go to purge queue: ${provider.getId()}`);
         }
     }
 
@@ -356,8 +345,6 @@ export class TradeManager implements ITradeManager {
                 this.activateProvider(provider);
             }
 
-            Blockchain.log(`buy tokens: ${actualTokens256}`);
-
             provider.subtractFromLiquidityAmount(actualTokens);
 
             this.increaseTokenReserved(u128.Zero);
@@ -367,6 +354,5 @@ export class TradeManager implements ITradeManager {
         }
 
         this.addProviderToPurgeQueue(provider);
-        Blockchain.log(`go to purge queue: ${provider.getId()}`);
     }
 }

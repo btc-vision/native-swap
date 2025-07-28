@@ -52,6 +52,10 @@ export class Provider {
      * @returns {boolean} - true if token amount is GE; false if not.
      */
     public static meetsMinimumReservationAmount(tokenAmount: u128, currentQuote: u256): boolean {
+        if (tokenAmount.isZero()) {
+            return false;
+        }
+
         const maxCostInSatoshis: u64 = tokensToSatoshis(tokenAmount.toU256(), currentQuote);
         return maxCostInSatoshis >= STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT;
     }

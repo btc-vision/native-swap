@@ -9,6 +9,10 @@ export class CappedTokensResult {
 }
 
 export function tokensToSatoshis(tokenAmount: u256, scaledPrice: u256): u64 {
+    if (tokenAmount.isZero()) {
+        return 0;
+    }
+
     const satoshis = SafeMath.div(
         SafeMath.mul(SafeMath.add(tokenAmount, u256.One), QUOTE_SCALE), // We have to do plus one here due to the round down
         scaledPrice,

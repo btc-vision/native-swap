@@ -268,7 +268,6 @@ export class ProviderQueue {
             result = provider;
         } else if (!provider.hasReservedAmount()) {
             this.resetProvider(provider);
-            Blockchain.log(`returnProvider - resetProvider`);
         }
 
         return result;

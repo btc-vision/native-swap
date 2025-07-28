@@ -59,9 +59,7 @@ export class PurgedProviderQueue {
         let count: u32 = 0;
 
         while (count < queueLength && result === null) {
-            Blockchain.log(`this.queue.startingIndex: ${this.queue.startingIndex()}`);
             const providerIndex: u32 = this.queue.next();
-
             this.ensureProviderQueueIndexIsValid(providerIndex);
 
             const providerId = associatedQueue.getAt(providerIndex);
@@ -72,7 +70,7 @@ export class PurgedProviderQueue {
 
             if (provider.getPurgedIndex() !== this.queue.previousOffset) {
                 throw new Revert(
-                    'Impossible state: provider.getPurgedIndex() !== this.queue.previousOffset',
+                    `Impossible state: Provider: ${provider.getId()} getPurgedIndex(${provider.getPurgedIndex()}) !== previousOffset(${this.queue.previousOffset}).`,
                 );
             }
 
@@ -165,27 +163,24 @@ export class PurgedProviderQueue {
         let result: Potential<Provider> = null;
         const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
 
-        if (!availableLiquidity.isZero()) {
-            if (this.enableIndexVerification) {
-                if (provider.getQueueIndex() !== index) {
-                    throw new Revert(
-                        `Impossible state: provider.getQueueIndex (${provider.getQueueIndex()}) does not match index (${index}).`,
-                    );
-                }
-
-                if (provider.isInitialLiquidityProvider()) {
-                    throw new Revert(
-                        'Impossible state: Initial liquidity provider cannot be returned here.',
-                    );
-                }
+        if (this.enableIndexVerification) {
+            if (provider.getQueueIndex() !== index) {
+                throw new Revert(
+                    `Impossible state: provider.getQueueIndex (${provider.getQueueIndex()}) does not match index (${index}).`,
+                );
             }
 
-            if (Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
-                result = provider;
-            } else if (!provider.hasReservedAmount()) {
-                Blockchain.log(`purgedQueue - resetProvider: ${provider.getId()}`);
-                this.resetProvider(provider, associatedQueue);
+            if (provider.isInitialLiquidityProvider()) {
+                throw new Revert(
+                    'Impossible state: Initial liquidity provider cannot be returned here.',
+                );
             }
+        }
+
+        if (Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
+            result = provider;
+        } else if (!provider.hasReservedAmount()) {
+            this.resetProvider(provider, associatedQueue);
         }
 
         return result;

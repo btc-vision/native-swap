@@ -333,6 +333,7 @@ export class ReservationManager implements IReservationManager {
             restoredLiquidity = SafeMath.add(restoredLiquidity, data.providedAmount.toU256());
         }
 
+        reservation.setPurged(true);
         reservation.timeoutUser();
         reservation.save();
 

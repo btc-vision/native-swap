@@ -302,28 +302,6 @@ describe('PriorityPurgedProviderQueue tests', () => {
                 purgedQueue.get(queue, u256.fromU32(100000000));
             }).toThrow();
         });
-
-        it('should return null, reset the provider but no delete it, transfer remaining liquidity when available liquidity < minimum required and no reserved amount', () => {
-            const queue: PriorityProviderQueue = createPriorityQueue();
-            const purgedQueue: PriorityPurgedProviderQueue = createPriorityPurgedQueue();
-
-            const providers = createProviders(10);
-            for (let i = 0; i < providers.length; i++) {
-                providers[i].markPriority();
-                providers[i].setLiquidityAmount(u128.fromU32(110));
-                queue.add(providers[i]);
-                purgedQueue.add(providers[i]);
-            }
-
-            const provider1Index = providers[0].getQueueIndex();
-            providers[0].markInitialLiquidityProvider();
-            const provider1 = purgedQueue.get(queue, u256.fromU32(100000000));
-            expect(provider1).toBeNull();
-            expect(providers[0].isPurged()).toBeFalsy();
-            expect(providers[0].isActive()).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
-            expect(queue.getAt(provider1Index)).not.toStrictEqual(u256.Zero);
-        });
     });
 
     describe('PriorityPurgedProviderQueue – remove', () => {

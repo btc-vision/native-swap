@@ -150,6 +150,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         reservation.setActivationDelay(this.activationDelay);
         reservation.setCreationBlock(Blockchain.block.number);
         reservation.setSwapped(false);
+        reservation.setPurged(false);
         reservation.save();
 
         return reservation;
@@ -395,7 +396,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 this.liquidityQueue.hasEnoughLiquidityLeftProvider(provider, this.currentQuote);
 
             if (!hasEnoughLiquidityLeft) {
-                Blockchain.log(`removeFromPurgeQueue - handleProviderPurgeQueues`);
                 this.liquidityQueue.removeFromPurgeQueue(provider);
             }
         }
