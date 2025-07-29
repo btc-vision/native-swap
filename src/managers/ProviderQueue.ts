@@ -209,7 +209,7 @@ export class ProviderQueue {
     protected tryNextCandidate(currentQuote: u256): Provider | null {
         let result: Potential<Provider> = null;
         const providerId: u256 = this.queue.get_physical(this._currentIndex);
-
+        Blockchain.log(`trying: ${providerId}`);
         if (!providerId.isZero()) {
             const provider: Provider = getProvider(providerId);
 
@@ -218,6 +218,11 @@ export class ProviderQueue {
             }
         }
 
+        if (result !== null) {
+            Blockchain.log(`Used: ${result.getId()}`);
+        } else {
+            Blockchain.log(`null`);
+        }
         return result;
     }
 

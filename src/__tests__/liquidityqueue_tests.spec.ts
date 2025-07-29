@@ -11,6 +11,7 @@ import {
 import {
     createLiquidityQueue,
     createProvider,
+    createProviderId,
     createProviders,
     createReservation,
     ITestLiquidityQueue,
@@ -490,6 +491,76 @@ describe('Liquidity queue tests', () => {
             );
             const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
             expect(queue2.timeOutEnabled).toBeTruthy();
+        });
+
+        it('should gets the normal queue starting index', () => {
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+            expect(queue.getNormalQueueStartingIndex()).toStrictEqual(0);
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+                true,
+            );
+
+            const provider1 = new Provider(createProviderId(providerAddress1, tokenAddress1));
+            const provider2 = new Provider(createProviderId(providerAddress2, tokenAddress1));
+
+            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
+            provider1.activate();
+            provider2.activate();
+            queue2.addToNormalQueue(provider1);
+            queue2.addToNormalQueue(provider2);
+            provider1.save();
+            provider2.save();
+
+            queue2.removeFromNormalQueue(provider1);
+            provider1.save();
+
+            createQueueResult2.providerManager.cleanUpQueues();
+            expect(queue2.getNormalQueueStartingIndex()).toStrictEqual(1);
+        });
+
+        it('should gets the priority queue starting index', () => {
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+            expect(queue.getPriorityQueueStartingIndex()).toStrictEqual(0);
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+                true,
+            );
+
+            const provider1 = new Provider(createProviderId(providerAddress1, tokenAddress1));
+            const provider2 = new Provider(createProviderId(providerAddress2, tokenAddress1));
+
+            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
+            provider1.activate();
+            provider2.activate();
+            provider1.markPriority();
+            provider2.markPriority();
+            queue2.addToPriorityQueue(provider1);
+            queue2.addToPriorityQueue(provider2);
+            provider1.save();
+            provider2.save();
+
+            queue2.removeFromPriorityQueue(provider1);
+            provider1.save();
+
+            createQueueResult2.providerManager.cleanUpQueues();
+            expect(queue2.getPriorityQueueStartingIndex()).toStrictEqual(1);
         });
 
         it('should get the length of the block with reservation queue', () => {

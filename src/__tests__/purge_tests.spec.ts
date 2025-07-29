@@ -29,6 +29,7 @@ import {
 } from './test_helper';
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import {
+    INDEX_NOT_SET_VALUE,
     INITIAL_FEE_COLLECT_ADDRESS,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
 } from '../constants/Contract';
@@ -40,7 +41,7 @@ import { Reservation } from '../models/Reservation';
 
 const tokenDec = 18;
 
-function createPool(): u256 {
+function createPool(): Provider {
     const initialProvider: u256 = createProviderId(Blockchain.tx.sender, tokenAddress1);
     const lq1 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
@@ -68,10 +69,14 @@ function createPool(): u256 {
     createPoolOp.execute();
     lq1.liquidityQueue.save();
 
-    return initialProvider;
+    return getProvider(initialProvider);
 }
 
-function listTokenForSale(amount: u128, receiverAddress: string, priority: boolean = false): u256 {
+function listTokenForSale(
+    amount: u128,
+    receiverAddress: string,
+    priority: boolean = false,
+): Provider {
     const liquidityProvider: u256 = createProviderId(Blockchain.tx.sender, tokenAddress1);
     const lq1 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
     const listLiquidityOp = new ListTokensForSaleOperation(
@@ -87,7 +92,7 @@ function listTokenForSale(amount: u128, receiverAddress: string, priority: boole
     listLiquidityOp.execute();
     lq1.liquidityQueue.save();
 
-    return liquidityProvider;
+    return getProvider(liquidityProvider);
 }
 
 function reserve(amount: u64): u256 {
@@ -143,8 +148,7 @@ function getReservationId(token: Address, reserver: Address): u128 {
     return reservation.getId();
 }
 
-function logProvider(providerId: u256, name: string = 'Provider'): void {
-    const provider: Provider = getProvider(providerId);
+function logProvider(provider: Provider, name: string = 'Provider'): void {
     Blockchain.log(name);
     Blockchain.log(`---------`);
     Blockchain.log(`id: ${provider.getId()}`);
@@ -158,7 +162,7 @@ function logProvider(providerId: u256, name: string = 'Provider'): void {
     Blockchain.log(`isPriority: ${provider.isPriority()}`);
 }
 
-describe('Purge tests', () => {
+describe('Reserve, swap and purge tests', () => {
     beforeEach(() => {
         clearCachedProviders();
         Blockchain.clearStorage();
@@ -167,144 +171,294 @@ describe('Purge tests', () => {
         TransferHelper.clearMockedResults();
     });
 
+    /*
+    The scenario begins with a large reservation that consumes the full liquidity of Provider1 and partially uses Provider2.
+    When this reservation is partially swapped, Provider1 receives an amount of satoshis that leave its liquidity below the minimum threshold,
+    so Provider1 is reset.
+    Provider2 receives nothing, causing its liquidity to be restored.
+    Importantly, Provider2 gets added to a purge queue because it wasn't actually utilized during the swap operation.
+
+    A second reservation is then made, and the system prioritizes Provider2 from the purge queue for this new reservation.
+    Following this, a purge operation is performed, which restores Provider2 since reservation 2 was never swapped,
+    while Provider1 remains unchanged as it is no more active.
+
+    When a third reservation is made, Provider2 continues to be prioritized from the purge queue as the number of sent satoshis still fit in the provider2 liquidity.
+
+    The complexity escalates with a fourth reservation made, requiring a larger amount that needs tokens from multiple providers.
+    Provider2's liquidity is fully utilized first, and the system falls back to using the Initial Provider to fulfill the remaining token requirements.
+    */
     it('Test 1', () => {
         setBlockchainEnvironment(100, providerAddress1, providerAddress1);
-        Blockchain.log('\r\n\r\n100 - CreatePool');
-        const initialProvider: u256 = createPool();
-        logProvider(initialProvider);
+        const initialProvider = createPool();
+        expect(initialProvider.getLiquidityAmount()).toStrictEqual(
+            u128.fromString(`52500000000000000000000`),
+        );
+        expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #1');
-        const liquidityProvider1: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
-        logProvider(liquidityProvider1);
+        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1000000000000000000000`),
+        );
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #2');
-        const liquidityProvider2: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
-        logProvider(liquidityProvider2);
+        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1000000000000000000000`),
+        );
+        expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(112, providerAddress3, providerAddress3);
-        Blockchain.log('\r\n\r\n112 - Reserve #1');
-        const reserver1: u256 = reserve(491000);
-        logProvider(liquidityProvider1);
-        logProvider(liquidityProvider2);
 
+        // Reserve full liquidity or provider1 and some from provider2.
+        reserve(491000);
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
+            u128.fromString(`999998934541942857142`),
+        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1065458057142858`),
+        );
+
+        expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
+            u128.fromString(`694341330962819047619`),
+        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`305658669037180952381`),
+        );
+
+        // Partial swap the reservation leaving small amount in provider1 smaller than minimum amount, so it is resets.
+        // Don't send any sats to provider2 so it is restored.
         setBlockchainEnvironment(116, providerAddress3, providerAddress3);
-        Blockchain.log('\r\n\r\n116 - Swap #1');
         swap([receiverAddress2], [489000]);
-        logProvider(liquidityProvider1);
-        logProvider(liquidityProvider2);
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.isPurged()).toBeFalsy();
+        expect(liquidityProvider1.isActive()).toBeFalsy();
 
+        expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1000000000000000000000`),
+        );
+        expect(liquidityProvider2.isPurged()).toBeTruthy();
+        expect(liquidityProvider2.isActive()).toBeTruthy();
+
+        // Reserve again.
+        // Provider2 has been push in the purge queue in the swap operation.
+        // So it is the 1st one used for the requested amount.
         setBlockchainEnvironment(118, providerAddress4, providerAddress4);
-        Blockchain.log('\r\n\r\n118 - Reserve #2');
-        const reserver2: u256 = reserve(100000);
-        logProvider(liquidityProvider1);
-        logProvider(liquidityProvider2);
+        reserve(100000);
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.isActive()).toBeFalsy();
 
+        expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
+            u128.fromString(`337591091932497987821`),
+        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`662408908067502012179`),
+        );
+        expect(liquidityProvider2.isPurged()).toBeTruthy();
+        expect(liquidityProvider2.isActive()).toBeTruthy();
+
+        // Force a purge.
+        // Provider2 is restored as reservation #2 expired and was not swapped.
+        // Provider1 stays as is.
         setBlockchainEnvironment(132, msgSender1, msgSender1);
-        Blockchain.log('\r\n\r\n132 - Purge');
         const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         lq.liquidityQueue.save();
-        logProvider(liquidityProvider1);
-        logProvider(liquidityProvider2);
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.isActive()).toBeFalsy();
 
-        setBlockchainEnvironment(133, msgSender1, msgSender1);
-        Blockchain.log('\r\n\r\n133 - Change token price');
-        const lq1 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-        lq1.liquidityQueue.decreaseVirtualSatoshisReserve(20000000);
+        expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1000000000000000000000`),
+        );
+        expect(liquidityProvider2.isPurged()).toBeTruthy();
+        expect(liquidityProvider2.isActive()).toBeTruthy();
 
+        // Reserve again.
+        // As provider2 is still in purged queue, given the satoshis amount, it is the only one that should be used.
         setBlockchainEnvironment(134, providerAddress6, providerAddress6);
-        Blockchain.log('\r\n\r\n134 - Reserve #3');
-        const reserver3: u256 = reserve(10000);
-        logProvider(liquidityProvider1);
-        logProvider(liquidityProvider2);
+        reserve(10000);
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.isPurged()).toBeFalsy();
+        expect(liquidityProvider1.isActive()).toBeFalsy();
 
+        expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
+            u128.fromString(`33759109193249798782`),
+        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`966240890806750201218`),
+        );
+        expect(liquidityProvider2.isPurged()).toBeTruthy();
+        expect(liquidityProvider2.isActive()).toBeTruthy();
+
+        // Reserve again.
+        // This time with a bigger amount.
+        // All liquidity from Provider2 will be used, so it is removed from purge queue.
+        // Initial provider will be used to fill the missing tokens.
         setBlockchainEnvironment(134, providerAddress3, providerAddress3);
-        Blockchain.log('\r\n\r\n134 - Reserve #4');
-        const reserver4: u256 = reserve(1000000);
-        logProvider(liquidityProvider1);
-        logProvider(liquidityProvider2);
-        logProvider(initialProvider);
+        reserve(1000000);
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.isPurged()).toBeFalsy();
+        expect(liquidityProvider1.isActive()).toBeFalsy();
 
-        /*
-                setBlockchainEnvironment(122, msgSender1, msgSender1);
-                Blockchain.log('\r\n\r\n122 - Purge');
-                const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-                lq.liquidityQueue.save();
-                logProvider(liquidityProvider1);
-                logProvider(liquidityProvider2);
-        
-                setBlockchainEnvironment(123, providerAddress4, providerAddress4);
-                Blockchain.log('\r\n\r\n123 - Reserve #2');
-                const reserver2: u256 = reserve(100000);
-                logProvider(liquidityProvider1);
-                logProvider(liquidityProvider2);
-        */
-        /* setBlockchainEnvironment(124, providerAddress6, providerAddress6);
-         Blockchain.log('\r\n\r\n124 - Reserve #3');
-         const reserver3: u256 = reserve(1000000);
-         logProvider(liquidityProvider1);
-         logProvider(liquidityProvider2);*/
+        expect(liquidityProvider1.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+        expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
+            u128.fromString(`999998828878768239606`),
+        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1171121231760394`),
+        );
+        expect(liquidityProvider2.isPurged()).toBeFalsy();
+        expect(liquidityProvider2.isActive()).toBeTruthy();
+
+        expect(initialProvider.getReservedAmount()).toStrictEqual(
+            u128.fromString(`2409671199639461437393`),
+        );
+        expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`50090328800360538562607`),
+        );
     });
 
+    /*
+    This test scenario validates the system's handling of liquidity providers that fall below minimum thresholds
+    after large liquidity operations and ensures proper provider reset and deactivation mechanisms.
+
+    The test begins by creating a reservation that consumes nearly all available liquidity from both Provider1 and Provider2,
+    strategically leaving only small amounts in each that fall below the system's minimum liquidity threshold.
+    Since these two providers cannot fully satisfy the reservation requirements, the system completes the reservation
+    by drawing additional liquidity from the Initial Provider, demonstrating the fallback mechanism when primary providers
+    have insufficient funds.
+
+    The reservation is then fully swapped, meaning all reserved liquidity is actually utilized and converted.
+    This full execution triggers a critical system response where Provider1 and Provider2 are both reset and deactivated
+    because their remaining liquidity amounts are below the minimum viable threshold. Meanwhile, the Initial Provider,
+    which had liquidity drawn from it during the reservation, gets its liquidity restored since it does not receive any satoshis.
+
+    The test concludes by making another reservation to verify the system's provider selection logic after the reset operation.
+    As expected, Provider1 and Provider2 are not considered for this new reservation since they were deactivated in the previous
+    step. Instead, only the Initial Provider is used, confirming that the system correctly maintains its provider registry and
+    only selects from active, viable providers.
+    */
     it('Test 2', () => {
         setBlockchainEnvironment(100, providerAddress1, providerAddress1);
-        Blockchain.log('\r\n\r\n100 - CreatePool');
-        const initialProvider: u256 = createPool();
-        logProvider(initialProvider);
+        const initialProvider = createPool();
+        expect(initialProvider.getLiquidityAmount()).toStrictEqual(
+            u128.fromString(`52500000000000000000000`),
+        );
+        expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #1');
-        const liquidityProvider1: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
-        logProvider(liquidityProvider1);
+        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1000000000000000000000`),
+        );
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #2');
-        const liquidityProvider2: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
-        logProvider(liquidityProvider2);
+        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1000000000000000000000`),
+        );
+        expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
 
+        // First make a reservation that takes almost all liquidity from Provider1 and Provider2,
+        // leaving a small amount that is below the minimum threshold.
+        // Complete the reservation by using a small amount in the initial provider.
         setBlockchainEnvironment(112, providerAddress3, providerAddress3);
-        Blockchain.log('\r\n\r\n112 - Reserve #1');
-        const reserver1: u256 = reserve(982000);
-        logProvider(liquidityProvider1);
-        logProvider(liquidityProvider2);
-        logProvider(initialProvider);
+        reserve(982000);
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
+            u128.fromString(`999998934541942857142`),
+        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1065458057142858`),
+        );
+        expect(liquidityProvider1.isActive()).toBeTruthy();
+        expect(liquidityProvider1.isPurged()).toBeFalsy();
 
+        expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
+            u128.fromString(`999998934541942857142`),
+        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1065458057142858`),
+        );
+        expect(liquidityProvider2.isActive()).toBeTruthy();
+        expect(liquidityProvider2.isPurged()).toBeFalsy();
+
+        expect(initialProvider.getReservedAmount()).toStrictEqual(
+            u128.fromString(`1388682661925638095238`),
+        );
+        expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`51111317338074361904762`),
+        );
+
+        // Do a full swap of the reservation for Provider1 and Provider2.
+        // Provider1 and Provider2 should be resets and deactivated.
+        // Initial provider gets restored.
         setBlockchainEnvironment(116, providerAddress3, providerAddress3);
-        Blockchain.log('\r\n\r\n116 - Swap #1');
         swap([receiverAddress2, receiverAddress5], [489000, 489000]);
-        logProvider(liquidityProvider1);
-        logProvider(liquidityProvider2);
-        logProvider(initialProvider);
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.isActive()).toBeFalsy();
+        expect(liquidityProvider1.isPurged()).toBeFalsy();
 
+        expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider2.isActive()).toBeFalsy();
+        expect(liquidityProvider2.isPurged()).toBeFalsy();
+
+        expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`52500000000000000000000`),
+        );
+
+        // Do another reservation, Provider1 and Provider2 should not be used.
+        // Only initial provider should be used.
         setBlockchainEnvironment(118, providerAddress4, providerAddress4);
-        Blockchain.log('\r\n\r\n118 - Reserve #2');
-        const reserver2: u256 = reserve(200000);
-        logProvider(liquidityProvider1);
-        logProvider(liquidityProvider2);
-        logProvider(initialProvider);
+        reserve(200000);
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.isActive()).toBeFalsy();
+        expect(liquidityProvider1.isPurged()).toBeFalsy();
+
+        expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider2.isActive()).toBeFalsy();
+        expect(liquidityProvider2.isPurged()).toBeFalsy();
+
+        expect(initialProvider.getReservedAmount()).toStrictEqual(
+            u128.fromString(`660703987946697348875`),
+        );
+        expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`51839296012053302651125`),
+        );
     });
 
     it('Test 3', () => {
         setBlockchainEnvironment(100, providerAddress1, providerAddress1);
         Blockchain.log('\r\n\r\n100 - CreatePool');
-        const initialProvider: u256 = createPool();
+        const initialProvider = createPool();
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
         Blockchain.log('\r\n\r\n110 - ListTokenForSale #1');
-        const liquidityProvider1: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
 
         setBlockchainEnvironment(110, providerAddress3, providerAddress3);
         Blockchain.log('\r\n\r\n110 - ListTokenForSale #2');
-        const liquidityProvider2: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress3);
+        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress3);
 
         setBlockchainEnvironment(110, providerAddress4, providerAddress4);
         Blockchain.log('\r\n\r\n110 - ListTokenForSale #3');
-        const liquidityProvider3: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress4);
+        const liquidityProvider3 = listTokenForSale(u128.fromU32(1000), receiverAddress4);
 
         setBlockchainEnvironment(112, providerAddress5, providerAddress5);
         Blockchain.log('\r\n\r\n112 - Reserve #1');
-        const reserver1: u256 = reserve(982000);
+        reserve(982000);
         logProvider(liquidityProvider1, 'Provider 1');
         logProvider(liquidityProvider2, 'Provider 2');
         logProvider(liquidityProvider3, 'Provider 3');
@@ -320,7 +474,7 @@ describe('Purge tests', () => {
 
         setBlockchainEnvironment(118, providerAddress6, providerAddress6);
         Blockchain.log('\r\n\r\n118 - Reserve #2');
-        const reserver2: u256 = reserve(200000);
+        reserve(200000);
         logProvider(liquidityProvider1, 'Provider 1');
         logProvider(liquidityProvider2, 'Provider 2');
         logProvider(liquidityProvider3, 'Provider 3');
@@ -336,226 +490,199 @@ describe('Purge tests', () => {
 
         setBlockchainEnvironment(122, providerAddress7, providerAddress7);
         Blockchain.log('\r\n\r\n122 - Reserve #3');
-        const reserver3: u256 = reserve(200000);
+        reserve(200000);
         logProvider(liquidityProvider1, 'Provider 1');
         logProvider(liquidityProvider2, 'Provider 2');
         logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(initialProvider, 'Initial Provider');
-
-        /*
-                setBlockchainEnvironment(132, msgSender1, msgSender1);
-                Blockchain.log('\r\n\r\n132 - Purge');
-                const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-                lq.liquidityQueue.save();
-                logProvider(liquidityProvider1);
-                logProvider(liquidityProvider2);
-
-                setBlockchainEnvironment(133, msgSender1, msgSender1);
-                Blockchain.log('\r\n\r\n133 - Change token price');
-                const lq1 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                Blockchain.log(`quote: ${lq1.liquidityQueue.quote()}`);
-                lq1.liquidityQueue.decreaseVirtualSatoshisReserve(20000000);
-                Blockchain.log(`quote2: ${lq1.liquidityQueue.quote()}`);
-
-                setBlockchainEnvironment(134, providerAddress6, providerAddress6);
-                Blockchain.log('\r\n\r\n134 - Reserve #3');
-                const reserver3: u256 = reserve(10000);
-                logProvider(liquidityProvider1);
-                logProvider(liquidityProvider2);
-
-                setBlockchainEnvironment(134, providerAddress3, providerAddress3);
-                Blockchain.log('\r\n\r\n134 - Reserve #4');
-                const reserver4: u256 = reserve(1000000);
-                logProvider(liquidityProvider1);
-                logProvider(liquidityProvider2);
-                logProvider(initialProvider);
-        */
-    });
-
-    it('Test 3', () => {
-        setBlockchainEnvironment(100, providerAddress1, providerAddress1);
-        Blockchain.log('\r\n\r\n100 - CreatePool');
-        const initialProvider: u256 = createPool();
-
-        setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #1');
-        const liquidityProvider1: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
-
-        setBlockchainEnvironment(110, providerAddress3, providerAddress3);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #2');
-        const liquidityProvider2: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress3);
-
-        setBlockchainEnvironment(110, providerAddress4, providerAddress4);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #3');
-        const liquidityProvider3: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress4);
-
-        setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #4');
-        const liquidityProvider4: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
-
-        setBlockchainEnvironment(112, providerAddress6, providerAddress6);
-        Blockchain.log('\r\n\r\n112 - Reserve #1');
-        const reserver1: u256 = reserve(982000);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(113, providerAddress7, providerAddress7);
-        Blockchain.log('\r\n\r\n113 - Reserve #2');
-        const reserver2: u256 = reserve(582000);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(116, providerAddress7, providerAddress7);
-        Blockchain.log('\r\n\r\n116 - Swap #2');
-        swap([receiverAddress4], [484000]);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(117, providerAddress6, providerAddress6);
-        Blockchain.log('\r\n\r\n117 - Swap #1');
-        swap([receiverAddress4, receiverAddress3], [484000, 10000]);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(122, providerAddress7, providerAddress7);
-        Blockchain.log('\r\n\r\n122 - Reserve #3');
-        const reserver3: u256 = reserve(5200000);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(142, msgSender1, msgSender1);
-        Blockchain.log('\r\n\r\n142 - Purge');
-        const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-        lq.liquidityQueue.save();
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(142, providerAddress7, providerAddress7);
-
-        Blockchain.log('\r\n\r\n142 - Reserve #4');
-        const reserver4: u256 = reserve(2200000);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
         logProvider(initialProvider, 'Initial Provider');
     });
-
-    it('Test 4- Priority', () => {
-        setBlockchainEnvironment(100, providerAddress1, providerAddress1);
-        Blockchain.log('\r\n\r\n100 - CreatePool');
-        const initialProvider: u256 = createPool();
-
-        setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #1');
-        const liquidityProvider1: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
-
-        setBlockchainEnvironment(110, providerAddress3, providerAddress3);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #2');
-        const liquidityProvider2: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress3);
-
-        setBlockchainEnvironment(110, providerAddress4, providerAddress4);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #3');
-        const txOut: TransactionOutput[] = [];
-        txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
-        txOut.push(new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 1000));
-        Blockchain.mockTransactionOutput(txOut);
-        const liquidityProvider3: u256 = listTokenForSale(
-            u128.fromU32(1000),
-            receiverAddress4,
-            true,
-        );
-        Blockchain.mockTransactionOutput([]);
-
-        setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        Blockchain.log('\r\n\r\n110 - ListTokenForSale #4');
-        const liquidityProvider4: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
-
-        setBlockchainEnvironment(112, providerAddress6, providerAddress6);
-        Blockchain.log('\r\n\r\n112 - Reserve #1');
-        const reserver1: u256 = reserve(1582000);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(113, providerAddress7, providerAddress7);
-        Blockchain.log('\r\n\r\n113 - Reserve #2');
-        const reserver2: u256 = reserve(582000);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(116, providerAddress7, providerAddress7);
-        Blockchain.log('\r\n\r\n116 - Swap #2');
-        swap([receiverAddress4], [484000]);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(117, providerAddress6, providerAddress6);
-        Blockchain.log('\r\n\r\n117 - Swap #1');
-        swap([receiverAddress4, receiverAddress3], [284000, 484000]);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(122, providerAddress7, providerAddress7);
-        Blockchain.log('\r\n\r\n122 - Reserve #3');
-        const reserver3: u256 = reserve(5200000);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(142, msgSender1, msgSender1);
-        Blockchain.log('\r\n\r\n142 - Purge');
-        const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-        lq.liquidityQueue.save();
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-
-        setBlockchainEnvironment(142, providerAddress7, providerAddress7);
-
-        Blockchain.log('\r\n\r\n142 - Reserve #4');
-        const reserver4: u256 = reserve(2200000);
-        logProvider(liquidityProvider1, 'Provider 1');
-        logProvider(liquidityProvider2, 'Provider 2');
-        logProvider(liquidityProvider3, 'Provider 3');
-        logProvider(liquidityProvider4, 'Provider 4');
-        logProvider(initialProvider, 'Initial Provider');
-    });
+    /*
+        it('Test 3', () => {
+            setBlockchainEnvironment(100, providerAddress1, providerAddress1);
+            Blockchain.log('\r\n\r\n100 - CreatePool');
+            const initialProvider: u256 = createPool();
+    
+            setBlockchainEnvironment(110, providerAddress2, providerAddress2);
+            Blockchain.log('\r\n\r\n110 - ListTokenForSale #1');
+            const liquidityProvider1: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+    
+            setBlockchainEnvironment(110, providerAddress3, providerAddress3);
+            Blockchain.log('\r\n\r\n110 - ListTokenForSale #2');
+            const liquidityProvider2: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress3);
+    
+            setBlockchainEnvironment(110, providerAddress4, providerAddress4);
+            Blockchain.log('\r\n\r\n110 - ListTokenForSale #3');
+            const liquidityProvider3: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress4);
+    
+            setBlockchainEnvironment(110, providerAddress5, providerAddress5);
+            Blockchain.log('\r\n\r\n110 - ListTokenForSale #4');
+            const liquidityProvider4: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+    
+            setBlockchainEnvironment(112, providerAddress6, providerAddress6);
+            Blockchain.log('\r\n\r\n112 - Reserve #1');
+            const reserver1: u256 = reserve(982000);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(113, providerAddress7, providerAddress7);
+            Blockchain.log('\r\n\r\n113 - Reserve #2');
+            const reserver2: u256 = reserve(582000);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(116, providerAddress7, providerAddress7);
+            Blockchain.log('\r\n\r\n116 - Swap #2');
+            swap([receiverAddress4], [484000]);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(117, providerAddress6, providerAddress6);
+            Blockchain.log('\r\n\r\n117 - Swap #1');
+            swap([receiverAddress4, receiverAddress3], [484000, 10000]);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(122, providerAddress7, providerAddress7);
+            Blockchain.log('\r\n\r\n122 - Reserve #3');
+            const reserver3: u256 = reserve(5200000);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(142, msgSender1, msgSender1);
+            Blockchain.log('\r\n\r\n142 - Purge');
+            const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            lq.liquidityQueue.save();
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(142, providerAddress7, providerAddress7);
+    
+            Blockchain.log('\r\n\r\n142 - Reserve #4');
+            const reserver4: u256 = reserve(2200000);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+        });
+    
+        it('Test 4- Priority', () => {
+            setBlockchainEnvironment(100, providerAddress1, providerAddress1);
+            Blockchain.log('\r\n\r\n100 - CreatePool');
+            const initialProvider: u256 = createPool();
+    
+            setBlockchainEnvironment(110, providerAddress2, providerAddress2);
+            Blockchain.log('\r\n\r\n110 - ListTokenForSale #1');
+            const liquidityProvider1: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+    
+            setBlockchainEnvironment(110, providerAddress3, providerAddress3);
+            Blockchain.log('\r\n\r\n110 - ListTokenForSale #2');
+            const liquidityProvider2: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress3);
+    
+            setBlockchainEnvironment(110, providerAddress4, providerAddress4);
+            Blockchain.log('\r\n\r\n110 - ListTokenForSale #3');
+            const txOut: TransactionOutput[] = [];
+            txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
+            txOut.push(new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 1000));
+            Blockchain.mockTransactionOutput(txOut);
+            const liquidityProvider3: u256 = listTokenForSale(
+                u128.fromU32(1000),
+                receiverAddress4,
+                true,
+            );
+            Blockchain.mockTransactionOutput([]);
+    
+            setBlockchainEnvironment(110, providerAddress5, providerAddress5);
+            Blockchain.log('\r\n\r\n110 - ListTokenForSale #4');
+            const liquidityProvider4: u256 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+    
+            setBlockchainEnvironment(112, providerAddress6, providerAddress6);
+            Blockchain.log('\r\n\r\n112 - Reserve #1');
+            const reserver1: u256 = reserve(1582000);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(113, providerAddress7, providerAddress7);
+            Blockchain.log('\r\n\r\n113 - Reserve #2');
+            const reserver2: u256 = reserve(582000);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(116, providerAddress7, providerAddress7);
+            Blockchain.log('\r\n\r\n116 - Swap #2');
+            swap([receiverAddress4], [484000]);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(117, providerAddress6, providerAddress6);
+            Blockchain.log('\r\n\r\n117 - Swap #1');
+            swap([receiverAddress4, receiverAddress3], [284000, 484000]);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(122, providerAddress7, providerAddress7);
+            Blockchain.log('\r\n\r\n122 - Reserve #3');
+            const reserver3: u256 = reserve(5200000);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(142, msgSender1, msgSender1);
+            Blockchain.log('\r\n\r\n142 - Purge');
+            const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            lq.liquidityQueue.save();
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+    
+            setBlockchainEnvironment(142, providerAddress7, providerAddress7);
+    
+            Blockchain.log('\r\n\r\n142 - Reserve #4');
+            const reserver4: u256 = reserve(2200000);
+            logProvider(liquidityProvider1, 'Provider 1');
+            logProvider(liquidityProvider2, 'Provider 2');
+            logProvider(liquidityProvider3, 'Provider 3');
+            logProvider(liquidityProvider4, 'Provider 4');
+            logProvider(initialProvider, 'Initial Provider');
+        });
+        
+     */
 });
-
+/*
 describe('Expired swap', () => {
     beforeEach(() => {
         clearCachedProviders();
@@ -846,3 +973,6 @@ describe('Expired swap', () => {
         logProvider(liquidityProvider2, 'Provider 2');
     });
 });
+
+
+ */

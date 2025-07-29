@@ -925,5 +925,207 @@ describe('TradeManager tests', () => {
                 SafeMath.sub128(providerLiquidity, u128.fromU64(1000000000)),
             );
         });
+
+        it('should restore provider liquidity when reservation is not purged and mark it as not purged', () => {
+            setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
+
+            const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = getProvider(initialProviderId);
+
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
+            initialProvider.activate();
+            initialProvider.clearPriority();
+            initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+            initialProvider.save();
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.liquidityQueue.initializeInitialLiquidity(
+                u256.fromU32(1000),
+                initialProvider.getId(),
+                u128.fromU64(3000000000),
+                100,
+            );
+            queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
+            queue.liquidityQueue.setBlockQuote();
+            queue.liquidityQueue.save();
+
+            setBlockchainEnvironment(1001, providerAddress2, providerAddress2);
+
+            const providerLiquidity = u128.fromString('1000000000000000000000');
+
+            const provider: Provider = createProvider(
+                providerAddress2,
+                tokenAddress1,
+                false,
+                false,
+                false,
+                'wedwedwdwdw',
+                u128.Zero,
+                providerLiquidity,
+                providerLiquidity,
+            );
+
+            provider.save();
+
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue2.liquidityQueue.increaseTotalReserve(providerLiquidity.toU256());
+            queue2.liquidityQueue.addToNormalQueue(provider);
+            queue2.liquidityQueue.setBlockQuote();
+            queue2.liquidityQueue.save();
+
+            setBlockchainEnvironment(1003, ownerAddress1, ownerAddress1);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(
+                    provider.getQueueIndex(),
+                    providerLiquidity,
+                    ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
+                ),
+            );
+
+            queue3.liquidityQueue.increaseTotalReserved(providerLiquidity.toU256());
+            queue3.liquidityQueue.addReservation(reservation);
+            queue3.liquidityQueue.setBlockQuote();
+            queue3.liquidityQueue.save();
+
+            setBlockchainEnvironment(1024, ownerAddress1, ownerAddress1);
+            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
+            const txOut: TransactionOutput[] = [];
+
+            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 1000));
+
+            Blockchain.mockTransactionOutput(txOut);
+            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(provider.getReservedAmount()).toStrictEqual(provider.getReservedAmount());
+            expect(reservation2.getPurged()).toBeFalsy();
+
+            const result = queue4.tradeManager.executeTradeExpired(
+                reservation2,
+                u256.fromString('100000000000000'),
+            );
+
+            expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
+            expect(provider.getLiquidityAmount()).toStrictEqual(
+                SafeMath.sub128(providerLiquidity, u128.fromU64(1000000000)),
+            );
+            expect(result.totalTokensReserved).toStrictEqual(u256.Zero);
+            expect(result.totalTokensPurchased).toStrictEqual(u256.fromU64(1000000000));
+            expect(result.totalSatoshisSpent).toStrictEqual(1000);
+
+            expect(queue4.liquidityQueue.totalTokensSellActivated).toStrictEqual(
+                SafeMath.div128(providerLiquidity, u128.fromU32(2)).toU256(),
+            );
+            expect(reservation2.getPurged()).toBeFalsy();
+        });
+
+        it('should not restore provider liquidity when reservation is purged and mark it as not purged', () => {
+            setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
+
+            const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = getProvider(initialProviderId);
+
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
+            initialProvider.activate();
+            initialProvider.clearPriority();
+            initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+            initialProvider.save();
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.liquidityQueue.initializeInitialLiquidity(
+                u256.fromString(`100000000`),
+                initialProvider.getId(),
+                u128.fromU64(3000000000),
+                100,
+            );
+            queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
+            queue.liquidityQueue.setBlockQuote();
+            queue.liquidityQueue.save();
+
+            setBlockchainEnvironment(1001, providerAddress2, providerAddress2);
+
+            const providerLiquidity = u128.fromString('1000000000000000000000');
+
+            const provider: Provider = createProvider(
+                providerAddress2,
+                tokenAddress1,
+                false,
+                false,
+                false,
+                'wedwedwdwdw',
+                u128.Zero,
+                providerLiquidity,
+                providerLiquidity,
+            );
+
+            provider.save();
+
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue2.liquidityQueue.increaseTotalReserve(providerLiquidity.toU256());
+            queue2.liquidityQueue.addToNormalQueue(provider);
+            queue2.liquidityQueue.setBlockQuote();
+            queue2.liquidityQueue.save();
+
+            setBlockchainEnvironment(1003, ownerAddress1, ownerAddress1);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(
+                    provider.getQueueIndex(),
+                    providerLiquidity,
+                    ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
+                ),
+            );
+
+            queue3.liquidityQueue.increaseTotalReserved(providerLiquidity.toU256());
+            queue3.liquidityQueue.addReservation(reservation);
+            queue3.liquidityQueue.setBlockQuote();
+            queue3.liquidityQueue.save();
+
+            setBlockchainEnvironment(1023, ownerAddress1, ownerAddress1);
+            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            queue4.liquidityQueue.save();
+
+            setBlockchainEnvironment(1024, ownerAddress1, ownerAddress1);
+            const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
+            const txOut: TransactionOutput[] = [];
+
+            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 1000));
+
+            Blockchain.mockTransactionOutput(txOut);
+            expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
+            expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(reservation2.getPurged()).toBeTruthy();
+
+            const result = queue5.tradeManager.executeTradeExpired(
+                reservation2,
+                u256.fromString('100000000000000'),
+            );
+
+            expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(result.totalTokensReserved).toStrictEqual(u256.Zero);
+            expect(result.totalTokensPurchased).toStrictEqual(u256.fromU64(1000000000));
+            expect(result.totalSatoshisSpent).toStrictEqual(1000);
+
+            expect(queue5.liquidityQueue.totalTokensSellActivated).toStrictEqual(
+                SafeMath.div128(providerLiquidity, u128.fromU32(2)).toU256(),
+            );
+
+            expect(provider.getLiquidityAmount()).toStrictEqual(
+                SafeMath.sub128(providerLiquidity, u128.fromU64(1000000000)),
+            );
+            expect(reservation2.getPurged()).toBeFalsy();
+        });
     });
 });

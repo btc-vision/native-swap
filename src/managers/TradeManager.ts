@@ -7,10 +7,15 @@ import {
     CappedTokensResult,
     satoshisToTokens128,
     tokensToSatoshis,
+    tokensToSatoshis128,
 } from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
-import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    INDEX_NOT_SET_VALUE,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
+} from '../constants/Contract';
 import { ActivateProviderEvent } from '../events/ActivateProviderEvent';
 import { ITradeManager } from './interfaces/ITradeManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
@@ -252,9 +257,13 @@ export class TradeManager implements ITradeManager {
                 this.activateProvider(provider);
             }
 
-            // If partial fill, provider liquidity must be available again
+            // If partial fill, provider liquidity must be available again.
+            // If not purged, check if the provider needs to be reset.
+            // If purged, the reset will be done by the purge queue later.
             if (u128.lt(actualTokens, requestedTokens)) {
                 this.addProviderToPurgeQueue(provider);
+            } else if (!provider.isPurged()) {
+                this.resetProviderOnDust(provider);
             }
 
             this.increaseTokenReserved(requestedTokens);
@@ -309,6 +318,15 @@ export class TradeManager implements ITradeManager {
 
     private deactivateReservation(reservation: Reservation): void {
         this.reservationManager.deactivateReservation(reservation);
+    }
+
+    private resetProviderOnDust(provider: Provider): void {
+        const satoshis = tokensToSatoshis128(provider.getLiquidityAmount(), this.quoteToUse);
+
+        if (satoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
+            this.providerManager.resetProvider(provider, false, false);
+            Blockchain.log(`reset`);
+        }
     }
 
     private resetTotals(): void {

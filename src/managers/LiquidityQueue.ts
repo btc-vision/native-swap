@@ -27,9 +27,9 @@ import { IProviderManager } from './interfaces/IProviderManager';
 import { IReservationManager } from './interfaces/IReservationManager';
 import { ILiquidityQueue } from './interfaces/ILiquidityQueue';
 import { IDynamicFee } from './interfaces/IDynamicFee';
+import { preciseLog } from '../utils/MathUtils';
 
 const ENABLE_FEES: bool = true;
-const LN2_SCALED = u256.fromU64(693147); // ln(2)*1e6
 const SCALE = u256.fromU64(1_000_000);
 
 export class LiquidityQueue implements ILiquidityQueue {
@@ -182,46 +182,6 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     public set virtualTokenReserve(value: u256) {
         this.liquidityQueueReserve.virtualTokenReserve = value;
-    }
-
-    public preciseLog(x: u256): u256 {
-        if (x.isZero() || u256.eq(x, u256.One)) {
-            return u256.Zero;
-        }
-
-        const bitLen = SafeMath.bitLength256(x);
-        if (bitLen <= 1) return u256.Zero;
-
-        const k: u32 = bitLen - 1;
-
-        // Base: k * ln(2)
-        const base = SafeMath.mul(u256.fromU32(k), LN2_SCALED);
-
-        // Normalize x to range [1, 2) by dividing by 2^k
-        const pow2k = SafeMath.shl(u256.One, <i32>k);
-
-        // For better precision when x is close to 1 (common for small queue impacts)
-        if (k == 0) {
-            // x is already in [1, 2), compute ln(x) directly using Taylor series
-            // r = x - 1
-            const r = SafeMath.sub(x, u256.One);
-            if (r.isZero()) return u256.Zero;
-
-            // Scale r for precision
-            const rScaled = SafeMath.mul(r, SCALE);
-
-            // Use Taylor series for ln(1+r)
-            return this.calculateTaylorSeries(rScaled);
-        }
-
-        // r = x/2^k - 1 (will be in range [0, 1))
-        const xScaled = SafeMath.mul(x, SCALE);
-        const rScaled = SafeMath.sub(SafeMath.div(xScaled, pow2k), SCALE);
-
-        // Calculate ln(1+r) using Taylor series
-        const taylor = this.calculateTaylorSeries(rScaled);
-
-        return SafeMath.add(base, taylor);
     }
 
     public accruePenalty(penalty: u128, half: u128, stakingAddress: Address): void {
@@ -440,10 +400,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         // Add impact to token reserves ONLY for price calculation
         const effectiveT = SafeMath.add(TOKEN, queueImpact);
 
-        // OLD
-        // const scaled = SafeMath.mul(T, QUOTE_SCALE);
-        // return SafeMath.div(scaled, u256.fromU64(this.virtualSatoshisReserve));
-
         const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
         return SafeMath.div(scaled, u256.fromU64(BTC));
     }
@@ -453,7 +409,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public removeFromPriorityQueue(provider: Provider): void {
-        this.providerManager.removeFromNormalQueue(provider);
+        this.providerManager.removeFromPriorityQueue(provider);
     }
 
     public removeFromPurgeQueue(provider: Provider): void {
@@ -541,33 +497,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.lastVirtualUpdateBlock = currentBlock;
     }
 
-    // Helper function for Taylor series calculation
-    private calculateTaylorSeries(rScaled: u256): u256 {
-        // Taylor series: ln(1+r) ≈ r - r²/2 + r³/3 - r⁴/4 + r⁵/5
-        // Using 5 terms for better precision
-
-        // r² (scaled down once)
-        const r2 = SafeMath.div(SafeMath.mul(rScaled, rScaled), SCALE);
-
-        // r³ (scaled down twice)
-        const r3 = SafeMath.div(SafeMath.mul(r2, rScaled), SCALE);
-
-        // r⁴ (scaled down three times)
-        const r4 = SafeMath.div(SafeMath.mul(r3, rScaled), SCALE);
-
-        // r⁵ (scaled down four times)
-        const r5 = SafeMath.div(SafeMath.mul(r4, rScaled), SCALE);
-
-        // ln(1+r) ≈ r - r²/2 + r³/3 - r⁴/4 + r⁵/5
-        let taylor = rScaled;
-        taylor = SafeMath.sub(taylor, SafeMath.div(r2, u256.fromU32(2)));
-        taylor = SafeMath.add(taylor, SafeMath.div(r3, u256.fromU32(3)));
-        taylor = SafeMath.sub(taylor, SafeMath.div(r4, u256.fromU32(4)));
-        taylor = SafeMath.add(taylor, SafeMath.div(r5, u256.fromU32(5)));
-
-        return taylor;
-    }
-
     private calculateQueueImpact(): u256 {
         const queuedTokens = this.liquidity;
 
@@ -579,7 +508,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         const ratio = SafeMath.add(u256.One, SafeMath.div(queuedTokens, this.virtualTokenReserve));
 
         // Use precise logarithm calculation
-        const lnValue = this.preciseLog(ratio);
+        const lnValue = preciseLog(ratio, SCALE);
 
         // Impact = T * ln(1 + Q/T) / 1e6 (since log is scaled)
         return SafeMath.div(SafeMath.mul(this.virtualTokenReserve, lnValue), u256.fromU64(1000000));

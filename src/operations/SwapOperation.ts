@@ -103,6 +103,12 @@ export class SwapOperation extends BaseOperation {
         }
     }
 
+    private ensureTokensPurchasedForExpiredReservation(totalTokensPurchased: u256): void {
+        if (totalTokensPurchased === u256.Zero) {
+            throw new Revert('NATIVE_SWAP: No tokens purchased for expired reservation.');
+        }
+    }
+
     private executeExpired(reservation: Reservation): CompletedTrade {
         this.ensureReservationNotSwapped(reservation);
         this.ensureReservationHasProvider(reservation);
@@ -116,9 +122,7 @@ export class SwapOperation extends BaseOperation {
             this.liquidityQueue.quote(),
         );
 
-        if (tradeResult.totalTokensPurchased === u256.Zero) {
-            throw new Revert('NATIVE_SWAP: Not able to fulfill expired reservation.');
-        }
+        this.ensureTokensPurchasedForExpiredReservation(tradeResult.totalTokensPurchased);
 
         reservation.save();
 
