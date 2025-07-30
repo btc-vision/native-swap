@@ -2,6 +2,7 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { SafeMath } from '@btc-vision/btc-runtime/runtime';
 
 const LN2_SCALED = u256.fromU64(693147); // ln(2)*1e6
+const SCALE = u256.fromU64(1_000_000);
 
 export function min64(a: u64, b: u64): u64 {
     return a < b ? a : b;
@@ -11,17 +12,16 @@ export function min128(a: u128, b: u128): u128 {
     return u128.lt(a, b) ? a : b;
 }
 
-export function preciseLog(x: u256, scale: u256): u256 {
+export function preciseLog(x: u256): u256 {
     if (x.isZero() || u256.eq(x, u256.One)) {
         return u256.Zero;
     }
 
     const bitLen = SafeMath.bitLength256(x);
-    /*!!! pas besoin. deja valider en haut
+    // Safety check. This condition should never be true
     if (bitLen <= 1) {
         return u256.Zero;
     }
-     */
 
     const k: u32 = bitLen - 1;
 
@@ -31,27 +31,12 @@ export function preciseLog(x: u256, scale: u256): u256 {
     // Normalize x to range [1, 2) by dividing by 2^k
     const pow2k = SafeMath.shl(u256.One, <i32>k);
 
-    // !!!! pas besoin k va jamais etre a 0
-    // For better precision when x is close to 1 (common for small queue impacts)
-    /*if (k === 0) {
-        // x is already in [1, 2), compute ln(x) directly using Taylor series
-        // r = x - 1
-        const r = SafeMath.sub(x, u256.One);
-        if (r.isZero()) return u256.Zero;
-
-        // Scale r for precision
-        const rScaled = SafeMath.mul(r, scale);
-
-        // Use Taylor series for ln(1+r)
-        return calculateTaylorSeries(rScaled, scale);
-    }*/
-
     // r = x/2^k - 1 (will be in range [0, 1))
-    const xScaled = SafeMath.mul(x, scale);
-    const rScaled = SafeMath.sub(SafeMath.div(xScaled, pow2k), scale);
+    const xScaled = SafeMath.mul(x, SCALE);
+    const rScaled = SafeMath.sub(SafeMath.div(xScaled, pow2k), SCALE);
 
     // Calculate ln(1+r) using Taylor series
-    const taylor = calculateTaylorSeries(rScaled, scale);
+    const taylor = calculateTaylorSeries(rScaled, SCALE);
 
     return SafeMath.add(base, taylor);
 }

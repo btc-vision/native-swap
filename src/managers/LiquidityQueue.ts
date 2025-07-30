@@ -30,7 +30,6 @@ import { IDynamicFee } from './interfaces/IDynamicFee';
 import { preciseLog } from '../utils/MathUtils';
 
 const ENABLE_FEES: bool = true;
-const SCALE = u256.fromU64(1_000_000);
 
 export class LiquidityQueue implements ILiquidityQueue {
     public readonly token: Address;
@@ -508,7 +507,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         const ratio = SafeMath.add(u256.One, SafeMath.div(queuedTokens, this.virtualTokenReserve));
 
         // Use precise logarithm calculation
-        const lnValue = preciseLog(ratio, SCALE);
+        const lnValue = preciseLog(ratio);
 
         // Impact = T * ln(1 + Q/T) / 1e6 (since log is scaled)
         return SafeMath.div(SafeMath.mul(this.virtualTokenReserve, lnValue), u256.fromU64(1000000));

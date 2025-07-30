@@ -5,16 +5,10 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 const SCALE = u256.fromU64(1_000_000);
 const LN2_SCALED = u256.fromU64(693147);
-const TOL_SMALL = u256.fromU32(2); // ≤ 2 ulp      (≈ 2×10⁻⁶)
-const TOL_LARGE = u256.fromU32(250); // ≤ 2.5×10⁻⁴
+const TOL_SMALL = u256.fromU32(2);
 
 function pow2(k: u32): u256 {
     return SafeMath.shl(u256.One, <i32>k);
-}
-
-function jsLnScaled(x: u64): u256 {
-    const val = Math.log(<f64>x) * 1_000_000.0;
-    return u256.fromU64(<u64>Math.round(val));
 }
 
 describe('MathUtils tests', () => {
@@ -99,31 +93,28 @@ describe('MathUtils tests', () => {
         });
     });
 
-    describe('preciseLog – edge behaviour', () => {
+    describe('MathUtils tests - preciseLog ', () => {
         it('ln(0) == 0 by convention', () => {
-            expect(preciseLog(u256.Zero, SCALE)).toStrictEqual(u256.Zero);
+            expect(preciseLog(u256.Zero)).toStrictEqual(u256.Zero);
         });
 
         it('ln(1) == 0', () => {
-            expect(preciseLog(u256.One, SCALE)).toStrictEqual(u256.Zero);
+            expect(preciseLog(u256.One)).toStrictEqual(u256.Zero);
         });
 
-        it('exact output for powers of two up to 2¹⁶', () => {
+        it('exact output for powers of two up to 2^16', () => {
             for (let k: u32 = 1; k <= 16; k++) {
                 const x = pow2(k); // 2^k
                 const expected = SafeMath.mul(u256.fromU32(k), LN2_SCALED);
-                expect(preciseLog(x, SCALE)).toStrictEqual(
-                    expected,
-                    `failed for 2**${k.toString()}`,
-                );
+                expect(preciseLog(x)).toStrictEqual(expected, `failed for 2**${k.toString()}`);
             }
         });
 
-        it('exact output for a very large power of two (2¹²⁸)', () => {
+        it('exact output for a very large power of two (2^128', () => {
             const k: u32 = 128;
             const x = pow2(k);
             const expected = SafeMath.mul(u256.fromU32(k), LN2_SCALED);
-            expect(preciseLog(x, SCALE)).toStrictEqual(expected);
+            expect(preciseLog(x)).toStrictEqual(expected);
         });
 
         it('monotonicity – random ascending triplet', () => {
@@ -131,9 +122,9 @@ describe('MathUtils tests', () => {
             const b = u256.fromU32(31); // 31
             const c = u256.fromU32(128); // 128
 
-            const lnA = preciseLog(a, SCALE);
-            const lnB = preciseLog(b, SCALE);
-            const lnC = preciseLog(c, SCALE);
+            const lnA = preciseLog(a);
+            const lnB = preciseLog(b);
+            const lnC = preciseLog(c);
 
             expect(lnA < lnB && lnB < lnC).toBeTruthy();
         });
@@ -143,9 +134,9 @@ describe('MathUtils tests', () => {
             const y = u256.fromU32(59);
             const xy = SafeMath.mul(x, y);
 
-            const lnX = preciseLog(x, SCALE);
-            const lnY = preciseLog(y, SCALE);
-            const lnXY = preciseLog(xy, SCALE);
+            const lnX = preciseLog(x);
+            const lnY = preciseLog(y);
+            const lnXY = preciseLog(xy);
 
             // Absolute error
             const delta = SafeMath.sub(
@@ -166,7 +157,7 @@ describe('MathUtils tests', () => {
         });
 
         it('matches ln(1+r) for very small r (1e‑4)', () => {
-            const rScaled = u256.fromU32(100); // r = 1×10⁻⁴
+            const rScaled = u256.fromU32(100); // r = 1×10^-4
 
             const rFloat = <f64>rScaled.toU32() / 1_000_000.0; // 0.0001
             const expF64 = Math.log(1.0 + rFloat); // ln(1+r)
@@ -183,7 +174,7 @@ describe('MathUtils tests', () => {
 
         it('≈ ln(2) when rScaled == SCALE (r = 1)', () => {
             const rScaled = SCALE; // r = 1
-            const expected = u256.fromU32(693_147); // ln(2) × 10⁶ exact reference
+            const expected = u256.fromU32(693_147); // ln(2) × 10^6 exact reference
             const actual = calculateTaylorSeries(rScaled, SCALE);
 
             // allow 15% relative error

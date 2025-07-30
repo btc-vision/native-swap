@@ -365,12 +365,14 @@ export class TradeManager implements ITradeManager {
 
             provider.subtractFromLiquidityAmount(actualTokens);
 
-            this.increaseTokenReserved(u128.Zero);
             this.increaseTotalTokensPurchased(actualTokens256);
             this.increaseSatoshisSpent(actualTokensSatoshis);
             this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
         }
 
+        // Always push the provider to the purge queue.
+        // If provider does not have enough remaining liquidity,
+        // it will be removed from the purge queue when trying to use it.
         this.addProviderToPurgeQueue(provider);
     }
 }
