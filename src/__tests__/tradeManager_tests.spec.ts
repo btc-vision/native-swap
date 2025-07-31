@@ -462,7 +462,7 @@ describe('TradeManager tests', () => {
             Blockchain.mockTransactionOutput(txOut);
 
             queue4.tradeManager.executeTradeNotExpired(reservation2);
-            expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(995000));
+            expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
             expect(queue4.liquidityQueue.totalTokensSellActivated).toStrictEqual(
                 u256.fromU64(497500),
             );
@@ -868,7 +868,7 @@ describe('TradeManager tests', () => {
                 'wedwedwdwdw',
                 u128.Zero,
                 providerLiquidity,
-                u128.fromU64(5000),
+                u128.fromString(`5000000000`),
             );
 
             provider.save();
@@ -886,13 +886,13 @@ describe('TradeManager tests', () => {
             reservation.addProvider(
                 new ReservationProviderData(
                     provider.getQueueIndex(),
-                    u128.fromU32(5000),
+                    u128.fromString(`5000000000`),
                     ProviderTypes.Normal,
                     reservation.getCreationBlock(),
                 ),
             );
 
-            queue3.liquidityQueue.increaseTotalReserved(u256.fromU32(5000));
+            queue3.liquidityQueue.increaseTotalReserved(u256.fromString(`5000000000`));
             queue3.liquidityQueue.addReservation(reservation);
             queue3.liquidityQueue.setBlockQuote();
             queue3.liquidityQueue.save();
@@ -922,7 +922,7 @@ describe('TradeManager tests', () => {
             );
 
             expect(provider.getLiquidityAmount()).toStrictEqual(
-                SafeMath.sub128(providerLiquidity, u128.fromU64(1000000000)),
+                u128.fromString(`999999999999000000000`),
             );
         });
 

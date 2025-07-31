@@ -70,7 +70,11 @@ export class TradeManager implements ITradeManager {
             }
 
             if (satoshisSent !== 0) {
-                this.tryExecuteNormalOrPriorityTrade(provider, satoshisSent);
+                this.tryExecuteNormalOrPriorityTrade(
+                    provider,
+                    satoshisSent,
+                    providerData.providedAmount,
+                );
             } else {
                 this.addProviderToPurgeQueue(provider);
             }
@@ -276,10 +280,15 @@ export class TradeManager implements ITradeManager {
         }
     }
 
-    private getMaximumPossibleTargetTokens(satoshis: u64, providerLiquidity: u128): u128 {
+    private getMaximumPossibleTargetTokens(
+        satoshis: u64,
+        providerAvailableLiquidity: u128,
+        originalTokenAmount: u128,
+    ): u128 {
+        const cappedTokenAmount: u128 = min128(originalTokenAmount, providerAvailableLiquidity);
         const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.quoteToUse);
 
-        return min128(tokenResult.tokens, providerLiquidity);
+        return min128(tokenResult.tokens, cappedTokenAmount);
     }
 
     private getProvider(providerData: ReservationProviderData): Provider {
@@ -325,7 +334,6 @@ export class TradeManager implements ITradeManager {
 
         if (satoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
             this.providerManager.resetProvider(provider, false, false);
-            Blockchain.log(`reset`);
         }
     }
 
@@ -344,13 +352,18 @@ export class TradeManager implements ITradeManager {
         }
     }
 
-    private tryExecuteNormalOrPriorityTrade(provider: Provider, satoshisSent: u64): void {
+    private tryExecuteNormalOrPriorityTrade(
+        provider: Provider,
+        satoshisSent: u64,
+        originalTokenAmount: u128,
+    ): void {
         const actualTokens: u128 = this.getMaximumPossibleTargetTokens(
             satoshisSent,
             provider.getAvailableLiquidityAmount(),
+            originalTokenAmount,
         );
 
-        if (!actualTokens.isZero()) {
+        if (Provider.meetsMinimumReservationAmount(actualTokens, this.quoteToUse)) {
             this.ensureProviderHasEnoughLiquidity(provider, actualTokens);
 
             const actualTokens256: u256 = actualTokens.toU256();
