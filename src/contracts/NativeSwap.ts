@@ -7,7 +7,6 @@ import {
     BytesWriter,
     Calldata,
     encodeSelector,
-    Potential,
     Revert,
     SafeMath,
     Selector,
@@ -40,7 +39,6 @@ import {
     STAKING_CA_POINTER,
     WITHDRAW_MODE_POINTER,
 } from '../constants/StoredPointers';
-import { eqUint } from '@btc-vision/btc-runtime/runtime/generic/MapUint8Array';
 import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
 import {
     AT_LEAST_PROVIDERS_TO_PURGE,
@@ -83,7 +81,7 @@ export class NativeSwap extends ReentrancyGuard {
     private readonly _stakingContractAddress: StoredAddress;
     private readonly _isPaused: StoredBoolean;
     private readonly _withdrawModeActive: StoredBoolean;
-    private _tokenAddress: Potential<Address>;
+    private _tokenAddress: Address;
 
     public constructor() {
         super();
@@ -91,7 +89,7 @@ export class NativeSwap extends ReentrancyGuard {
         this._stakingContractAddress = new StoredAddress(STAKING_CA_POINTER);
         this._isPaused = new StoredBoolean(CONTRACT_PAUSED_POINTER, false);
         this._withdrawModeActive = new StoredBoolean(WITHDRAW_MODE_POINTER, false);
-        this._tokenAddress = null;
+        this._tokenAddress = ZERO_ADDRESS;
     }
 
     private static get DEPLOYER_SELECTOR(): Selector {
@@ -100,7 +98,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     public get stakingContractAddress(): Address {
         const address: Address = this._stakingContractAddress.value;
-        if (eqUint(address, ZERO_ADDRESS)) {
+        if (address.isZero()) {
             return Address.dead();
         }
 
@@ -115,7 +113,7 @@ export class NativeSwap extends ReentrancyGuard {
         FeeManager.save();
         saveAllProviders();
 
-        if (this._tokenAddress !== null) {
+        if (!this._tokenAddress.isZero()) {
             Blockchain.log(`call transferPendingAmountToStakingContract`);
             transferPendingAmountToStakingContract(this._tokenAddress, this.stakingContractAddress);
         } else {
@@ -382,7 +380,7 @@ export class NativeSwap extends ReentrancyGuard {
     private createPool(calldata: Calldata, token: Address): BytesWriter {
         this.ensureNotPaused();
         this.ensureWithdrawModeNotActive();
-        this._tokenAddress = token;
+        this._tokenAddress = token.clone();
 
         const tokenOwner: Address = this.getDeployer(token);
 
@@ -427,7 +425,7 @@ export class NativeSwap extends ReentrancyGuard {
 
         const token: Address = calldata.readAddress();
         const receiver: string = calldata.readStringWithLength();
-        this._tokenAddress = token;
+        this._tokenAddress = token.clone();
 
         this.ensureValidReceiverAddress(receiver);
 
@@ -482,7 +480,7 @@ export class NativeSwap extends ReentrancyGuard {
         const maximumAmountIn: u64 = calldata.readU64();
         const minimumAmountOut: u256 = calldata.readU256();
         const activationDelay: u8 = calldata.readU8();
-        this._tokenAddress = token;
+        this._tokenAddress = token.clone();
 
         this._reserve(token, maximumAmountIn, minimumAmountOut, activationDelay);
 
@@ -529,7 +527,7 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
-        this._tokenAddress = token;
+        this._tokenAddress = token.clone();
 
         this._cancelListing(token);
 
@@ -566,7 +564,7 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureWithdrawModeActive();
 
         const token: Address = calldata.readAddress();
-        this._tokenAddress = token;
+        this._tokenAddress = token.clone();
 
         this._withdrawListing(token);
 
@@ -603,7 +601,7 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
-        this._tokenAddress = token;
+        this._tokenAddress = token.clone();
 
         this._swap(token);
 
