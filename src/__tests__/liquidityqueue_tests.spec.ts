@@ -1,6 +1,10 @@
-import { clearCachedProviders, Provider } from '../models/Provider';
 import {
-    Address,
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+    Provider,
+} from '../models/Provider';
+import {
     Blockchain,
     SafeMath,
     StoredBooleanArray,
@@ -19,6 +23,7 @@ import {
     providerAddress1,
     providerAddress2,
     setBlockchainEnvironment,
+    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -957,10 +962,10 @@ describe('Liquidity queue tests', () => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
-        it('should increase token reserve with penalty, decrease total reserve with half and call safetransfer', () => {
+        it('should increase token reserve with penalty, decrease total reserve with half and add to staking contract', () => {
             setBlockchainEnvironment(1);
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
@@ -976,14 +981,18 @@ describe('Liquidity queue tests', () => {
             queue.increaseTotalReserve(u256.fromU64(10000));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(5000), Address.dead());
+            queue.accruePenalty(
+                u128.fromU64(10000),
+                u128.fromU64(5000),
+                testStackingContractAddress,
+            );
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(5000));
             expect(queue.liquidity).toStrictEqual(u256.Zero);
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`10000`));
         });
 
-        it('should not increase token reserve with penalty penaltyLeft is penaltyLeft is Zero', () => {
+        it('should not increase token reserve with penalty when penaltyLeft is Zero', () => {
             setBlockchainEnvironment(1);
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
@@ -999,11 +1008,15 @@ describe('Liquidity queue tests', () => {
             queue.increaseTotalReserve(u256.fromU64(10000));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(10000), Address.dead());
+            queue.accruePenalty(
+                u128.fromU64(10000),
+                u128.fromU64(10000),
+                testStackingContractAddress,
+            );
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(0));
             expect(queue.liquidity).toStrictEqual(u256.Zero);
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`10000`));
         });
 
         it('should do nothing when penalty is Zero', () => {
@@ -1022,11 +1035,11 @@ describe('Liquidity queue tests', () => {
             queue.increaseTotalReserve(u256.fromU64(10000));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-            queue.accruePenalty(u128.Zero, u128.Zero, Address.dead());
+            queue.accruePenalty(u128.Zero, u128.Zero, testStackingContractAddress);
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(0));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
-            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
         });
 
         it('should revert when penalty is less than half value', () => {
@@ -1046,7 +1059,11 @@ describe('Liquidity queue tests', () => {
                 queue.increaseTotalReserve(u256.fromU64(10000));
                 expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-                queue.accruePenalty(u128.fromU64(10000), u128.fromU64(15000), Address.dead());
+                queue.accruePenalty(
+                    u128.fromU64(10000),
+                    u128.fromU64(15000),
+                    testStackingContractAddress,
+                );
             }).toThrow();
         });
     });
@@ -1086,6 +1103,7 @@ describe('Liquidity queue tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should correctly compute the fees', () => {
@@ -1112,8 +1130,6 @@ describe('Liquidity queue tests', () => {
         });
 
         it('should correctly distribute the fee to the staking contract', () => {
-            TransferHelper.clearMockedResults();
-
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -1124,16 +1140,13 @@ describe('Liquidity queue tests', () => {
 
             queue.setLiquidity(u256.fromU32(10000));
             queue.virtualTokenReserve = u256.Zero;
-            queue.distributeFee(u256.fromU32(10000), Address.dead());
-
+            queue.distributeFee(u256.fromU32(10000), testStackingContractAddress);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(5000));
             expect(queue.liquidity).toStrictEqual(u256.fromU32(5000));
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`5000`));
         });
 
         it('should not call safetransfer when moto fee = 0', () => {
-            TransferHelper.clearMockedResults();
-
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -1144,11 +1157,11 @@ describe('Liquidity queue tests', () => {
 
             queue.setLiquidity(u256.fromU32(10000));
             queue.virtualTokenReserve = u256.Zero;
-            queue.distributeFee(u256.Zero, Address.dead());
+            queue.distributeFee(u256.Zero, testStackingContractAddress);
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
             expect(queue.liquidity).toStrictEqual(u256.fromU32(10000));
-            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
         });
     });
 

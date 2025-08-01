@@ -5,9 +5,8 @@ import {
     Potential,
     Revert,
     StoredU256Array,
-    TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
-import { getProvider, Provider } from '../models/Provider';
+import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
 import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
@@ -127,11 +126,7 @@ export class ProviderQueue {
         this.ensureProviderNotAlreadyPurged(provider);
 
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
-            TransferHelper.safeTransfer(
-                this.token,
-                this.stakingContractAddress,
-                provider.getLiquidityAmount().toU256(),
-            );
+            addAmountToStakingContract(provider.getLiquidityAmount().toU256());
         }
 
         if (!provider.isInitialLiquidityProvider()) {

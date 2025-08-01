@@ -1,5 +1,5 @@
 import { clearCachedProviders, getProvider } from '../models/Provider';
-import { Address, Blockchain } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import {
     createLiquidityQueue,
@@ -7,6 +7,7 @@ import {
     providerAddress1,
     receiverAddress1,
     setBlockchainEnvironment,
+    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -42,7 +43,7 @@ describe('CreatePoolOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -65,7 +66,7 @@ describe('CreatePoolOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -88,7 +89,7 @@ describe('CreatePoolOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -111,7 +112,7 @@ describe('CreatePoolOperation tests', () => {
                     10,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -134,7 +135,7 @@ describe('CreatePoolOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -151,7 +152,7 @@ describe('CreatePoolOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 operation2.execute();
@@ -174,7 +175,7 @@ describe('CreatePoolOperation tests', () => {
                     0,
                     u256.Zero,
                     115,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -205,7 +206,7 @@ describe('CreatePoolOperation tests', () => {
                 10,
                 u256.fromU32(20),
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             operation.execute();
@@ -248,7 +249,7 @@ describe('CreatePoolOperation tests', () => {
                 10,
                 u256.fromU32(20),
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             operation.execute();
@@ -272,7 +273,7 @@ describe('CreatePoolOperation tests', () => {
                 0,
                 u256.fromU32(20),
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             operation.execute();

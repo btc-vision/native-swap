@@ -2004,7 +2004,6 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Reservation2 and Reservation3 expire.
         // Purge them and restore reserved liquidity to providers.
         setBlockchainEnvironment(136, msgSender1, msgSender1);
-        Blockchain.log('\r\n\r\n136 - Purge');
         const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
         lq.liquidityQueue.save();
 
@@ -2033,7 +2032,6 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Provider1 is removed from purge queue,
         // Partially reserve Provider2. Add it to purge queue.
         setBlockchainEnvironment(137, providerAddress3, providerAddress3);
-        Blockchain.log('\r\n\r\n137 - Reserve #4');
         reserve(480000);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`1308681232078440`),

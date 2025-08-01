@@ -4,10 +4,9 @@ import {
     Potential,
     Revert,
     StoredU32Array,
-    TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
 import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
-import { getProvider, Provider } from '../models/Provider';
+import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
@@ -135,11 +134,7 @@ export class PurgedProviderQueue {
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
 
         if (provider.hasLiquidityAmount()) {
-            TransferHelper.safeTransfer(
-                this.token,
-                this.stakingContractAddress,
-                provider.getLiquidityAmount().toU256(),
-            );
+            addAmountToStakingContract(provider.getLiquidityAmount().toU256());
         }
 
         // Remove from normal/priority queue

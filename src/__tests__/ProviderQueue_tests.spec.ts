@@ -1,4 +1,9 @@
-import { clearCachedProviders, Provider } from '../models/Provider';
+import {
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+    Provider,
+} from '../models/Provider';
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { ProviderQueue } from '../managers/ProviderQueue';
 import { NORMAL_QUEUE_POINTER } from '../constants/StoredPointers';
@@ -236,7 +241,7 @@ describe('ProviderQueue tests', () => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('reverts if provider is already purged', () => {
@@ -271,7 +276,7 @@ describe('ProviderQueue tests', () => {
             const index: u32 = queue.add(provider);
             queue.resetProvider(provider, true, false);
 
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
             expect(queue.getAt(index)).toStrictEqual(u256.Zero);
             expect(queue.length).toStrictEqual(1);
             expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
@@ -299,7 +304,7 @@ describe('ProviderQueue tests', () => {
             provider.markInitialLiquidityProvider();
             queue.resetProvider(provider, true, false);
 
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
             expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);

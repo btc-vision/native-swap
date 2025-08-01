@@ -7,6 +7,7 @@ import {
     BytesWriter,
     Calldata,
     encodeSelector,
+    Potential,
     Revert,
     SafeMath,
     Selector,
@@ -20,7 +21,12 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
-import { getProvider, Provider, saveAllProviders } from '../models/Provider';
+import {
+    getProvider,
+    Provider,
+    saveAllProviders,
+    transferPendingAmountToStakingContract,
+} from '../models/Provider';
 import { FeeManager } from '../managers/FeeManager';
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
@@ -77,6 +83,7 @@ export class NativeSwap extends ReentrancyGuard {
     private readonly _stakingContractAddress: StoredAddress;
     private readonly _isPaused: StoredBoolean;
     private readonly _withdrawModeActive: StoredBoolean;
+    private _tokenAddress: Potential<Address>;
 
     public constructor() {
         super();
@@ -84,6 +91,7 @@ export class NativeSwap extends ReentrancyGuard {
         this._stakingContractAddress = new StoredAddress(STAKING_CA_POINTER);
         this._isPaused = new StoredBoolean(CONTRACT_PAUSED_POINTER, false);
         this._withdrawModeActive = new StoredBoolean(WITHDRAW_MODE_POINTER, false);
+        this._tokenAddress = null;
     }
 
     private static get DEPLOYER_SELECTOR(): Selector {
@@ -104,10 +112,17 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
-        super.onExecutionCompleted(selector, calldata);
-
         FeeManager.save();
         saveAllProviders();
+
+        if (this._tokenAddress !== null) {
+            Blockchain.log(`call transferPendingAmountToStakingContract`);
+            transferPendingAmountToStakingContract(this._tokenAddress, this.stakingContractAddress);
+        } else {
+            Blockchain.log(`don't call transferPendingAmountToStakingContract`);
+        }
+
+        super.onExecutionCompleted(selector, calldata);
     }
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
@@ -367,6 +382,7 @@ export class NativeSwap extends ReentrancyGuard {
     private createPool(calldata: Calldata, token: Address): BytesWriter {
         this.ensureNotPaused();
         this.ensureWithdrawModeNotActive();
+        this._tokenAddress = token;
 
         const tokenOwner: Address = this.getDeployer(token);
 
@@ -411,6 +427,7 @@ export class NativeSwap extends ReentrancyGuard {
 
         const token: Address = calldata.readAddress();
         const receiver: string = calldata.readStringWithLength();
+        this._tokenAddress = token;
 
         this.ensureValidReceiverAddress(receiver);
 
@@ -465,6 +482,7 @@ export class NativeSwap extends ReentrancyGuard {
         const maximumAmountIn: u64 = calldata.readU64();
         const minimumAmountOut: u256 = calldata.readU256();
         const activationDelay: u8 = calldata.readU8();
+        this._tokenAddress = token;
 
         this._reserve(token, maximumAmountIn, minimumAmountOut, activationDelay);
 
@@ -511,6 +529,8 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
+        this._tokenAddress = token;
+
         this._cancelListing(token);
 
         const result: BytesWriter = new BytesWriter(1);
@@ -546,6 +566,8 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureWithdrawModeActive();
 
         const token: Address = calldata.readAddress();
+        this._tokenAddress = token;
+
         this._withdrawListing(token);
 
         const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
@@ -581,6 +603,8 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
+        this._tokenAddress = token;
+
         this._swap(token);
 
         const result: BytesWriter = new BytesWriter(1);
@@ -622,7 +646,7 @@ export class NativeSwap extends ReentrancyGuard {
         const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
             token,
             this.addressToPointer(token),
-            true,
+            false,
         );
 
         this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);

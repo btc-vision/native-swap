@@ -1,4 +1,4 @@
-import { Address, Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders, getProvider } from '../models/Provider';
 import {
     createLiquidityQueue,
@@ -10,6 +10,7 @@ import {
     receiverAddress1,
     setBlockchainEnvironment,
     TestReserveLiquidityOperation,
+    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -192,7 +193,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -253,7 +254,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -318,7 +319,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -382,7 +383,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -471,7 +472,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -559,7 +560,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -612,7 +613,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -678,7 +679,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     10,
                     u256.fromU32(15000),
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -734,7 +735,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -798,7 +799,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 100,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -862,7 +863,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     1,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -917,7 +918,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     1,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -972,7 +973,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     150,
                     u256.fromU32(10000),
                     100,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1024,7 +1025,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     100,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1087,7 +1088,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1102,7 +1103,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`66670000000000000000`),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -1158,7 +1159,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1173,7 +1174,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`20000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -1236,7 +1237,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1251,7 +1252,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -1312,7 +1313,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 100,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1372,7 +1373,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1427,7 +1428,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1442,7 +1443,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -1496,7 +1497,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1513,7 +1514,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -1573,7 +1574,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 100,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1589,7 +1590,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -1663,7 +1664,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1678,7 +1679,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );

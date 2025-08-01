@@ -5,7 +5,6 @@ import {
     SafeMath,
     StoredU256,
     StoredU64,
-    TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
@@ -14,7 +13,7 @@ import {
     RESERVATION_SETTINGS_POINTER,
 } from '../constants/StoredPointers';
 
-import { Provider } from '../models/Provider';
+import { addAmountToStakingContract, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
 import {
     MAX_TOTAL_SATOSHIS,
@@ -201,7 +200,7 @@ export class LiquidityQueue implements ILiquidityQueue {
             }
 
             // TODO: When adding lp, remove this and use this.increaseTotalReserve(penalty);
-            TransferHelper.safeTransfer(this.token, stakingAddress, penaltyU256);
+            addAmountToStakingContract(penaltyU256);
         }
     }
 
@@ -261,7 +260,8 @@ export class LiquidityQueue implements ILiquidityQueue {
         // Only transfer if the fee is non-zero
         if (feeMoto > u256.Zero) {
             // Send other half of fee to staking contract
-            TransferHelper.safeTransfer(this.token, stakingAddress, feeMoto);
+            addAmountToStakingContract(feeMoto);
+
             this.decreaseTotalReserve(feeMoto);
         }
     }

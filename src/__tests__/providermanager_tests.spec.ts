@@ -1,5 +1,10 @@
 import { Blockchain, BytesReader, TransferHelper } from '@btc-vision/btc-runtime/runtime';
-import { clearCachedProviders, Provider } from '../models/Provider';
+import {
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+    Provider,
+} from '../models/Provider';
 import { ProviderManager } from '../managers/ProviderManager';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
@@ -1027,6 +1032,7 @@ describe('ProviderManager tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should burn the provider funds when burnRemainingFunds is true and liquidity is not 0', () => {
@@ -1042,7 +1048,7 @@ describe('ProviderManager tests', () => {
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             manager.resetProvider(provider, true);
 
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
         });
 
         it('should not burn the provider funds when burnRemainingFunds is true and liquidity is 0', () => {
@@ -1059,7 +1065,7 @@ describe('ProviderManager tests', () => {
             provider.setLiquidityAmount(u128.Zero);
             manager.resetProvider(provider, true);
 
-            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
         });
 
         it('should not burn the provider funds when burnRemainingFunds is false', () => {
@@ -1076,7 +1082,7 @@ describe('ProviderManager tests', () => {
             provider.setLiquidityAmount(u128.Zero);
             manager.resetProvider(provider, false);
 
-            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
         });
 
         it('should remove the provider from the priority queue and reset it', () => {

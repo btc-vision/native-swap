@@ -1,4 +1,9 @@
-import { clearCachedProviders, Provider } from '../models/Provider';
+import {
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+    Provider,
+} from '../models/Provider';
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { NORMAL_QUEUE_POINTER, NORMAL_QUEUE_PURGED_RESERVATION } from '../constants/StoredPointers';
 import {
@@ -144,7 +149,7 @@ describe('PurgedProviderQueue tests', () => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should revert if provider queue index is not set', () => {
@@ -318,14 +323,18 @@ describe('PurgedProviderQueue tests', () => {
                 purgedQueue.add(providers[i]);
             }
 
-            const provider1Index = providers[0].getQueueIndex();
+            const provider = purgedQueue.get(queue, u256.fromU32(100000000));
+            expect(provider).toBeNull();
 
-            const provider1 = purgedQueue.get(queue, u256.fromU32(100000000));
-            expect(provider1).toBeNull();
-            expect(providers[0].isPurged()).toBeFalsy();
-            expect(providers[0].isActive()).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
-            expect(queue.getAt(provider1Index)).toStrictEqual(u256.Zero);
+            for (let i = 0; i < providers.length; i++) {
+                expect(providers[i].isPurged()).toBeFalsy();
+                expect(providers[i].isActive()).toBeFalsy();
+                expect(queue.getAt(i)).toStrictEqual(u256.Zero);
+            }
+
+            expect(getPendingStakingContractAmount()).toStrictEqual(
+                u256.fromU32(providers.length * 110),
+            );
         });
 
         it('should revert when provider not purged, available liquidity < minimum required and no reserved amount', () => {

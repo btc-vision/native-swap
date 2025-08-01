@@ -1,6 +1,6 @@
 import { BaseOperation } from './BaseOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { getProvider, Provider } from '../models/Provider';
+import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import {
     Address,
     Blockchain,
@@ -166,7 +166,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
                 this.provider.subtractFromLiquidityAmount(tax);
                 this.liquidityQueue.decreaseTotalReserve(tax256);
                 this.liquidityQueue.increaseVirtualTokenReserve(tax256);
-                TransferHelper.safeTransfer(this.liquidityQueue.token, this.stakingAddress, tax256);
+                addAmountToStakingContract(tax256);
             }
         }
     }

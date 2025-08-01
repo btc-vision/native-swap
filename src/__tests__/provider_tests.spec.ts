@@ -1,16 +1,21 @@
 import { Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import {
+    addAmountToStakingContract,
     clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
     getProvider,
     getProviderCacheLength,
     Provider,
     saveAllProviders,
+    transferPendingAmountToStakingContract,
 } from '../models/Provider';
 import {
     addressToPointerU256,
     providerAddress1,
     providerAddress2,
     providerAddress3,
+    testStackingContractAddress,
     tokenAddress1,
 } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
@@ -194,6 +199,38 @@ describe('Provider tests', () => {
             expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
             expect(provider.isActive()).toBeFalsy();
             expect(provider.isPriority()).toBeFalsy();
+        });
+    });
+
+    describe('Provider – staking contract accumulator behavior', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
+        });
+
+        it('should add to and get the pendingStakingContractAmount', () => {
+            addAmountToStakingContract(u256.fromU64(1000));
+            addAmountToStakingContract(u256.fromU64(2999));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU64(3999));
+        });
+
+        it('should transfer the pendingStakingContractAmount to the staking contract when amount > 0', () => {
+            addAmountToStakingContract(u256.fromU64(1000));
+            addAmountToStakingContract(u256.fromU64(2999));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU64(3999));
+
+            transferPendingAmountToStakingContract(tokenAddress1, testStackingContractAddress);
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+        });
+
+        it('should not transfer the pendingStakingContractAmount to the staking contract when amount = 0', () => {
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
+
+            transferPendingAmountToStakingContract(tokenAddress1, testStackingContractAddress);
+            expect(TransferHelper.safeTransferCalled).toBeFalsy();
         });
     });
 
