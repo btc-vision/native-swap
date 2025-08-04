@@ -1,6 +1,6 @@
 import { BaseOperation } from './BaseOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { getProvider, Provider } from '../models/Provider';
+import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import {
     Address,
     Blockchain,
@@ -146,7 +146,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.ensureNoLiquidityOverflow();
         this.ensureNoActivePositionInPriorityQueue();
         this.ensureProviderNotAlreadyProvidingLiquidity();
-        this.ensureNotInRemovalQueue();
+        this.ensureNoActiveReservation();
+        this.ensureProviderIsNotPurged();
 
         if (!this.isForInitialLiquidity) {
             this.ensurePriceIsNotZero();
@@ -165,7 +166,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
                 this.provider.subtractFromLiquidityAmount(tax);
                 this.liquidityQueue.decreaseTotalReserve(tax256);
                 this.liquidityQueue.increaseVirtualTokenReserve(tax256);
-                TransferHelper.safeTransfer(this.liquidityQueue.token, this.stakingAddress, tax256);
+                addAmountToStakingContract(tax256);
             }
         }
     }
@@ -218,17 +219,25 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
     }
 
-    private ensureNoLiquidityOverflow(): void {
-        if (!u128.lt(this.oldLiquidity, SafeMath.sub128(u128.Max, this.amountIn))) {
-            throw new Revert('NATIVE_SWAP: Liquidity overflow. Please add a smaller amount.');
+    private ensureNoActiveReservation(): void {
+        if (this.provider.hasReservedAmount()) {
+            throw new Revert(
+                `NATIVE_SWAP: All active reservations on your listing must be completed before listing again.`,
+            );
         }
     }
 
-    private ensureNotInRemovalQueue(): void {
-        if (this.provider.isPendingRemoval()) {
+    private ensureProviderIsNotPurged(): void {
+        if (this.provider.isPurged()) {
             throw new Revert(
-                'NATIVE_SWAP: You are in the removal queue. Wait for removal of your liquidity first.',
+                `NATIVE_SWAP: You are in the purge queue. Your current listing must be bought before listing again.`,
             );
+        }
+    }
+
+    private ensureNoLiquidityOverflow(): void {
+        if (!u128.lt(this.oldLiquidity, SafeMath.sub128(u128.Max, this.amountIn))) {
+            throw new Revert('NATIVE_SWAP: Liquidity overflow. Please add a smaller amount.');
         }
     }
 

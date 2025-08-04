@@ -82,7 +82,6 @@ export class CancelListingOperation extends BaseOperation {
         this.ensureLiquidityNotZero();
         this.ensureProviderNotProvideLiquidity();
         this.ensureNotInitialProvider();
-        this.ensureProviderNotPendingRemoval();
     }
 
     private emitListingCanceledEvent(amount: u128, penalty: u128): void {
@@ -126,12 +125,6 @@ export class CancelListingOperation extends BaseOperation {
     private ensureProviderIsActive(): void {
         if (!this.provider.isActive()) {
             throw new Revert("NATIVE_SWAP: Provider is not active or doesn't exist.");
-        }
-    }
-
-    private ensureProviderNotPendingRemoval(): void {
-        if (this.provider.isPendingRemoval()) {
-            throw new Revert('NATIVE_SWAP: Provider is in pending removal.');
         }
     }
 

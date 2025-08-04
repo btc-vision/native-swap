@@ -25,26 +25,4 @@ describe('ReservationProviderData tests', () => {
         expect(data.providerType).toStrictEqual(type);
         expect(data.creationBlock).toStrictEqual(creationBlock);
     });
-
-    it('returns true when providerType is LiquidityRemoval', () => {
-        const data = new ReservationProviderData(
-            1 as u32,
-            u128.fromU64(0),
-            ProviderTypes.LiquidityRemoval,
-            100,
-        );
-
-        expect(data.isLiquidityRemoval()).toBeTruthy();
-    });
-
-    it('returns false when providerType is not LiquidityRemoval', () => {
-        const data = new ReservationProviderData(
-            2 as u32,
-            u128.fromU64(999),
-            ProviderTypes.Normal,
-            100,
-        );
-
-        expect(data.isLiquidityRemoval()).toBeFalsy();
-    });
 });

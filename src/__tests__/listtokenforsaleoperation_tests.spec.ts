@@ -1,23 +1,27 @@
-import { clearCachedProviders, getProvider } from '../models/Provider';
 import {
-    Address,
-    Blockchain,
-    TransactionOutput,
-    TransferHelper,
-} from '@btc-vision/btc-runtime/runtime';
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+    getProvider,
+} from '../models/Provider';
+import { Blockchain, TransactionOutput, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import {
     createLiquidityQueue,
     createProvider,
     providerAddress1,
     receiverAddress1,
     setBlockchainEnvironment,
+    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../managers/FeeManager';
-import { FEE_COLLECT_SCRIPT_PUBKEY, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    INITIAL_FEE_COLLECT_ADDRESS,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+} from '../constants/Contract';
 
 describe('ListTokenForSaleOperation tests', () => {
     beforeEach(() => {
@@ -41,7 +45,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 FeeManager.onDeploy();
                 const txOut: TransactionOutput[] = [];
                 txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
-                txOut.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 100));
+                txOut.push(new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 100));
                 Blockchain.mockTransactionOutput(txOut);
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.activate();
@@ -54,7 +58,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     true,
                     false,
                 );
@@ -75,7 +79,7 @@ describe('ListTokenForSaleOperation tests', () => {
                         1,
                         0,
                         null,
-                        FEE_COLLECT_SCRIPT_PUBKEY,
+                        INITIAL_FEE_COLLECT_ADDRESS,
                         FeeManager.priorityQueueBaseFee,
                     ),
                 );
@@ -85,7 +89,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.activate();
                 provider.clearPriority();
                 provider.setLiquidityAmount(u128.Zero);
-                provider.setLiquidityProvided(u128.Zero);
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
                 queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -99,7 +102,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     true,
                     false,
                 );
@@ -119,7 +122,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u256.fromU64(111),
                     u128.Zero,
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -143,7 +146,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -167,31 +170,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
-                    false,
-                    false,
-                );
-
-                operation.execute();
-            }).toThrow();
-        });
-
-        it('should revert if provider is in the removal queue.', () => {
-            expect(() => {
-                setBlockchainEnvironment(100);
-                FeeManager.onDeploy();
-
-                const provider = createProvider(providerAddress1, tokenAddress1);
-                provider.markPendingRemoval();
-
-                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-                const operation = new ListTokensForSaleOperation(
-                    queue.liquidityQueue,
-                    provider.getId(),
-                    u128.fromU64(100),
-                    receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -215,7 +194,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -240,7 +219,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -267,7 +246,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -293,7 +272,55 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
+                    false,
+                    false,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
+
+        it('should revert if provider has active reservation', () => {
+            expect(() => {
+                setBlockchainEnvironment(100);
+                FeeManager.onDeploy();
+
+                const provider = createProvider(providerAddress1, tokenAddress1);
+                provider.addToReservedAmount(u128.fromU32(100000));
+
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const operation = new ListTokensForSaleOperation(
+                    queue.liquidityQueue,
+                    provider.getId(),
+                    u128.fromU64(100),
+                    receiverAddress1,
+                    testStackingContractAddress,
+                    false,
+                    false,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
+
+        it('should revert if provider is in purge queue', () => {
+            expect(() => {
+                setBlockchainEnvironment(100);
+                FeeManager.onDeploy();
+
+                const provider = createProvider(providerAddress1, tokenAddress1);
+                provider.markPurged();
+
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const operation = new ListTokensForSaleOperation(
+                    queue.liquidityQueue,
+                    provider.getId(),
+                    u128.fromU64(100),
+                    receiverAddress1,
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -309,6 +336,7 @@ describe('ListTokenForSaleOperation tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should transfer token from user to contract', () => {
@@ -322,7 +350,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     1,
                     0,
                     null,
-                    FEE_COLLECT_SCRIPT_PUBKEY,
+                    INITIAL_FEE_COLLECT_ADDRESS,
                     FeeManager.priorityQueueBaseFee,
                 ),
             );
@@ -332,7 +360,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.activate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -346,7 +373,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 true,
                 false,
             );
@@ -368,7 +395,7 @@ describe('ListTokenForSaleOperation tests', () => {
                         1,
                         0,
                         null,
-                        FEE_COLLECT_SCRIPT_PUBKEY,
+                        INITIAL_FEE_COLLECT_ADDRESS,
                         FeeManager.priorityQueueBaseFee,
                     ),
                 );
@@ -388,7 +415,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     true,
                     false,
                 );
@@ -409,7 +436,7 @@ describe('ListTokenForSaleOperation tests', () => {
                         1,
                         0,
                         null,
-                        FEE_COLLECT_SCRIPT_PUBKEY,
+                        INITIAL_FEE_COLLECT_ADDRESS,
                         FeeManager.priorityQueueBaseFee,
                     ),
                 );
@@ -428,7 +455,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     true,
                     false,
                 );
@@ -448,7 +475,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     1,
                     0,
                     null,
-                    FEE_COLLECT_SCRIPT_PUBKEY,
+                    INITIAL_FEE_COLLECT_ADDRESS,
                     FeeManager.priorityQueueBaseFee,
                 ),
             );
@@ -458,7 +485,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -473,7 +499,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 true,
                 false,
             );
@@ -496,7 +522,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     1,
                     0,
                     null,
-                    FEE_COLLECT_SCRIPT_PUBKEY,
+                    INITIAL_FEE_COLLECT_ADDRESS,
                     FeeManager.priorityQueueBaseFee,
                 ),
             );
@@ -506,7 +532,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -521,7 +546,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 true,
                 false,
             );
@@ -545,7 +570,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider2.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 true,
                 false,
             );
@@ -572,7 +597,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     1,
                     0,
                     null,
-                    FEE_COLLECT_SCRIPT_PUBKEY,
+                    INITIAL_FEE_COLLECT_ADDRESS,
                     FeeManager.priorityQueueBaseFee,
                 ),
             );
@@ -582,7 +607,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -597,7 +621,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 true,
                 false,
             );
@@ -631,7 +655,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider3.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 true,
                 false,
             );
@@ -653,7 +677,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -668,7 +691,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -692,7 +715,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider2.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -715,7 +738,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -730,7 +752,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -763,7 +785,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider3.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -785,7 +807,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -800,7 +821,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -819,7 +840,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.Zero);
-            provider.setLiquidityProvided(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -835,7 +855,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 true,
             );
@@ -855,7 +875,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU32(10000));
-            provider.setLiquidityProvided(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -866,7 +885,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 true,
             );
@@ -882,7 +901,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU32(10000));
-            provider.setLiquidityProvided(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -893,7 +911,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 true,
             );
@@ -919,7 +937,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 true,
             );
@@ -937,7 +955,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.deactivate();
                 provider.clearPriority();
                 provider.setLiquidityAmount(u128.fromU32(10000));
-                provider.setLiquidityProvided(u128.fromU32(10000));
                 provider.setReservedAmount(u128.fromU32(1000));
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
@@ -949,7 +966,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     true,
                 );
@@ -965,7 +982,6 @@ describe('ListTokenForSaleOperation tests', () => {
             provider.deactivate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU32(10000));
-            provider.setLiquidityProvided(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
@@ -978,7 +994,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 true,
             );
@@ -994,7 +1010,7 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const txOut: TransactionOutput[] = [];
             txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
-            txOut.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 100000));
+            txOut.push(new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 100000));
             Blockchain.mockTransactionOutput(txOut);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1011,7 +1027,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 true,
                 false,
             );
@@ -1019,7 +1035,7 @@ describe('ListTokenForSaleOperation tests', () => {
             operation.execute();
 
             // Tax should be:3000000
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(3000000));
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(97010000));
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(54000000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(97000000));
@@ -1031,7 +1047,7 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const txOut: TransactionOutput[] = [];
             txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
-            txOut.push(new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 100000));
+            txOut.push(new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 100000));
             Blockchain.mockTransactionOutput(txOut);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1048,13 +1064,14 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
 
             operation.execute();
 
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(100010000));
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(51000000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(100000000));
@@ -1095,13 +1112,14 @@ describe('ListTokenForSaleOperation tests', () => {
                 initialProvider.getId(),
                 u128.fromString(`1000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 true,
             );
 
             operation.execute();
 
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
             expect(initialProvider.getLiquidityAmount()).toStrictEqual(
                 u128.fromString(`1000000000000000000`),
             );

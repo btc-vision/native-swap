@@ -37,7 +37,6 @@ export class ReservationManager implements IReservationManager {
     protected readonly blocksWithReservations: StoredU64Array;
     protected readonly tokenIdUint8Array: Uint8Array;
     protected atLeastProvidersToPurge: u32;
-    protected allowDirty: boolean;
     private readonly token: Address;
     private readonly providerManager: IProviderManager;
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
@@ -48,7 +47,6 @@ export class ReservationManager implements IReservationManager {
         providerManager: IProviderManager,
         liquidityQueueReserve: ILiquidityQueueReserve,
         atLeastProvidersToPurge: u32,
-        allowDirty: boolean,
     ) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
@@ -59,7 +57,6 @@ export class ReservationManager implements IReservationManager {
             tokenIdUint8Array,
         );
         this.atLeastProvidersToPurge = atLeastProvidersToPurge;
-        this.allowDirty = allowDirty;
     }
 
     public addReservation(blockNumber: u64, reservation: Reservation): void {
@@ -86,7 +83,7 @@ export class ReservationManager implements IReservationManager {
     public getReservationIdAtIndex(blockNumber: u64, index: u32): u128 {
         const reservationList: StoredU128Array = this.getReservationListForBlock(blockNumber);
 
-        return reservationList.get(index); //!!! no check if index >= length???
+        return reservationList.get(index);
     }
 
     public getReservationWithExpirationChecks(owner: Address): Reservation {
@@ -105,17 +102,11 @@ export class ReservationManager implements IReservationManager {
     public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
         const currentBlockNumber: u64 = Blockchain.block.number;
 
-        Blockchain.log(`purgeReservationsAndRestoreProviders`);
-        Blockchain.log(`------------------------------------`);
-        Blockchain.log(`currentBlockNumber:${currentBlockNumber}`);
-        Blockchain.log(`lastPurgedBlock:${lastPurgedBlock}`);
         if (currentBlockNumber <= RESERVATION_EXPIRE_AFTER_IN_BLOCKS) {
             return lastPurgedBlock;
         }
 
         const maxBlockToPurge: u64 = currentBlockNumber - RESERVATION_EXPIRE_AFTER_IN_BLOCKS;
-
-        Blockchain.log(`maxBlockToPurge:${maxBlockToPurge}`);
 
         if (maxBlockToPurge <= lastPurgedBlock) {
             this.providerManager.restoreCurrentIndex();
@@ -178,15 +169,13 @@ export class ReservationManager implements IReservationManager {
         let newLastPurgedBlock: u64 = lastPurgedBlock;
 
         if (shifted) {
-            if (this.blocksWithReservations.getLength() == 0) {
+            if (this.blocksWithReservations.getLength() === 0) {
                 newLastPurgedBlock = maxBlockToPurge; // queue empty
             } else {
                 const head = this.blocksWithReservations.get(0); // > maxBlock
                 newLastPurgedBlock = head > 0 ? head - 1 : 0; // under-flow guard
             }
         }
-
-        Blockchain.log(`newLastPurgedBlock:${newLastPurgedBlock}`);
 
         return newLastPurgedBlock;
     }
@@ -277,15 +266,13 @@ export class ReservationManager implements IReservationManager {
                 const reservationId: u128 = reservations.get(index);
                 const reservation = Reservation.load(reservationId);
 
-                Blockchain.log(`purgeBlockIncremental reservation: ${reservation.getId()}`);
-                Blockchain.log(`purgeBlockIncremental blockNumber: ${blockNumber}`);
                 this.ensureReservationIsExpired(reservation);
                 this.ensureReservationPurgeIndexMatch(reservation, index);
 
                 const providerCount: u32 = reservation.getProviderCount();
-                const freed: u256 = this.restoreReservation(reservation);
+                const freed: u256 = this.restoreReservation(reservation, providerCount);
                 totalFreed = SafeMath.add(totalFreed, freed);
-                totalProvidersPurged += reservation.getProviderCount();
+                totalProvidersPurged += providerCount;
 
                 actives.set(index, false);
 
@@ -335,10 +322,8 @@ export class ReservationManager implements IReservationManager {
         return this.getPurgeIndexStore(blockNumber).get(0);
     }
 
-    private restoreReservation(reservation: Reservation): u256 {
-        Blockchain.log(`restoreReservation: ${reservation.getId()}`);
+    private restoreReservation(reservation: Reservation, providerCount: u32): u256 {
         let restoredLiquidity: u256 = u256.Zero;
-        const providerCount: u32 = reservation.getProviderCount();
 
         for (let index: u32 = 0; index < providerCount; index++) {
             const data: ReservationProviderData = reservation.getProviderAt(index);
@@ -348,12 +333,9 @@ export class ReservationManager implements IReservationManager {
             restoredLiquidity = SafeMath.add(restoredLiquidity, data.providedAmount.toU256());
         }
 
-        if (!this.allowDirty) {
-            reservation.delete(true);
-        } else {
-            reservation.timeoutUser();
-            reservation.save();
-        }
+        reservation.setPurged(true);
+        reservation.timeoutUser();
+        reservation.save();
 
         return restoredLiquidity;
     }

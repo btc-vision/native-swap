@@ -1,17 +1,22 @@
-import { clearCachedProviders, Provider } from '../models/Provider';
+import {
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+    Provider,
+} from '../models/Provider';
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { NORMAL_QUEUE_POINTER, NORMAL_QUEUE_PURGED_RESERVATION } from '../constants/StoredPointers';
 import {
     createProvider,
     createProviders,
     providerAddress1,
+    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { PurgedProviderQueue } from '../managers/PurgedProviderQueue';
 import {
-    ALLOW_DIRTY,
     ENABLE_INDEX_VERIFICATION,
     INDEX_NOT_SET_VALUE,
     MAXIMUM_NUMBER_OF_PROVIDERS,
@@ -21,7 +26,6 @@ import { ProviderQueue } from '../managers/ProviderQueue';
 const QUOTE = u256.fromU64(100000000);
 
 function createNormalPurgedQueue(
-    allowDirty: boolean = ALLOW_DIRTY,
     enableIndexVerification: boolean = ENABLE_INDEX_VERIFICATION,
 ): PurgedProviderQueue {
     const queue: PurgedProviderQueue = new PurgedProviderQueue(
@@ -29,7 +33,7 @@ function createNormalPurgedQueue(
         NORMAL_QUEUE_PURGED_RESERVATION,
         tokenIdUint8Array1,
         enableIndexVerification,
-        allowDirty,
+        testStackingContractAddress,
     );
 
     return queue;
@@ -42,6 +46,7 @@ function createNormalQueue(): ProviderQueue {
         tokenIdUint8Array1,
         ENABLE_INDEX_VERIFICATION,
         MAXIMUM_NUMBER_OF_PROVIDERS,
+        testStackingContractAddress,
     );
 
     return queue;
@@ -144,7 +149,7 @@ describe('PurgedProviderQueue tests', () => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should revert if provider queue index is not set', () => {
@@ -202,14 +207,13 @@ describe('PurgedProviderQueue tests', () => {
             expect(provider1).not.toBeNull();
             if (provider1 !== null) {
                 expect(provider1.getPurgedIndex()).toStrictEqual(0);
-                expect(provider1.isFromRemovalQueue()).toBeFalsy();
             }
         });
 
         it('should revert when purge index and previous offset does not match', () => {
             expect(() => {
                 const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(true);
 
                 const providers = createProviders(10);
                 for (let i = 0; i < providers.length; i++) {
@@ -226,7 +230,7 @@ describe('PurgedProviderQueue tests', () => {
         it('should revert when enableIndexVerification and queue index does not match', () => {
             expect(() => {
                 const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(true);
 
                 const providers = createProviders(10);
                 for (let i = 0; i < providers.length; i++) {
@@ -243,7 +247,7 @@ describe('PurgedProviderQueue tests', () => {
         it('should revert if returned provider is initial provider', () => {
             expect(() => {
                 const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(true);
 
                 const providers = createProviders(10);
                 for (let i = 0; i < providers.length; i++) {
@@ -264,6 +268,7 @@ describe('PurgedProviderQueue tests', () => {
             const providers = createProviders(10);
             for (let i = 0; i < providers.length; i++) {
                 providers[i].setLiquidityAmount(u128.Zero);
+                providers[i].setReservedAmount(u128.Zero);
                 queue.add(providers[i]);
                 purgedQueue.add(providers[i]);
             }
@@ -318,14 +323,18 @@ describe('PurgedProviderQueue tests', () => {
                 purgedQueue.add(providers[i]);
             }
 
-            const provider1Index = providers[0].getQueueIndex();
+            const provider = purgedQueue.get(queue, u256.fromU32(100000000));
+            expect(provider).toBeNull();
 
-            const provider1 = purgedQueue.get(queue, u256.fromU32(100000000));
-            expect(provider1).toBeNull();
-            expect(providers[0].isPurged()).toBeFalsy();
-            expect(providers[0].isActive()).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
-            expect(queue.getAt(provider1Index)).toStrictEqual(u256.Zero);
+            for (let i = 0; i < providers.length; i++) {
+                expect(providers[i].isPurged()).toBeFalsy();
+                expect(providers[i].isActive()).toBeFalsy();
+                expect(queue.getAt(i)).toStrictEqual(u256.Zero);
+            }
+
+            expect(getPendingStakingContractAmount()).toStrictEqual(
+                u256.fromU32(providers.length * 110),
+            );
         });
 
         it('should revert when provider not purged, available liquidity < minimum required and no reserved amount', () => {
@@ -343,27 +352,6 @@ describe('PurgedProviderQueue tests', () => {
                 providers[0].clearPurged();
                 purgedQueue.get(queue, u256.fromU32(100000000));
             }).toThrow();
-        });
-
-        it('should return null, reset the provider but no delete it, transfer remaining liquidity when available liquidity < minimum required and no reserved amount', () => {
-            const queue: ProviderQueue = createNormalQueue();
-            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
-
-            const providers = createProviders(10);
-            for (let i = 0; i < providers.length; i++) {
-                providers[i].setLiquidityAmount(u128.fromU32(110));
-                queue.add(providers[i]);
-                purgedQueue.add(providers[i]);
-            }
-
-            const provider1Index = providers[0].getQueueIndex();
-            providers[0].markInitialLiquidityProvider();
-            const provider1 = purgedQueue.get(queue, u256.fromU32(100000000));
-            expect(provider1).toBeNull();
-            expect(providers[0].isPurged()).toBeFalsy();
-            expect(providers[0].isActive()).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
-            expect(queue.getAt(provider1Index)).not.toStrictEqual(u256.Zero);
         });
     });
 
@@ -399,20 +387,6 @@ describe('PurgedProviderQueue tests', () => {
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(provider.isPurged()).toBeFalsy();
             expect(queue.length).toStrictEqual(0);
-        });
-
-        it('should properly remove the provider and delete it from the queue if dirty not allowed', () => {
-            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(false);
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setQueueIndex(0);
-
-            purgedQueue.add(provider);
-
-            purgedQueue.remove(provider);
-
-            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-            expect(provider.isPurged()).toBeFalsy();
-            expect(purgedQueue.length).toStrictEqual(0);
         });
     });
 

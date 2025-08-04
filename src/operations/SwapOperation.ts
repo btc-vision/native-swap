@@ -12,25 +12,34 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
 import { CompletedTrade } from '../models/CompletedTrade';
+import { ReservationFallbackEvent } from '../events/ReservationFallbackEvent';
 
 export class SwapOperation extends BaseOperation {
     private readonly tradeManager: ITradeManager;
+    private readonly stakingAddress: Address;
 
     public constructor(
         liquidityQueue: ILiquidityQueue,
         tradeManager: ITradeManager,
-        private readonly stakingAddress: Address = Address.dead(),
+        stakingAddress: Address,
     ) {
         super(liquidityQueue);
         this.tradeManager = tradeManager;
+        this.stakingAddress = stakingAddress;
     }
 
     public override execute(): void {
-        const reservation: Reservation = this.liquidityQueue.getReservationWithExpirationChecks();
+        const reservation: Reservation = new Reservation(
+            this.liquidityQueue.token,
+            Blockchain.tx.sender,
+        );
 
-        this.ensureReservationNotForLP(reservation);
-
-        const trade: CompletedTrade = this.tradeManager.executeTrade(reservation);
+        let trade: CompletedTrade;
+        if (!reservation.isExpired()) {
+            trade = this.executeNotExpired(reservation);
+        } else {
+            trade = this.executeExpired(reservation);
+        }
 
         let totalTokensPurchased: u256 = trade.getTotalTokensPurchased();
         const totalSatoshisSpent: u64 = trade.getTotalSatoshisSpent();
@@ -78,10 +87,57 @@ export class SwapOperation extends BaseOperation {
         Blockchain.emit(new SwapExecutedEvent(buyer, totalSatoshisSpent, totalTokensPurchased));
     }
 
-    private ensureReservationNotForLP(reservation: Reservation): void {
-        if (reservation.isForLiquidityPool()) {
-            throw new Revert('NATIVE_SWAP: Reserved for LP; cannot swap.');
+    private emitReservationFallbackEvent(reservation: Reservation): void {
+        Blockchain.emit(new ReservationFallbackEvent(reservation));
+    }
+
+    private ensureReservationNotSwapped(reservation: Reservation): void {
+        if (reservation.getSwapped()) {
+            throw new Revert('NATIVE_SWAP: Reservation already swapped.');
         }
+    }
+
+    private ensureReservationHasProvider(reservation: Reservation): void {
+        if (reservation.getProviderCount() === 0) {
+            throw new Revert('NATIVE_SWAP: Reservation does not have any providers.');
+        }
+    }
+
+    private ensureTokensPurchasedForExpiredReservation(totalTokensPurchased: u256): void {
+        if (totalTokensPurchased === u256.Zero) {
+            throw new Revert('NATIVE_SWAP: No tokens purchased for expired reservation.');
+        }
+    }
+
+    private executeExpired(reservation: Reservation): CompletedTrade {
+        this.ensureReservationNotSwapped(reservation);
+        this.ensureReservationHasProvider(reservation);
+
+        reservation.setSwapped(true);
+
+        this.emitReservationFallbackEvent(reservation);
+
+        const tradeResult: CompletedTrade = this.tradeManager.executeTradeExpired(
+            reservation,
+            this.liquidityQueue.quote(),
+        );
+
+        this.ensureTokensPurchasedForExpiredReservation(tradeResult.totalTokensPurchased);
+
+        reservation.save();
+
+        return tradeResult;
+    }
+
+    private executeNotExpired(reservation: Reservation): CompletedTrade {
+        reservation.ensureCanBeConsumed();
+        reservation.setSwapped(true);
+
+        const tradeResult: CompletedTrade = this.tradeManager.executeTradeNotExpired(reservation);
+
+        reservation.save();
+
+        return tradeResult;
     }
 
     private sendToken(amount: u256): void {

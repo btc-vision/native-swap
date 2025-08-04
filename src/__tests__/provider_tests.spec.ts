@@ -1,16 +1,21 @@
 import { Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import {
+    addAmountToStakingContract,
     clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
     getProvider,
     getProviderCacheLength,
     Provider,
     saveAllProviders,
+    transferPendingAmountToStakingContract,
 } from '../models/Provider';
 import {
     addressToPointerU256,
     providerAddress1,
     providerAddress2,
     providerAddress3,
+    testStackingContractAddress,
     tokenAddress1,
 } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
@@ -43,9 +48,6 @@ describe('Provider tests', () => {
 
             provider.activate();
             provider.markPriority();
-            provider.markPendingRemoval();
-            provider.markLiquidityProvider();
-            provider.setLiquidityProvided(liquidityProvided);
             provider.setLiquidityAmount(liquidity);
             provider.setReservedAmount(reserved);
             provider.setBtcReceiver(btcReceiver);
@@ -54,9 +56,6 @@ describe('Provider tests', () => {
             const provider2: Provider = getProvider(providerId);
 
             expect(provider2).toBe(provider);
-            expect(provider2.isPendingRemoval()).toBeTruthy();
-            expect(provider2.isLiquidityProvider()).toBeTruthy();
-            expect(provider2.getLiquidityProvided()).toStrictEqual(liquidityProvided);
             expect(provider2.getLiquidityAmount()).toStrictEqual(liquidity);
             expect(provider2.getReservedAmount()).toStrictEqual(reserved);
             expect(provider2.getAvailableLiquidityAmount()).toStrictEqual(
@@ -78,9 +77,6 @@ describe('Provider tests', () => {
 
             provider.activate();
             provider.markPriority();
-            provider.markPendingRemoval();
-            provider.markLiquidityProvider();
-            provider.setLiquidityProvided(liquidityProvided);
             provider.setLiquidityAmount(liquidity);
             provider.setReservedAmount(reserved);
             provider.setBtcReceiver(btcReceiver);
@@ -94,9 +90,6 @@ describe('Provider tests', () => {
             const provider2: Provider = getProvider(providerId);
 
             expect(provider2).not.toBe(provider);
-            expect(provider2.isPendingRemoval()).toBeTruthy();
-            expect(provider2.isLiquidityProvider()).toBeTruthy();
-            expect(provider2.getLiquidityProvided()).toStrictEqual(liquidityProvided);
             expect(provider2.getLiquidityAmount()).toStrictEqual(liquidity);
             expect(provider2.getReservedAmount()).toStrictEqual(reserved);
             expect(provider2.getAvailableLiquidityAmount()).toStrictEqual(
@@ -118,9 +111,6 @@ describe('Provider tests', () => {
 
             provider1.activate();
             provider1.markPriority();
-            provider1.markPendingRemoval();
-            provider1.markLiquidityProvider();
-            provider1.setLiquidityProvided(liquidityProvided1);
             provider1.setLiquidityAmount(liquidity1);
             provider1.setReservedAmount(reserved1);
             provider1.setBtcReceiver(btcReceiver1);
@@ -135,9 +125,6 @@ describe('Provider tests', () => {
 
             provider2.activate();
             provider2.clearPriority();
-            provider2.clearPendingRemoval();
-            provider2.markLiquidityProvider();
-            provider2.setLiquidityProvided(liquidityProvided2);
             provider2.setLiquidityAmount(liquidity2);
             provider2.setReservedAmount(reserved2);
             provider2.setBtcReceiver(btcReceiver2);
@@ -152,9 +139,6 @@ describe('Provider tests', () => {
 
             provider3.activate();
             provider3.clearPriority();
-            provider3.markPendingRemoval();
-            provider3.clearLiquidityProvider();
-            provider3.setLiquidityProvided(liquidityProvided3);
             provider3.setLiquidityAmount(liquidity3);
             provider3.setReservedAmount(reserved3);
             provider3.setBtcReceiver(btcReceiver3);
@@ -168,9 +152,6 @@ describe('Provider tests', () => {
 
             const loadedProvider1: Provider = getProvider(providerId1);
             expect(loadedProvider1).not.toBe(provider1);
-            expect(loadedProvider1.isPendingRemoval()).toBeTruthy();
-            expect(loadedProvider1.isLiquidityProvider()).toBeTruthy();
-            expect(loadedProvider1.getLiquidityProvided()).toStrictEqual(liquidityProvided1);
             expect(loadedProvider1.getLiquidityAmount()).toStrictEqual(liquidity1);
             expect(loadedProvider1.getReservedAmount()).toStrictEqual(reserved1);
             expect(loadedProvider1.getAvailableLiquidityAmount()).toStrictEqual(
@@ -183,9 +164,6 @@ describe('Provider tests', () => {
 
             const loadedProvider3: Provider = getProvider(providerId3);
             expect(loadedProvider3).not.toBe(provider3);
-            expect(loadedProvider3.isPendingRemoval()).toBeTruthy();
-            expect(loadedProvider3.isLiquidityProvider()).toBeFalsy();
-            expect(loadedProvider3.getLiquidityProvided()).toStrictEqual(liquidityProvided3);
             expect(loadedProvider3.getLiquidityAmount()).toStrictEqual(liquidity3);
             expect(loadedProvider3.getReservedAmount()).toStrictEqual(reserved3);
             expect(loadedProvider3.getAvailableLiquidityAmount()).toStrictEqual(
@@ -198,9 +176,6 @@ describe('Provider tests', () => {
 
             const loadedProvider2: Provider = getProvider(providerId2);
             expect(loadedProvider2).not.toBe(provider2);
-            expect(loadedProvider2.isPendingRemoval()).toBeFalsy();
-            expect(loadedProvider2.isLiquidityProvider()).toBeTruthy();
-            expect(loadedProvider2.getLiquidityProvided()).toStrictEqual(liquidityProvided2);
             expect(loadedProvider2.getLiquidityAmount()).toStrictEqual(liquidity2);
             expect(loadedProvider2.getReservedAmount()).toStrictEqual(reserved2);
             expect(loadedProvider2.getAvailableLiquidityAmount()).toStrictEqual(
@@ -217,9 +192,6 @@ describe('Provider tests', () => {
             const provider: Provider = getProvider(providerId);
 
             expect(provider.getId()).toStrictEqual(providerId);
-            expect(provider.isPendingRemoval()).toBeFalsy();
-            expect(provider.isLiquidityProvider()).toBeFalsy();
-            expect(provider.getLiquidityProvided()).toStrictEqual(u128.Zero);
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(provider.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
@@ -227,6 +199,38 @@ describe('Provider tests', () => {
             expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
             expect(provider.isActive()).toBeFalsy();
             expect(provider.isPriority()).toBeFalsy();
+        });
+    });
+
+    describe('Provider – staking contract accumulator behavior', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
+        });
+
+        it('should add to and get the pendingStakingContractAmount', () => {
+            addAmountToStakingContract(u256.fromU64(1000));
+            addAmountToStakingContract(u256.fromU64(2999));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU64(3999));
+        });
+
+        it('should transfer the pendingStakingContractAmount to the staking contract when amount > 0', () => {
+            addAmountToStakingContract(u256.fromU64(1000));
+            addAmountToStakingContract(u256.fromU64(2999));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU64(3999));
+
+            transferPendingAmountToStakingContract(tokenAddress1, testStackingContractAddress);
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+        });
+
+        it('should not transfer the pendingStakingContractAmount to the staking contract when amount = 0', () => {
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
+
+            transferPendingAmountToStakingContract(tokenAddress1, testStackingContractAddress);
+            expect(TransferHelper.safeTransferCalled).toBeFalsy();
         });
     });
 
@@ -444,12 +448,6 @@ describe('Provider tests', () => {
             provider.markPriority();
             expect(provider.getProviderType()).toStrictEqual(ProviderTypes.Priority);
         });
-
-        it('is LiquidityRemoval type', () => {
-            const provider: Provider = new Provider(u256.fromU64(42));
-            provider.markPendingRemoval();
-            expect(provider.getProviderType()).toStrictEqual(ProviderTypes.LiquidityRemoval);
-        });
     });
 
     describe('Provider – liquidity provision allowed flag', () => {
@@ -470,24 +468,6 @@ describe('Provider tests', () => {
         });
     });
 
-    describe('Provider – pending removal flag', () => {
-        beforeEach(() => {
-            clearCachedProviders();
-            Blockchain.clearStorage();
-            Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
-        });
-
-        it('mark/clear pending removal', () => {
-            const provider: Provider = new Provider(u256.fromU64(42));
-
-            provider.markPendingRemoval();
-            expect(provider.isPendingRemoval()).toBeTruthy();
-            provider.clearPendingRemoval();
-            expect(provider.isPendingRemoval()).toBeFalsy();
-        });
-    });
-
     describe('Provider – BTC receiver', () => {
         beforeEach(() => {
             clearCachedProviders();
@@ -500,40 +480,6 @@ describe('Provider tests', () => {
             const provider: Provider = new Provider(u256.fromU64(42));
             provider.setBtcReceiver('abcde');
             expect(provider.getBtcReceiver()).toStrictEqual('abcde');
-        });
-    });
-
-    describe('Provider – liquidity provider flag', () => {
-        beforeEach(() => {
-            clearCachedProviders();
-            Blockchain.clearStorage();
-            Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
-        });
-
-        it('mark/clear liquidity provider', () => {
-            const provider: Provider = new Provider(u256.fromU64(42));
-            provider.markLiquidityProvider();
-            expect(provider.isLiquidityProvider()).toBeTruthy();
-            provider.clearLiquidityProvider();
-            expect(provider.isLiquidityProvider()).toBeFalsy();
-        });
-    });
-
-    describe('Provider – fromRemovalQueue flag', () => {
-        beforeEach(() => {
-            clearCachedProviders();
-            Blockchain.clearStorage();
-            Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
-        });
-
-        it('mark and clear fromRemovalQueue', () => {
-            const provider: Provider = new Provider(u256.fromU64(42));
-            provider.markFromRemovalQueue();
-            expect(provider.isFromRemovalQueue()).toBeTruthy();
-            provider.clearFromRemovalQueue();
-            expect(provider.isFromRemovalQueue()).toBeFalsy();
         });
     });
 
@@ -564,30 +510,22 @@ describe('Provider tests', () => {
             expect(provider.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
         });
 
-        it('resetLiquidityProviderValues clears provider related fields', () => {
-            const provider: Provider = new Provider(u256.fromU64(42));
-
-            provider.markLiquidityProvider();
-            provider.setLiquidityProvided(u128.fromU64(30));
-            provider.markPendingRemoval();
-            provider.setQueueIndex(5);
-
-            provider.resetLiquidityProviderValues();
-
-            expect(provider.isLiquidityProvider()).toBeFalsy();
-            expect(provider.getLiquidityProvided()).toStrictEqual(u128.Zero);
-            expect(provider.isPendingRemoval()).toBeFalsy();
-            expect(provider.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-        });
-
-        it('resetAll clears both listing and provider fields', () => {
+        it('resetAll clears both listing fields', () => {
             const provider: Provider = new Provider(u256.fromU64(42));
 
             provider.activate();
-            provider.markLiquidityProvider();
+            provider.markPriority();
+            provider.allowLiquidityProvision();
+            provider.setLiquidityAmount(u128.fromU64(25));
+            provider.setReservedAmount(u128.fromU64(5));
+            provider.setQueueIndex(9);
             provider.resetAll();
             expect(provider.isActive()).toBeFalsy();
-            expect(provider.isLiquidityProvider()).toBeFalsy();
+            expect(provider.isPriority()).toBeFalsy();
+            expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
+            expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
+            expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
+            expect(provider.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
         });
     });
 
@@ -649,34 +587,6 @@ describe('Provider tests', () => {
 
                 provider.subtractFromReservedAmount(u128.fromU64(5));
             }).toThrow();
-        });
-    });
-
-    describe('Provider – Liquidity Provided helpers', () => {
-        beforeEach(() => {
-            clearCachedProviders();
-            Blockchain.clearStorage();
-            Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
-        });
-
-        it('default liquidity provided amount is zero', () => {
-            const provider: Provider = new Provider(u256.fromU64(100));
-            expect(provider.getLiquidityProvided()).toStrictEqual(u128.Zero);
-        });
-
-        it('setLiquidityProvided updates value', () => {
-            const provider: Provider = new Provider(u256.fromU64(101));
-            const amount: u128 = u128.fromU64(15);
-            provider.setLiquidityProvided(amount);
-            expect(provider.getLiquidityProvided()).toStrictEqual(amount);
-        });
-
-        it('addToLiquidityProvided increments existing value', () => {
-            const provider: Provider = new Provider(u256.fromU64(102));
-            provider.setLiquidityProvided(u128.fromU64(10));
-            provider.addToLiquidityProvided(u128.fromU64(7));
-            expect(provider.getLiquidityProvided()).toStrictEqual(u128.fromU64(17));
         });
     });
 

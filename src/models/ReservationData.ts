@@ -105,29 +105,28 @@ export class ReservationData {
         return this._creationBlock + RESERVATION_EXPIRE_AFTER_IN_BLOCKS;
     }
 
-    private _forLiquidityPool: boolean = false;
+    private _purged: boolean = false;
 
     /**
-     * @method forLiquidityPool
-     * @description Gets if the reservation is for a liquidity pool.
-     * @returns {boolean} - true if the reservation is for a liquidity pool; false if not.
+     * @method purged
+     * @description Gets if the reservation has been purged.
+     * @returns {boolean} - true if purged; false if not.
      */
     @inline
-    public get forLiquidityPool(): boolean {
+    public get purged(): boolean {
         this.ensureValues();
-        return this._forLiquidityPool;
+        return this._purged;
     }
 
     /**
-     * @method forLiquidityPool
-     * @description Sets if the reservation is for a liquidity pool.
-     * @param {boolean} value - true if the reservation is for a liquidity pool; false if not.
+     * @method purged
+     * @description Sets the purged states.
+     * @param {boolean} value - true if purged; false if not.
      */
-    public set forLiquidityPool(value: boolean) {
+    public set purged(value: boolean) {
         this.ensureValues();
-
-        if (this._forLiquidityPool !== value) {
-            this._forLiquidityPool = value;
+        if (this._purged !== value) {
+            this._purged = value;
             this.isChanged = true;
         }
     }
@@ -154,6 +153,31 @@ export class ReservationData {
         this.ensureValues();
         if (this._purgeIndex !== value) {
             this._purgeIndex = value;
+            this.isChanged = true;
+        }
+    }
+
+    private _swapped: boolean = false;
+    /**
+     * @method swapped
+     * @description Gets the swapped state.
+     * @returns {boolean} true if swapped; false if not.
+     */
+    @inline
+    public get swapped(): boolean {
+        this.ensureValues();
+        return this._swapped;
+    }
+
+    /**
+     * @method swapped
+     * @description Sets the swapped state.
+     * @param {boolean} true if swapped, false if not swapped.
+     */
+    public set swapped(value: boolean) {
+        this.ensureValues();
+        if (this._swapped !== value) {
+            this._swapped = value;
             this.isChanged = true;
         }
     }
@@ -208,10 +232,13 @@ export class ReservationData {
      */
     @inline
     public reset(isTimeout: boolean): void {
-        this.forLiquidityPool = false;
         this.purgeIndex = INDEX_NOT_SET_VALUE;
         this.activationDelay = 0;
         this.timeout = isTimeout;
+        this.purged = false;
+
+        // Never reset the swapped state here, we want to keep it as it is
+        // Only new reservation should reset this state.
 
         if (!isTimeout) {
             this.creationBlock = 0;
@@ -261,8 +288,17 @@ export class ReservationData {
     private packFlags(): u8 {
         let flags: u8 = 0;
 
-        if (this.forLiquidityPool) flags |= 0b1;
-        if (this.timeout) flags |= 0b10;
+        if (this.timeout) {
+            flags |= 0b1;
+        }
+
+        if (this.swapped) {
+            flags |= 0b10;
+        }
+
+        if (this.purged) {
+            flags |= 0b100;
+        }
 
         return flags;
     }
@@ -294,8 +330,9 @@ export class ReservationData {
      * @returns {void}
      */
     private unpackFlags(packedFlags: u8): void {
-        this._forLiquidityPool = (packedFlags & 0b1) !== 0;
-        this._timeout = (packedFlags & 0b10) !== 0;
+        this._timeout = (packedFlags & 0b1) !== 0;
+        this._swapped = (packedFlags & 0b10) !== 0;
+        this._purged = (packedFlags & 0b100) !== 0;
     }
 
     /**

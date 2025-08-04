@@ -1,4 +1,9 @@
-import { clearCachedProviders, Provider } from '../models/Provider';
+import {
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+    Provider,
+} from '../models/Provider';
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import {
     PRIORITY_QUEUE_POINTER,
@@ -8,13 +13,13 @@ import {
     createProvider,
     createProviders,
     providerAddress1,
+    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { PriorityPurgedProviderQueue } from '../managers/PriorityPurgedProviderQueue';
 import {
-    ALLOW_DIRTY,
     ENABLE_INDEX_VERIFICATION,
     INDEX_NOT_SET_VALUE,
     MAXIMUM_NUMBER_OF_PROVIDERS,
@@ -23,13 +28,13 @@ import { PriorityProviderQueue } from '../managers/PriorityProviderQueue';
 
 const QUOTE = u256.fromU64(100000000);
 
-function createPriorityPurgedQueue(allowDirty: boolean = ALLOW_DIRTY): PriorityPurgedProviderQueue {
+function createPriorityPurgedQueue(): PriorityPurgedProviderQueue {
     const queue: PriorityPurgedProviderQueue = new PriorityPurgedProviderQueue(
         tokenAddress1,
         PRIORITY_QUEUE_PURGED_RESERVATION,
         tokenIdUint8Array1,
         ENABLE_INDEX_VERIFICATION,
-        allowDirty,
+        testStackingContractAddress,
     );
 
     return queue;
@@ -42,6 +47,7 @@ function createPriorityQueue(): PriorityProviderQueue {
         tokenIdUint8Array1,
         ENABLE_INDEX_VERIFICATION,
         MAXIMUM_NUMBER_OF_PROVIDERS,
+        testStackingContractAddress,
     );
 
     return queue;
@@ -53,6 +59,7 @@ describe('PriorityPurgedProviderQueue tests', () => {
         Blockchain.clearStorage();
         Blockchain.clearMockedResults();
         TransferHelper.clearMockedResults();
+        clearPendingStakingContractAmount();
     });
 
     describe('PriorityPurgedProviderQueue – getters', () => {
@@ -61,6 +68,7 @@ describe('PriorityPurgedProviderQueue tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should have a 0 length after creation', () => {
@@ -76,6 +84,7 @@ describe('PriorityPurgedProviderQueue tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should return INDEX_NOT_SET_VALUE if initial provider', () => {
@@ -146,6 +155,7 @@ describe('PriorityPurgedProviderQueue tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should revert if provider queue index is not set', () => {
@@ -206,7 +216,6 @@ describe('PriorityPurgedProviderQueue tests', () => {
             expect(provider1).not.toBeNull();
             if (provider1 !== null) {
                 expect(provider1.getPurgedIndex()).toStrictEqual(0);
-                expect(provider1.isFromRemovalQueue()).toBeFalsy();
             }
         });
 
@@ -275,14 +284,18 @@ describe('PriorityPurgedProviderQueue tests', () => {
                 purgedQueue.add(providers[i]);
             }
 
-            const provider1Index = providers[0].getQueueIndex();
+            const provider = purgedQueue.get(queue, u256.fromU32(100000000));
+            expect(provider).toBeNull();
 
-            const provider1 = purgedQueue.get(queue, u256.fromU32(100000000));
-            expect(provider1).toBeNull();
-            expect(providers[0].isPurged()).toBeFalsy();
-            expect(providers[0].isActive()).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
-            expect(queue.getAt(provider1Index)).toStrictEqual(u256.Zero);
+            for (let i = 0; i < providers.length; i++) {
+                expect(providers[i].isPurged()).toBeFalsy();
+                expect(providers[i].isActive()).toBeFalsy();
+                expect(queue.getAt(i)).toStrictEqual(u256.Zero);
+            }
+
+            expect(getPendingStakingContractAmount()).toStrictEqual(
+                u256.fromU32(providers.length * 110),
+            );
         });
 
         it('should revert when provider not purged, available liquidity < minimum required and no reserved amount', () => {
@@ -302,28 +315,6 @@ describe('PriorityPurgedProviderQueue tests', () => {
                 purgedQueue.get(queue, u256.fromU32(100000000));
             }).toThrow();
         });
-
-        it('should return null, reset the provider but no delete it, transfer remaining liquidity when available liquidity < minimum required and no reserved amount', () => {
-            const queue: PriorityProviderQueue = createPriorityQueue();
-            const purgedQueue: PriorityPurgedProviderQueue = createPriorityPurgedQueue();
-
-            const providers = createProviders(10);
-            for (let i = 0; i < providers.length; i++) {
-                providers[i].markPriority();
-                providers[i].setLiquidityAmount(u128.fromU32(110));
-                queue.add(providers[i]);
-                purgedQueue.add(providers[i]);
-            }
-
-            const provider1Index = providers[0].getQueueIndex();
-            providers[0].markInitialLiquidityProvider();
-            const provider1 = purgedQueue.get(queue, u256.fromU32(100000000));
-            expect(provider1).toBeNull();
-            expect(providers[0].isPurged()).toBeFalsy();
-            expect(providers[0].isActive()).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
-            expect(queue.getAt(provider1Index)).not.toStrictEqual(u256.Zero);
-        });
     });
 
     describe('PriorityPurgedProviderQueue – remove', () => {
@@ -332,6 +323,7 @@ describe('PriorityPurgedProviderQueue tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should revert if purger provider queue index is not set', () => {
@@ -360,24 +352,6 @@ describe('PriorityPurgedProviderQueue tests', () => {
             expect(provider.isPurged()).toBeFalsy();
             expect(queue.length).toStrictEqual(0);
         });
-
-        it('should properly remove the provider and delete it from the queue if dirty not allowed', () => {
-            /*
-            const queue: PriorityPurgedProviderQueue = createPriorityPurgedQueue(false);
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setQueueIndex(0);
-provider.markPriority();
-            const index = queue.add(provider);
-
-            queue.remove(provider);
-
-            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-            expect(provider.isPurged()).toBeFalsy();
-            expect(queue.length).toStrictEqual(0);
-
-
-             */
-        });
     });
 
     describe('PriorityPurgedProviderQueue – save', () => {
@@ -386,6 +360,7 @@ provider.markPriority();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should save correctly', () => {

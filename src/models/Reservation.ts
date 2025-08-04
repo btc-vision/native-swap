@@ -64,10 +64,6 @@ export class Reservation {
         this.reservedPriority.push(<u8>providerData.providerType);
     }
 
-    public clearForLiquidityPool(): void {
-        this.reservationData.forLiquidityPool = false;
-    }
-
     public delete(isTimeout: boolean): void {
         this.reservedIndexes.reset();
         this.reservedValues.reset();
@@ -124,8 +120,16 @@ export class Reservation {
         return this.reservedIndexes.getLength();
     }
 
+    public getPurged(): boolean {
+        return this.reservationData.purged;
+    }
+
     public getPurgeIndex(): u32 {
         return this.reservationData.purgeIndex;
+    }
+
+    public getSwapped(): boolean {
+        return this.reservationData.swapped;
     }
 
     public getUserTimeoutBlockExpiration(): u64 {
@@ -140,16 +144,8 @@ export class Reservation {
         return Blockchain.block.number > this.reservationData.expirationBlock;
     }
 
-    public isForLiquidityPool(): boolean {
-        return this.reservationData.forLiquidityPool;
-    }
-
     public isValid(): boolean {
         return !this.isExpired() && this.reservedIndexes.getLength() > 0;
-    }
-
-    public markForLiquidityPool(): void {
-        this.reservationData.forLiquidityPool = true;
     }
 
     public save(): void {
@@ -167,8 +163,16 @@ export class Reservation {
         this.reservationData.creationBlock = value;
     }
 
+    public setPurged(value: boolean): void {
+        this.reservationData.purged = value;
+    }
+
     public setPurgeIndex(index: u32): void {
         this.reservationData.purgeIndex = index;
+    }
+
+    public setSwapped(value: boolean): void {
+        this.reservationData.swapped = value;
     }
 
     public timeoutUser(): void {

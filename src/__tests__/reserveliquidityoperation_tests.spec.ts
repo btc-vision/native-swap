@@ -1,10 +1,4 @@
-import {
-    Address,
-    Blockchain,
-    SafeMath,
-    TransactionOutput,
-    TransferHelper,
-} from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { clearCachedProviders, getProvider } from '../models/Provider';
 import {
     createLiquidityQueue,
@@ -16,6 +10,7 @@ import {
     receiverAddress1,
     setBlockchainEnvironment,
     TestReserveLiquidityOperation,
+    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -25,15 +20,11 @@ import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import { FeeManager } from '../managers/FeeManager';
 import { Reservation } from '../models/Reservation';
 import {
-    FEE_COLLECT_SCRIPT_PUBKEY,
     INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
 } from '../constants/Contract';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
-import { AddLiquidityOperation } from '../operations/AddLiquidityOperation';
-import { RemoveLiquidityOperation } from '../operations/RemoveLiquidityOperation';
-import { ProviderTypes } from '../types/ProviderTypes';
 
 describe('ReserveLiquidityOperation tests', () => {
     beforeEach(() => {
@@ -53,11 +44,17 @@ describe('ReserveLiquidityOperation tests', () => {
             FeeManager.reservationBaseFee = 0;
         });
 
-        it("should revert if initial provider try to reserve his own liquidity'", () => {
+        it('should revert if initial provider try to reserve his own liquidity', () => {
             expect(() => {
                 setBlockchainEnvironment(100);
 
-                const provider = createProvider(providerAddress1, tokenAddress1, true, true, false);
+                const provider = createProvider(
+                    providerAddress1,
+                    tokenAddress1,
+                    false,
+                    false,
+                    false,
+                );
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
                 queue.liquidityQueue.initialLiquidityProviderId = provider.getId();
 
@@ -67,7 +64,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     msgSender1,
                     10000,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -91,7 +87,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     msgSender1,
                     10000,
                     u256.Zero,
-                    false,
                     8,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -115,7 +110,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     msgSender1,
                     0,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -139,7 +133,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     msgSender1,
                     1000,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -163,7 +156,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     msgSender1,
                     10000,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -201,7 +193,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -218,7 +210,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress1,
                     10000,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -263,7 +254,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -279,7 +270,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress1,
                     10000,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -295,7 +285,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress1,
                     10000,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -304,7 +293,7 @@ describe('ReserveLiquidityOperation tests', () => {
             }).toThrow();
         });
 
-        it("should revert if there is already an active reservation'", () => {
+        it('should revert if there is already an active reservation', () => {
             expect(() => {
                 setBlockchainEnvironment(100, msgSender1, msgSender1);
                 Blockchain.mockValidateBitcoinAddressResult(true);
@@ -330,7 +319,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -346,7 +335,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress1,
                     10000,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -362,7 +350,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress1,
                     10000,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -396,7 +383,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -413,7 +400,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 900000000,
                 u256.Zero,
-                false,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
@@ -423,16 +409,15 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
             expect(reservation.getActivationDelay()).toStrictEqual(2);
-            expect(reservation.isForLiquidityPool()).toBeFalsy();
             expect(reservation.getExpirationBlock()).toStrictEqual(108);
             expect(reservation.getPurgeIndex()).toStrictEqual(0);
             expect(reservation.getProviderCount()).toStrictEqual(1);
 
             const value1 = reservation.getProviderAt(0);
             expect(value1.providerIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
-            expect(value1.providedAmount).toStrictEqual(u128.fromString(`49999999999999999999999`));
+            expect(value1.providedAmount).toStrictEqual(u128.fromString(`49999998972775999999999`));
             expect(queue2.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`49999999999999999999999`),
+                u256.fromString(`49999998972775999999999`),
             );
 
             for (let i: u64 = 105; i < 110; i++) {
@@ -450,7 +435,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 900000000,
                 u256.Zero,
-                false,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
@@ -488,7 +472,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -505,7 +489,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress2,
                     900000000,
                     u256.Zero,
-                    false,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -515,7 +498,6 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const reservation = new Reservation(tokenAddress1, providerAddress2);
                 expect(reservation.getActivationDelay()).toStrictEqual(2);
-                expect(reservation.isForLiquidityPool()).toBeFalsy();
                 expect(reservation.getExpirationBlock()).toStrictEqual(108);
                 expect(reservation.getPurgeIndex()).toStrictEqual(0);
                 expect(reservation.getProviderCount()).toStrictEqual(1);
@@ -544,7 +526,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress2,
                     900000000,
                     u256.Zero,
-                    false,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -552,114 +533,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 reserveOp2.execute();
                 queue3.liquidityQueue.save();
             }).toThrow();
-        });
-
-        it('should set isForLiquidityPool flag when reservation is for liquidity pool ', () => {
-            setBlockchainEnvironment(100, msgSender1, msgSender1);
-            Blockchain.mockValidateBitcoinAddressResult(true);
-
-            const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-            const floorPrice: u256 = SafeMath.div(
-                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
-                u256.fromU32(1500),
-            );
-            const initialLiquidity = SafeMath.mul128(
-                u128.fromU32(1000000),
-                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
-            );
-
-            const createPoolOp = new CreatePoolOperation(
-                queue.liquidityQueue,
-                floorPrice,
-                initialProviderId,
-                initialLiquidity,
-                receiverAddress1,
-                0,
-                u256.Zero,
-                5,
-                Address.dead(),
-            );
-
-            createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
-            queue.liquidityQueue.save();
-
-            setBlockchainEnvironment(102, providerAddress2, providerAddress2);
-            const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-            const reserveOp = new ReserveLiquidityOperation(
-                queue3.liquidityQueue,
-                providerId2,
-                providerAddress2,
-                900000000,
-                u256.Zero,
-                true,
-                2,
-                MAXIMUM_PROVIDER_PER_RESERVATIONS,
-            );
-
-            reserveOp.execute();
-            queue3.liquidityQueue.save();
-
-            const reservation = new Reservation(tokenAddress1, providerAddress2);
-            expect(reservation.isForLiquidityPool()).toBeTruthy();
-        });
-
-        it('should not set isForLiquidityPool flag when reservation is not for liquidity pool ', () => {
-            setBlockchainEnvironment(100, msgSender1, msgSender1);
-            Blockchain.mockValidateBitcoinAddressResult(true);
-
-            const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-            const floorPrice: u256 = SafeMath.div(
-                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
-                u256.fromU32(1500),
-            );
-            const initialLiquidity = SafeMath.mul128(
-                u128.fromU32(1000000),
-                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
-            );
-
-            const createPoolOp = new CreatePoolOperation(
-                queue.liquidityQueue,
-                floorPrice,
-                initialProviderId,
-                initialLiquidity,
-                receiverAddress1,
-                0,
-                u256.Zero,
-                5,
-                Address.dead(),
-            );
-
-            createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
-            queue.liquidityQueue.save();
-
-            setBlockchainEnvironment(102, providerAddress2, providerAddress2);
-            const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-            const reserveOp = new ReserveLiquidityOperation(
-                queue3.liquidityQueue,
-                providerId2,
-                providerAddress2,
-                900000000,
-                u256.Zero,
-                false,
-                2,
-                MAXIMUM_PROVIDER_PER_RESERVATIONS,
-            );
-
-            reserveOp.execute();
-            queue3.liquidityQueue.save();
-
-            const reservation = new Reservation(tokenAddress1, providerAddress2);
-            expect(reservation.isForLiquidityPool()).toBeFalsy();
         });
 
         it('should set the creation block number', () => {
@@ -687,7 +560,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -704,7 +577,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 900000000,
                 u256.Zero,
-                false,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
@@ -714,6 +586,61 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
             expect(reservation.getCreationBlock()).toStrictEqual(102);
+        });
+
+        it('should set the swapped flag to false', () => {
+            setBlockchainEnvironment(100, msgSender1, msgSender1);
+            Blockchain.mockValidateBitcoinAddressResult(true);
+
+            const initialProviderId = createProviderId(msgSender1, tokenAddress1);
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+            const floorPrice: u256 = SafeMath.div(
+                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
+                u256.fromU32(1500),
+            );
+            const initialLiquidity = SafeMath.mul128(
+                u128.fromU32(1000000),
+                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
+            );
+
+            const createPoolOp = new CreatePoolOperation(
+                queue.liquidityQueue,
+                floorPrice,
+                initialProviderId,
+                initialLiquidity,
+                receiverAddress1,
+                0,
+                u256.Zero,
+                5,
+                testStackingContractAddress,
+            );
+
+            createPoolOp.execute();
+            queue.liquidityQueue.setBlockQuote();
+            queue.liquidityQueue.save();
+
+            setBlockchainEnvironment(102, providerAddress2, providerAddress2);
+            const providerId2 = createProviderId(providerAddress2, tokenAddress1);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const reservation = new Reservation(tokenAddress1, providerAddress2);
+            reservation.setSwapped(true);
+
+            const reserveOp = new ReserveLiquidityOperation(
+                queue3.liquidityQueue,
+                providerId2,
+                providerAddress2,
+                900000000,
+                u256.Zero,
+                2,
+                MAXIMUM_PROVIDER_PER_RESERVATIONS,
+            );
+
+            reserveOp.execute();
+            queue3.liquidityQueue.save();
+
+            const reservation2 = new Reservation(tokenAddress1, providerAddress2);
+            expect(reservation2.getSwapped()).toBeFalsy();
         });
     });
 
@@ -726,7 +653,7 @@ describe('ReserveLiquidityOperation tests', () => {
             FeeManager.reservationBaseFee = 0;
         });
 
-        it("should revert if liquidity queue does not have enough available liquidity'", () => {
+        it('should revert if liquidity queue does not have enough available liquidity', () => {
             expect(() => {
                 setBlockchainEnvironment(100, msgSender1, msgSender1);
                 Blockchain.mockValidateBitcoinAddressResult(true);
@@ -752,7 +679,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     10,
                     u256.fromU32(15000),
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -774,7 +701,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress1,
                     11000,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -809,7 +735,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -829,7 +755,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress1,
                     10000,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -847,61 +772,6 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
             FeeManager.reservationBaseFee = 0;
-        });
-
-        it('should revert when trying to add to much tokens for liquidity pool', () => {
-            expect(() => {
-                setBlockchainEnvironment(100, msgSender1, msgSender1);
-                Blockchain.mockValidateBitcoinAddressResult(true);
-
-                const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-                const floorPrice: u256 = SafeMath.div(
-                    SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
-                    u256.fromU32(1),
-                );
-                const initialLiquidity = SafeMath.mul128(
-                    u128.fromU64(999999999),
-                    SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
-                );
-
-                const createPoolOp = new CreatePoolOperation(
-                    queue.liquidityQueue,
-                    floorPrice,
-                    initialProviderId,
-                    initialLiquidity,
-                    receiverAddress1,
-                    0,
-                    u256.Zero,
-                    0,
-                    Address.dead(),
-                );
-
-                createPoolOp.execute();
-                queue.liquidityQueue.virtualTokenReserve = u256.fromString(
-                    '99999999999999999999999999999999',
-                );
-                queue.liquidityQueue.virtualSatoshisReserve = 1;
-                queue.liquidityQueue.setBlockQuote();
-                queue.liquidityQueue.save();
-
-                setBlockchainEnvironment(101, providerAddress1, providerAddress1);
-                const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-                const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-                const reserveOp = new ReserveLiquidityOperation(
-                    queue2.liquidityQueue,
-                    providerId1,
-                    providerAddress1,
-                    u64.MAX_VALUE,
-                    u256.Zero,
-                    true,
-                    0,
-                    MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                );
-
-                reserveOp.execute();
-            }).toThrow();
         });
 
         it('should limit the number of tokens to the available liquidity', () => {
@@ -929,7 +799,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 100,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -946,7 +816,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 90000000,
                 u256.Zero,
-                false,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
@@ -963,7 +832,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             if (result !== null) {
                 expect(result.providedAmount).toStrictEqual(
-                    u128.fromString(`9999999999999999999999`),
+                    u128.fromString(`9999999343049333333333`),
                 );
             }
         });
@@ -994,7 +863,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     1,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1014,7 +883,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress2,
                     90000000,
                     u256.Zero,
-                    false,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -1050,7 +918,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     1,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1070,7 +938,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress2,
                     90000000,
                     u256.Zero,
-                    false,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -1106,7 +973,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     150,
                     u256.fromU32(10000),
                     100,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1123,7 +990,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress2,
                     90000000,
                     u256.Zero,
-                    false,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -1159,7 +1025,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     100,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1176,7 +1042,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress2,
                     10000,
                     u256.Zero,
-                    false,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -1223,7 +1088,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1236,9 +1101,9 @@ describe('ReserveLiquidityOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId1,
-                u128.fromString(`6667000000000000000`),
+                u128.fromString(`66670000000000000000`),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -1254,9 +1119,8 @@ describe('ReserveLiquidityOperation tests', () => {
                 queue3.liquidityQueue,
                 providerId2,
                 providerAddress2,
-                10001,
+                59080,
                 u256.Zero,
-                false,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
@@ -1265,7 +1129,7 @@ describe('ReserveLiquidityOperation tests', () => {
             queue3.liquidityQueue.save();
 
             expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`6666688890000000000`),
+                u256.fromString(`66669321090403253460`),
             );
         });
 
@@ -1295,7 +1159,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1308,9 +1172,9 @@ describe('ReserveLiquidityOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId1,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`20000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -1332,7 +1196,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 20000,
                 u256.Zero,
-                false,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
@@ -1344,7 +1207,7 @@ describe('ReserveLiquidityOperation tests', () => {
             expect(reservation.getProviderCount()).toStrictEqual(1);
 
             const values = reservation.getProviderAt(0);
-            expect(values.providedAmount).toStrictEqual(u128.fromString(`9999383330000000000`));
+            expect(values.providedAmount).toStrictEqual(u128.fromString(`19999652358523639999`));
         });
 
         it('should revert when provider queue index is not set', () => {
@@ -1374,7 +1237,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1389,7 +1252,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -1409,7 +1272,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress2,
                     20000,
                     u256.Zero,
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -1450,8 +1312,8 @@ describe('ReserveLiquidityOperation tests', () => {
                 receiverAddress1,
                 0,
                 u256.Zero,
-                5,
-                Address.dead(),
+                100,
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1463,7 +1325,7 @@ describe('ReserveLiquidityOperation tests', () => {
             const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             initProvider.setReservedAmount(
-                SafeMath.sub128(initProvider.getLiquidityAmount(), u128.fromU64(1000000000000000)),
+                SafeMath.sub128(initProvider.getLiquidityAmount(), u128.fromU64(5000000000000000)),
             );
             initProvider.save();
             queue3.liquidityQueue.mockgetNextProviderWithLiquidity(initProvider);
@@ -1474,7 +1336,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 20000,
                 u256.Zero,
-                false,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
@@ -1512,7 +1373,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1532,7 +1393,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress2,
                     10000,
                     u256.Zero,
-                    false,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -1568,7 +1428,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1583,7 +1443,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -1601,7 +1461,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress2,
                     900000000000,
                     u256.fromString(`9000000000000000000000000`),
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -1638,7 +1497,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
+                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1655,7 +1514,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
-                    Address.dead(),
+                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -1678,7 +1537,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerAddress2,
                     900000000000,
                     u256.fromString(`9000000000000000000000000`),
-                    false,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 );
@@ -1716,7 +1574,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 100,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1730,9 +1588,9 @@ describe('ReserveLiquidityOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId1,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -1757,7 +1615,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 1000000000000,
                 u256.Zero,
-                false,
                 0,
                 1,
             );
@@ -1766,333 +1623,6 @@ describe('ReserveLiquidityOperation tests', () => {
             queue3.liquidityQueue.save();
 
             expect(reserveOp.getReservedProviderCount()).toStrictEqual(1);
-        });
-    });
-
-    describe('ReserveLiquidityOperation - reserve from pending removal', () => {
-        beforeEach(() => {
-            clearCachedProviders();
-            Blockchain.clearStorage();
-            Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
-            FeeManager.reservationBaseFee = 0;
-        });
-
-        it('should reserve from a pending removal provider and increment reservedProviderCount', () => {
-            setBlockchainEnvironment(100, msgSender1, msgSender1);
-            Blockchain.mockValidateBitcoinAddressResult(true);
-
-            const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const initialProvider = getProvider(initialProviderId);
-            initialProvider.markInitialLiquidityProvider();
-            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
-
-            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-            const floorPrice: u256 = SafeMath.div(
-                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
-                u256.fromU32(1500),
-            );
-            const initialLiquidity = SafeMath.mul128(
-                u128.fromU32(1000000),
-                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
-            );
-
-            const createPoolOp = new CreatePoolOperation(
-                queue.liquidityQueue,
-                floorPrice,
-                initialProviderId,
-                initialLiquidity,
-                receiverAddress1,
-                0,
-                u256.Zero,
-                5,
-                Address.dead(),
-            );
-
-            createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
-            queue.liquidityQueue.save();
-
-            setBlockchainEnvironment(103, providerAddress1, providerAddress1);
-            const transactionOutput: TransactionOutput[] = [];
-
-            transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
-            transactionOutput.push(
-                new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000),
-            );
-            transactionOutput.push(
-                new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
-            );
-
-            Blockchain.mockTransactionOutput(transactionOutput);
-            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-            const provider1 = getProvider(providerId1);
-            const reserveOp = new ReserveLiquidityOperation(
-                queue2.liquidityQueue,
-                providerId1,
-                providerAddress1,
-                900000000,
-                u256.Zero,
-                true,
-                0,
-                MAXIMUM_PROVIDER_PER_RESERVATIONS,
-            );
-
-            reserveOp.execute();
-            queue2.liquidityQueue.setBlockQuote();
-            queue2.liquidityQueue.save();
-
-            setBlockchainEnvironment(104, providerAddress1, providerAddress1);
-            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const addLiquidityOp = new AddLiquidityOperation(
-                queue3.liquidityQueue,
-                queue3.tradeManager,
-                providerId1,
-                receiverAddress1,
-            );
-
-            addLiquidityOp.execute();
-            queue3.liquidityQueue.setBlockQuote();
-            queue3.liquidityQueue.save();
-
-            setBlockchainEnvironment(105, providerAddress1, providerAddress1);
-            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const removeLiquidityOp = new RemoveLiquidityOperation(
-                queue4.liquidityQueue,
-                providerId1,
-            );
-
-            removeLiquidityOp.execute();
-            queue4.liquidityQueue.setBlockQuote();
-            queue4.liquidityQueue.save();
-
-            setBlockchainEnvironment(106, providerAddress2, providerAddress2);
-            const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const reserveOp2 = new TestReserveLiquidityOperation(
-                queue5.liquidityQueue,
-                providerId2,
-                providerAddress2,
-                10000,
-                u256.Zero,
-                false,
-                2,
-                MAXIMUM_PROVIDER_PER_RESERVATIONS,
-            );
-
-            reserveOp2.execute();
-            queue5.liquidityQueue.save();
-
-            const reservation = new Reservation(tokenAddress1, providerAddress2);
-
-            expect(reserveOp2.getReservedProviderCount()).toStrictEqual(1);
-            expect(provider1.isPendingRemoval()).toBeTruthy();
-            expect(reservation.getProviderCount()).toStrictEqual(1);
-            const data = reservation.getProviderAt(0);
-            expect(data).not.toBeNull();
-
-            if (data !== null) {
-                expect(data.providerType).toStrictEqual(ProviderTypes.LiquidityRemoval);
-            }
-        });
-
-        it('should cap to owed amount when reserving from a pending removal provider and remainingSatoshis > owed amount', () => {
-            setBlockchainEnvironment(100, msgSender1, msgSender1);
-            Blockchain.mockValidateBitcoinAddressResult(true);
-
-            const initialProviderId = createProviderId(msgSender1, tokenAddress1);
-            const initialProvider = getProvider(initialProviderId);
-            initialProvider.markInitialLiquidityProvider();
-            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
-
-            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-            const floorPrice: u256 = SafeMath.div(
-                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
-                u256.fromU32(1500),
-            );
-            const initialLiquidity = SafeMath.mul128(
-                u128.fromU32(1000000),
-                SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
-            );
-
-            const createPoolOp = new CreatePoolOperation(
-                queue.liquidityQueue,
-                floorPrice,
-                initialProviderId,
-                initialLiquidity,
-                receiverAddress1,
-                0,
-                u256.Zero,
-                5,
-                Address.dead(),
-            );
-
-            createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
-            queue.liquidityQueue.save();
-
-            setBlockchainEnvironment(103, providerAddress1, providerAddress1);
-            const transactionOutput: TransactionOutput[] = [];
-
-            transactionOutput.push(new TransactionOutput(0, 0, null, 'fakeaddress', 0));
-            transactionOutput.push(
-                new TransactionOutput(1, 0, null, FEE_COLLECT_SCRIPT_PUBKEY, 10000),
-            );
-            transactionOutput.push(
-                new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), 10000),
-            );
-
-            Blockchain.mockTransactionOutput(transactionOutput);
-            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-            const provider1 = getProvider(providerId1);
-            const reserveOp = new ReserveLiquidityOperation(
-                queue2.liquidityQueue,
-                providerId1,
-                providerAddress1,
-                900000000,
-                u256.Zero,
-                true,
-                0,
-                MAXIMUM_PROVIDER_PER_RESERVATIONS,
-            );
-
-            reserveOp.execute();
-            queue2.liquidityQueue.setBlockQuote();
-            queue2.liquidityQueue.save();
-
-            setBlockchainEnvironment(104, providerAddress1, providerAddress1);
-            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const addLiquidityOp = new AddLiquidityOperation(
-                queue3.liquidityQueue,
-                queue3.tradeManager,
-                providerId1,
-                receiverAddress1,
-            );
-
-            addLiquidityOp.execute();
-            queue3.liquidityQueue.setBlockQuote();
-            queue3.liquidityQueue.save();
-
-            setBlockchainEnvironment(105, providerAddress1, providerAddress1);
-            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const removeLiquidityOp = new RemoveLiquidityOperation(
-                queue4.liquidityQueue,
-                providerId1,
-            );
-
-            removeLiquidityOp.execute();
-            queue4.liquidityQueue.setBlockQuote();
-            queue4.liquidityQueue.save();
-
-            setBlockchainEnvironment(106, providerAddress2, providerAddress2);
-            const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const reserveOp2 = new TestReserveLiquidityOperation(
-                queue5.liquidityQueue,
-                providerId2,
-                providerAddress2,
-                10000,
-                u256.Zero,
-                false,
-                2,
-                MAXIMUM_PROVIDER_PER_RESERVATIONS,
-            );
-
-            const reservation = new Reservation(tokenAddress1, providerAddress2);
-
-            queue5.liquidityQueue.setSatoshisOwed(providerId1, 20000);
-            reserveOp2.callReserveFromRemovalProvider(
-                reservation,
-                provider1,
-                30000,
-                u256.fromString(`66666666666666666666666`),
-            );
-
-            expect(reservation.getProviderCount()).toStrictEqual(1);
-            const data = reservation.getProviderAt(0);
-            expect(data).not.toBeNull();
-
-            if (data !== null) {
-                expect(data.providedAmount).toStrictEqual(u128.fromString(`13333333333333333333`));
-                expect(queue5.liquidityQueue.getSatoshisOwedReserved(providerId1)).toStrictEqual(
-                    20000,
-                );
-            }
-        });
-
-        it('should reserve remainingSatoshis when reserving from a pending removal provider and remainingSatoshis <= owed amount', () => {
-            setBlockchainEnvironment(106, providerAddress2, providerAddress2);
-            const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-            const provider1 = getProvider(providerId1);
-            const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const reserveOp2 = new TestReserveLiquidityOperation(
-                queue5.liquidityQueue,
-                providerId2,
-                providerAddress2,
-                10000,
-                u256.Zero,
-                false,
-                2,
-                MAXIMUM_PROVIDER_PER_RESERVATIONS,
-            );
-
-            const reservation = new Reservation(tokenAddress1, providerAddress2);
-
-            queue5.liquidityQueue.setSatoshisOwed(providerId1, 30000);
-            reserveOp2.setRemainingTokens(u256.fromString(`13333333333333333333`));
-            reserveOp2.callReserveFromRemovalProvider(
-                reservation,
-                provider1,
-                20000,
-                u256.fromString(`66666666666666666666666`),
-            );
-
-            expect(reservation.getProviderCount()).toStrictEqual(1);
-            const data = reservation.getProviderAt(0);
-            expect(data).not.toBeNull();
-
-            if (data !== null) {
-                expect(data.providedAmount).toStrictEqual(u128.fromString(`13333333333333333333`));
-                expect(queue5.liquidityQueue.getSatoshisOwedReserved(providerId1)).toStrictEqual(
-                    20000,
-                );
-            }
-        });
-
-        it('should reserve nothing from a pending removal provider when targetTokensToReserve is 0', () => {
-            setBlockchainEnvironment(106, providerAddress2, providerAddress2);
-            const providerId1 = createProviderId(providerAddress1, tokenAddress1);
-            const provider1 = getProvider(providerId1);
-            const providerId2 = createProviderId(providerAddress2, tokenAddress1);
-            const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const reserveOp2 = new TestReserveLiquidityOperation(
-                queue5.liquidityQueue,
-                providerId2,
-                providerAddress2,
-                10000,
-                u256.Zero,
-                false,
-                2,
-                MAXIMUM_PROVIDER_PER_RESERVATIONS,
-            );
-
-            const reservation = new Reservation(tokenAddress1, providerAddress2);
-
-            queue5.liquidityQueue.setSatoshisOwed(providerId1, 30000);
-            reserveOp2.setRemainingTokens(u256.fromString(`0`));
-            reserveOp2.callReserveFromRemovalProvider(
-                reservation,
-                provider1,
-                0,
-                u256.fromString(`66666666666666666666666`),
-            );
-
-            expect(reservation.getProviderCount()).toStrictEqual(0);
         });
     });
 
@@ -2134,7 +1664,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
+                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -2147,9 +1677,9 @@ describe('ReserveLiquidityOperation tests', () => {
             const listOp = new ListTokensForSaleOperation(
                 queue2.liquidityQueue,
                 providerId1,
-                u128.fromString(`10000000000000000000`),
+                u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
+                testStackingContractAddress,
                 false,
                 false,
             );
@@ -2167,7 +1697,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 900000000,
                 u256.Zero,
-                false,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
@@ -2179,7 +1708,6 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
             expect(reservation.getActivationDelay()).toStrictEqual(2);
-            expect(reservation.isForLiquidityPool()).toBeFalsy();
             expect(reservation.getExpirationBlock()).toStrictEqual(108);
             expect(reservation.getPurgeIndex()).toStrictEqual(0);
 
@@ -2189,11 +1717,10 @@ describe('ReserveLiquidityOperation tests', () => {
 
             expect(value1.providerIndex).toStrictEqual(0);
             expect(value2.providerIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
-
-            expect(value1.providedAmount).toStrictEqual(u128.fromString(`9999383330000000000`));
-            expect(value2.providedAmount).toStrictEqual(u128.fromString(`49990499951250000000000`));
+            expect(value1.providedAmount).toStrictEqual(u128.fromString(`999999415637569000000`));
+            expect(value2.providedAmount).toStrictEqual(u128.fromString(`49049999513782532000000`));
             expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`50000499334580000000000`),
+                u256.fromString(`50049998929420101000000`),
             );
 
             const reservationList = queue3.reservationManager.callgetReservationListForBlock(103);
@@ -2219,7 +1746,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 10000,
                 u256.Zero,
-                false,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
@@ -2256,7 +1782,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 10000,
                 u256.Zero,
-                false,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
@@ -2293,7 +1818,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 10000,
                 u256.Zero,
-                false,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );
@@ -2330,7 +1854,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerAddress2,
                 10000,
                 u256.Zero,
-                false,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
             );

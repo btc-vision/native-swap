@@ -1,4 +1,8 @@
-import { clearCachedProviders } from '../models/Provider';
+import {
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+} from '../models/Provider';
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import {
     createLiquidityQueue,
@@ -91,6 +95,29 @@ describe('CancelListTokenForSaleOperation tests', () => {
             }).toThrow();
         });
 
+        it('should revert if provider is in the purge queue', () => {
+            expect(() => {
+                setBlockchainEnvironment(100);
+
+                const provider = createProvider(providerAddress1, tokenAddress1);
+                provider.activate();
+                provider.clearPriority();
+                provider.markPurged();
+                provider.setPurgedIndex(1);
+                provider.setListedTokenAtBlock(100);
+
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const operation = new CancelListingOperation(
+                    queue.liquidityQueue,
+                    provider.getId(),
+                    testStackingContractAddress,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
+
         it('should revert if provider have no liquidity', () => {
             expect(() => {
                 setBlockchainEnvironment(100);
@@ -144,7 +171,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
                     providerAddress1,
                     tokenAddress1,
                     false,
-                    true,
+                    false,
                     false,
                 );
                 provider.activate();
@@ -163,29 +190,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 operation.execute();
             }).toThrow();
         });
-
-        it('should revert if provider is pending removal', () => {
-            expect(() => {
-                setBlockchainEnvironment(100);
-
-                const provider = createProvider(providerAddress1, tokenAddress1);
-                provider.activate();
-                provider.clearPriority();
-                provider.setLiquidityAmount(u128.fromU64(10000));
-                provider.markPendingRemoval();
-                provider.setListedTokenAtBlock(100);
-
-                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-                const operation = new CancelListingOperation(
-                    queue.liquidityQueue,
-                    provider.getId(),
-                    testStackingContractAddress,
-                );
-
-                operation.execute();
-            }).toThrow();
-        });
     });
 
     describe('CancelListTokenForSaleOperation execute', () => {
@@ -194,12 +198,13 @@ describe('CancelListTokenForSaleOperation tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should apply 50% penalty if in grace period', () => {
             setBlockchainEnvironment(100);
 
-            const provider = createProvider(providerAddress1, tokenAddress1, false, true, false);
+            const provider = createProvider(providerAddress1, tokenAddress1, false, false, false);
             provider.activate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU64(10000));
@@ -209,6 +214,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
 
             queue.providerManager.addToNormalQueue(provider);
             queue.liquidityQueue.virtualTokenReserve = u256.fromU64(10000);
+            queue.liquidityQueue.increaseTotalReserve(u256.fromU64(10000));
 
             setBlockchainEnvironment(101);
             const operation = new CancelListingOperation(
@@ -221,12 +227,14 @@ describe('CancelListTokenForSaleOperation tests', () => {
 
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(0));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5000));
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
         });
 
         it('should apply more than 50 % penalty if outside of grace period', () => {
             setBlockchainEnvironment(100);
 
-            const provider = createProvider(providerAddress1, tokenAddress1, false, true, false);
+            const provider = createProvider(providerAddress1, tokenAddress1, false, false, false);
             provider.activate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU64(10000));
@@ -249,13 +257,15 @@ describe('CancelListTokenForSaleOperation tests', () => {
             operation.execute();
 
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10005));
-            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(99995));
+            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(90000));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5005));
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
         });
 
         it('should cap halfToCharge to penaltyAmount', () => {
             setBlockchainEnvironment(100);
 
-            const provider = createProvider(providerAddress1, tokenAddress1, false, true, false);
+            const provider = createProvider(providerAddress1, tokenAddress1, false, false, false);
             provider.activate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU64(10001));
@@ -278,17 +288,18 @@ describe('CancelListTokenForSaleOperation tests', () => {
             operation.execute();
 
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000));
-            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(100000));
+            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(89999));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5000));
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
         });
 
         it('should succeed: set provider liquidity to 0, call resetProvider, safeTransfer, update reserve, cleanUpQueues, emit event', () => {
             setBlockchainEnvironment(100);
 
-            const provider = createProvider(providerAddress1, tokenAddress1, false, true, false);
+            const provider = createProvider(providerAddress1, tokenAddress1, false, false, false);
             provider.activate();
             provider.clearPriority();
             provider.setLiquidityAmount(u128.fromU64(10000));
-            provider.setLiquidityProvided(u128.Zero);
             provider.setListedTokenAtBlock(100);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
@@ -309,7 +320,9 @@ describe('CancelListTokenForSaleOperation tests', () => {
             expect(provider.isActive()).toBeFalsy();
 
             expect(TransferHelper.safeTransferCalled).toBeTruthy();
-            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(1000000000));
+            expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(999990000));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5000));
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
         });
     });
 });

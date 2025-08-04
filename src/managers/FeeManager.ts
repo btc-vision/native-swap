@@ -1,5 +1,6 @@
-import { Revert, StoredU64 } from '@btc-vision/btc-runtime/runtime';
-import { FEE_SETTINGS_POINTER } from '../constants/StoredPointers';
+import { Revert, StoredString, StoredU64 } from '@btc-vision/btc-runtime/runtime';
+import { FEE_SETTINGS_POINTER, FEES_ADDRESS_POINTER } from '../constants/StoredPointers';
+import { INITIAL_FEE_COLLECT_ADDRESS } from '../constants/Contract';
 
 class FeeManagerBase {
     private static CAP_RESERVATION_BASE_FEE: u64 = 100_000;
@@ -8,6 +9,15 @@ class FeeManagerBase {
     private static DEFAULT_PRIORITY_QUEUE_BASE_FEE: u64 = 50_000;
 
     private readonly settings: StoredU64 = new StoredU64(FEE_SETTINGS_POINTER, new Uint8Array(30));
+    private readonly _feesAddress: StoredString = new StoredString(FEES_ADDRESS_POINTER);
+
+    public get feesAddress(): string {
+        return this._feesAddress.value;
+    }
+
+    public set feesAddress(address: string) {
+        this._feesAddress.value = address;
+    }
 
     public get reservationBaseFee(): u64 {
         return this.settings.get(0);
@@ -36,6 +46,7 @@ class FeeManagerBase {
     public onDeploy(): void {
         this.reservationBaseFee = FeeManagerBase.DEFAULT_RESERVATION_BASE_FEE;
         this.priorityQueueBaseFee = FeeManagerBase.DEFAULT_PRIORITY_QUEUE_BASE_FEE;
+        this._feesAddress.value = INITIAL_FEE_COLLECT_ADDRESS;
     }
 
     private ensurePriorityQueueBaseFeeNotAboveCap(value: u64): void {
