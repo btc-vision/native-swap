@@ -158,7 +158,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
     private computeTokenRemaining(): void {
         const tokens: u256 = satoshisToTokens(this.maximumAmountInSats, this.currentQuote);
-
         const limitedByLiquidity: u256 = this.limitByAvailableLiquidity(tokens);
         this.ensureAvailableLiquidityNonZero(limitedByLiquidity);
 
