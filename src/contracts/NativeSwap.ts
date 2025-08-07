@@ -118,10 +118,7 @@ export class NativeSwap extends ReentrancyGuard {
         saveAllProviders();
 
         if (!this._tokenAddress.isZero()) {
-            Blockchain.log(`call transferPendingAmountToStakingContract`);
             transferPendingAmountToStakingContract(this._tokenAddress, this.stakingContractAddress);
-        } else {
-            Blockchain.log(`don't call transferPendingAmountToStakingContract`);
         }
 
         super.onExecutionCompleted(selector, calldata);

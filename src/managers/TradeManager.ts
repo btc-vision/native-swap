@@ -62,12 +62,25 @@ export class TradeManager implements ITradeManager {
 
         for (let index: u32 = 0; index < providerCount; index++) {
             const providerData: ReservationProviderData = reservation.getProviderAt(index);
+
+            // Skip if provider has been removed from provider queue due
+            // to either a fulfill or a cancel liquidity.
+            if (!this.canGetProvider(providerData)) {
+                continue;
+            }
+
             const provider: Provider = this.getProvider(providerData);
-            const satoshisSent: u64 = this.getSatoshisSent(provider.getBtcReceiver());
+
+            // Skip if provider is no more active
+            if (!provider.isActive()) {
+                continue;
+            }
 
             if (!reservation.getPurged()) {
                 this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
             }
+
+            const satoshisSent: u64 = this.getSatoshisSent(provider.getBtcReceiver());
 
             if (satoshisSent !== 0) {
                 this.tryExecuteNormalOrPriorityTrade(
@@ -182,13 +195,31 @@ export class TradeManager implements ITradeManager {
     }
 
     private addProviderToPurgeQueue(provider: Provider): void {
-        if (!provider.isPurged()) {
+        if (!provider.isPurged() && provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX) {
             if (provider.getProviderType() === ProviderTypes.Normal) {
                 this.providerManager.addToNormalPurgedQueue(provider);
             } else {
                 this.providerManager.addToPriorityPurgedQueue(provider);
             }
         }
+    }
+
+    private canGetProvider(providerData: ReservationProviderData): boolean {
+        let result: boolean = false;
+
+        // Initial provider is never in a queue.
+        // Otherwise, ensure provider has not been removed from its queue.
+        if (providerData.providerIndex === INITIAL_LIQUIDITY_PROVIDER_INDEX) {
+            result = true;
+        } else if (
+            !this.providerManager
+                .getIdFromQueue(providerData.providerIndex, providerData.providerType)
+                .isZero()
+        ) {
+            result = true;
+        }
+
+        return result;
     }
 
     private emitProviderActivatedEvent(provider: Provider): void {

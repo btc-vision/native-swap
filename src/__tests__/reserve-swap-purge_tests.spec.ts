@@ -38,6 +38,7 @@ import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOpera
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
 import { SwapOperation } from '../operations/SwapOperation';
 import { Reservation } from '../models/Reservation';
+import { CancelListingOperation } from '../operations/CancelListingOperation';
 
 const tokenDec = 18;
 
@@ -93,6 +94,19 @@ function listTokenForSale(
     lq1.liquidityQueue.save();
 
     return getProvider(liquidityProvider);
+}
+
+function cancelListing(provider: Provider): void {
+    const lq1 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+    const cancelListingOp = new CancelListingOperation(
+        lq1.liquidityQueue,
+        provider.getId(),
+        testStackingContractAddress,
+    );
+
+    cancelListingOp.execute();
+    lq1.liquidityQueue.save();
 }
 
 function reserve(amount: u64): u256 {
@@ -2065,5 +2079,185 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         );
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeTruthy();
+    });
+
+    //***
+
+    /*
+    The test examines how the system prevents swap attempt after its provider has already been consumed.
+    The first reservation consumes most of Provider1's liquidity, leaving only a small amount below the minimum threshold.
+    It also reserves some liquidity from the initial provider to complete the reservation.
+    This reservation is then allowed to expire without being swapped.
+
+    Before handling the expired Reservation1, a second reservation is created with identical parameters:
+        - Reserves most of Provider1's remaining liquidity (leaving below-threshold amount)
+        - Uses some initial provider liquidity
+    This creates a scenario where both reservations have claims on the same Provider1 liquidity, but the first one is expired.
+
+    Reservation2 is swapped with selective funding:
+        - Provider1 receives full payment and is completely bought out
+        - Initial provider receives no satoshis, triggering restoration of its reserved liquidity
+
+    At this point, Provider1 is fully consumed and is unavailable for any other operations.
+
+    The system then attempts to swap the expired Reservation1, trying to fully fund Provider1. However, Provider1 has already
+    been fully bought by Reservation2's swap.
+    The expected behavior is that the system detects Provider1's fully bought status and ignores the swap attempt entirely as
+    initial provider did not receive any satoshis.
+    */
+    it('Test8', () => {
+        setBlockchainEnvironment(100, providerAddress1, providerAddress1);
+        const initialProvider = createPool();
+        expect(initialProvider.getLiquidityAmount()).toStrictEqual(
+            u128.fromString(`52500000000000000000000`),
+        );
+        expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
+
+        setBlockchainEnvironment(110, providerAddress2, providerAddress2);
+        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1000000000000000000000`),
+        );
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
+
+        // Reservation1.
+        // Reserve liquidity from Provider1 and leave a very small amount of available liquidity
+        // that is below the minimum threshold.
+        // The reservation also reserve some liquidity from initial provider.
+        setBlockchainEnvironment(112, providerAddress3, providerAddress3);
+        reserve(691000);
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`549451352380953`),
+        );
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
+            u128.fromString(`999999450548647619047`),
+        );
+        expect(liquidityProvider1.isPurged()).toBeFalsy();
+
+        expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`51137785256986742857143`),
+        );
+        expect(initialProvider.getReservedAmount()).toStrictEqual(
+            u128.fromString(`1362214743013257142857`),
+        );
+        expect(initialProvider.isPurged()).toBeFalsy();
+
+        // Let the Reservation1 expires and do Reservation2.
+        // Reserve liquidity from Provider1 and leave a very small amount of available liquidity
+        // that is below the minimum threshold.
+        // The reservation also reserve some liquidity from initial provider.
+        setBlockchainEnvironment(126, providerAddress4, providerAddress4);
+        reserve(691000);
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`549451352380953`),
+        );
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
+            u128.fromString(`999999450548647619047`),
+        );
+        expect(liquidityProvider1.isPurged()).toBeFalsy();
+
+        expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`51137785256986742857143`),
+        );
+        expect(initialProvider.getReservedAmount()).toStrictEqual(
+            u128.fromString(`1362214743013257142857`),
+        );
+        expect(initialProvider.isPurged()).toBeFalsy();
+
+        // Swap Reservation2.
+        // Do a full swap for the Provider1 will be fully bought.
+        // Don't send satoshis to initial provider, so it is restored.
+        setBlockchainEnvironment(129, providerAddress4, providerAddress4);
+        swap([receiverAddress2], [489000]);
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(liquidityProvider1.isPurged()).toBeFalsy();
+        expect(liquidityProvider1.isActive()).toBeFalsy();
+
+        expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`52500000000000000000000`),
+        );
+        expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(initialProvider.isPurged()).toBeFalsy();
+
+        // Swap the expired Reservation1 by fully funding the Provider1.
+        // Provider1 should be already fully bought.
+        // Initial provider do not receive any satoshis. so it is not used.
+        // Swap should be ignored and don't buy anything.
+        setBlockchainEnvironment(147, providerAddress3, providerAddress3);
+        expect(() => {
+            swap([receiverAddress2], [489000]);
+        }).toThrow();
+    });
+
+    /*
+    The test examines how the system prevents swap attempt after the initial provider has already been consumed.
+    The first reservation consumes most of initial provider's liquidity, leaving only a small amount below the minimum threshold.
+    This reservation is then allowed to expire without being swapped.
+
+    Before handling the expired Reservation1, a second reservation is created with identical parameters:
+        - Reserves most of initial provider's remaining liquidity (leaving below-threshold amount)
+    This creates a scenario where both reservations have claims on the same initial provider liquidity, but the first one is expired.
+
+    Reservation2 is swapped with selective funding:
+        - Initial provider receives full payment and is completely bought out
+
+    At this point, initial provider is fully consumed and is unavailable for any other operations.
+
+    The system then attempts to swap the expired Reservation1, trying to fully fund initial provider. However, initial provider has already
+    been fully bought by Reservation2's swap.
+    The expected behavior is that the system detects initial provider's fully bought status and ignores the swap attempt entirely.
+    */
+    it('Test9', () => {
+        setBlockchainEnvironment(100, providerAddress1, providerAddress1);
+        const initialProvider = createPool();
+        expect(initialProvider.getLiquidityAmount()).toStrictEqual(
+            u128.fromString(`52500000000000000000000`),
+        );
+        expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
+
+        // Reservation1.
+        // Reserve liquidity from initial provider and leave a very small amount of available liquidity
+        // that is below the minimum threshold.
+        setBlockchainEnvironment(112, providerAddress3, providerAddress3);
+        reserve(89100000);
+        expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1755844000000000`),
+        );
+        expect(initialProvider.getReservedAmount()).toStrictEqual(
+            u128.fromString(`52499998244156000000000`),
+        );
+        expect(initialProvider.isPurged()).toBeFalsy();
+
+        // Let the Reservation1 expires and do Reservation2.
+        // Reserve liquidity from initial provider and leave a very small amount of available liquidity
+        // that is below the minimum threshold.
+        setBlockchainEnvironment(126, providerAddress4, providerAddress4);
+        reserve(89100000);
+        expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
+            u128.fromString(`1755844000000000`),
+        );
+        expect(initialProvider.getReservedAmount()).toStrictEqual(
+            u128.fromString(`52499998244156000000000`),
+        );
+        expect(initialProvider.isPurged()).toBeFalsy();
+
+        // Swap Reservation2.
+        // Do a full swap so the initial provider will be fully bought.
+        setBlockchainEnvironment(129, providerAddress4, providerAddress4);
+        swap([receiverAddress1], [89100000]);
+        expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
+        expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
+        expect(initialProvider.isPurged()).toBeFalsy();
+        expect(initialProvider.isActive()).toBeFalsy();
+
+        // Swap the expired Reservation1 by fully funding the initial provider.
+        // initial provider should be already fully bought. So it should be ignored and don't
+        // buy anything.
+        setBlockchainEnvironment(147, providerAddress3, providerAddress3);
+        expect(() => {
+            swap([receiverAddress1], [489000]);
+        }).toThrow();
     });
 });

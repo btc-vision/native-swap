@@ -10,6 +10,7 @@ import {
     createLiquidityQueue,
     createProviderId,
     msgSender1,
+    providerAddress1,
     providerAddress2,
     providerAddress3,
     providerAddress4,
@@ -47,6 +48,51 @@ describe('SwapOperation tests', () => {
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
         });
+
+        it('should revert if reservation does not exists', () => {
+            expect(() => {
+                setBlockchainEnvironment(100, msgSender1, msgSender1);
+                Blockchain.mockValidateBitcoinAddressResult(true);
+
+                const initialProviderId = createProviderId(msgSender1, tokenAddress1);
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const floorPrice: u256 = SafeMath.div(
+                    SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
+                    u256.fromU32(1500),
+                );
+                const initialLiquidity = SafeMath.mul128(
+                    u128.fromU32(1000000),
+                    SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
+                );
+
+                const createPoolOp = new CreatePoolOperation(
+                    queue.liquidityQueue,
+                    floorPrice,
+                    initialProviderId,
+                    initialLiquidity,
+                    receiverAddress1,
+                    0,
+                    u256.Zero,
+                    5,
+                    Address.dead(),
+                );
+
+                createPoolOp.execute();
+                queue.liquidityQueue.setBlockQuote();
+                queue.liquidityQueue.save();
+
+                setBlockchainEnvironment(102, providerAddress1, providerAddress1);
+                const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+                const swapOp = new SwapOperation(
+                    queue2.liquidityQueue,
+                    queue2.tradeManager,
+                    testStackingContractAddress,
+                );
+                swapOp.execute();
+            }).toThrow();
+        });
+
         it('should revert if swapping a reservation more than 1 time', () => {
             expect(() => {
                 setBlockchainEnvironment(100, msgSender1, msgSender1);
@@ -743,6 +789,50 @@ describe('SwapOperation tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+        });
+
+        it('should revert if reservation does not exists', () => {
+            expect(() => {
+                setBlockchainEnvironment(100, msgSender1, msgSender1);
+                Blockchain.mockValidateBitcoinAddressResult(true);
+
+                const initialProviderId = createProviderId(msgSender1, tokenAddress1);
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const floorPrice: u256 = SafeMath.div(
+                    SafeMath.pow(u256.fromU32(10), u256.fromU32(18)),
+                    u256.fromU32(1500),
+                );
+                const initialLiquidity = SafeMath.mul128(
+                    u128.fromU32(1000000),
+                    SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
+                );
+
+                const createPoolOp = new CreatePoolOperation(
+                    queue.liquidityQueue,
+                    floorPrice,
+                    initialProviderId,
+                    initialLiquidity,
+                    receiverAddress1,
+                    0,
+                    u256.Zero,
+                    5,
+                    Address.dead(),
+                );
+
+                createPoolOp.execute();
+                queue.liquidityQueue.setBlockQuote();
+                queue.liquidityQueue.save();
+
+                setBlockchainEnvironment(102, providerAddress1, providerAddress1);
+                const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+                const swapOp = new SwapOperation(
+                    queue2.liquidityQueue,
+                    queue2.tradeManager,
+                    testStackingContractAddress,
+                );
+                swapOp.execute();
+            }).toThrow();
         });
 
         it('should revert if reservation does not have providers', () => {
