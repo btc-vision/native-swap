@@ -109,7 +109,6 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
     private verifyReceiverAddress(): void {
         //Blockchain.validateBitcoinAddress();
-
         // TODO: Implement Bitcoin address validation
     }
 
