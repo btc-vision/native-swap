@@ -860,7 +860,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private ensureValidTokenAddress(token: Address): void {
-        if (token.empty() || token.equals(Blockchain.DEAD_ADDRESS)) {
+        if (token.isZero() || token.equals(Blockchain.DEAD_ADDRESS)) {
             throw new Revert('NATIVE_SWAP: Invalid token address.');
         }
     }
