@@ -182,7 +182,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.liquidityQueueReserve.virtualTokenReserve = value;
     }
 
-    public accruePenalty(penalty: u128, half: u128, stakingAddress: Address): void {
+    public accruePenalty(penalty: u128, half: u128): void {
         if (!penalty.isZero()) {
             this.ensurePenaltyNotLessThanHalf(penalty, half);
 
@@ -247,7 +247,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.virtualTokenReserve = SafeMath.sub(this.virtualTokenReserve, value);
     }
 
-    public distributeFee(totalFee: u256, stakingAddress: Address): void {
+    public distributeFee(totalFee: u256): void {
         const feeLP: u256 = SafeMath.div(
             SafeMath.mul(totalFee, u256.fromU64(50)),
             u256.fromU64(100),

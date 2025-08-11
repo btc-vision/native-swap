@@ -16,7 +16,6 @@ export class ProviderQueue {
     protected readonly queue: StoredU256Array;
     protected readonly enableIndexVerification: boolean;
     protected readonly maximumNumberOfProvider: u32;
-    protected readonly stakingContractAddress: Address;
 
     constructor(
         token: Address,
@@ -24,13 +23,11 @@ export class ProviderQueue {
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
         maximumNumberOfProvider: u32,
-        stakingContractAddress: Address,
     ) {
         this.queue = new StoredU256Array(pointer, subPointer, MAXIMUM_VALID_INDEX);
         this.token = token;
         this.enableIndexVerification = enableIndexVerification;
         this.maximumNumberOfProvider = maximumNumberOfProvider;
-        this.stakingContractAddress = stakingContractAddress;
     }
 
     protected _currentIndex: u32 = 0;
