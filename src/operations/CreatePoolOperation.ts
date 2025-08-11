@@ -120,7 +120,6 @@ export class CreatePoolOperation extends BaseOperation {
             this.providerId,
             this.initialLiquidity,
             this.receiver,
-            this.stakingAddress,
             false,
             true,
         );

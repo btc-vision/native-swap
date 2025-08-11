@@ -11,7 +11,6 @@ import {
     providerAddress1,
     receiverAddress1,
     setBlockchainEnvironment,
-    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -58,7 +57,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    testStackingContractAddress,
                     true,
                     false,
                 );
@@ -102,7 +100,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    testStackingContractAddress,
                     true,
                     false,
                 );
@@ -122,7 +119,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     u256.fromU64(111),
                     u128.Zero,
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -146,7 +142,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -170,7 +165,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -194,7 +188,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -219,7 +212,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -246,7 +238,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -272,7 +263,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -296,7 +286,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -320,7 +309,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -373,7 +361,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 true,
                 false,
             );
@@ -415,7 +402,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    testStackingContractAddress,
                     true,
                     false,
                 );
@@ -455,7 +441,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    testStackingContractAddress,
                     true,
                     false,
                 );
@@ -499,7 +484,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 true,
                 false,
             );
@@ -546,7 +530,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 true,
                 false,
             );
@@ -570,7 +553,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider2.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 true,
                 false,
             );
@@ -621,7 +603,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 true,
                 false,
             );
@@ -655,7 +636,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider3.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 true,
                 false,
             );
@@ -691,7 +671,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 false,
             );
@@ -715,7 +694,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider2.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 false,
             );
@@ -752,7 +730,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 false,
             );
@@ -785,7 +762,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider3.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 false,
             );
@@ -821,7 +797,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 false,
             );
@@ -855,7 +830,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 true,
             );
@@ -885,7 +859,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 true,
             );
@@ -911,7 +884,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 true,
             );
@@ -937,7 +909,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 true,
             );
@@ -966,7 +937,6 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     true,
                 );
@@ -994,7 +964,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 true,
             );
@@ -1027,7 +996,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 true,
                 false,
             );
@@ -1064,7 +1032,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 false,
             );
@@ -1112,7 +1079,6 @@ describe('ListTokenForSaleOperation tests', () => {
                 initialProvider.getId(),
                 u128.fromString(`1000000000000000000`),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 true,
             );

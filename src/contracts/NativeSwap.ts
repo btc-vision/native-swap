@@ -460,7 +460,6 @@ export class NativeSwap extends ReentrancyGuard {
             providerId,
             amountIn,
             receiver,
-            this.stakingContractAddress,
             priority,
             false,
         );

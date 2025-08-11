@@ -471,7 +471,6 @@ describe('SwapOperation tests', () => {
                 providerId2,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
                 false,
                 false,
             );
@@ -581,7 +580,6 @@ describe('SwapOperation tests', () => {
                 providerId2,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
                 false,
                 false,
             );
@@ -697,7 +695,6 @@ describe('SwapOperation tests', () => {
                 providerId2,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
                 false,
                 false,
             );
@@ -714,7 +711,6 @@ describe('SwapOperation tests', () => {
                 providerId3,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress2,
-                Address.dead(),
                 true,
                 false,
             );
@@ -1182,7 +1178,6 @@ describe('SwapOperation tests', () => {
                 providerId2,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
                 false,
                 false,
             );
