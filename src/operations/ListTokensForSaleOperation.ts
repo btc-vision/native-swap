@@ -1,13 +1,7 @@
 import { BaseOperation } from './BaseOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
-import {
-    Address,
-    Blockchain,
-    Revert,
-    SafeMath,
-    TransferHelper,
-} from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { tokensToSatoshis } from '../utils/SatoshisConversion';
 import { getTotalFeeCollected } from '../utils/BlockchainUtils';
 import { LiquidityListedEvent } from '../events/LiquidityListedEvent';
@@ -35,7 +29,6 @@ export class ListTokensForSaleOperation extends BaseOperation {
         providerId: u256,
         amountIn: u128,
         receiver: string,
-        private readonly stakingAddress: Address,
         usePriorityQueue: boolean,
         isForInitialLiquidity: boolean = false,
     ) {
@@ -108,8 +101,16 @@ export class ListTokensForSaleOperation extends BaseOperation {
         if (this.provider.hasReservedAmount() && this.provider.getBtcReceiver() !== this.receiver) {
             throw new Revert('NATIVE_SWAP: Cannot change receiver address while reserved.');
         } else if (!this.provider.hasReservedAmount()) {
+            this.verifyReceiverAddress();
+
             this.provider.setBtcReceiver(this.receiver);
         }
+    }
+
+    private verifyReceiverAddress(): void {
+        //Blockchain.validateBitcoinAddress();
+
+        // TODO: Implement Bitcoin address validation
     }
 
     private assertQueueSwitchAllowed(): void {
@@ -129,12 +130,10 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private calculateTax(): u128 {
-        const tokensForPriorityQueue: u128 = SafeMath.div128(
+        return SafeMath.div128(
             SafeMath.mul128(this.amountIn, PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX),
             PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
         );
-
-        return tokensForPriorityQueue;
     }
 
     private checkPreConditions(): void {
