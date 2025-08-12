@@ -504,11 +504,15 @@ export function transferPendingAmountToStakingContract(
     stakingContractAddress: Address,
 ): void {
     if (!pendingStakingContractAmount.isZero()) {
-        TransferHelper.safeTransferBurnIfDead(
-            tokenAddress,
-            stakingContractAddress,
-            pendingStakingContractAmount,
-        );
+        if (stakingContractAddress.isZero() || stakingContractAddress.isDead()) {
+            TransferHelper.burn(tokenAddress, pendingStakingContractAmount);
+        } else {
+            TransferHelper.safeTransfer(
+                tokenAddress,
+                stakingContractAddress,
+                pendingStakingContractAmount,
+            );
+        }
     }
 }
 
