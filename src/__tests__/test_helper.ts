@@ -297,6 +297,12 @@ export function createReservationId(tokenAddress: Address, providerAddress: Addr
     return u128.fromBytes(reservationArrayId, true);
 }
 
+const regtestChainId = new Uint8Array(32);
+regtestChainId.set([
+    0x0f, 0x91, 0x88, 0xf1, 0x3c, 0xb7, 0xb2, 0xc7, 0x1f, 0x2a, 0x33, 0x5e, 0x3a, 0x4f, 0xc3, 0x28,
+    0xbf, 0x5b, 0xeb, 0x43, 0x60, 0x12, 0xaf, 0xca, 0x59, 0x0b, 0x1a, 0x11, 0x46, 0x6e, 0x22, 0x06,
+]);
+
 export function setBlockchainEnvironment(
     currentBlock: u64,
     sender: Address = msgSender1,
@@ -320,7 +326,7 @@ export function setBlockchainEnvironment(
     writer.writeAddress(sender);
     writer.writeAddress(origin);
 
-    writer.writeBytes(new Uint8Array(32)); // chain id
+    writer.writeBytes(regtestChainId); // chain id
     writer.writeBytes(new Uint8Array(32)); // protocol id
 
     Blockchain.setEnvironmentVariables(writer.getBuffer());
