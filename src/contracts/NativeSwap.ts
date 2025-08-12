@@ -63,7 +63,7 @@ import { WithdrawListingOperation } from '../operations/WithdrawListingOperation
 import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
 
 // onOP20Received(address,address,uint256,bytes)
-const ON_OP_20_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
+export const ON_OP_20_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
 
 class GetLiquidityQueueResult {
     public liquidityQueue: ILiquidityQueue;

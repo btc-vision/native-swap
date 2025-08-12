@@ -6,6 +6,7 @@ import {
     Selector,
     StoredBoolean,
 } from '@btc-vision/btc-runtime/runtime';
+import { ON_OP_20_RECEIVED_SELECTOR } from './NativeSwap';
 
 const statusPointer: u16 = Blockchain.nextPointer;
 
@@ -21,11 +22,15 @@ export class ReentrancyGuard extends OP_NET {
     public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
         super.onExecutionCompleted(selector, calldata);
 
+        if (selector === ON_OP_20_RECEIVED_SELECTOR) return;
+
         this.nonReentrantAfter();
     }
 
     public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
         super.onExecutionStarted(selector, calldata);
+
+        if (selector === ON_OP_20_RECEIVED_SELECTOR) return;
 
         this.nonReentrantBefore();
     }
