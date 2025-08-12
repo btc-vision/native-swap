@@ -1,12 +1,6 @@
 import { BaseOperation } from './BaseOperation';
 import { getProvider, Provider } from '../models/Provider';
-import {
-    Address,
-    Blockchain,
-    Revert,
-    SafeMath,
-    TransferHelper,
-} from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ListingCanceledEvent } from '../events/ListingCanceledEvent';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
@@ -20,14 +14,12 @@ import { slash } from '../utils/Slashing';
 export class CancelListingOperation extends BaseOperation {
     private readonly providerId: u256;
     private readonly provider: Provider;
-    private readonly stakingAddress: Address;
 
-    constructor(liquidityQueue: ILiquidityQueue, providerId: u256, stakingAddress: Address) {
+    constructor(liquidityQueue: ILiquidityQueue, providerId: u256) {
         super(liquidityQueue);
 
         this.providerId = providerId;
         this.provider = getProvider(providerId);
-        this.stakingAddress = stakingAddress;
     }
 
     public override execute(): void {
@@ -138,7 +130,7 @@ export class CancelListingOperation extends BaseOperation {
 
     private postProcessQueues(refundAmount: u256, penaltyAmount: u128, halfToCharge: u128): void {
         if (!penaltyAmount.isZero()) {
-            this.liquidityQueue.accruePenalty(penaltyAmount, halfToCharge, this.stakingAddress);
+            this.liquidityQueue.accruePenalty(penaltyAmount, halfToCharge);
         }
 
         if (!refundAmount.isZero()) {

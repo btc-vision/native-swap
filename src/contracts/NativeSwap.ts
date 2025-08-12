@@ -383,6 +383,7 @@ export class NativeSwap extends ReentrancyGuard {
             true,
         );
         const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
+
         const operation: CreatePoolOperation = new CreatePoolOperation(
             liquidityQueueResult.liquidityQueue,
             floorPrice,
@@ -392,7 +393,6 @@ export class NativeSwap extends ReentrancyGuard {
             antiBotEnabledFor,
             antiBotMaximumTokensPerReservation,
             maxReservesIn5BlocksPercent,
-            this.stakingContractAddress,
         );
 
         operation.execute();
@@ -442,7 +442,6 @@ export class NativeSwap extends ReentrancyGuard {
             providerId,
             amountIn,
             receiver,
-            this.stakingContractAddress,
             priority,
             false,
         );
@@ -526,7 +525,6 @@ export class NativeSwap extends ReentrancyGuard {
         const operation: CancelListingOperation = new CancelListingOperation(
             liquidityQueueResult.liquidityQueue,
             providerId,
-            this.stakingContractAddress,
         );
 
         operation.execute();
@@ -592,7 +590,6 @@ export class NativeSwap extends ReentrancyGuard {
         const operation: SwapOperation = new SwapOperation(
             liquidityQueueResult.liquidityQueue,
             liquidityQueueResult.tradeManager,
-            this.stakingContractAddress,
         );
 
         operation.execute();
@@ -690,24 +687,29 @@ export class NativeSwap extends ReentrancyGuard {
         purgeOldReservations: boolean,
         timeoutEnabled: boolean = false,
     ): GetLiquidityQueueResult {
+        Blockchain.log('in 1');
         const quoteManager: IQuoteManager = this.getQuoteManager(tokenId);
+        Blockchain.log('in 2');
         const liquidityQueueReserve: ILiquidityQueueReserve = this.getLiquidityQueueReserve(
             token,
             tokenId,
         );
+        Blockchain.log('in 3');
         const providerManager: IProviderManager = this.getProviderManager(
             token,
             tokenId,
             quoteManager,
         );
+        Blockchain.log('in 4');
         const reservationManager: IReservationManager = this.getReservationManager(
             token,
             tokenId,
             providerManager,
             liquidityQueueReserve,
         );
+        Blockchain.log('in 5');
         const dynamicFee: IDynamicFee = this.getDynamicFee(tokenId);
-
+        Blockchain.log('in 6');
         const liquidityQueue: LiquidityQueue = new LiquidityQueue(
             token,
             tokenId,
@@ -719,7 +721,7 @@ export class NativeSwap extends ReentrancyGuard {
             purgeOldReservations,
             timeoutEnabled,
         );
-
+        Blockchain.log('in 7');
         const tradeManager: TradeManager = new TradeManager(
             tokenId,
             quoteManager,
@@ -727,6 +729,7 @@ export class NativeSwap extends ReentrancyGuard {
             liquidityQueueReserve,
             reservationManager,
         );
+        Blockchain.log('in 8');
 
         return new GetLiquidityQueueResult(liquidityQueue, tradeManager);
     }
@@ -740,13 +743,7 @@ export class NativeSwap extends ReentrancyGuard {
         tokenId: Uint8Array,
         quoteManager: IQuoteManager,
     ): IProviderManager {
-        return new ProviderManager(
-            token,
-            tokenId,
-            quoteManager,
-            ENABLE_INDEX_VERIFICATION,
-            this.stakingContractAddress,
-        );
+        return new ProviderManager(token, tokenId, quoteManager, ENABLE_INDEX_VERIFICATION);
     }
 
     private getLiquidityQueueReserve(token: Address, tokenId: Uint8Array): ILiquidityQueueReserve {
@@ -830,7 +827,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private ensureValidTokenAddress(token: Address): void {
-        if (token.empty() || token.equals(Blockchain.DEAD_ADDRESS)) {
+        if (token.isZero() || token.equals(Blockchain.DEAD_ADDRESS)) {
             throw new Revert('NATIVE_SWAP: Invalid token address.');
         }
     }

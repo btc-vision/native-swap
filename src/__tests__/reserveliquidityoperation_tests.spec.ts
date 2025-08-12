@@ -1174,7 +1174,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`20000000000000000000`),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 false,
             );
@@ -1252,7 +1251,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -1443,7 +1441,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -1514,7 +1511,6 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
-                    testStackingContractAddress,
                     false,
                     false,
                 );
@@ -1590,7 +1586,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 false,
             );
@@ -1679,7 +1674,6 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
-                testStackingContractAddress,
                 false,
                 false,
             );

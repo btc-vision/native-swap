@@ -15,19 +15,16 @@ export class PurgedProviderQueue {
     protected readonly token: Address;
     protected readonly queue: StoredU32Array;
     protected readonly enableIndexVerification: boolean;
-    protected readonly stakingContractAddress: Address;
 
     constructor(
         token: Address,
         pointer: u16,
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
-        stakingContractAddress: Address,
     ) {
         this.token = token;
         this.queue = new StoredU32Array(pointer, subPointer, INDEX_NOT_SET_VALUE - 1);
         this.enableIndexVerification = enableIndexVerification;
-        this.stakingContractAddress = stakingContractAddress;
     }
 
     public get length(): u32 {

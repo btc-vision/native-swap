@@ -16,16 +16,10 @@ import { ReservationFallbackEvent } from '../events/ReservationFallbackEvent';
 
 export class SwapOperation extends BaseOperation {
     private readonly tradeManager: ITradeManager;
-    private readonly stakingAddress: Address;
 
-    public constructor(
-        liquidityQueue: ILiquidityQueue,
-        tradeManager: ITradeManager,
-        stakingAddress: Address,
-    ) {
+    public constructor(liquidityQueue: ILiquidityQueue, tradeManager: ITradeManager) {
         super(liquidityQueue);
         this.tradeManager = tradeManager;
-        this.stakingAddress = stakingAddress;
     }
 
     public override execute(): void {
@@ -73,7 +67,7 @@ export class SwapOperation extends BaseOperation {
 
             newTotalTokensPurchased = SafeMath.sub(totalTokensPurchased, totalFeeTokens);
 
-            this.liquidityQueue.distributeFee(totalFeeTokens, this.stakingAddress);
+            this.liquidityQueue.distributeFee(totalFeeTokens);
         }
 
         return newTotalTokensPurchased;

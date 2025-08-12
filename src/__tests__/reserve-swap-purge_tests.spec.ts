@@ -85,7 +85,6 @@ function listTokenForSale(
         liquidityProvider,
         expand(amount, tokenDec),
         receiverAddress,
-        testStackingContractAddress,
         priority,
         false,
     );
