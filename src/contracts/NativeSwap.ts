@@ -690,29 +690,29 @@ export class NativeSwap extends ReentrancyGuard {
         purgeOldReservations: boolean,
         timeoutEnabled: boolean = false,
     ): GetLiquidityQueueResult {
-        Blockchain.log('in 1');
+        //Blockchain.log('in 1');
         const quoteManager: IQuoteManager = this.getQuoteManager(tokenId);
-        Blockchain.log('in 2');
+        //Blockchain.log('in 2');
         const liquidityQueueReserve: ILiquidityQueueReserve = this.getLiquidityQueueReserve(
             token,
             tokenId,
         );
-        Blockchain.log('in 3');
+        //Blockchain.log('in 3');
         const providerManager: IProviderManager = this.getProviderManager(
             token,
             tokenId,
             quoteManager,
         );
-        Blockchain.log('in 4');
+        //Blockchain.log('in 4');
         const reservationManager: IReservationManager = this.getReservationManager(
             token,
             tokenId,
             providerManager,
             liquidityQueueReserve,
         );
-        Blockchain.log('in 5');
+        //Blockchain.log('in 5');
         const dynamicFee: IDynamicFee = this.getDynamicFee(tokenId);
-        Blockchain.log('in 6');
+        //Blockchain.log('in 6');
         const liquidityQueue: LiquidityQueue = new LiquidityQueue(
             token,
             tokenId,
@@ -724,7 +724,7 @@ export class NativeSwap extends ReentrancyGuard {
             purgeOldReservations,
             timeoutEnabled,
         );
-        Blockchain.log('in 7');
+        //Blockchain.log('in 7');
         const tradeManager: TradeManager = new TradeManager(
             tokenId,
             quoteManager,
@@ -732,7 +732,7 @@ export class NativeSwap extends ReentrancyGuard {
             liquidityQueueReserve,
             reservationManager,
         );
-        Blockchain.log('in 8');
+        //Blockchain.log('in 8');
 
         return new GetLiquidityQueueResult(liquidityQueue, tradeManager);
     }
