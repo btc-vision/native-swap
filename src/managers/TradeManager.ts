@@ -16,7 +16,7 @@ import {
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
 } from '../constants/Contract';
-import { ActivateProviderEvent } from '../events/ActivateProviderEvent';
+import { ProviderActivatedEvent } from '../events/ProviderActivatedEvent';
 import { ITradeManager } from './interfaces/ITradeManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
@@ -191,7 +191,7 @@ export class TradeManager implements ITradeManager {
 
         // track that we virtually added those tokens to the pool
         this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
-        this.emitActivateProviderEvent(provider);
+        this.emitProviderActivatedEvent(provider);
     }
 
     private addProviderToPurgeQueue(provider: Provider): void {
@@ -222,9 +222,9 @@ export class TradeManager implements ITradeManager {
         return result;
     }
 
-    private emitActivateProviderEvent(provider: Provider): void {
+    private emitProviderActivatedEvent(provider: Provider): void {
         Blockchain.emit(
-            new ActivateProviderEvent(provider.getId(), provider.getLiquidityAmount(), 0),
+            new ProviderActivatedEvent(provider.getId(), provider.getLiquidityAmount(), 0),
         );
     }
 

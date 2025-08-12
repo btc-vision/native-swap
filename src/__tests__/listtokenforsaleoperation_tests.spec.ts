@@ -10,6 +10,7 @@ import {
     createProvider,
     providerAddress1,
     receiverAddress1,
+    receiverAddress1CSV,
     setBlockchainEnvironment,
     tokenAddress1,
     tokenIdUint8Array1,
@@ -57,7 +58,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    true,
+                    receiverAddress1CSV,
                     false,
                 );
 
@@ -100,6 +101,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     true,
                     false,
                 );
@@ -119,6 +121,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u256.fromU64(111),
                     u128.Zero,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -142,6 +145,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -165,6 +169,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -188,6 +193,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -212,6 +218,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -238,6 +245,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -263,6 +271,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -286,6 +295,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -309,6 +319,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -361,6 +372,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -402,6 +414,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     true,
                     false,
                 );
@@ -441,6 +454,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     true,
                     false,
                 );
@@ -484,6 +498,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -530,6 +545,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -553,6 +569,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider2.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -603,6 +620,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -636,6 +654,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider3.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -671,6 +690,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -694,6 +714,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider2.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -730,6 +751,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -762,6 +784,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider3.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -797,6 +820,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -830,6 +854,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 true,
             );
@@ -859,6 +884,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 true,
             );
@@ -884,6 +910,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 true,
             );
@@ -909,13 +936,14 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 true,
             );
 
             operation.execute();
 
-            expect(provider.getBtcReceiver()).toStrictEqual(receiverAddress1);
+            expect(provider.getBtcReceiver()).toStrictEqual(receiverAddress1CSV);
         });
 
         it('should revert if provider has reservation and btc receiver addresses differ', () => {
@@ -937,6 +965,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     true,
                 );
@@ -964,6 +993,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 true,
             );
@@ -996,6 +1026,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -1032,6 +1063,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -1079,6 +1111,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 initialProvider.getId(),
                 u128.fromString(`1000000000000000000`),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 true,
             );

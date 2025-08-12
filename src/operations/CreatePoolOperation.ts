@@ -10,7 +10,8 @@ export class CreatePoolOperation extends BaseOperation {
     private readonly floorPrice: u256;
     private readonly providerId: u256;
     private readonly initialLiquidity: u128;
-    private readonly receiver: string;
+    private readonly receiver: Uint8Array;
+    private readonly receiverStr: string;
     private readonly antiBotEnabledFor: u16;
     private readonly antiBotMaximumTokensPerReservation: u256;
     private readonly maxReservesIn5BlocksPercent: u16;
@@ -20,7 +21,8 @@ export class CreatePoolOperation extends BaseOperation {
         floorPrice: u256,
         providerId: u256,
         initialLiquidity: u128,
-        receiver: string,
+        receiver: Uint8Array,
+        receiverStr: string,
         antiBotEnabledFor: u16,
         antiBotMaximumTokensPerReservation: u256,
         maxReservesIn5BlocksPercent: u16,
@@ -31,21 +33,17 @@ export class CreatePoolOperation extends BaseOperation {
         this.providerId = providerId;
         this.initialLiquidity = initialLiquidity;
         this.receiver = receiver;
+        this.receiverStr = receiverStr;
         this.antiBotEnabledFor = antiBotEnabledFor;
         this.antiBotMaximumTokensPerReservation = antiBotMaximumTokensPerReservation;
         this.maxReservesIn5BlocksPercent = maxReservesIn5BlocksPercent;
     }
 
     public override execute(): void {
-        Blockchain.log(`in1`);
         this.checkPreConditions();
-        Blockchain.log(`in2`);
         this.initializeInitialProvider();
-        Blockchain.log(`in3`);
         this.listTokenForSale();
-        Blockchain.log(`in4`);
         this.applyAntibotSettingsIfNeeded();
-        Blockchain.log(`in5`);
     }
 
     private applyAntibotSettingsIfNeeded(): void {
@@ -98,7 +96,7 @@ export class CreatePoolOperation extends BaseOperation {
     }
 
     private ensureReceiverAddressValid(): void {
-        if (Blockchain.validateBitcoinAddress(this.receiver) == false) {
+        if (Blockchain.validateBitcoinAddress(this.receiverStr) == false) {
             throw new Revert('NATIVE_SWAP: Invalid receiver address.');
         }
     }
@@ -124,6 +122,7 @@ export class CreatePoolOperation extends BaseOperation {
             this.providerId,
             this.initialLiquidity,
             this.receiver,
+            this.receiverStr,
             false,
             true,
         );

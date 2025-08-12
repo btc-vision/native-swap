@@ -34,11 +34,7 @@ import { Reservation } from '../models/Reservation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
-import {
-    INDEX_NOT_SET_VALUE,
-    INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    MAX_TOTAL_SATOSHIS,
-} from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX, MAX_TOTAL_SATOSHIS, } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 
 describe('Liquidity queue tests', () => {

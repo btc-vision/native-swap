@@ -7,7 +7,7 @@ import {
     StoredU256Array,
 } from '@btc-vision/btc-runtime/runtime';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
-import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
+import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 
@@ -132,7 +132,7 @@ export class ProviderQueue {
 
         provider.resetListingProviderValues();
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
+        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), canceled, false));
     }
 
     public restoreCurrentIndex(index: u32): void {

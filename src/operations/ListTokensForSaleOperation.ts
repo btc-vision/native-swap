@@ -1,13 +1,21 @@
 import { BaseOperation } from './BaseOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
-import { Blockchain, Revert, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import {
+    BitcoinAddresses,
+    Blockchain,
+    Network,
+    Revert,
+    SafeMath,
+    TransferHelper,
+} from '@btc-vision/btc-runtime/runtime';
 import { tokensToSatoshis } from '../utils/SatoshisConversion';
 import { getTotalFeeCollected } from '../utils/BlockchainUtils';
 import { LiquidityListedEvent } from '../events/LiquidityListedEvent';
 import { FeeManager } from '../managers/FeeManager';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import {
+    CSV_BLOCKS_REQUIRED,
     INDEX_NOT_SET_VALUE,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
     PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
@@ -18,7 +26,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private readonly providerId: u256;
     private readonly amountIn: u128;
     private readonly amountIn256: u256;
-    private readonly receiver: string;
+    private readonly receiver: Uint8Array;
+    private readonly receiverStr: string;
     private readonly usePriorityQueue: boolean;
     private readonly isForInitialLiquidity: boolean;
     private readonly provider: Provider;
@@ -28,7 +37,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
         liquidityQueue: ILiquidityQueue,
         providerId: u256,
         amountIn: u128,
-        receiver: string,
+        receiver: Uint8Array,
+        receiverStr: string, // Ensure we recompute the right string
         usePriorityQueue: boolean,
         isForInitialLiquidity: boolean = false,
     ) {
@@ -38,6 +48,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.amountIn = amountIn;
         this.amountIn256 = amountIn.toU256();
         this.receiver = receiver;
+        this.receiverStr = receiverStr;
         this.usePriorityQueue = usePriorityQueue;
         this.isForInitialLiquidity = isForInitialLiquidity;
 
@@ -47,6 +58,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     public override execute(): void {
+        this.ensureValidReceiverAddress(this.receiverStr);
         this.checkPreConditions();
         this.transferToken();
         this.emitLiquidityListedEvent();
@@ -60,6 +72,12 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
         if (!deltaHalf.isZero()) {
             this.liquidityQueue.increaseVirtualTokenReserve(deltaHalf.toU256());
+        }
+    }
+
+    private ensureValidReceiverAddress(receiver: string): void {
+        if (Blockchain.validateBitcoinAddress(receiver) == false) {
+            throw new Revert('NATIVE_SWAP: Invalid receiver address.');
         }
     }
 
@@ -98,18 +116,31 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private assignReceiver(): void {
-        if (this.provider.hasReservedAmount() && this.provider.getBtcReceiver() !== this.receiver) {
+        if (
+            this.provider.hasReservedAmount() &&
+            this.provider.getBtcReceiver() !== this.receiverStr
+        ) {
             throw new Revert('NATIVE_SWAP: Cannot change receiver address while reserved.');
         } else if (!this.provider.hasReservedAmount()) {
             this.verifyReceiverAddress();
 
-            this.provider.setBtcReceiver(this.receiver);
+            this.provider.setBtcReceiver(this.receiverStr);
         }
     }
 
     private verifyReceiverAddress(): void {
-        //Blockchain.validateBitcoinAddress();
-        // TODO: Implement Bitcoin address validation
+        const isValidCSV = BitcoinAddresses.verifyCsvP2wshAddress(
+            this.receiver,
+            CSV_BLOCKS_REQUIRED,
+            this.receiverStr,
+            Network.hrp(Blockchain.network),
+        );
+
+        if (!isValidCSV) {
+            throw new Revert(
+                `NATIVE_SWAP: Invalid receiver address. Expected CSV P2WSH address with ${CSV_BLOCKS_REQUIRED} blocks.`,
+            );
+        }
     }
 
     private assertQueueSwitchAllowed(): void {
@@ -171,7 +202,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
     private emitLiquidityListedEvent(): void {
         Blockchain.emit(
-            new LiquidityListedEvent(this.provider.getLiquidityAmount(), this.receiver),
+            new LiquidityListedEvent(this.provider.getLiquidityAmount(), this.receiverStr),
         );
     }
 
