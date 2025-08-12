@@ -14,7 +14,7 @@ import { Reservation } from '../models/Reservation';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
 import { ProviderManager } from '../managers/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import { AT_LEAST_PROVIDERS_TO_PURGE, ENABLE_INDEX_VERIFICATION } from '../constants/Contract';
+import { AT_LEAST_PROVIDERS_TO_PURGE, CSV_BLOCKS_REQUIRED, ENABLE_INDEX_VERIFICATION, } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
 
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
@@ -139,7 +139,16 @@ export const ownerAddress3: Address = new Address([
     151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 34,
 ]);
 
-export const receiverAddress1: string = 'wjo29i3d02jd208j3';
+export const receiverAddress1: Uint8Array = new Uint8Array(33);
+receiverAddress1.set([
+    0x02, 0x03, 0x73, 0x62, 0x6d, 0x31, 0x7a, 0xe8, 0x78, 0x8c, 0xe3, 0x28, 0x0b, 0x49, 0x10, 0x68,
+    0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x0a, 0xf5,
+    0x2c,
+]);
+
+export const receiverAddress1CSV: string = Address.toCSV(receiverAddress1, CSV_BLOCKS_REQUIRED);
+
+// TODO: DO IT LIKE THIS FOR THE REST
 
 export const receiverAddress2: string = 'cmewj390ujllq23u9';
 
@@ -297,6 +306,12 @@ export function createReservationId(tokenAddress: Address, providerAddress: Addr
     return u128.fromBytes(reservationArrayId, true);
 }
 
+const regtestChainId = new Uint8Array(32);
+regtestChainId.set([
+    0x0f, 0x91, 0x88, 0xf1, 0x3c, 0xb7, 0xb2, 0xc7, 0x1f, 0x2a, 0x33, 0x5e, 0x3a, 0x4f, 0xc3, 0x28,
+    0xbf, 0x5b, 0xeb, 0x43, 0x60, 0x12, 0xaf, 0xca, 0x59, 0x0b, 0x1a, 0x11, 0x46, 0x6e, 0x22, 0x06,
+]);
+
 export function setBlockchainEnvironment(
     currentBlock: u64,
     sender: Address = msgSender1,
@@ -320,7 +335,7 @@ export function setBlockchainEnvironment(
     writer.writeAddress(sender);
     writer.writeAddress(origin);
 
-    writer.writeBytes(new Uint8Array(32)); // chain id
+    writer.writeBytes(regtestChainId); // chain id
     writer.writeBytes(new Uint8Array(32)); // protocol id
 
     Blockchain.setEnvironmentVariables(writer.getBuffer());

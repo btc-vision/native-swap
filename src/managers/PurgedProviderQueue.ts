@@ -9,7 +9,7 @@ import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
+import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 
 export class PurgedProviderQueue {
     protected readonly token: Address;
@@ -142,7 +142,7 @@ export class PurgedProviderQueue {
 
         provider.resetListingProviderValues();
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, false));
+        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), false, false));
     }
 
     // TODO: Potential optimization. we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
