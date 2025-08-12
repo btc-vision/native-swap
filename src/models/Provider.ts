@@ -505,14 +505,16 @@ export function transferPendingAmountToStakingContract(
 ): void {
     if (!pendingStakingContractAmount.isZero()) {
         if (stakingContractAddress.isZero() || stakingContractAddress.isDead()) {
-            TransferHelper.burn(tokenAddress, pendingStakingContractAmount);
-        } else {
-            TransferHelper.safeTransfer(
-                tokenAddress,
-                stakingContractAddress,
-                pendingStakingContractAmount,
+            throw new Revert(
+                'NATIVE_SWAP: Staking contract address is not set.',
             );
         }
+
+        TransferHelper.safeTransfer(
+            tokenAddress,
+            stakingContractAddress,
+            pendingStakingContractAmount,
+        );
     }
 }
 
