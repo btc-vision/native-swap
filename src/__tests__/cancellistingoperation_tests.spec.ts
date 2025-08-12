@@ -9,7 +9,6 @@ import {
     createProvider,
     providerAddress1,
     setBlockchainEnvironment,
-    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -46,7 +45,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -66,7 +64,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -88,7 +85,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -111,7 +107,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -133,7 +128,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -156,7 +150,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -184,7 +177,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -217,11 +209,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(10000));
 
             setBlockchainEnvironment(101);
-            const operation = new CancelListingOperation(
-                queue.liquidityQueue,
-                provider.getId(),
-                testStackingContractAddress,
-            );
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
 
@@ -248,11 +236,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             queue.providerManager.addToNormalQueue(provider);
 
             setBlockchainEnvironment(107);
-            const operation = new CancelListingOperation(
-                queue.liquidityQueue,
-                provider.getId(),
-                testStackingContractAddress,
-            );
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
 
@@ -279,11 +263,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             queue.providerManager.addToNormalQueue(provider);
 
             setBlockchainEnvironment(101);
-            const operation = new CancelListingOperation(
-                queue.liquidityQueue,
-                provider.getId(),
-                testStackingContractAddress,
-            );
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
 
@@ -307,11 +287,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             queue.providerManager.addToNormalQueue(provider);
 
             setBlockchainEnvironment(101);
-            const operation = new CancelListingOperation(
-                queue.liquidityQueue,
-                provider.getId(),
-                testStackingContractAddress,
-            );
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
 

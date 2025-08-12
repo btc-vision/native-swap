@@ -13,7 +13,6 @@ import {
     createProvider,
     createProviders,
     providerAddress1,
-    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -34,7 +33,6 @@ function createPriorityPurgedQueue(): PriorityPurgedProviderQueue {
         PRIORITY_QUEUE_PURGED_RESERVATION,
         tokenIdUint8Array1,
         ENABLE_INDEX_VERIFICATION,
-        testStackingContractAddress,
     );
 
     return queue;
@@ -47,7 +45,6 @@ function createPriorityQueue(): PriorityProviderQueue {
         tokenIdUint8Array1,
         ENABLE_INDEX_VERIFICATION,
         MAXIMUM_NUMBER_OF_PROVIDERS,
-        testStackingContractAddress,
     );
 
     return queue;

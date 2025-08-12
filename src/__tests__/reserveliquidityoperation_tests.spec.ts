@@ -8,9 +8,9 @@ import {
     providerAddress1,
     providerAddress2,
     receiverAddress1,
+    receiverAddress1CSV,
     setBlockchainEnvironment,
     TestReserveLiquidityOperation,
-    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -190,10 +190,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -251,10 +251,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -316,10 +316,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -380,10 +380,10 @@ describe('ReserveLiquidityOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -469,10 +469,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -557,10 +557,10 @@ describe('ReserveLiquidityOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -610,10 +610,10 @@ describe('ReserveLiquidityOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -676,10 +676,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     10,
                     u256.fromU32(15000),
                     5,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -732,10 +732,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -796,10 +796,10 @@ describe('ReserveLiquidityOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 100,
-                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -860,10 +860,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     1,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -915,10 +915,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     1,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -970,10 +970,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     150,
                     u256.fromU32(10000),
                     100,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1022,10 +1022,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     100,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1085,10 +1085,10 @@ describe('ReserveLiquidityOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1103,7 +1103,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`66670000000000000000`),
                 receiverAddress1,
-                testStackingContractAddress,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -1156,10 +1156,10 @@ describe('ReserveLiquidityOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1174,6 +1174,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`20000000000000000000`),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -1233,10 +1234,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1251,6 +1252,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -1308,10 +1310,10 @@ describe('ReserveLiquidityOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 100,
-                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1368,10 +1370,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1423,10 +1425,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1441,6 +1443,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -1491,10 +1494,10 @@ describe('ReserveLiquidityOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 createPoolOp.execute();
@@ -1511,6 +1514,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     providerId1,
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -1567,10 +1571,10 @@ describe('ReserveLiquidityOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 100,
-                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1586,6 +1590,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -1656,10 +1661,10 @@ describe('ReserveLiquidityOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -1674,6 +1679,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 providerId1,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );

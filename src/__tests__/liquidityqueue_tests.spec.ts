@@ -23,7 +23,6 @@ import {
     providerAddress1,
     providerAddress2,
     setBlockchainEnvironment,
-    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -34,7 +33,11 @@ import { Reservation } from '../models/Reservation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
-import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX, MAX_TOTAL_SATOSHIS, } from '../constants/Contract';
+import {
+    INDEX_NOT_SET_VALUE,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAX_TOTAL_SATOSHIS,
+} from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 
 describe('Liquidity queue tests', () => {
@@ -977,11 +980,7 @@ describe('Liquidity queue tests', () => {
             queue.increaseTotalReserve(u256.fromU64(10000));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-            queue.accruePenalty(
-                u128.fromU64(10000),
-                u128.fromU64(5000),
-                testStackingContractAddress,
-            );
+            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(5000));
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(5000));
             expect(queue.liquidity).toStrictEqual(u256.Zero);
@@ -1004,11 +1003,7 @@ describe('Liquidity queue tests', () => {
             queue.increaseTotalReserve(u256.fromU64(10000));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-            queue.accruePenalty(
-                u128.fromU64(10000),
-                u128.fromU64(10000),
-                testStackingContractAddress,
-            );
+            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(10000));
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(0));
             expect(queue.liquidity).toStrictEqual(u256.Zero);
@@ -1031,7 +1026,7 @@ describe('Liquidity queue tests', () => {
             queue.increaseTotalReserve(u256.fromU64(10000));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-            queue.accruePenalty(u128.Zero, u128.Zero, testStackingContractAddress);
+            queue.accruePenalty(u128.Zero, u128.Zero);
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(0));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
@@ -1055,11 +1050,7 @@ describe('Liquidity queue tests', () => {
                 queue.increaseTotalReserve(u256.fromU64(10000));
                 expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-                queue.accruePenalty(
-                    u128.fromU64(10000),
-                    u128.fromU64(15000),
-                    testStackingContractAddress,
-                );
+                queue.accruePenalty(u128.fromU64(10000), u128.fromU64(15000));
             }).toThrow();
         });
     });
@@ -1136,7 +1127,7 @@ describe('Liquidity queue tests', () => {
 
             queue.setLiquidity(u256.fromU32(10000));
             queue.virtualTokenReserve = u256.Zero;
-            queue.distributeFee(u256.fromU32(10000), testStackingContractAddress);
+            queue.distributeFee(u256.fromU32(10000));
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(5000));
             expect(queue.liquidity).toStrictEqual(u256.fromU32(5000));
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`5000`));
@@ -1153,7 +1144,7 @@ describe('Liquidity queue tests', () => {
 
             queue.setLiquidity(u256.fromU32(10000));
             queue.virtualTokenReserve = u256.Zero;
-            queue.distributeFee(u256.Zero, testStackingContractAddress);
+            queue.distributeFee(u256.Zero);
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
             expect(queue.liquidity).toStrictEqual(u256.fromU32(10000));
