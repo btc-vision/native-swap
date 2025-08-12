@@ -373,7 +373,8 @@ export class NativeSwap extends ReentrancyGuard {
 
         const floorPrice: u256 = calldata.readU256();
         const initialLiquidity: u128 = calldata.readU128();
-        const receiver: string = calldata.readStringWithLength();
+        const receiver: Uint8Array = calldata.readBytes(33);
+        const receiverStr: string = calldata.readStringWithLength();
         const antiBotEnabledFor: u16 = calldata.readU16();
         const antiBotMaximumTokensPerReservation: u256 = calldata.readU256();
         const maxReservesIn5BlocksPercent: u16 = calldata.readU16();
@@ -390,6 +391,7 @@ export class NativeSwap extends ReentrancyGuard {
             providerId,
             initialLiquidity,
             receiver,
+            receiverStr,
             antiBotEnabledFor,
             antiBotMaximumTokensPerReservation,
             maxReservesIn5BlocksPercent,
@@ -406,22 +408,22 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
-        const receiver: string = calldata.readStringWithLength();
+        const receiver: Uint8Array = calldata.readBytes(33);
+        const receiverStr: string = calldata.readStringWithLength();
         this._tokenAddress = token.clone();
-
-        this.ensureValidReceiverAddress(receiver);
 
         const amountIn: u128 = calldata.readU128();
         const priority: boolean = calldata.readBoolean();
 
-        this._listLiquidity(token, receiver, amountIn, priority);
+        this._listLiquidity(token, receiver, receiverStr, amountIn, priority);
 
         return new BytesWriter(0);
     }
 
     private _listLiquidity(
         token: Address,
-        receiver: string,
+        receiver: Uint8Array,
+        receiverStr: string,
         amountIn: u128,
         priority: boolean,
     ): void {
@@ -442,6 +444,7 @@ export class NativeSwap extends ReentrancyGuard {
             providerId,
             amountIn,
             receiver,
+            receiverStr,
             priority,
             false,
         );
@@ -812,12 +815,6 @@ export class NativeSwap extends ReentrancyGuard {
 
         const response: BytesReader = Blockchain.call(token, calldata);
         return response.readAddress();
-    }
-
-    private ensureValidReceiverAddress(receiver: string): void {
-        if (Blockchain.validateBitcoinAddress(receiver) == false) {
-            throw new Revert('NATIVE_SWAP: Invalid receiver address.');
-        }
     }
 
     private ensureContractDeployer(tokenOwner: Address): void {
