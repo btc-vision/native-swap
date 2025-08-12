@@ -881,12 +881,12 @@ export class NativeSwap extends ReentrancyGuard {
         return writer;
     }
 
-    private ensureStakingContractAddressIsValid(address: Address) {
+    private ensureStakingContractAddressIsValid(address: Address): void {
         if (address.isZero()) {
             throw new Revert('NATIVE_SWAP: Staking contract address cannot be empty.');
         }
 
-        if (address.equals(Address.dead())) {
+        if (address.isDead()) {
             throw new Revert('NATIVE_SWAP: Staking contract address cannot be dead address.');
         }
     }
