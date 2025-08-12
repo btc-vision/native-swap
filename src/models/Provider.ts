@@ -504,7 +504,7 @@ export function transferPendingAmountToStakingContract(
     stakingContractAddress: Address,
 ): void {
     if (!pendingStakingContractAmount.isZero()) {
-        TransferHelper.safeTransfer(
+        TransferHelper.safeTransferBurnIfDead(
             tokenAddress,
             stakingContractAddress,
             pendingStakingContractAmount,
