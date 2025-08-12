@@ -3,6 +3,7 @@ import {
     ADDRESS_BYTE_LENGTH,
     Blockchain,
     BytesWriter,
+    Networks,
     StoredBooleanArray,
     StoredU128Array,
     StoredU256Array,
@@ -14,11 +15,7 @@ import { Reservation } from '../models/Reservation';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
 import { ProviderManager } from '../managers/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import {
-    AT_LEAST_PROVIDERS_TO_PURGE,
-    CSV_BLOCKS_REQUIRED,
-    ENABLE_INDEX_VERIFICATION,
-} from '../constants/Contract';
+import { AT_LEAST_PROVIDERS_TO_PURGE, CSV_BLOCKS_REQUIRED, ENABLE_INDEX_VERIFICATION, } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
 
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
@@ -34,6 +31,9 @@ import { DynamicFee } from '../managers/DynamicFee';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
+
+// IF YOU CHANGE NETWORK MAKE SURE TO CHANGE THIS AS WELL.
+Blockchain.network = Networks.Regtest;
 
 export const testStackingContractAddress: Address = new Address([
     99, 103, 209, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
