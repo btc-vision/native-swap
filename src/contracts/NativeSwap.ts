@@ -130,14 +130,14 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.reserve(calldata);
             case encodeSelector('swap(address)'):
                 return this.swap(calldata);
-            case encodeSelector('listLiquidity(address,string,uint128,bool)'):
+            case encodeSelector('listLiquidity(address,bytes,string,uint128,bool)'):
                 return this.listLiquidity(calldata);
             case encodeSelector('cancelListing(address)'):
                 return this.cancelListing(calldata);
             case encodeSelector('withdrawListing(address)'):
                 return this.withdrawListing(calldata);
             case encodeSelector(
-                'createPool(address,uint256,uint128,string,uint16,uint256,uint16)',
+                'createPool(address,uint256,uint128,bytes,string,uint16,uint256,uint16)',
             ): {
                 const token: Address = calldata.readAddress();
                 return this.createPool(calldata, token);
