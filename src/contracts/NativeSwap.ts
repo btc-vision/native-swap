@@ -234,7 +234,9 @@ export class NativeSwap extends ReentrancyGuard {
         this.onlyDeployer(Blockchain.tx.sender);
         this.ensureWithdrawModeNotActive();
 
-        this._stakingContractAddress.value = calldata.readAddress();
+        const address: Address = calldata.readAddress();
+        this.ensureStakingContractAddressIsValid(address);
+        this._stakingContractAddress.value = address;
 
         const result: BytesWriter = new BytesWriter(BOOLEAN_BYTE_LENGTH);
         result.writeBoolean(true);
@@ -907,6 +909,16 @@ export class NativeSwap extends ReentrancyGuard {
 
         if (Blockchain.validateBitcoinAddress(address) == false) {
             throw new Revert('NATIVE_SWAP: Fees address is an invalid bitcoin address.');
+        }
+    }
+
+    private ensureStakingContractAddressIsValid(address: Address) {
+        if (address.isZero()) {
+            throw new Revert('NATIVE_SWAP: Staking contract address cannot be empty.');
+        }
+
+        if (address.equals(Address.dead())) {
+            throw new Revert('NATIVE_SWAP: Staking contract address cannot be dead address.');
         }
     }
 
