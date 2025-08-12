@@ -14,7 +14,7 @@ import { Reservation } from '../models/Reservation';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
 import { ProviderManager } from '../managers/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import { AT_LEAST_PROVIDERS_TO_PURGE, ENABLE_INDEX_VERIFICATION } from '../constants/Contract';
+import { AT_LEAST_PROVIDERS_TO_PURGE, CSV_BLOCKS_REQUIRED, ENABLE_INDEX_VERIFICATION, } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
 
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
@@ -139,7 +139,16 @@ export const ownerAddress3: Address = new Address([
     151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 34,
 ]);
 
-export const receiverAddress1: string = 'wjo29i3d02jd208j3';
+export const receiverAddress1: Uint8Array = new Uint8Array(33);
+receiverAddress1.set([
+    0x02, 0x03, 0x73, 0x62, 0x6d, 0x31, 0x7a, 0xe8, 0x78, 0x8c, 0xe3, 0x28, 0x0b, 0x49, 0x10, 0x68,
+    0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x0a, 0xf5,
+    0x2c,
+]);
+
+export const receiverAddress1CSV: string = Address.toCSV(receiverAddress1, CSV_BLOCKS_REQUIRED);
+
+// TODO: DO IT LIKE THIS FOR THE REST
 
 export const receiverAddress2: string = 'cmewj390ujllq23u9';
 
