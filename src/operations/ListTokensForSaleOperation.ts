@@ -58,7 +58,6 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     public override execute(): void {
-        this.ensureValidReceiverAddress(this.receiverStr);
         this.checkPreConditions();
         this.transferToken();
         this.emitLiquidityListedEvent();
@@ -171,6 +170,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
             this.ensureEnoughPriorityFees();
         }
 
+        this.ensureValidReceiverAddress(this.receiverStr);
         this.ensureAmountInIsNotZero();
         this.ensureNoLiquidityOverflow();
         this.ensureNoActivePositionInPriorityQueue();

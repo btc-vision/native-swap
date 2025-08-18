@@ -1,6 +1,5 @@
 import { clearCachedProviders, getProvider } from '../models/Provider';
 import {
-    Address,
     Blockchain,
     SafeMath,
     TransactionOutput,
@@ -15,9 +14,10 @@ import {
     providerAddress3,
     providerAddress4,
     receiverAddress1,
+    receiverAddress1CSV,
     receiverAddress2,
+    receiverAddress2CSV,
     setBlockchainEnvironment,
-    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -72,10 +72,10 @@ describe('SwapOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
                 );
 
                 createPoolOp.execute();
@@ -84,11 +84,7 @@ describe('SwapOperation tests', () => {
 
                 setBlockchainEnvironment(102, providerAddress1, providerAddress1);
                 const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                const swapOp = new SwapOperation(
-                    queue2.liquidityQueue,
-                    queue2.tradeManager,
-                    testStackingContractAddress,
-                );
+                const swapOp = new SwapOperation(queue2.liquidityQueue, queue2.tradeManager);
                 swapOp.execute();
             }).toThrow();
         });
@@ -117,10 +113,10 @@ describe('SwapOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
                 );
 
                 createPoolOp.execute();
@@ -157,20 +153,12 @@ describe('SwapOperation tests', () => {
                 Blockchain.mockTransactionOutput(transactionOutput);
 
                 const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                const swapOp = new SwapOperation(
-                    queue4.liquidityQueue,
-                    queue4.tradeManager,
-                    testStackingContractAddress,
-                );
+                const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
                 swapOp.execute();
                 queue4.liquidityQueue.save();
 
                 const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                const swapOp2 = new SwapOperation(
-                    queue5.liquidityQueue,
-                    queue5.tradeManager,
-                    testStackingContractAddress,
-                );
+                const swapOp2 = new SwapOperation(queue5.liquidityQueue, queue5.tradeManager);
                 swapOp2.execute();
                 queue5.liquidityQueue.save();
             }).toThrow();
@@ -199,10 +187,10 @@ describe('SwapOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                testStackingContractAddress,
             );
 
             createPoolOp.execute();
@@ -239,11 +227,7 @@ describe('SwapOperation tests', () => {
             Blockchain.mockTransactionOutput([]);
 
             const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const swapOp = new SwapOperation(
-                queue4.liquidityQueue,
-                queue4.tradeManager,
-                testStackingContractAddress,
-            );
+            const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
 
             swapOp.execute();
             queue4.liquidityQueue.save();
@@ -286,10 +270,10 @@ describe('SwapOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -326,11 +310,7 @@ describe('SwapOperation tests', () => {
             Blockchain.mockTransactionOutput(transactionOutput);
 
             const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const swapOp = new SwapOperation(
-                queue4.liquidityQueue,
-                queue4.tradeManager,
-                testStackingContractAddress,
-            );
+            const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
 
             const reservationActiveList = queue4.reservationManager.callgetActiveListForBlock(101);
             const reservationList = queue4.reservationManager.callgetReservationListForBlock(101);
@@ -367,10 +347,10 @@ describe('SwapOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -407,11 +387,7 @@ describe('SwapOperation tests', () => {
             Blockchain.mockTransactionOutput(transactionOutput);
 
             const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const swapOp = new SwapOperation(
-                queue4.liquidityQueue,
-                queue4.tradeManager,
-                testStackingContractAddress,
-            );
+            const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
             swapOp.execute();
             queue4.liquidityQueue.save();
 
@@ -453,10 +429,10 @@ describe('SwapOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -471,6 +447,7 @@ describe('SwapOperation tests', () => {
                 providerId2,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -512,11 +489,7 @@ describe('SwapOperation tests', () => {
             Blockchain.mockTransactionOutput(transactionOutput);
 
             const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const swapOp = new SwapOperation(
-                queue4.liquidityQueue,
-                queue4.tradeManager,
-                testStackingContractAddress,
-            );
+            const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
 
             const reservationActiveList = queue4.reservationManager.callgetActiveListForBlock(102);
             const reservationList = queue4.reservationManager.callgetReservationListForBlock(102);
@@ -560,10 +533,10 @@ describe('SwapOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -580,6 +553,7 @@ describe('SwapOperation tests', () => {
                 providerId2,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -610,7 +584,7 @@ describe('SwapOperation tests', () => {
             transactionOutput.push(
                 new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 10000),
             );
-            transactionOutput.push(new TransactionOutput(2, 0, null, receiverAddress1, 15000));
+            transactionOutput.push(new TransactionOutput(2, 0, null, receiverAddress1CSV, 15000));
             transactionOutput.push(
                 new TransactionOutput(3, 0, null, initialProvider.getBtcReceiver(), 600),
             );
@@ -618,11 +592,7 @@ describe('SwapOperation tests', () => {
             Blockchain.mockTransactionOutput(transactionOutput);
 
             const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const swapOp = new SwapOperation(
-                queue4.liquidityQueue,
-                queue4.tradeManager,
-                testStackingContractAddress,
-            );
+            const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
 
             const reservationActiveList = queue4.reservationManager.callgetActiveListForBlock(102);
             const reservationList = queue4.reservationManager.callgetReservationListForBlock(102);
@@ -676,10 +646,10 @@ describe('SwapOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -695,6 +665,7 @@ describe('SwapOperation tests', () => {
                 providerId2,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -711,6 +682,7 @@ describe('SwapOperation tests', () => {
                 providerId3,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress2,
+                receiverAddress2CSV,
                 true,
                 false,
             );
@@ -760,11 +732,7 @@ describe('SwapOperation tests', () => {
             expect(reservationList.getLength()).toStrictEqual(1);
             expect(reservationActiveList.get(0)).toBeTruthy();
 
-            const swapOp = new SwapOperation(
-                queue5.liquidityQueue,
-                queue5.tradeManager,
-                testStackingContractAddress,
-            );
+            const swapOp = new SwapOperation(queue5.liquidityQueue, queue5.tradeManager);
             swapOp.execute();
             queue5.liquidityQueue.save();
 
@@ -810,10 +778,10 @@ describe('SwapOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
                 );
 
                 createPoolOp.execute();
@@ -822,11 +790,7 @@ describe('SwapOperation tests', () => {
 
                 setBlockchainEnvironment(102, providerAddress1, providerAddress1);
                 const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                const swapOp = new SwapOperation(
-                    queue2.liquidityQueue,
-                    queue2.tradeManager,
-                    testStackingContractAddress,
-                );
+                const swapOp = new SwapOperation(queue2.liquidityQueue, queue2.tradeManager);
                 swapOp.execute();
             }).toThrow();
         });
@@ -854,10 +818,10 @@ describe('SwapOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
                 );
 
                 createPoolOp.execute();
@@ -886,11 +850,7 @@ describe('SwapOperation tests', () => {
                 reservation.delete(true);
 
                 const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                const swapOp = new SwapOperation(
-                    queue3.liquidityQueue,
-                    queue3.tradeManager,
-                    testStackingContractAddress,
-                );
+                const swapOp = new SwapOperation(queue3.liquidityQueue, queue3.tradeManager);
                 swapOp.execute();
             }).toThrow();
         });
@@ -919,10 +879,10 @@ describe('SwapOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
                 );
 
                 createPoolOp.execute();
@@ -950,11 +910,7 @@ describe('SwapOperation tests', () => {
                 initialProvider.setReservedAmount(initialProvider.getAvailableLiquidityAmount());
 
                 const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                const swapOp = new SwapOperation(
-                    queue3.liquidityQueue,
-                    queue3.tradeManager,
-                    testStackingContractAddress,
-                );
+                const swapOp = new SwapOperation(queue3.liquidityQueue, queue3.tradeManager);
                 swapOp.execute();
             }).toThrow();
         });
@@ -983,10 +939,10 @@ describe('SwapOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
                 );
 
                 createPoolOp.execute();
@@ -1023,20 +979,12 @@ describe('SwapOperation tests', () => {
                 Blockchain.mockTransactionOutput(transactionOutput);
 
                 const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                const swapOp = new SwapOperation(
-                    queue4.liquidityQueue,
-                    queue4.tradeManager,
-                    testStackingContractAddress,
-                );
+                const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
                 swapOp.execute();
                 queue4.liquidityQueue.save();
 
                 const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                const swapOp2 = new SwapOperation(
-                    queue5.liquidityQueue,
-                    queue5.tradeManager,
-                    testStackingContractAddress,
-                );
+                const swapOp2 = new SwapOperation(queue5.liquidityQueue, queue5.tradeManager);
                 swapOp2.execute();
                 queue5.liquidityQueue.save();
             }).toThrow();
@@ -1066,10 +1014,10 @@ describe('SwapOperation tests', () => {
                     initialProviderId,
                     initialLiquidity,
                     receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    Address.dead(),
                 );
 
                 createPoolOp.execute();
@@ -1106,11 +1054,7 @@ describe('SwapOperation tests', () => {
                 Blockchain.mockTransactionOutput(transactionOutput);
 
                 const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                const swapOp = new SwapOperation(
-                    queue4.liquidityQueue,
-                    queue4.tradeManager,
-                    testStackingContractAddress,
-                );
+                const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
                 swapOp.execute();
                 queue4.liquidityQueue.save();
 
@@ -1127,11 +1071,7 @@ describe('SwapOperation tests', () => {
 
                 Blockchain.mockTransactionOutput(transactionOutput);
                 const queue5 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                const swapOp2 = new SwapOperation(
-                    queue5.liquidityQueue,
-                    queue5.tradeManager,
-                    testStackingContractAddress,
-                );
+                const swapOp2 = new SwapOperation(queue5.liquidityQueue, queue5.tradeManager);
                 swapOp2.execute();
                 queue5.liquidityQueue.save();
             }).toThrow();
@@ -1160,10 +1100,10 @@ describe('SwapOperation tests', () => {
                 initialProviderId,
                 initialLiquidity,
                 receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.Zero,
                 5,
-                Address.dead(),
             );
 
             createPoolOp.execute();
@@ -1178,6 +1118,7 @@ describe('SwapOperation tests', () => {
                 providerId2,
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -1217,11 +1158,7 @@ describe('SwapOperation tests', () => {
             Blockchain.mockTransactionOutput(transactionOutput);
 
             const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const swapOp = new SwapOperation(
-                queue4.liquidityQueue,
-                queue4.tradeManager,
-                testStackingContractAddress,
-            );
+            const swapOp = new SwapOperation(queue4.liquidityQueue, queue4.tradeManager);
             swapOp.execute();
             queue4.liquidityQueue.save();
 

@@ -18,12 +18,16 @@ import {
     providerAddress6,
     providerAddress7,
     receiverAddress1,
+    receiverAddress1CSV,
     receiverAddress2,
+    receiverAddress2CSV,
     receiverAddress3,
+    receiverAddress3CSV,
     receiverAddress4,
+    receiverAddress4CSV,
     receiverAddress5,
+    receiverAddress5CSV,
     setBlockchainEnvironment,
-    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -61,10 +65,10 @@ function createPool(): Provider {
         initialProvider,
         initialLiq,
         receiverAddress1,
+        receiverAddress1CSV,
         0,
         u256.Zero,
         100,
-        testStackingContractAddress,
     );
 
     createPoolOp.execute();
@@ -75,7 +79,8 @@ function createPool(): Provider {
 
 function listTokenForSale(
     amount: u128,
-    receiverAddress: string,
+    receiverAddress: Uint8Array,
+    receiverAddressStr: string,
     priority: boolean = false,
 ): Provider {
     const liquidityProvider: u256 = createProviderId(Blockchain.tx.sender, tokenAddress1);
@@ -85,6 +90,7 @@ function listTokenForSale(
         liquidityProvider,
         expand(amount, tokenDec),
         receiverAddress,
+        receiverAddressStr,
         priority,
         false,
     );
@@ -98,11 +104,7 @@ function listTokenForSale(
 function cancelListing(provider: Provider): void {
     const lq1 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-    const cancelListingOp = new CancelListingOperation(
-        lq1.liquidityQueue,
-        provider.getId(),
-        testStackingContractAddress,
-    );
+    const cancelListingOp = new CancelListingOperation(lq1.liquidityQueue, provider.getId());
 
     cancelListingOp.execute();
     lq1.liquidityQueue.save();
@@ -140,11 +142,7 @@ function swap(receiver: string[], amount: u64[]): void {
 
     Blockchain.mockTransactionOutput(txOut);
 
-    const swapOp = new SwapOperation(
-        lq1.liquidityQueue,
-        lq1.tradeManager,
-        testStackingContractAddress,
-    );
+    const swapOp = new SwapOperation(lq1.liquidityQueue, lq1.tradeManager);
 
     swapOp.execute();
     lq1.liquidityQueue.save();
@@ -209,14 +207,22 @@ describe('Reserve, swap and purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        const liquidityProvider2 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress5,
+            receiverAddress5CSV,
+        );
         expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -243,7 +249,7 @@ describe('Reserve, swap and purge tests', () => {
         // Partial swap the reservation leaving small amount in provider1 smaller than minimum amount, so it is resets.
         // Don't send any sats to provider2 so it is restored.
         setBlockchainEnvironment(116, providerAddress3, providerAddress3);
-        swap([receiverAddress2], [489000]);
+        swap([receiverAddress2CSV], [489000]);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
@@ -367,14 +373,22 @@ describe('Reserve, swap and purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        const liquidityProvider2 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress5,
+            receiverAddress5CSV,
+        );
         expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -414,7 +428,7 @@ describe('Reserve, swap and purge tests', () => {
         // Provider1 and Provider2 should be resets and deactivated.
         // Initial provider gets restored.
         setBlockchainEnvironment(116, providerAddress3, providerAddress3);
-        swap([receiverAddress2, receiverAddress5], [489000, 489000]);
+        swap([receiverAddress2CSV, receiverAddress5CSV], [489000, 489000]);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isActive()).toBeFalsy();
@@ -479,21 +493,33 @@ describe('Reserve, swap and purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress3, providerAddress3);
-        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress3);
+        const liquidityProvider2 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress3,
+            receiverAddress3CSV,
+        );
         expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress4, providerAddress4);
-        const liquidityProvider3 = listTokenForSale(u128.fromU32(1000), receiverAddress4);
+        const liquidityProvider3 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress4,
+            receiverAddress4CSV,
+        );
         expect(liquidityProvider3.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -540,7 +566,7 @@ describe('Reserve, swap and purge tests', () => {
         // Provider2 should be completely buy and deactivated.
         // Provider1 and Provider3 should go to the purge queue to be reused in priority.
         setBlockchainEnvironment(116, providerAddress5, providerAddress5);
-        swap([receiverAddress3], [484000]);
+        swap([receiverAddress3CSV], [484000]);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
@@ -595,7 +621,7 @@ describe('Reserve, swap and purge tests', () => {
         // Provider1 should be restored.
         // Provider1 should go to the purge queue to be reused in priority.
         setBlockchainEnvironment(121, providerAddress6, providerAddress6);
-        swap([receiverAddress4], [484000]);
+        swap([receiverAddress4CSV], [484000]);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
@@ -691,28 +717,44 @@ describe('Reserve, swap and purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress3, providerAddress3);
-        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress3);
+        const liquidityProvider2 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress3,
+            receiverAddress3CSV,
+        );
         expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress4, providerAddress4);
-        const liquidityProvider3 = listTokenForSale(u128.fromU32(1000), receiverAddress4);
+        const liquidityProvider3 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress4,
+            receiverAddress4CSV,
+        );
         expect(liquidityProvider3.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        const liquidityProvider4 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        const liquidityProvider4 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress5,
+            receiverAddress5CSV,
+        );
         expect(liquidityProvider4.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -809,7 +851,7 @@ describe('Reserve, swap and purge tests', () => {
         // Reserved liquidity for Provider4 should be restored and Provider4 is added to purge queue.
         // Reserved liquidity for Initial provider should be restored.
         setBlockchainEnvironment(116, providerAddress7, providerAddress7);
-        swap([receiverAddress4], [484000]);
+        swap([receiverAddress4CSV], [484000]);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
             u128.fromString(`999999676301580952380`),
         );
@@ -858,7 +900,7 @@ describe('Reserve, swap and purge tests', () => {
         // Provider4 should be restored and added to the purge queue.
         // Initial provider should be restored.
         setBlockchainEnvironment(117, providerAddress6, providerAddress6);
-        swap([receiverAddress4, receiverAddress3], [484000, 10000]);
+        swap([receiverAddress4CSV, receiverAddress3CSV], [484000, 10000]);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
@@ -1052,14 +1094,22 @@ describe('Reserve, swap and purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress3, providerAddress3);
-        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress3);
+        const liquidityProvider2 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress3,
+            receiverAddress3CSV,
+        );
         expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -1070,7 +1120,12 @@ describe('Reserve, swap and purge tests', () => {
         txOut.push(new TransactionOutput(0, 0, null, `random address`, 0));
         txOut.push(new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 1000));
         Blockchain.mockTransactionOutput(txOut);
-        const liquidityProvider3 = listTokenForSale(u128.fromU32(1000), receiverAddress4, true);
+        const liquidityProvider3 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress4,
+            receiverAddress4CSV,
+            true,
+        );
         expect(liquidityProvider3.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`970000000000000000000`),
         );
@@ -1080,7 +1135,11 @@ describe('Reserve, swap and purge tests', () => {
         Blockchain.mockTransactionOutput([]);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        const liquidityProvider4 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        const liquidityProvider4 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress5,
+            receiverAddress5CSV,
+        );
         expect(liquidityProvider4.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -1181,7 +1240,7 @@ describe('Reserve, swap and purge tests', () => {
         // Do not send satoshis to the reserved provider.
         // Reserved liquidity by Reservation2 from the initial provider is restored.
         setBlockchainEnvironment(116, providerAddress7, providerAddress7);
-        swap([receiverAddress4], [484000]);
+        swap([receiverAddress4CSV], [484000]);
         expect(initialProvider.getReservedAmount()).toStrictEqual(
             u128.fromString(`1594265711685463999999`),
         );
@@ -1196,7 +1255,7 @@ describe('Reserve, swap and purge tests', () => {
         // Provider2 and Provider3 are fully buy, so they are reset and deactivated.
         // Initial provider reserved liquidity is also restored.
         setBlockchainEnvironment(117, providerAddress6, providerAddress6);
-        swap([receiverAddress4, receiverAddress3], [284000, 484000]);
+        swap([receiverAddress4CSV, receiverAddress3CSV], [284000, 484000]);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
@@ -1368,14 +1427,22 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        const liquidityProvider2 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress5,
+            receiverAddress5CSV,
+        );
         expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -1407,7 +1474,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Provider1 liquidity should be fully bought and Provider1 added to purge queue.
         // Provider2 reserved liquidity should be fully restored and Provider2 added to purge queue.
         setBlockchainEnvironment(126, providerAddress3, providerAddress3);
-        swap([receiverAddress2], [489000]);
+        swap([receiverAddress2CSV], [489000]);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`1065458057142858`),
         );
@@ -1450,14 +1517,22 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        const liquidityProvider2 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress5,
+            receiverAddress5CSV,
+        );
         expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -1489,7 +1564,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Provider1 should also be added to purge queue.
         // Provider2 reserved liquidity should be fully restored and Provider2 added to purge queue.
         setBlockchainEnvironment(126, providerAddress3, providerAddress3);
-        swap([receiverAddress2], [29000]);
+        swap([receiverAddress2CSV], [29000]);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`899926949695238095239`),
         );
@@ -1526,7 +1601,11 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -1549,7 +1628,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Provider1 should be sent to purge queue to be reset later when trying to be used
         // by another reservation.
         setBlockchainEnvironment(126, providerAddress3, providerAddress3);
-        swap([receiverAddress2], [495000]);
+        swap([receiverAddress2CSV], [495000]);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString('549451352380953'),
         );
@@ -1604,14 +1683,22 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        const liquidityProvider2 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress5,
+            receiverAddress5CSV,
+        );
         expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -1642,7 +1729,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Provider2 reserved liquidity should be fully restored and tokens should be bought for the provided amount using the current price.
         // Provider2 should also be added to purge queue.
         setBlockchainEnvironment(126, providerAddress3, providerAddress3);
-        swap([receiverAddress2, receiverAddress5], [489000, 200000]);
+        swap([receiverAddress2CSV, receiverAddress5CSV], [489000, 200000]);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`1065458057142858`),
         );
@@ -1686,14 +1773,22 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        const liquidityProvider2 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress5,
+            receiverAddress5CSV,
+        );
         expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -1724,7 +1819,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Provider2 reserved liquidity should be fully restored and tokens should be bought for the provided amount using the current price.
         // Provider2 should also be added to purge queue.
         setBlockchainEnvironment(126, providerAddress3, providerAddress3);
-        swap([receiverAddress2, receiverAddress5], [489000, 200000]);
+        swap([receiverAddress2CSV, receiverAddress5CSV], [489000, 200000]);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`1065458057142858`),
         );
@@ -1791,14 +1886,22 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        const liquidityProvider2 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress5,
+            receiverAddress5CSV,
+        );
         expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -1831,7 +1934,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Provider2 reserved liquidity should be fully restored and tokens should be bought for the provided amount using the current price.
         // Provider2 should also be added to purge queue.
         setBlockchainEnvironment(126, providerAddress3, providerAddress3);
-        swap([receiverAddress2, receiverAddress5], [489000, 200000]);
+        swap([receiverAddress2CSV, receiverAddress5CSV], [489000, 200000]);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`1065458057142858`),
         );
@@ -1899,14 +2002,22 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress5, providerAddress5);
-        const liquidityProvider2 = listTokenForSale(u128.fromU32(1000), receiverAddress5);
+        const liquidityProvider2 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress5,
+            receiverAddress5CSV,
+        );
         expect(liquidityProvider2.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -1961,7 +2072,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Buy from Provider2. Provider2 liquidity should be reduced by the number of tokens bought.
         // Both provider should be added to purge queue.
         setBlockchainEnvironment(126, providerAddress3, providerAddress3);
-        swap([receiverAddress2, receiverAddress5], [489000, 20000]);
+        swap([receiverAddress2CSV, receiverAddress5CSV], [489000, 20000]);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`1065458057142858`),
         );
@@ -2113,7 +2224,11 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
 
         setBlockchainEnvironment(110, providerAddress2, providerAddress2);
-        const liquidityProvider1 = listTokenForSale(u128.fromU32(1000), receiverAddress2);
+        const liquidityProvider1 = listTokenForSale(
+            u128.fromU32(1000),
+            receiverAddress2,
+            receiverAddress2CSV,
+        );
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),
         );
@@ -2167,7 +2282,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Do a full swap for the Provider1 will be fully bought.
         // Don't send satoshis to initial provider, so it is restored.
         setBlockchainEnvironment(129, providerAddress4, providerAddress4);
-        swap([receiverAddress2], [489000]);
+        swap([receiverAddress2CSV], [489000]);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(u128.Zero);
@@ -2186,7 +2301,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Swap should be ignored and don't buy anything.
         setBlockchainEnvironment(147, providerAddress3, providerAddress3);
         expect(() => {
-            swap([receiverAddress2], [489000]);
+            swap([receiverAddress2CSV], [489000]);
         }).toThrow();
     });
 
@@ -2245,7 +2360,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Swap Reservation2.
         // Do a full swap so the initial provider will be fully bought.
         setBlockchainEnvironment(129, providerAddress4, providerAddress4);
-        swap([receiverAddress1], [89100000]);
+        swap([receiverAddress1CSV], [89100000]);
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(initialProvider.isPurged()).toBeFalsy();
@@ -2256,7 +2371,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // buy anything.
         setBlockchainEnvironment(147, providerAddress3, providerAddress3);
         expect(() => {
-            swap([receiverAddress1], [489000]);
+            swap([receiverAddress1CSV], [489000]);
         }).toThrow();
     });
 });

@@ -6,8 +6,8 @@ import {
     createProviderId,
     providerAddress1,
     receiverAddress1,
+    receiverAddress1CSV,
     setBlockchainEnvironment,
-    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -39,11 +39,11 @@ describe('CreatePoolOperation tests', () => {
                     u256.fromU64(100),
                     u256.fromU64(100),
                     u128.fromU64(100),
-                    'd9dhdh92hd923hd',
+                    receiverAddress1,
+                    'wjdhwe9dy9w08h29w',
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -62,11 +62,11 @@ describe('CreatePoolOperation tests', () => {
                     u256.Zero,
                     u256.fromU64(100),
                     u128.fromU64(100),
-                    'd9dhdh92hd923hd',
+                    receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -85,11 +85,11 @@ describe('CreatePoolOperation tests', () => {
                     u256.fromU64(100),
                     u256.fromU64(100),
                     u128.Zero,
-                    'd9dhdh92hd923hd',
+                    receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -108,11 +108,11 @@ describe('CreatePoolOperation tests', () => {
                     u256.fromU64(100),
                     u256.fromU64(100),
                     u128.fromU64(100),
-                    'd9dhdh92hd923hd',
+                    receiverAddress1,
+                    receiverAddress1CSV,
                     10,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -131,11 +131,11 @@ describe('CreatePoolOperation tests', () => {
                     u256.fromU64(100),
                     u256.fromU64(100),
                     u128.fromU64(100),
-                    'd9dhdh92hd923hd',
+                    receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -148,11 +148,11 @@ describe('CreatePoolOperation tests', () => {
                     u256.fromU64(100),
                     u256.fromU64(100),
                     u128.fromU64(100),
-                    'd9dhdh92hd923hd',
+                    receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     5,
-                    testStackingContractAddress,
                 );
 
                 operation2.execute();
@@ -171,11 +171,11 @@ describe('CreatePoolOperation tests', () => {
                     u256.fromU64(100),
                     u256.fromU64(100),
                     u128.fromU64(100000),
-                    'd9dhdh92hd923hd',
+                    receiverAddress1,
+                    receiverAddress1CSV,
                     0,
                     u256.Zero,
                     115,
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -203,10 +203,10 @@ describe('CreatePoolOperation tests', () => {
                 initialProviderId,
                 u128.fromU64(1000000),
                 receiverAddress1,
+                receiverAddress1CSV,
                 10,
                 u256.fromU32(20),
                 5,
-                testStackingContractAddress,
             );
 
             operation.execute();
@@ -229,7 +229,7 @@ describe('CreatePoolOperation tests', () => {
             expect(queue2.providerManager.priorityQueueLength).toStrictEqual(0);
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(1000000));
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
-            expect(provider.getBtcReceiver()).toStrictEqual(receiverAddress1);
+            expect(provider.getBtcReceiver()).toStrictEqual(receiverAddress1CSV);
             expect(provider.isActive()).toBeTruthy();
             expect(provider.isPriority()).toBeFalsy();
         });
@@ -245,11 +245,11 @@ describe('CreatePoolOperation tests', () => {
                 u256.fromU64(100),
                 u256.fromU64(100),
                 u128.fromU64(100),
-                'd9dhdh92hd923hd',
+                receiverAddress1,
+                receiverAddress1CSV,
                 10,
                 u256.fromU32(20),
                 5,
-                testStackingContractAddress,
             );
 
             operation.execute();
@@ -269,11 +269,11 @@ describe('CreatePoolOperation tests', () => {
                 u256.fromU64(100),
                 u256.fromU64(100),
                 u128.fromU64(100),
-                'd9dhdh92hd923hd',
+                receiverAddress1,
+                receiverAddress1CSV,
                 0,
                 u256.fromU32(20),
                 5,
-                testStackingContractAddress,
             );
 
             operation.execute();

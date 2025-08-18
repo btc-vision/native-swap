@@ -13,7 +13,6 @@ import {
     ownerAddress1,
     providerAddress1,
     providerAddress2,
-    receiverAddress1,
     setBlockchainEnvironment,
     tokenAddress1,
     tokenIdUint8Array1,
@@ -23,6 +22,8 @@ import { Reservation } from '../models/Reservation';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+
+const dummyBTCReceiver: string = 'dj2d89j22j23jdwejhd2903du02';
 
 describe('TradeManager tests', () => {
     beforeEach(() => {
@@ -84,7 +85,7 @@ describe('TradeManager tests', () => {
                 false,
                 false,
                 true,
-                receiverAddress1,
+                dummyBTCReceiver,
                 u128.fromU64(2000000000),
                 u128.fromU64(2000000000),
                 u128.fromU64(10),
@@ -141,7 +142,7 @@ describe('TradeManager tests', () => {
             initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
             initialProvider.activate();
             initialProvider.clearPriority();
-            initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
             initialProvider.save();
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -226,7 +227,7 @@ describe('TradeManager tests', () => {
                 initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
                 initialProvider.activate();
                 initialProvider.clearPriority();
-                initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+                initialProvider.setBtcReceiver(dummyBTCReceiver);
                 initialProvider.save();
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -307,7 +308,7 @@ describe('TradeManager tests', () => {
             initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
             initialProvider.activate();
             initialProvider.clearPriority();
-            initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
             initialProvider.save();
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -394,7 +395,7 @@ describe('TradeManager tests', () => {
             initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
             initialProvider.activate();
             initialProvider.clearPriority();
-            initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
             initialProvider.save();
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -479,7 +480,7 @@ describe('TradeManager tests', () => {
             initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
             initialProvider.activate();
             initialProvider.clearPriority();
-            initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
             initialProvider.save();
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -662,7 +663,7 @@ describe('TradeManager tests', () => {
             initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
             initialProvider.activate();
             initialProvider.clearPriority();
-            initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
             initialProvider.save();
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -724,7 +725,7 @@ describe('TradeManager tests', () => {
             const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
 
             const txOut: TransactionOutput[] = [];
-            txOut.push(new TransactionOutput(1, 0, null, 'dj2d89j22j23jdwejhd2903du02', 10000));
+            txOut.push(new TransactionOutput(1, 0, null, dummyBTCReceiver, 10000));
 
             Blockchain.mockTransactionOutput(txOut);
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
@@ -752,7 +753,7 @@ describe('TradeManager tests', () => {
             initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
             initialProvider.activate();
             initialProvider.clearPriority();
-            initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
             initialProvider.save();
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -841,7 +842,7 @@ describe('TradeManager tests', () => {
             initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
             initialProvider.activate();
             initialProvider.clearPriority();
-            initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
             initialProvider.save();
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -937,7 +938,7 @@ describe('TradeManager tests', () => {
             initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
             initialProvider.activate();
             initialProvider.clearPriority();
-            initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
             initialProvider.save();
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -1036,7 +1037,7 @@ describe('TradeManager tests', () => {
             initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
             initialProvider.activate();
             initialProvider.clearPriority();
-            initialProvider.setBtcReceiver('dj2d89j22j23jdwejhd2903du02');
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
             initialProvider.save();
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);

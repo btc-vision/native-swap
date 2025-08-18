@@ -28,6 +28,7 @@ describe('ListTokenForSaleOperation tests', () => {
         clearCachedProviders();
         Blockchain.clearStorage();
         Blockchain.clearMockedResults();
+        Blockchain.mockValidateBitcoinAddressResult(true);
         TransferHelper.clearMockedResults();
     });
 
@@ -36,7 +37,31 @@ describe('ListTokenForSaleOperation tests', () => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
+            Blockchain.mockValidateBitcoinAddressResult(true);
             TransferHelper.clearMockedResults();
+        });
+
+        it('should revert if the receiver address is invalid', () => {
+            expect(() => {
+                Blockchain.mockValidateBitcoinAddressResult(false);
+                setBlockchainEnvironment(100);
+                FeeManager.onDeploy();
+                const provider = createProvider(providerAddress1, tokenAddress1);
+                provider.activate();
+
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+                const operation = new ListTokensForSaleOperation(
+                    queue.liquidityQueue,
+                    provider.getId(),
+                    u128.fromU64(100),
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    false,
+                );
+
+                operation.execute();
+            }).toThrow();
         });
 
         it('should revert if use priority queue and not enough fees collected', () => {
@@ -59,7 +84,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
+                    true,
                 );
 
                 operation.execute();
@@ -334,6 +359,7 @@ describe('ListTokenForSaleOperation tests', () => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
+            Blockchain.mockValidateBitcoinAddressResult(true);
             TransferHelper.clearMockedResults();
             clearPendingStakingContractAmount();
         });
@@ -967,7 +993,34 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1,
                     receiverAddress1CSV,
                     false,
-                    true,
+                    false,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
+
+        it('should revert if btc receiver addresses is invalid', () => {
+            setBlockchainEnvironment(100);
+
+            expect(() => {
+                const provider = createProvider(providerAddress1, tokenAddress1);
+                provider.deactivate();
+                provider.clearPriority();
+                provider.setLiquidityAmount(u128.fromU32(10000));
+
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+                queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
+                queue.liquidityQueue.virtualSatoshisReserve = 100;
+
+                const operation = new ListTokensForSaleOperation(
+                    queue.liquidityQueue,
+                    provider.getId(),
+                    u128.fromU64(100000000),
+                    receiverAddress1,
+                    'invalidfakeaddress',
+                    false,
+                    false,
                 );
 
                 operation.execute();

@@ -237,7 +237,9 @@ export class NativeSwap extends ReentrancyGuard {
         this.onlyDeployer(Blockchain.tx.sender);
         this.ensureWithdrawModeNotActive();
 
-        this._stakingContractAddress.value = calldata.readAddress();
+        const address: Address = calldata.readAddress();
+        this.ensureStakingContractAddressIsValid(address);
+        this._stakingContractAddress.value = address;
 
         return new BytesWriter(0);
     }
@@ -690,29 +692,26 @@ export class NativeSwap extends ReentrancyGuard {
         purgeOldReservations: boolean,
         timeoutEnabled: boolean = false,
     ): GetLiquidityQueueResult {
-        //Blockchain.log('in 1');
         const quoteManager: IQuoteManager = this.getQuoteManager(tokenId);
-        //Blockchain.log('in 2');
         const liquidityQueueReserve: ILiquidityQueueReserve = this.getLiquidityQueueReserve(
             token,
             tokenId,
         );
-        //Blockchain.log('in 3');
+
         const providerManager: IProviderManager = this.getProviderManager(
             token,
             tokenId,
             quoteManager,
         );
-        //Blockchain.log('in 4');
+
         const reservationManager: IReservationManager = this.getReservationManager(
             token,
             tokenId,
             providerManager,
             liquidityQueueReserve,
         );
-        //Blockchain.log('in 5');
+
         const dynamicFee: IDynamicFee = this.getDynamicFee(tokenId);
-        //Blockchain.log('in 6');
         const liquidityQueue: LiquidityQueue = new LiquidityQueue(
             token,
             tokenId,
@@ -724,7 +723,7 @@ export class NativeSwap extends ReentrancyGuard {
             purgeOldReservations,
             timeoutEnabled,
         );
-        //Blockchain.log('in 7');
+
         const tradeManager: TradeManager = new TradeManager(
             tokenId,
             quoteManager,
@@ -732,7 +731,6 @@ export class NativeSwap extends ReentrancyGuard {
             liquidityQueueReserve,
             reservationManager,
         );
-        //Blockchain.log('in 8');
 
         return new GetLiquidityQueueResult(liquidityQueue, tradeManager);
     }
@@ -881,6 +879,16 @@ export class NativeSwap extends ReentrancyGuard {
         const writer = new BytesWriter(SELECTOR_BYTE_LENGTH);
         writer.writeSelector(ON_OP_20_RECEIVED_SELECTOR);
         return writer;
+    }
+
+    private ensureStakingContractAddressIsValid(address: Address): void {
+        if (address.isZero()) {
+            throw new Revert('NATIVE_SWAP: Staking contract address cannot be empty.');
+        }
+
+        if (address.isDead()) {
+            throw new Revert('NATIVE_SWAP: Staking contract address cannot be dead address.');
+        }
     }
 
     /*DEBUG FUNCTIONS
