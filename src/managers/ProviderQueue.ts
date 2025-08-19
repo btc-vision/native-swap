@@ -10,12 +10,14 @@ import { addAmountToStakingContract, getProvider, Provider } from '../models/Pro
 import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
+import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 
 export class ProviderQueue {
     protected readonly token: Address;
     protected readonly queue: StoredU256Array;
     protected readonly enableIndexVerification: boolean;
     protected readonly maximumNumberOfProvider: u32;
+    protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
 
     constructor(
         token: Address,
@@ -23,11 +25,13 @@ export class ProviderQueue {
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
         maximumNumberOfProvider: u32,
+        liquidityQueueReserve: ILiquidityQueueReserve,
     ) {
         this.queue = new StoredU256Array(pointer, subPointer, MAXIMUM_VALID_INDEX);
         this.token = token;
         this.enableIndexVerification = enableIndexVerification;
         this.maximumNumberOfProvider = maximumNumberOfProvider;
+        this.liquidityQueueReserve = liquidityQueueReserve;
     }
 
     protected _currentIndex: u32 = 0;
@@ -123,7 +127,10 @@ export class ProviderQueue {
         this.ensureProviderNotAlreadyPurged(provider);
 
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
-            addAmountToStakingContract(provider.getLiquidityAmount().toU256());
+            const liquidity256: u256 = provider.getLiquidityAmount().toU256();
+
+            this.liquidityQueueReserve.subFromTotalReserve(liquidity256);
+            addAmountToStakingContract(liquidity256);
         }
 
         if (!provider.isInitialLiquidityProvider()) {

@@ -702,6 +702,7 @@ export class NativeSwap extends ReentrancyGuard {
             token,
             tokenId,
             quoteManager,
+            liquidityQueueReserve,
         );
 
         const reservationManager: IReservationManager = this.getReservationManager(
@@ -743,8 +744,15 @@ export class NativeSwap extends ReentrancyGuard {
         token: Address,
         tokenId: Uint8Array,
         quoteManager: IQuoteManager,
+        liquidityQueueReserve: ILiquidityQueueReserve,
     ): IProviderManager {
-        return new ProviderManager(token, tokenId, quoteManager, ENABLE_INDEX_VERIFICATION);
+        return new ProviderManager(
+            token,
+            tokenId,
+            quoteManager,
+            ENABLE_INDEX_VERIFICATION,
+            liquidityQueueReserve,
+        );
     }
 
     private getLiquidityQueueReserve(token: Address, tokenId: Uint8Array): ILiquidityQueueReserve {

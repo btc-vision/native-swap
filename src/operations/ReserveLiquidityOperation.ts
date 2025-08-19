@@ -391,12 +391,26 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
     private handleProviderPurgeQueues(provider: Provider): void {
         if (provider.isPurged()) {
+            if (
+                !Provider.meetsMinimumReservationAmount(
+                    provider.getAvailableLiquidityAmount(),
+                    this.currentQuote,
+                )
+            ) {
+                // Here, the provider will always have a reserved amount
+                // so no needs to check if we need to reset the provider
+                this.liquidityQueue.removeFromPurgeQueue(provider);
+            }
+
+            /*!!!!! TO remove
             const hasEnoughLiquidityLeft: boolean =
                 this.liquidityQueue.hasEnoughLiquidityLeftProvider(provider, this.currentQuote);
 
             if (!hasEnoughLiquidityLeft) {
                 this.liquidityQueue.removeFromPurgeQueue(provider);
             }
+
+             */
         }
     }
 

@@ -10,21 +10,25 @@ import { addAmountToStakingContract, getProvider, Provider } from '../models/Pro
 import { ProviderQueue } from './ProviderQueue';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
+import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 
 export class PurgedProviderQueue {
     protected readonly token: Address;
     protected readonly queue: StoredU32Array;
     protected readonly enableIndexVerification: boolean;
+    protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
 
     constructor(
         token: Address,
         pointer: u16,
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
+        liquidityQueueReserve: ILiquidityQueueReserve,
     ) {
         this.token = token;
         this.queue = new StoredU32Array(pointer, subPointer, INDEX_NOT_SET_VALUE - 1);
         this.enableIndexVerification = enableIndexVerification;
+        this.liquidityQueueReserve = liquidityQueueReserve;
     }
 
     public get length(): u32 {
@@ -131,7 +135,10 @@ export class PurgedProviderQueue {
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
 
         if (provider.hasLiquidityAmount()) {
-            addAmountToStakingContract(provider.getLiquidityAmount().toU256());
+            const liquidity256: u256 = provider.getLiquidityAmount().toU256();
+
+            this.liquidityQueueReserve.subFromTotalReserve(liquidity256);
+            addAmountToStakingContract(liquidity256);
         }
 
         // Remove from normal/priority queue

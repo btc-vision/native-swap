@@ -463,7 +463,7 @@ describe('TradeManager tests', () => {
             Blockchain.mockTransactionOutput(txOut);
 
             queue4.tradeManager.executeTradeNotExpired(reservation2);
-            expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
+            expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(995000));
             expect(queue4.liquidityQueue.totalTokensSellActivated).toStrictEqual(
                 u256.fromU64(497500),
             );

@@ -64,7 +64,8 @@ export interface ILiquidityQueue {
 
     getUtilizationRatio(): u256;
 
-    hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean;
+    //!!! TO remove
+    //hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean;
 
     increaseTotalSatoshisExchangedForTokens(value: u64): void;
 

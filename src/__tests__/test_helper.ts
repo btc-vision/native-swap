@@ -464,7 +464,12 @@ export function createLiquidityQueue(
 ): CreateLiquidityQueueResult {
     const quoteManager: IQuoteManager = getQuoteManager(tokenId);
     const liquidityQueueReserve: ILiquidityQueueReserve = getLiquidityQueueReserve(token, tokenId);
-    const providerManager: ITestProviderManager = getProviderManager(token, tokenId, quoteManager);
+    const providerManager: ITestProviderManager = getProviderManager(
+        token,
+        tokenId,
+        quoteManager,
+        liquidityQueueReserve,
+    );
     const reservationManager: ITestReservationManager = getReservationManager(
         token,
         tokenId,
@@ -510,8 +515,15 @@ export function getProviderManager(
     token: Address,
     tokenId: Uint8Array,
     quoteManager: IQuoteManager,
+    liquidityQueueReserve: ILiquidityQueueReserve,
 ): ITestProviderManager {
-    return new TestProviderManager(token, tokenId, quoteManager, ENABLE_INDEX_VERIFICATION);
+    return new TestProviderManager(
+        token,
+        tokenId,
+        quoteManager,
+        ENABLE_INDEX_VERIFICATION,
+        liquidityQueueReserve,
+    );
 }
 
 export function getLiquidityQueueReserve(

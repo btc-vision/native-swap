@@ -1811,6 +1811,7 @@ describe('Liquidity queue tests', () => {
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.addToNormalQueue(provider);
+            queue.setLiquidity(provider.getLiquidityAmount().toU256());
 
             queue.resetProvider(provider, true, false);
 
@@ -1901,34 +1902,35 @@ describe('Liquidity queue tests', () => {
 
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
         });
-
-        it('should return true if provider has enough liquidity left', () => {
-            setBlockchainEnvironment(1000);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
-
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setLiquidityAmount(u128.fromU32(200000));
-            provider.setReservedAmount(u128.fromU32(20000));
-            provider.save();
-            queue.save();
-
-            const createQueueResult2 = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-
-            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
-            const result = queue2.hasEnoughLiquidityLeftProvider(provider, u256.fromU64(666666666));
-
-            expect(result).toBeTruthy();
-        });
+        /*!!! TO remove
+                it('should return true if provider has enough liquidity left', () => {
+                    setBlockchainEnvironment(1000);
+        
+                    const createQueueResult = createLiquidityQueue(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                        false,
+                    );
+                    const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+        
+                    const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+                    provider.setLiquidityAmount(u128.fromU32(200000));
+                    provider.setReservedAmount(u128.fromU32(20000));
+                    provider.save();
+                    queue.save();
+        
+                    const createQueueResult2 = createLiquidityQueue(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                        false,
+                    );
+        
+                    const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+                    const result = queue2.hasEnoughLiquidityLeftProvider(provider, u256.fromU64(666666666));
+        
+                    expect(result).toBeTruthy();
+                });
+                */
     });
 
     describe('Cap', () => {

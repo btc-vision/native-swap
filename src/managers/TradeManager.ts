@@ -7,15 +7,10 @@ import {
     CappedTokensResult,
     satoshisToTokens128,
     tokensToSatoshis,
-    tokensToSatoshis128,
 } from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
-import {
-    INDEX_NOT_SET_VALUE,
-    INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
-} from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 import { ProviderActivatedEvent } from '../events/ProviderActivatedEvent';
 import { ITradeManager } from './interfaces/ITradeManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
@@ -361,10 +356,14 @@ export class TradeManager implements ITradeManager {
     }
 
     private resetProviderOnDust(provider: Provider): void {
-        const satoshis = tokensToSatoshis128(provider.getLiquidityAmount(), this.quoteToUse);
-
-        if (satoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
-            this.providerManager.resetProvider(provider, false, false);
+        if (
+            !provider.hasReservedAmount() &&
+            !Provider.meetsMinimumReservationAmount(
+                provider.getAvailableLiquidityAmount(),
+                this.quoteToUse,
+            )
+        ) {
+            this.providerManager.resetProvider(provider, true, false);
         }
     }
 

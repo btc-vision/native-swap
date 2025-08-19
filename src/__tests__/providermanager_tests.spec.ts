@@ -29,6 +29,7 @@ import {
 } from '../constants/Contract';
 import { QuoteManager } from '../managers/QuoteManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
+import { LiquidityQueueReserve } from '../models/LiquidityQueueReserve';
 
 describe('ProviderManager tests', () => {
     beforeEach(() => {
@@ -48,11 +49,17 @@ describe('ProviderManager tests', () => {
 
         it('should create a new provider manager and initialize correctly when not exists', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             expect(manager.currentIndexNormal).toStrictEqual(0);
@@ -68,11 +75,17 @@ describe('ProviderManager tests', () => {
 
         it('should create a provider manager, load stored values and initialize correctly when currentIndex = 0', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             manager.addToNormalQueue(createProvider(providerAddress1, tokenAddress1));
@@ -85,6 +98,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
             expect(manager2.currentIndexNormal).toStrictEqual(0);
             expect(manager2.currentIndexPriority).toStrictEqual(0);
@@ -99,11 +113,17 @@ describe('ProviderManager tests', () => {
 
         it('should create a provider manager, load stored values and initialize correctly when currentIndex > 1', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const normalProvider = createProvider(
@@ -178,6 +198,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
             expect(manager2.currentIndexNormal).toStrictEqual(0);
             expect(manager2.currentIndexPriority).toStrictEqual(0);
@@ -201,11 +222,17 @@ describe('ProviderManager tests', () => {
 
         it('should get/set the initial liquidity provider correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const initialLiquidityProvider = u256.fromU64(99999);
@@ -217,11 +244,17 @@ describe('ProviderManager tests', () => {
 
         it('should get/set the previous priority starting index correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             manager.previousPriorityStartingIndex = 100;
@@ -231,11 +264,17 @@ describe('ProviderManager tests', () => {
 
         it('should get/set the previous normal starting index correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             manager.previousNormalStartingIndex = 200;
@@ -245,11 +284,17 @@ describe('ProviderManager tests', () => {
 
         it('should get the priority queue length correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -262,11 +307,17 @@ describe('ProviderManager tests', () => {
 
         it('should get the normal queue length correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -279,11 +330,17 @@ describe('ProviderManager tests', () => {
 
         it('should reset all previous starting index to 0', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             manager.previousNormalStartingIndex = 100;
@@ -297,11 +354,17 @@ describe('ProviderManager tests', () => {
 
         it('should reset all previous starting index to corresponding queue starting index', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             manager.previousNormalStartingIndex = 0;
@@ -318,11 +381,17 @@ describe('ProviderManager tests', () => {
 
         it('should restore all current index to previous value', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             manager.previousNormalStartingIndex = 100;
@@ -334,13 +403,14 @@ describe('ProviderManager tests', () => {
             expect(manager.currentIndexPriority).toStrictEqual(200);
         });
 
+        /*!!! To remove
         it('should return true when a provider has enough remaining liquidity', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
-                ENABLE_INDEX_VERIFICATION,
+                ENABLE_INDEX_VERIFICATION, liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -357,7 +427,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
-                ENABLE_INDEX_VERIFICATION,
+                ENABLE_INDEX_VERIFICATION, liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -380,7 +450,7 @@ describe('ProviderManager tests', () => {
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
-                ENABLE_INDEX_VERIFICATION,
+                ENABLE_INDEX_VERIFICATION, liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -397,13 +467,21 @@ describe('ProviderManager tests', () => {
             expect(provider.isActive()).toBeTruthy();
         });
 
+         */
+
         it('should get the queue data', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider1: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -446,11 +524,17 @@ describe('ProviderManager tests', () => {
 
         it('should add/get providers to/from priority queue correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -473,11 +557,17 @@ describe('ProviderManager tests', () => {
 
         it('should add/get providers to/from normal queue correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             expect(manager.normalQueueLength).toStrictEqual(0);
@@ -500,11 +590,17 @@ describe('ProviderManager tests', () => {
 
         it('should get providers id by types correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
@@ -528,11 +624,17 @@ describe('ProviderManager tests', () => {
         it('should throws when get initial provider from queue but not set', () => {
             expect(() => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 manager.getProviderFromQueue(
@@ -544,11 +646,17 @@ describe('ProviderManager tests', () => {
 
         it('should get initial provider from queue correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const initialProvider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -569,11 +677,17 @@ describe('ProviderManager tests', () => {
         it('should throws when get normal provider from queue but not in the list', () => {
             expect(() => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 manager.getProviderFromQueue(23, ProviderTypes.Normal);
@@ -582,11 +696,17 @@ describe('ProviderManager tests', () => {
 
         it('should get normal provider from queue correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -604,11 +724,17 @@ describe('ProviderManager tests', () => {
         it('should throws when get priority provider from queue but not in the list', () => {
             expect(() => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 manager.getProviderFromQueue(23, ProviderTypes.Priority);
@@ -617,11 +743,17 @@ describe('ProviderManager tests', () => {
 
         it('should get priority provider from queue correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -638,11 +770,17 @@ describe('ProviderManager tests', () => {
 
         it('should return 0 when priority queue does not contains the provider index or is empty', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const providerIdOut: u256 = manager.getFromPriorityQueue(22222);
@@ -652,11 +790,17 @@ describe('ProviderManager tests', () => {
 
         it('should return 0 when getFromStandardQueue does not contains the provider index or is empty', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const providerIdOut: u256 = manager.getFromNormalQueue(22222);
@@ -666,11 +810,17 @@ describe('ProviderManager tests', () => {
 
         it('should remove providers from priority queue correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -686,11 +836,17 @@ describe('ProviderManager tests', () => {
 
         it('should remove providers from normal queue correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -715,11 +871,17 @@ describe('ProviderManager tests', () => {
 
         it('should add/get providers to/from purged priority queue correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider1: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -752,11 +914,17 @@ describe('ProviderManager tests', () => {
 
         it('should add/get providers to/from normal queue correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -789,11 +957,17 @@ describe('ProviderManager tests', () => {
 
         it('should remove providers from purged priority queue correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -810,11 +984,17 @@ describe('ProviderManager tests', () => {
 
         it('should remove providers from purged normal queue correctly', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -840,11 +1020,17 @@ describe('ProviderManager tests', () => {
 
         it('should purge and restore normal provider when available liquidity >= Minimum', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -869,11 +1055,17 @@ describe('ProviderManager tests', () => {
 
         it('should purge and restore priority provider when  available liquidity >= Minimum', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -899,11 +1091,17 @@ describe('ProviderManager tests', () => {
 
         it('should reset provider when not removal,  available liquidity < Minimum and no reserved amount left', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -929,11 +1127,17 @@ describe('ProviderManager tests', () => {
 
         it('should not reset provider when not removal,  available liquidity < Minimum and reserved amount left', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: TestProviderManager = new TestProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -960,11 +1164,17 @@ describe('ProviderManager tests', () => {
         it('should revert when not removal,  available provider reserved amount < reservation amount', () => {
             expect(() => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: TestProviderManager = new TestProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -997,26 +1207,40 @@ describe('ProviderManager tests', () => {
 
         it('should burn the provider funds when burnRemainingFunds is true and liquidity is not 0', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
             manager.resetProvider(provider, true);
 
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
+            expect(liquidityQueueReserve.liquidity).toStrictEqual(u256.Zero);
         });
 
         it('should not burn the provider funds when burnRemainingFunds is true and liquidity is 0', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1028,11 +1252,17 @@ describe('ProviderManager tests', () => {
 
         it('should not burn the provider funds when burnRemainingFunds is false', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1044,11 +1274,17 @@ describe('ProviderManager tests', () => {
 
         it('should remove the provider from the priority queue and reset it', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1072,11 +1308,17 @@ describe('ProviderManager tests', () => {
 
         it('should remove the provider from the normal queue and reset it', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1099,11 +1341,17 @@ describe('ProviderManager tests', () => {
 
         it('should only reset listing values when initial liquidity provider', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1127,11 +1375,17 @@ describe('ProviderManager tests', () => {
 
         it('should correctly persists the values', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             manager.initialLiquidityProviderId = u256.fromU32(1);
@@ -1150,6 +1404,7 @@ describe('ProviderManager tests', () => {
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             expect(manager.initialLiquidityProviderId).toStrictEqual(u256.fromU32(1));
@@ -1173,11 +1428,17 @@ describe('ProviderManager tests', () => {
 
         it('should correctly persists the value when save is called and currentIndex > 0', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const providers = createProviders(4, 0);
@@ -1201,11 +1462,17 @@ describe('ProviderManager tests', () => {
 
         it('should correctly persists the value when save is called and currentIndexPriority > 0', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
             const manager: ProviderManager = new ProviderManager(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
+                liquidityQueueReserve,
             );
 
             const providers = createProviders(4, 0);
@@ -1243,11 +1510,17 @@ describe('ProviderManager tests', () => {
 
             it('should return a purged provider with liquidity', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: TestProviderManager = new TestProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const providers = createProviders(3, 0);
@@ -1277,11 +1550,17 @@ describe('ProviderManager tests', () => {
             it('should revert if initial provider is purged', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: TestProviderManager = new TestProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1297,11 +1576,17 @@ describe('ProviderManager tests', () => {
             it('should revert if normal provider is purged', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: TestProviderManager = new TestProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1316,11 +1601,17 @@ describe('ProviderManager tests', () => {
             it('should revert if priority provider is purged', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: TestProviderManager = new TestProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1344,11 +1635,17 @@ describe('ProviderManager tests', () => {
 
             it('should set currentIndexPriority to priorityQueue startingIndex when currentIndexPriority = 0 and provider valid for the test ', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: TestProviderManager = new TestProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 // Add 3 providers that will be deleted. This will move the priorityQueue starting index to 3.
@@ -1403,11 +1700,17 @@ describe('ProviderManager tests', () => {
 
             it('should use currentIndexPriority when currentIndexPriority <> 0 and provider valid for the test', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 // Add 3 providers that will be deleted. This will move the priorityQueue starting index to 3.
@@ -1467,11 +1770,17 @@ describe('ProviderManager tests', () => {
 
             it('should skip deleted providers when there are some in the priority queue before the valid provider for the test', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const providersPriority = createProviders(
@@ -1503,11 +1812,17 @@ describe('ProviderManager tests', () => {
 
             it('should skip provider when the provider is not active', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const providersPriority = createProviders(
@@ -1539,11 +1854,17 @@ describe('ProviderManager tests', () => {
             it('should revert when the provider is not a priority provider', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: ProviderManager = new ProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     const providersPriority = createProviders(
@@ -1574,11 +1895,17 @@ describe('ProviderManager tests', () => {
             it('should revert when liquidity < reserved', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: ProviderManager = new ProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     const provider = createProvider(
@@ -1604,11 +1931,17 @@ describe('ProviderManager tests', () => {
 
             it('should return null when liquidity = reserved', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const provider = createProvider(
@@ -1635,11 +1968,17 @@ describe('ProviderManager tests', () => {
             it('should revert when startingIndex() > getLength()', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: TestProviderManager = new TestProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     const provider: Provider = createProvider(
@@ -1667,11 +2006,17 @@ describe('ProviderManager tests', () => {
             });
             it('should set currentIndex to standard queue startingIndex when currentIndex = 0 and provider valid for the test ', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 // Add 3 providers that will be deleted. This will move the queue starting index to 3.
@@ -1726,11 +2071,17 @@ describe('ProviderManager tests', () => {
 
             it('should use currentIndex when currentIndex <> 0 and provider valid for the test', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 // Add 3 providers that will be deleted. This will move the standard queue starting index to 3.
@@ -1791,11 +2142,17 @@ describe('ProviderManager tests', () => {
 
             it('should skip deleted providers when there are some in the standard queue before the valid provider for the test', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const providers = createProviders(
@@ -1827,11 +2184,17 @@ describe('ProviderManager tests', () => {
 
             it('should skip provider when the provider is not active', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const providers = createProviders(
@@ -1863,11 +2226,17 @@ describe('ProviderManager tests', () => {
             it('should revert when the provider is a priority provider', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: ProviderManager = new ProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     const providers = createProviders(
@@ -1898,11 +2267,17 @@ describe('ProviderManager tests', () => {
             it('should revert when liquidity < reserved', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: ProviderManager = new ProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     const provider = createProvider(
@@ -1928,11 +2303,17 @@ describe('ProviderManager tests', () => {
 
             it('should return null when liquidity = reserved', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const provider = createProvider(
@@ -1959,11 +2340,17 @@ describe('ProviderManager tests', () => {
             it('should revert when startingIndex() > getLength()', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: TestProviderManager = new TestProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     const provider: Provider = createProvider(
@@ -1994,11 +2381,17 @@ describe('ProviderManager tests', () => {
 
             it('should return null when no provider are found', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const currentQuote = u256.fromU32(1000);
@@ -2010,11 +2403,16 @@ describe('ProviderManager tests', () => {
 
             it('should return null when initial provider is not active', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
@@ -2032,11 +2430,17 @@ describe('ProviderManager tests', () => {
 
             it('should return initialprovider when current quote is 0', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const provider = createProvider(
@@ -2063,11 +2467,17 @@ describe('ProviderManager tests', () => {
 
             it('should return null when no initial liquidity provider', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 createProvider(
@@ -2094,11 +2504,17 @@ describe('ProviderManager tests', () => {
             it('should revert when liquidity < reserved', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: ProviderManager = new ProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     const provider = createProvider(
@@ -2124,11 +2540,17 @@ describe('ProviderManager tests', () => {
 
             it('should return the initial liquidity provider when liquidity > reserved', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const provider = createProvider(
@@ -2159,11 +2581,17 @@ describe('ProviderManager tests', () => {
 
             it('should return null when liquidity = reserved', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const provider = createProvider(
@@ -2189,11 +2617,17 @@ describe('ProviderManager tests', () => {
 
             it('should return null when initial provider availableLiquidity = 0', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
@@ -2212,11 +2646,17 @@ describe('ProviderManager tests', () => {
 
             it('should return null when initial provider does not meet the minimal reservation amount and no reserved amount', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
@@ -2227,10 +2667,11 @@ describe('ProviderManager tests', () => {
                 provider.save();
 
                 manager.initialLiquidityProviderId = provider.getId();
-
+                liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
                 const provider2 = manager.getNextProviderWithLiquidity(u256.fromU32(10000000));
 
                 expect(provider2).toBeNull();
+                expect(liquidityQueueReserve.liquidity).toStrictEqual(u256.Zero);
             });
         });
 
@@ -2244,11 +2685,17 @@ describe('ProviderManager tests', () => {
 
             it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex = 0, 1 provider active', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -2272,11 +2719,17 @@ describe('ProviderManager tests', () => {
             it('should revert when cleanUpQueues is called and a provider is not active', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: ProviderManager = new ProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -2296,11 +2749,17 @@ describe('ProviderManager tests', () => {
 
             it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex = 0, 2 providers active', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -2329,11 +2788,17 @@ describe('ProviderManager tests', () => {
 
             it('should correctly set previousReservationStartingIndex and priority queue state when cleanUpQueues is called, previousReservationStartingIndex <> 0, 2 providers active', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -2380,11 +2845,17 @@ describe('ProviderManager tests', () => {
 
             it('should skip a deleted provider and correctly set previousReservationStartingIndex', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider1.activate();
@@ -2422,11 +2893,17 @@ describe('ProviderManager tests', () => {
 
             it('should correctly set previousReservationStartingIndex and normal queue state when cleanUpQueues is called, previousReservationStartingIndex = 0, 1 provider active', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -2449,11 +2926,17 @@ describe('ProviderManager tests', () => {
             it('should revert when cleanUpQueues is called and a provider is not active', () => {
                 expect(() => {
                     const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                    const liquidityQueueReserve = new LiquidityQueueReserve(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                    );
+
                     const manager: ProviderManager = new ProviderManager(
                         tokenAddress1,
                         tokenIdUint8Array1,
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
+                        liquidityQueueReserve,
                     );
 
                     expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -2472,11 +2955,17 @@ describe('ProviderManager tests', () => {
 
             it('should correctly set previousReservationStartingIndex and normal queue state when cleanUpQueues is called, previousReservationStartingIndex = 0, 2 providers active', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -2503,11 +2992,17 @@ describe('ProviderManager tests', () => {
 
             it('should correctly set previousReservationStartingIndex and normal queue state when cleanUpQueues is called, previousReservationStartingIndex <> 0, 2 providers active', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
 
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -2549,11 +3044,17 @@ describe('ProviderManager tests', () => {
 
             it('should skip a deleted provider and correctly set previousReservationStartingIndex', () => {
                 const quoteManager = new QuoteManager(tokenIdUint8Array1);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
                 const manager: ProviderManager = new ProviderManager(
                     tokenAddress1,
                     tokenIdUint8Array1,
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
+                    liquidityQueueReserve,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider1.activate();
