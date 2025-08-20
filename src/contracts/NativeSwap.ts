@@ -795,7 +795,7 @@ export class NativeSwap extends ReentrancyGuard {
                 U128_BYTE_LENGTH * 2 +
                 (U32_BYTE_LENGTH + provider.getBtcReceiver().length) +
                 2 * U32_BYTE_LENGTH +
-                3 * BOOLEAN_BYTE_LENGTH +
+                4 * BOOLEAN_BYTE_LENGTH +
                 U64_BYTE_LENGTH,
         );
 
@@ -812,6 +812,7 @@ export class NativeSwap extends ReentrancyGuard {
 
         writer.writeU64(provider.getListedTokenAtBlock());
         writer.writeBoolean(provider.isPurged());
+        writer.writeBoolean(provider.isLiquidityProvisionAllowed());
         return writer;
     }
 

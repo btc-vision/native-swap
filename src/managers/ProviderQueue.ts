@@ -124,13 +124,14 @@ export class ProviderQueue {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
+        let stakedAmount: u256 = u256.Zero;
         this.ensureProviderNotAlreadyPurged(provider);
 
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
-            const liquidity256: u256 = provider.getLiquidityAmount().toU256();
+            stakedAmount = provider.getLiquidityAmount().toU256();
 
-            this.liquidityQueueReserve.subFromTotalReserve(liquidity256);
-            addAmountToStakingContract(liquidity256);
+            this.liquidityQueueReserve.subFromTotalReserve(stakedAmount);
+            addAmountToStakingContract(stakedAmount);
         }
 
         if (!provider.isInitialLiquidityProvider()) {
@@ -139,7 +140,9 @@ export class ProviderQueue {
 
         provider.resetListingProviderValues();
 
-        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), canceled, false));
+        Blockchain.emit(
+            new ProviderFulfilledEvent(provider.getId(), canceled, false, stakedAmount),
+        );
     }
 
     public restoreCurrentIndex(index: u32): void {

@@ -399,18 +399,13 @@ export class ProviderManager implements IProviderManager {
     ): void {
         provider.subtractFromReservedAmount(data.providedAmount);
 
-        // !!!! Pourquoi pas la quote courante
-        // Comment la liquidity qu'on restore peut devenir < minimum avec la meme quote????
         const quote: u256 = this.quoteManager.getValidBlockQuote(data.creationBlock);
 
         if (
             !Provider.meetsMinimumReservationAmount(provider.getAvailableLiquidityAmount(), quote)
         ) {
             if (!provider.hasReservedAmount()) {
-                //!!!! pourquoi on ne burn pas ici?
-                // On va avoir des token dans la liquidity mais plus persone pour les provider
-                // et le ns va avoir des token dans le contrat de token. le count va matcher mais seront jamais utiliser
-                this.resetProvider(provider, false, false);
+                this.resetProvider(provider);
             }
         } else if (!provider.isPurged()) {
             if (provider.getProviderType() === ProviderTypes.Normal) {

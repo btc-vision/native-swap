@@ -131,14 +131,15 @@ export class PurgedProviderQueue {
     }
 
     private resetProvider(provider: Provider, associatedQueue: ProviderQueue): void {
+        let stakedAmount: u256 = u256.Zero;
         this.ensureProviderPurged(provider);
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
 
         if (provider.hasLiquidityAmount()) {
-            const liquidity256: u256 = provider.getLiquidityAmount().toU256();
+            stakedAmount = provider.getLiquidityAmount().toU256();
 
-            this.liquidityQueueReserve.subFromTotalReserve(liquidity256);
-            addAmountToStakingContract(liquidity256);
+            this.liquidityQueueReserve.subFromTotalReserve(stakedAmount);
+            addAmountToStakingContract(stakedAmount);
         }
 
         // Remove from normal/priority queue
@@ -149,7 +150,7 @@ export class PurgedProviderQueue {
 
         provider.resetListingProviderValues();
 
-        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), false, false));
+        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), false, false, stakedAmount));
     }
 
     // TODO: Potential optimization. we could verify to check if we want to skip an index but this adds complexity, but it could save gas.

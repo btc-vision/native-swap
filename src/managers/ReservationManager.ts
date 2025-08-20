@@ -284,6 +284,7 @@ export class ReservationManager implements IReservationManager {
                             Blockchain.block.number,
                             blockNumber,
                             providerCount,
+                            freed,
                         ),
                     );
                 }

@@ -358,10 +358,7 @@ export class TradeManager implements ITradeManager {
     private resetProviderOnDust(provider: Provider): void {
         if (
             !provider.hasReservedAmount() &&
-            !Provider.meetsMinimumReservationAmount(
-                provider.getAvailableLiquidityAmount(),
-                this.quoteToUse,
-            )
+            !Provider.meetsMinimumReservationAmount(provider.getLiquidityAmount(), this.quoteToUse)
         ) {
             this.providerManager.resetProvider(provider, true, false);
         }
