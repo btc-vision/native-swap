@@ -248,22 +248,9 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public distributeFee(totalFee: u256): void {
-        const feeLP: u256 = SafeMath.div(
-            SafeMath.mul(totalFee, u256.fromU64(50)),
-            u256.fromU64(100),
-        );
-        const feeMoto: u256 = SafeMath.sub(totalFee, feeLP);
-
-        // Do nothing with half the fee
-        this.increaseVirtualTokenReserve(feeLP);
-
-        // Only transfer if the fee is non-zero
-        if (feeMoto > u256.Zero) {
-            // Send other half of fee to staking contract
-            addAmountToStakingContract(feeMoto);
-
-            this.decreaseTotalReserve(feeMoto);
-        }
+        this.decreaseVirtualTokenReserve(totalFee);
+        this.decreaseTotalReserve(totalFee);
+        addAmountToStakingContract(totalFee);
     }
 
     public getMaximumTokensLeftBeforeCap(): u256 {

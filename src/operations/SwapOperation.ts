@@ -35,8 +35,10 @@ export class SwapOperation extends BaseOperation {
             trade = this.executeExpired(reservation);
         }
 
+        const initialTotalTokensPurchased: u256 = trade.getTotalTokensPurchased();
         let totalTokensPurchased: u256 = trade.getTotalTokensPurchased();
         const totalSatoshisSpent: u64 = trade.getTotalSatoshisSpent();
+        let totalFees: u256 = u256.Zero;
 
         if (!totalTokensPurchased.isZero()) {
             totalTokensPurchased = this.applyFeesIfEnabled(
@@ -51,9 +53,15 @@ export class SwapOperation extends BaseOperation {
             );
 
             this.sendToken(totalTokensPurchased);
+            totalFees = u256.sub(initialTotalTokensPurchased, totalTokensPurchased);
         }
 
-        this.emitSwapExecutedEvent(Blockchain.tx.sender, totalSatoshisSpent, totalTokensPurchased);
+        this.emitSwapExecutedEvent(
+            Blockchain.tx.sender,
+            totalSatoshisSpent,
+            totalTokensPurchased,
+            totalFees,
+        );
     }
 
     private applyFeesIfEnabled(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256 {
@@ -77,8 +85,11 @@ export class SwapOperation extends BaseOperation {
         buyer: Address,
         totalSatoshisSpent: u64,
         totalTokensPurchased: u256,
+        totalFees: u256,
     ): void {
-        Blockchain.emit(new SwapExecutedEvent(buyer, totalSatoshisSpent, totalTokensPurchased));
+        Blockchain.emit(
+            new SwapExecutedEvent(buyer, totalSatoshisSpent, totalTokensPurchased, totalFees),
+        );
     }
 
     private emitReservationFallbackEvent(reservation: Reservation): void {

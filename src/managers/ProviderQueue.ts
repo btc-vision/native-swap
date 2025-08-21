@@ -131,6 +131,7 @@ export class ProviderQueue {
             stakedAmount = provider.getLiquidityAmount().toU256();
 
             this.liquidityQueueReserve.subFromTotalReserve(stakedAmount);
+            this.liquidityQueueReserve.subFromVirtualTokenReserve(stakedAmount);
             addAmountToStakingContract(stakedAmount);
         }
 

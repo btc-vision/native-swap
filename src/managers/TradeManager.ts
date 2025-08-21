@@ -10,7 +10,11 @@ import {
 } from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
-import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    EMIT_PROVIDERCONSUMED_EVENTS,
+    INDEX_NOT_SET_VALUE,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+} from '../constants/Contract';
 import { ProviderActivatedEvent } from '../events/ProviderActivatedEvent';
 import { ITradeManager } from './interfaces/ITradeManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
@@ -18,6 +22,7 @@ import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { min128 } from '../utils/MathUtils';
 import { IReservationManager } from './interfaces/IReservationManager';
 import { ProviderTypes } from '../types/ProviderTypes';
+import { ProviderConsumedEvent } from '../events/ProviderConsumedEvent';
 
 export class TradeManager implements ITradeManager {
     protected readonly consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
@@ -223,6 +228,12 @@ export class TradeManager implements ITradeManager {
         );
     }
 
+    private emitProviderConsumedEvent(provider: Provider, amountUsed: u128): void {
+        if (EMIT_PROVIDERCONSUMED_EVENTS) {
+            Blockchain.emit(new ProviderConsumedEvent(provider.getId(), amountUsed));
+        }
+    }
+
     private ensureProviderHasEnoughLiquidity(provider: Provider, tokensDesired: u128): void {
         if (u128.lt(provider.getLiquidityAmount(), tokensDesired)) {
             throw new Revert('Impossible state: liquidity < tokensDesired.');
@@ -286,6 +297,8 @@ export class TradeManager implements ITradeManager {
             ) {
                 this.activateProvider(provider);
             }
+
+            this.emitProviderConsumedEvent(provider, actualTokens);
 
             // If partial fill, provider liquidity must be available again.
             // If not purged, check if the provider needs to be reset.
@@ -405,6 +418,7 @@ export class TradeManager implements ITradeManager {
 
             provider.subtractFromLiquidityAmount(actualTokens);
 
+            this.emitProviderConsumedEvent(provider, actualTokens);
             this.increaseTotalTokensPurchased(actualTokens256);
             this.increaseSatoshisSpent(actualTokensSatoshis);
             this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
