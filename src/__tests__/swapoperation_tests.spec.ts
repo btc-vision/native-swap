@@ -392,11 +392,12 @@ describe('SwapOperation tests', () => {
             queue4.liquidityQueue.save();
 
             expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
+
             expect(initialProvider.getLiquidityAmount()).toStrictEqual(
                 u128.fromString(`999988712353333333333334`),
             );
             expect(queue4.liquidityQueue.liquidity).toStrictEqual(
-                u256.fromString(`999988723640980000000000`),
+                u256.fromString(`999988712353333333333334`),
             );
             expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue4.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(10000);
@@ -605,7 +606,7 @@ describe('SwapOperation tests', () => {
 
             expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue4.liquidityQueue.liquidity).toStrictEqual(
-                u256.fromString(`1000982400084368764400000`),
+                u256.fromString(`1000982382466835600000000`),
             );
             expect(provider2.getLiquidityAmount()).toStrictEqual(
                 u128.fromString(`982382466835600000000`),

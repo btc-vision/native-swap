@@ -129,7 +129,12 @@ export class ReserveLiquidityOperation extends BaseOperation {
             ),
         );
 
-        this.emitLiquidityReservedEvent(provider.getId(), provider.getBtcReceiver(), satoshis);
+        this.emitLiquidityReservedEvent(
+            provider.getId(),
+            provider.getBtcReceiver(),
+            satoshis,
+            tokens,
+        );
     }
 
     private checkPreConditions(): void {
@@ -214,8 +219,11 @@ export class ReserveLiquidityOperation extends BaseOperation {
         providerId: u256,
         btcReceiver: string,
         costInSatoshis: u64,
+        tokenAmount: u128,
     ): void {
-        Blockchain.emit(new LiquidityReservedEvent(btcReceiver, costInSatoshis, providerId));
+        Blockchain.emit(
+            new LiquidityReservedEvent(btcReceiver, costInSatoshis, tokenAmount, providerId),
+        );
     }
 
     private ensureActivationDelayValid(): void {

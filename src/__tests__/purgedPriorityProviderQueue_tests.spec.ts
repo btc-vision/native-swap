@@ -320,6 +320,7 @@ describe('PriorityPurgedProviderQueue tests', () => {
                 purgedQueue.add(providers[i]);
             }
 
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
             liquidityQueueReserve.addToTotalReserve(u256.fromU32(1100));
 
             const provider1 = purgedQueue.get(queue, u256.fromU32(100000000));
@@ -348,6 +349,7 @@ describe('PriorityPurgedProviderQueue tests', () => {
             }
 
             liquidityQueueReserve.addToTotalReserve(u256.fromU32(1100));
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
             const provider = purgedQueue.get(queue, u256.fromU32(100000000));
             expect(provider).toBeNull();
 

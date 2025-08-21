@@ -370,6 +370,7 @@ describe('PurgedProviderQueue tests', () => {
             const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(liquidityQueueReserve);
 
             liquidityQueueReserve.addToTotalReserve(u256.fromU32(1100));
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(11000));
 
             const providers = createProviders(10);
             for (let i = 0; i < providers.length; i++) {
@@ -395,6 +396,7 @@ describe('PurgedProviderQueue tests', () => {
             const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(liquidityQueueReserve);
 
             liquidityQueueReserve.addToTotalReserve(u256.fromU32(1100));
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(11000));
             const providers = createProviders(10);
             for (let i = 0; i < providers.length; i++) {
                 providers[i].setLiquidityAmount(u128.fromU32(110));

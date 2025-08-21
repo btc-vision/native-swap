@@ -1104,6 +1104,8 @@ describe('ProviderManager tests', () => {
                 liquidityQueueReserve,
             );
 
+            liquidityQueueReserve.addToTotalReserve(u256.fromU32(100000));
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             provider.setLiquidityAmount(u128.fromU32(20000));
             provider.setReservedAmount(u128.fromU32(20000));
@@ -1222,6 +1224,7 @@ describe('ProviderManager tests', () => {
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(10000));
             manager.resetProvider(provider, true);
 
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
@@ -2667,6 +2670,7 @@ describe('ProviderManager tests', () => {
                 provider.save();
 
                 manager.initialLiquidityProviderId = provider.getId();
+                liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(10000));
                 liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
                 const provider2 = manager.getNextProviderWithLiquidity(u256.fromU32(10000000));
 

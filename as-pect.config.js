@@ -21,7 +21,7 @@ export default {
      * A set of globs passed to the glob package that qualify typescript files for testing.
      */
     entries: ['src/__tests__/**/*.spec.ts'],
-    //entries: ['src/__tests__/**/provider_tests.spec.ts'],
+    //entries: ['src/__tests__/**/purgedpriorityproviderqueue_tests.spec.ts'],
 
     /**
      * A set of globs passed to the glob package that quality files to be added to each test.

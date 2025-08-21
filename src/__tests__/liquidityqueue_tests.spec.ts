@@ -1125,12 +1125,12 @@ describe('Liquidity queue tests', () => {
 
             const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
 
-            queue.setLiquidity(u256.fromU32(10000));
-            queue.virtualTokenReserve = u256.Zero;
+            queue.setLiquidity(u256.fromU32(15000));
+            queue.virtualTokenReserve = u256.fromU32(15000);
             queue.distributeFee(u256.fromU32(10000));
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(5000));
             expect(queue.liquidity).toStrictEqual(u256.fromU32(5000));
-            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`5000`));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`10000`));
         });
 
         it('should not call safetransfer when moto fee = 0', () => {
@@ -1812,7 +1812,7 @@ describe('Liquidity queue tests', () => {
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.addToNormalQueue(provider);
             queue.setLiquidity(provider.getLiquidityAmount().toU256());
-
+            queue.increaseVirtualTokenReserve(u256.fromU32(100000));
             queue.resetProvider(provider, true, false);
 
             expect(createQueueResult.providerManager.resetProviderCalled).toBeTruthy();

@@ -335,6 +335,7 @@ describe('ProviderQueue tests', () => {
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
             queue.resetProvider(provider, true, false);
 
@@ -371,6 +372,7 @@ describe('ProviderQueue tests', () => {
             provider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
             provider.markInitialLiquidityProvider();
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
             queue.resetProvider(provider, true, false);
 
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
@@ -783,6 +785,7 @@ describe('ProviderQueue tests', () => {
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
             );
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
             
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
