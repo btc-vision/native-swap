@@ -7,6 +7,8 @@ import {
     BytesWriter,
     Calldata,
     encodeSelector,
+    ON_OP20_RECEIVED_SELECTOR,
+    ReentrancyGuard,
     Revert,
     SafeMath,
     Selector,
@@ -33,7 +35,6 @@ import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperati
 import { CancelListingOperation } from '../operations/CancelListingOperation';
 import { SwapOperation } from '../operations/SwapOperation';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import { ReentrancyGuard } from './ReentrancyGuard';
 import {
     CONTRACT_PAUSED_POINTER,
     STAKING_CA_POINTER,
@@ -61,9 +62,6 @@ import { IDynamicFee } from '../managers/interfaces/IDynamicFee';
 import { DynamicFee } from '../managers/DynamicFee';
 import { WithdrawListingOperation } from '../operations/WithdrawListingOperation';
 import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
-
-// onOP20Received(address,address,uint256,bytes)
-export const ON_OP_20_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
 
 class GetLiquidityQueueResult {
     public liquidityQueue: ILiquidityQueue;
@@ -820,8 +818,8 @@ export class NativeSwap extends ReentrancyGuard {
         const calldata: BytesWriter = new BytesWriter(4);
         calldata.writeSelector(NativeSwap.DEPLOYER_SELECTOR);
 
-        const response: BytesReader = Blockchain.call(token, calldata);
-        return response.readAddress();
+        const response = Blockchain.call(token, calldata);
+        return response.data.readAddress();
     }
 
     private ensureContractDeployer(tokenOwner: Address): void {
@@ -886,7 +884,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private onOP20Received(_calldata: Calldata): BytesWriter {
         const writer = new BytesWriter(SELECTOR_BYTE_LENGTH);
-        writer.writeSelector(ON_OP_20_RECEIVED_SELECTOR);
+        writer.writeSelector(ON_OP20_RECEIVED_SELECTOR);
         return writer;
     }
 
