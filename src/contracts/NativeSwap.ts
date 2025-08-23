@@ -181,9 +181,9 @@ export class NativeSwap extends ReentrancyGuard {
         }
     }
 
-    protected override isSelectorExcluded(_: Selector): boolean {
-        return false;
-    }
+    //protected override isSelectorExcluded(_: Selector): boolean {
+    //    return false;
+    //}
 
     private getAntibotSettings(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
