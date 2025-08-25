@@ -96,7 +96,7 @@ export class ReservationManager implements IReservationManager {
     public isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean {
         const activeReservationList: StoredBooleanArray = this.getActiveListForBlock(blockNumber);
 
-        return activeReservationList.get(index) ? true : false;
+        return !!activeReservationList.get(index);
     }
 
     public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
