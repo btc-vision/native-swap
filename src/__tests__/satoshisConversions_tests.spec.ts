@@ -41,6 +41,11 @@ describe('SatoshisConversions tests', () => {
                 tokensToSatoshis(big, scaledPrice);
             }).toThrow();
         });
+
+        it('should return 0 if number of token is 0', () => {
+            const satoshis = tokensToSatoshis(u256.Zero, u256.fromU32(1000));
+            expect(satoshis).toStrictEqual(0);
+        });
     });
 
     describe('tokensToSatoshis128()', () => {

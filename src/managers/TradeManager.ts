@@ -7,21 +7,22 @@ import {
     CappedTokensResult,
     satoshisToTokens128,
     tokensToSatoshis,
-    tokensToSatoshis128,
 } from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
 import {
+    EMIT_PROVIDERCONSUMED_EVENTS,
     INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
 } from '../constants/Contract';
-import { ActivateProviderEvent } from '../events/ActivateProviderEvent';
+import { ProviderActivatedEvent } from '../events/ProviderActivatedEvent';
 import { ITradeManager } from './interfaces/ITradeManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { min128 } from '../utils/MathUtils';
 import { IReservationManager } from './interfaces/IReservationManager';
+import { ProviderTypes } from '../types/ProviderTypes';
+import { ProviderConsumedEvent } from '../events/ProviderConsumedEvent';
 
 export class TradeManager implements ITradeManager {
     protected readonly consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
@@ -35,7 +36,7 @@ export class TradeManager implements ITradeManager {
     private totalSatoshisSpent: u64 = 0;
     private totalSatoshisRefunded: u64 = 0;
     private tokensReserved: u256 = u256.Zero;
-    private quoteAtReservation: u256 = u256.Zero;
+    private quoteToUse: u256 = u256.Zero;
 
     constructor(
         tokenIdUint8Array: Uint8Array,
@@ -51,7 +52,59 @@ export class TradeManager implements ITradeManager {
         this.reservationManager = reservationManager;
     }
 
-    public executeTrade(reservation: Reservation): CompletedTrade {
+    public executeTradeExpired(reservation: Reservation, currentQuote: u256): CompletedTrade {
+        this.ensureQuoteIsValid(currentQuote);
+        this.quoteToUse = currentQuote;
+        this.deactivateReservation(reservation);
+        this.resetTotals();
+
+        const providerCount: u32 = reservation.getProviderCount();
+
+        for (let index: u32 = 0; index < providerCount; index++) {
+            const providerData: ReservationProviderData = reservation.getProviderAt(index);
+
+            // Skip if provider has been removed from provider queue due
+            // to either a fulfill or a cancel liquidity.
+            if (!this.canGetProvider(providerData)) {
+                continue;
+            }
+
+            const provider: Provider = this.getProvider(providerData);
+
+            // Skip if provider is no more active
+            if (!provider.isActive()) {
+                continue;
+            }
+
+            if (!reservation.getPurged()) {
+                this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
+            }
+
+            const satoshisSent: u64 = this.getSatoshisSent(provider.getBtcReceiver());
+
+            if (satoshisSent !== 0) {
+                this.tryExecuteNormalOrPriorityTrade(
+                    provider,
+                    satoshisSent,
+                    providerData.providedAmount,
+                );
+            } else {
+                this.addProviderToPurgeQueue(provider);
+            }
+        }
+
+        reservation.delete(false);
+
+        return new CompletedTrade(
+            this.tokensReserved,
+            this.totalTokensPurchased,
+            this.totalSatoshisSpent,
+            this.totalSatoshisRefunded,
+            this.totalTokensRefunded,
+        );
+    }
+
+    public executeTradeNotExpired(reservation: Reservation): CompletedTrade {
         this.ensureReservationIsValid(reservation);
         this.ensurePurgeIndexIsValid(reservation.getPurgeIndex());
         this.getValidBlockQuote(reservation.getCreationBlock());
@@ -72,7 +125,8 @@ export class TradeManager implements ITradeManager {
                     satoshisSent,
                 );
             } else {
-                this.noStatsSendToProvider(providerData, provider);
+                this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
+                this.addProviderToPurgeQueue(provider);
             }
         }
 
@@ -122,10 +176,62 @@ export class TradeManager implements ITradeManager {
         return totalSatoshis - consumedSatoshis;
     }
 
-    private emitActivateProviderEvent(provider: Provider): void {
-        Blockchain.emit(
-            new ActivateProviderEvent(provider.getId(), provider.getLiquidityAmount(), 0),
+    private activateProvider(provider: Provider): void {
+        provider.allowLiquidityProvision();
+        const totalLiquidity: u128 = provider.getLiquidityAmount();
+
+        // floor(totalLiquidity / 2)
+        const halfFloor: u128 = SafeMath.div128(totalLiquidity, u128.fromU32(2));
+
+        // CEIL = floor + (totalLiquidity & 1)
+        const halfCred: u128 = u128.add(
+            halfFloor,
+            u128.and(totalLiquidity, u128.One), // adds 1 iff odd
         );
+
+        // track that we virtually added those tokens to the pool
+        this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
+        this.emitProviderActivatedEvent(provider);
+    }
+
+    private addProviderToPurgeQueue(provider: Provider): void {
+        if (!provider.isPurged() && provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX) {
+            if (provider.getProviderType() === ProviderTypes.Normal) {
+                this.providerManager.addToNormalPurgedQueue(provider);
+            } else {
+                this.providerManager.addToPriorityPurgedQueue(provider);
+            }
+        }
+    }
+
+    private canGetProvider(providerData: ReservationProviderData): boolean {
+        let result: boolean = false;
+
+        // Initial provider is never in a queue.
+        // Otherwise, ensure provider has not been removed from its queue.
+        if (providerData.providerIndex === INITIAL_LIQUIDITY_PROVIDER_INDEX) {
+            result = true;
+        } else if (
+            !this.providerManager
+                .getIdFromQueue(providerData.providerIndex, providerData.providerType)
+                .isZero()
+        ) {
+            result = true;
+        }
+
+        return result;
+    }
+
+    private emitProviderActivatedEvent(provider: Provider): void {
+        Blockchain.emit(
+            new ProviderActivatedEvent(provider.getId(), provider.getLiquidityAmount(), 0),
+        );
+    }
+
+    private emitProviderConsumedEvent(provider: Provider, amountUsed: u128): void {
+        if (EMIT_PROVIDERCONSUMED_EVENTS) {
+            Blockchain.emit(new ProviderConsumedEvent(provider.getId(), amountUsed));
+        }
     }
 
     private ensureProviderHasEnoughLiquidity(provider: Provider, tokensDesired: u128): void {
@@ -137,6 +243,14 @@ export class TradeManager implements ITradeManager {
     private ensurePurgeIndexIsValid(purgeIndex: u32): void {
         if (purgeIndex === INDEX_NOT_SET_VALUE) {
             throw new Revert('Impossible state: purgeIndex is not set.');
+        }
+    }
+
+    private ensureQuoteIsValid(quote: u256): void {
+        if (quote.isZero()) {
+            throw new Revert(
+                `Impossible state: Current quote is zero for block number: ${Blockchain.block.number}`,
+            );
         }
     }
 
@@ -167,49 +281,53 @@ export class TradeManager implements ITradeManager {
             provider.getLiquidityAmount(),
         );
 
-        const actualTokens256: u256 = actualTokens.toU256();
-
         if (!actualTokens.isZero()) {
             this.ensureReservedAmountIsValid(provider, requestedTokens);
             this.ensureProviderHasEnoughLiquidity(provider, actualTokens);
 
-            const actualTokensSatoshis: u64 = tokensToSatoshis(
-                actualTokens256,
-                this.quoteAtReservation,
-            );
+            const actualTokens256: u256 = actualTokens.toU256();
+            const actualTokensSatoshis: u64 = tokensToSatoshis(actualTokens256, this.quoteToUse);
+
             provider.subtractFromReservedAmount(requestedTokens);
+            provider.subtractFromLiquidityAmount(actualTokens);
 
             if (
                 !provider.isLiquidityProvisionAllowed() &&
                 provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX
             ) {
-                provider.allowLiquidityProvision();
-                const totalLiquidity: u128 = provider.getLiquidityAmount();
-
-                // floor(totalLiquidity / 2)
-                const halfFloor: u128 = SafeMath.div128(totalLiquidity, u128.fromU32(2));
-
-                // CEIL = floor + (totalLiquidity & 1)
-                const halfCred: u128 = u128.add(
-                    halfFloor,
-                    u128.and(totalLiquidity, u128.One), // adds 1 iff odd
-                );
-
-                // track that we virtually added those tokens to the pool
-                this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
-                this.emitActivateProviderEvent(provider);
+                this.activateProvider(provider);
             }
 
-            provider.subtractFromLiquidityAmount(actualTokens);
+            this.emitProviderConsumedEvent(provider, actualTokens);
 
-            this.resetProviderOnDust(provider);
+            // If partial fill, provider liquidity must be available again.
+            // If not purged, check if the provider needs to be reset.
+            // If purged, the reset will be done by the purge queue later.
+            if (u128.lt(actualTokens, requestedTokens)) {
+                this.addProviderToPurgeQueue(provider);
+            } else if (!provider.isPurged()) {
+                this.resetProviderOnDust(provider);
+            }
+
             this.increaseTokenReserved(requestedTokens);
             this.increaseTotalTokensPurchased(actualTokens256);
             this.increaseSatoshisSpent(actualTokensSatoshis);
             this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
         } else {
             this.restoreReservedLiquidityForProvider(provider, requestedTokens);
+            this.addProviderToPurgeQueue(provider);
         }
+    }
+
+    private getMaximumPossibleTargetTokens(
+        satoshis: u64,
+        providerAvailableLiquidity: u128,
+        originalTokenAmount: u128,
+    ): u128 {
+        const cappedTokenAmount: u128 = min128(originalTokenAmount, providerAvailableLiquidity);
+        const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.quoteToUse);
+
+        return min128(tokenResult.tokens, cappedTokenAmount);
     }
 
     private getProvider(providerData: ReservationProviderData): Provider {
@@ -222,10 +340,7 @@ export class TradeManager implements ITradeManager {
     }
 
     private getTargetTokens(satoshis: u64, requestedTokens: u128, providerLiquidity: u128): u128 {
-        const tokenResult: CappedTokensResult = satoshisToTokens128(
-            satoshis,
-            this.quoteAtReservation,
-        );
+        const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.quoteToUse);
 
         let targetTokens: u128 = min128(tokenResult.tokens, requestedTokens);
         targetTokens = min128(targetTokens, providerLiquidity);
@@ -234,7 +349,7 @@ export class TradeManager implements ITradeManager {
     }
 
     private getValidBlockQuote(blockNumber: u64): void {
-        this.quoteAtReservation = this.quoteManager.getValidBlockQuote(blockNumber);
+        this.quoteToUse = this.quoteManager.getValidBlockQuote(blockNumber);
     }
 
     private increaseSatoshisSpent(value: u64): void {
@@ -249,22 +364,16 @@ export class TradeManager implements ITradeManager {
         this.tokensReserved = SafeMath.add(this.tokensReserved, value.toU256());
     }
 
-    private noStatsSendToProvider(providerData: ReservationProviderData, provider: Provider): void {
-        this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
-    }
-
     private deactivateReservation(reservation: Reservation): void {
         this.reservationManager.deactivateReservation(reservation);
     }
 
     private resetProviderOnDust(provider: Provider): void {
-        const satoshis = tokensToSatoshis128(
-            provider.getLiquidityAmount(),
-            this.quoteAtReservation,
-        );
-
-        if (satoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
-            this.providerManager.resetProvider(provider, false, false);
+        if (
+            !provider.hasReservedAmount() &&
+            !Provider.meetsMinimumReservationAmount(provider.getLiquidityAmount(), this.quoteToUse)
+        ) {
+            this.providerManager.resetProvider(provider, true, false);
         }
     }
 
@@ -277,7 +386,47 @@ export class TradeManager implements ITradeManager {
     }
 
     private restoreReservedLiquidityForProvider(provider: Provider, value: u128): void {
-        provider.subtractFromReservedAmount(value);
-        this.liquidityQueueReserve.subFromTotalReserved(value.toU256());
+        if (!value.isZero()) {
+            provider.subtractFromReservedAmount(value);
+            this.liquidityQueueReserve.subFromTotalReserved(value.toU256());
+        }
+    }
+
+    private tryExecuteNormalOrPriorityTrade(
+        provider: Provider,
+        satoshisSent: u64,
+        originalTokenAmount: u128,
+    ): void {
+        const actualTokens: u128 = this.getMaximumPossibleTargetTokens(
+            satoshisSent,
+            provider.getAvailableLiquidityAmount(),
+            originalTokenAmount,
+        );
+
+        if (Provider.meetsMinimumReservationAmount(actualTokens, this.quoteToUse)) {
+            this.ensureProviderHasEnoughLiquidity(provider, actualTokens);
+
+            const actualTokens256: u256 = actualTokens.toU256();
+            const actualTokensSatoshis: u64 = tokensToSatoshis(actualTokens256, this.quoteToUse);
+
+            if (
+                !provider.isLiquidityProvisionAllowed() &&
+                provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX
+            ) {
+                this.activateProvider(provider);
+            }
+
+            provider.subtractFromLiquidityAmount(actualTokens);
+
+            this.emitProviderConsumedEvent(provider, actualTokens);
+            this.increaseTotalTokensPurchased(actualTokens256);
+            this.increaseSatoshisSpent(actualTokensSatoshis);
+            this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
+        }
+
+        // Always push the provider to the purge queue.
+        // If provider does not have enough remaining liquidity,
+        // it will be removed from the purge queue when trying to use it.
+        this.addProviderToPurgeQueue(provider);
     }
 }

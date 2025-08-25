@@ -120,8 +120,16 @@ export class Reservation {
         return this.reservedIndexes.getLength();
     }
 
+    public getPurged(): boolean {
+        return this.reservationData.purged;
+    }
+
     public getPurgeIndex(): u32 {
         return this.reservationData.purgeIndex;
+    }
+
+    public getSwapped(): boolean {
+        return this.reservationData.swapped;
     }
 
     public getUserTimeoutBlockExpiration(): u64 {
@@ -155,8 +163,16 @@ export class Reservation {
         this.reservationData.creationBlock = value;
     }
 
+    public setPurged(value: boolean): void {
+        this.reservationData.purged = value;
+    }
+
     public setPurgeIndex(index: u32): void {
         this.reservationData.purgeIndex = index;
+    }
+
+    public setSwapped(value: boolean): void {
+        this.reservationData.swapped = value;
     }
 
     public timeoutUser(): void {

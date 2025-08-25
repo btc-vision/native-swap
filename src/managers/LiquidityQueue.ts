@@ -5,7 +5,6 @@ import {
     SafeMath,
     StoredU256,
     StoredU64,
-    TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
@@ -14,7 +13,7 @@ import {
     RESERVATION_SETTINGS_POINTER,
 } from '../constants/StoredPointers';
 
-import { Provider } from '../models/Provider';
+import { addAmountToStakingContract, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
 import {
     MAX_TOTAL_SATOSHIS,
@@ -27,6 +26,7 @@ import { IProviderManager } from './interfaces/IProviderManager';
 import { IReservationManager } from './interfaces/IReservationManager';
 import { ILiquidityQueue } from './interfaces/ILiquidityQueue';
 import { IDynamicFee } from './interfaces/IDynamicFee';
+import { preciseLog } from '../utils/MathUtils';
 
 const ENABLE_FEES: bool = true;
 
@@ -182,7 +182,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.liquidityQueueReserve.virtualTokenReserve = value;
     }
 
-    public accruePenalty(penalty: u128, half: u128, stakingAddress: Address): void {
+    public accruePenalty(penalty: u128, half: u128): void {
         if (!penalty.isZero()) {
             this.ensurePenaltyNotLessThanHalf(penalty, half);
 
@@ -200,7 +200,7 @@ export class LiquidityQueue implements ILiquidityQueue {
             }
 
             // TODO: When adding lp, remove this and use this.increaseTotalReserve(penalty);
-            TransferHelper.safeTransfer(this.token, stakingAddress, penaltyU256);
+            addAmountToStakingContract(penaltyU256);
         }
     }
 
@@ -247,22 +247,10 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.virtualTokenReserve = SafeMath.sub(this.virtualTokenReserve, value);
     }
 
-    public distributeFee(totalFee: u256, stakingAddress: Address): void {
-        const feeLP: u256 = SafeMath.div(
-            SafeMath.mul(totalFee, u256.fromU64(50)),
-            u256.fromU64(100),
-        );
-        const feeMoto: u256 = SafeMath.sub(totalFee, feeLP);
-
-        // Do nothing with half the fee
-        this.increaseVirtualTokenReserve(feeLP);
-
-        // Only transfer if the fee is non-zero
-        if (feeMoto > u256.Zero) {
-            // Send other half of fee to staking contract
-            TransferHelper.safeTransfer(this.token, stakingAddress, feeMoto);
-            this.decreaseTotalReserve(feeMoto);
-        }
+    public distributeFee(totalFee: u256): void {
+        this.decreaseVirtualTokenReserve(totalFee);
+        this.decreaseTotalReserve(totalFee);
+        addAmountToStakingContract(totalFee);
     }
 
     public getMaximumTokensLeftBeforeCap(): u256 {
@@ -322,9 +310,13 @@ export class LiquidityQueue implements ILiquidityQueue {
         );
     }
 
+    //!!! To remove
+    /*
     public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
         return this.providerManager.hasEnoughLiquidityLeftProvider(provider, quote);
     }
+    
+     */
 
     public increaseTotalSatoshisExchangedForTokens(value: u64): void {
         this.liquidityQueueReserve.addToTotalSatoshisExchangedForTokens(value);
@@ -381,18 +373,25 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     // Return number of tokens per satoshi
     public quote(): u256 {
-        const T: u256 = this.virtualTokenReserve;
-        if (T.isZero()) {
+        const TOKEN: u256 = this.virtualTokenReserve;
+        const BTC: u64 = this.virtualSatoshisReserve;
+
+        if (TOKEN.isZero()) {
             return u256.Zero;
         }
 
-        if (this.virtualSatoshisReserve === 0) {
+        if (BTC === 0) {
             throw new Revert(`Impossible state: Not enough liquidity.`);
         }
 
-        // scaledQuote = T * QUOTE_SCALE / B
-        const scaled = SafeMath.mul(T, QUOTE_SCALE);
-        return SafeMath.div(scaled, u256.fromU64(this.virtualSatoshisReserve));
+        // Calculate queue impact
+        const queueImpact = this.calculateQueueImpact();
+
+        // Add impact to token reserves ONLY for price calculation
+        const effectiveT = SafeMath.add(TOKEN, queueImpact);
+
+        const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
+        return SafeMath.div(scaled, u256.fromU64(BTC));
     }
 
     public removeFromNormalQueue(provider: Provider): void {
@@ -400,7 +399,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public removeFromPriorityQueue(provider: Provider): void {
-        this.providerManager.removeFromNormalQueue(provider);
+        this.providerManager.removeFromPriorityQueue(provider);
     }
 
     public removeFromPurgeQueue(provider: Provider): void {
@@ -486,6 +485,23 @@ export class LiquidityQueue implements ILiquidityQueue {
         );
 
         this.lastVirtualUpdateBlock = currentBlock;
+    }
+
+    private calculateQueueImpact(): u256 {
+        const queuedTokens = this.liquidity;
+
+        if (queuedTokens.isZero()) {
+            return u256.Zero;
+        }
+
+        // Calculate ratio = 1 + Q/T
+        const ratio = SafeMath.add(u256.One, SafeMath.div(queuedTokens, this.virtualTokenReserve));
+
+        // Use precise logarithm calculation
+        const lnValue = preciseLog(ratio);
+
+        // Impact = T * ln(1 + Q/T) / 1e6 (since log is scaled)
+        return SafeMath.div(SafeMath.mul(this.virtualTokenReserve, lnValue), u256.fromU64(1000000));
     }
 
     private computeInitialSatoshisReserve(initialLiquidity: u256, floorPrice: u256): u64 {

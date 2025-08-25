@@ -20,7 +20,6 @@ import { ProviderQueue } from './ProviderQueue';
 import { PriorityProviderQueue } from './PriorityProviderQueue';
 
 import {
-    ALLOW_DIRTY,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAXIMUM_NUMBER_OF_PROVIDERS,
 } from '../constants/Contract';
@@ -30,6 +29,7 @@ import { PurgedProviderQueue } from './PurgedProviderQueue';
 import { PriorityPurgedProviderQueue } from './PriorityPurgedProviderQueue';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { IQuoteManager } from './interfaces/IQuoteManager';
+import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 
 export class ProviderManager implements IProviderManager {
     protected readonly token: Address;
@@ -48,6 +48,7 @@ export class ProviderManager implements IProviderManager {
         tokenIdUint8Array: Uint8Array,
         quoteManager: IQuoteManager,
         enableIndexVerification: boolean,
+        liquidityQueueReserve: ILiquidityQueueReserve,
     ) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
@@ -58,6 +59,7 @@ export class ProviderManager implements IProviderManager {
             tokenIdUint8Array,
             enableIndexVerification,
             MAXIMUM_NUMBER_OF_PROVIDERS,
+            liquidityQueueReserve,
         );
         this.priorityQueue = new PriorityProviderQueue(
             token,
@@ -65,20 +67,21 @@ export class ProviderManager implements IProviderManager {
             tokenIdUint8Array,
             enableIndexVerification,
             MAXIMUM_NUMBER_OF_PROVIDERS,
+            liquidityQueueReserve,
         );
         this.normalPurgedQueue = new PurgedProviderQueue(
             token,
             NORMAL_QUEUE_PURGED_RESERVATION,
             tokenIdUint8Array,
             enableIndexVerification,
-            ALLOW_DIRTY,
+            liquidityQueueReserve,
         );
         this.priorityPurgedQueue = new PriorityPurgedProviderQueue(
             token,
             PRIORITY_QUEUE_PURGED_RESERVATION,
             tokenIdUint8Array,
             enableIndexVerification,
-            ALLOW_DIRTY,
+            liquidityQueueReserve,
         );
         this._initialLiquidityProviderId = new StoredU256(
             INITIAL_LIQUIDITY_PROVIDER_POINTER,
@@ -185,7 +188,7 @@ export class ProviderManager implements IProviderManager {
     public getNextFromPurgedProvider(currentQuote: u256): Provider | null {
         let result: Provider | null = null;
 
-        if (result === null && this.priorityPurgedQueue.length > 0) {
+        if (this.priorityPurgedQueue.length > 0) {
             result = this.priorityPurgedQueue.get(this.priorityQueue, currentQuote);
         }
 
@@ -261,6 +264,7 @@ export class ProviderManager implements IProviderManager {
         return writer.getBuffer();
     }
 
+    /*!!! TO remove
     public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
         let result: boolean = false;
         const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
@@ -275,6 +279,8 @@ export class ProviderManager implements IProviderManager {
 
         return result;
     }
+    
+     */
 
     public purgeAndRestoreProvider(data: ReservationProviderData): void {
         const provider: Provider = this.getProviderFromQueue(data.providerIndex, data.providerType);
@@ -399,7 +405,7 @@ export class ProviderManager implements IProviderManager {
             !Provider.meetsMinimumReservationAmount(provider.getAvailableLiquidityAmount(), quote)
         ) {
             if (!provider.hasReservedAmount()) {
-                this.resetProvider(provider, false, false);
+                this.resetProvider(provider);
             }
         } else if (!provider.isPurged()) {
             if (provider.getProviderType() === ProviderTypes.Normal) {
@@ -410,6 +416,7 @@ export class ProviderManager implements IProviderManager {
         }
     }
 
+    /* !!!! TO remove
     private verifyProviderRemainingLiquidityAndReset(
         provider: Provider,
         availableLiquidity: u128,
@@ -427,4 +434,6 @@ export class ProviderManager implements IProviderManager {
 
         return result;
     }
+
+     */
 }

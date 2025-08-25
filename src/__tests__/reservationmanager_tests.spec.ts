@@ -14,10 +14,9 @@ import {
 } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
-import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { PurgedResult } from '../managers/ReservationManager';
-import { Reservation } from '../models/Reservation';
 
 describe('Reservation manager tests', () => {
     beforeEach(() => {
@@ -838,61 +837,6 @@ describe('Reservation manager tests', () => {
                 const manager2 = createLiquidityQueueResult2.reservationManager;
                 manager2.purgeReservationsAndRestoreProviders(100);
             }).toThrow();
-        });
-
-        it('should delete reservation if allow dirty is false', () => {
-            setBlockchainEnvironment(100);
-
-            const createLiquidityQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-
-            createLiquidityQueueResult.liquidityQueue.increaseTotalReserve(u256.fromU64(400000));
-            createLiquidityQueueResult.liquidityQueue.increaseTotalReserved(u256.fromU64(400000));
-            createLiquidityQueueResult.quoteManager.setBlockQuote(100, u256.fromU64(666666666));
-
-            const provider1 = createProvider(providerAddress1, tokenAddress1);
-            provider1.setLiquidityAmount(u128.fromU64(150000));
-
-            const providerManager = createLiquidityQueueResult.providerManager;
-
-            provider1.addToReservedAmount(u128.fromU64(150000));
-            providerManager.addToNormalQueue(provider1);
-
-            const reservationManager = createLiquidityQueueResult.reservationManager;
-            reservationManager.setAllowDirty(false);
-
-            const reservation1 = createReservation(tokenAddress1, providerAddress1);
-            reservation1.setCreationBlock(100);
-            reservation1.addProvider(
-                new ReservationProviderData(
-                    provider1.getQueueIndex(),
-                    u128.fromU64(150000),
-                    ProviderTypes.Normal,
-                    100,
-                ),
-            );
-            reservationManager.addReservation(100, reservation1);
-            reservation1.save();
-
-            createLiquidityQueueResult.liquidityQueue.save();
-
-            setBlockchainEnvironment(106);
-            const createLiquidityQueueResult2 = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-
-            const manager2 = createLiquidityQueueResult2.reservationManager;
-            manager2.setAllowDirty(false);
-            manager2.purgeReservationsAndRestoreProviders(100);
-
-            const reservation2 = Reservation.load(reservation1.getId());
-            expect(reservation2.getProviderCount()).toStrictEqual(0);
-            expect(reservation2.getPurgeIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
         });
 
         it('should return next block from the list as the new last purged block', () => {

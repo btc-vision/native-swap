@@ -1,6 +1,6 @@
 import { BaseOperation } from './BaseOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Address, Blockchain, Revert } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, Revert } from '@btc-vision/btc-runtime/runtime';
 import { ListTokensForSaleOperation } from './ListTokensForSaleOperation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { getProvider, Provider } from '../models/Provider';
@@ -10,7 +10,8 @@ export class CreatePoolOperation extends BaseOperation {
     private readonly floorPrice: u256;
     private readonly providerId: u256;
     private readonly initialLiquidity: u128;
-    private readonly receiver: string;
+    private readonly receiver: Uint8Array;
+    private readonly receiverStr: string;
     private readonly antiBotEnabledFor: u16;
     private readonly antiBotMaximumTokensPerReservation: u256;
     private readonly maxReservesIn5BlocksPercent: u16;
@@ -20,11 +21,11 @@ export class CreatePoolOperation extends BaseOperation {
         floorPrice: u256,
         providerId: u256,
         initialLiquidity: u128,
-        receiver: string,
+        receiver: Uint8Array,
+        receiverStr: string,
         antiBotEnabledFor: u16,
         antiBotMaximumTokensPerReservation: u256,
         maxReservesIn5BlocksPercent: u16,
-        private readonly stakingAddress: Address,
     ) {
         super(liquidityQueue);
 
@@ -32,6 +33,7 @@ export class CreatePoolOperation extends BaseOperation {
         this.providerId = providerId;
         this.initialLiquidity = initialLiquidity;
         this.receiver = receiver;
+        this.receiverStr = receiverStr;
         this.antiBotEnabledFor = antiBotEnabledFor;
         this.antiBotMaximumTokensPerReservation = antiBotMaximumTokensPerReservation;
         this.maxReservesIn5BlocksPercent = maxReservesIn5BlocksPercent;
@@ -94,7 +96,7 @@ export class CreatePoolOperation extends BaseOperation {
     }
 
     private ensureReceiverAddressValid(): void {
-        if (Blockchain.validateBitcoinAddress(this.receiver) == false) {
+        if (Blockchain.validateBitcoinAddress(this.receiverStr) == false) {
             throw new Revert('NATIVE_SWAP: Invalid receiver address.');
         }
     }
@@ -120,7 +122,7 @@ export class CreatePoolOperation extends BaseOperation {
             this.providerId,
             this.initialLiquidity,
             this.receiver,
-            this.stakingAddress,
+            this.receiverStr,
             false,
             true,
         );

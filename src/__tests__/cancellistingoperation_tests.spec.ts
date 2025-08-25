@@ -1,11 +1,14 @@
-import { clearCachedProviders } from '../models/Provider';
+import {
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+} from '../models/Provider';
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import {
     createLiquidityQueue,
     createProvider,
     providerAddress1,
     setBlockchainEnvironment,
-    testStackingContractAddress,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -42,7 +45,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -62,7 +64,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -84,7 +85,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -107,7 +107,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -129,7 +128,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -152,7 +150,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -180,7 +177,6 @@ describe('CancelListTokenForSaleOperation tests', () => {
                 const operation = new CancelListingOperation(
                     queue.liquidityQueue,
                     provider.getId(),
-                    testStackingContractAddress,
                 );
 
                 operation.execute();
@@ -194,6 +190,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should apply 50% penalty if in grace period', () => {
@@ -212,16 +209,14 @@ describe('CancelListTokenForSaleOperation tests', () => {
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(10000));
 
             setBlockchainEnvironment(101);
-            const operation = new CancelListingOperation(
-                queue.liquidityQueue,
-                provider.getId(),
-                testStackingContractAddress,
-            );
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
 
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(0));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5000));
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
         });
 
         it('should apply more than 50 % penalty if outside of grace period', () => {
@@ -241,16 +236,14 @@ describe('CancelListTokenForSaleOperation tests', () => {
             queue.providerManager.addToNormalQueue(provider);
 
             setBlockchainEnvironment(107);
-            const operation = new CancelListingOperation(
-                queue.liquidityQueue,
-                provider.getId(),
-                testStackingContractAddress,
-            );
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
 
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10005));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(90000));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5005));
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
         });
 
         it('should cap halfToCharge to penaltyAmount', () => {
@@ -270,16 +263,14 @@ describe('CancelListTokenForSaleOperation tests', () => {
             queue.providerManager.addToNormalQueue(provider);
 
             setBlockchainEnvironment(101);
-            const operation = new CancelListingOperation(
-                queue.liquidityQueue,
-                provider.getId(),
-                testStackingContractAddress,
-            );
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
 
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(89999));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5000));
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
         });
 
         it('should succeed: set provider liquidity to 0, call resetProvider, safeTransfer, update reserve, cleanUpQueues, emit event', () => {
@@ -296,11 +287,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             queue.providerManager.addToNormalQueue(provider);
 
             setBlockchainEnvironment(101);
-            const operation = new CancelListingOperation(
-                queue.liquidityQueue,
-                provider.getId(),
-                testStackingContractAddress,
-            );
+            const operation = new CancelListingOperation(queue.liquidityQueue, provider.getId());
 
             operation.execute();
 
@@ -310,6 +297,8 @@ describe('CancelListTokenForSaleOperation tests', () => {
 
             expect(TransferHelper.safeTransferCalled).toBeTruthy();
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(999990000));
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5000));
+            expect(TransferHelper.safeTransferCalled).toBeTruthy();
         });
     });
 });

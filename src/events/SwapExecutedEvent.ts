@@ -10,14 +10,15 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 
 @final
 export class SwapExecutedEvent extends NetEvent {
-    constructor(buyer: Address, amountIn: u64, amountOut: u256) {
+    constructor(buyer: Address, amountIn: u64, amountOut: u256, totalFees: u256) {
         const data: BytesWriter = new BytesWriter(
-            ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH + U64_BYTE_LENGTH,
+            ADDRESS_BYTE_LENGTH + 2 * U256_BYTE_LENGTH + U64_BYTE_LENGTH,
         );
 
         data.writeAddress(buyer);
         data.writeU64(amountIn);
         data.writeU256(amountOut);
+        data.writeU256(totalFees);
 
         super('SwapExecuted', data);
     }

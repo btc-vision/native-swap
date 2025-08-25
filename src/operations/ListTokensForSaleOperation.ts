@@ -1,9 +1,10 @@
 import { BaseOperation } from './BaseOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { getProvider, Provider } from '../models/Provider';
+import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import {
-    Address,
+    BitcoinAddresses,
     Blockchain,
+    Network,
     Revert,
     SafeMath,
     TransferHelper,
@@ -14,6 +15,7 @@ import { LiquidityListedEvent } from '../events/LiquidityListedEvent';
 import { FeeManager } from '../managers/FeeManager';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import {
+    CSV_BLOCKS_REQUIRED,
     INDEX_NOT_SET_VALUE,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
     PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
@@ -24,7 +26,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private readonly providerId: u256;
     private readonly amountIn: u128;
     private readonly amountIn256: u256;
-    private readonly receiver: string;
+    private readonly receiver: Uint8Array;
+    private readonly receiverStr: string;
     private readonly usePriorityQueue: boolean;
     private readonly isForInitialLiquidity: boolean;
     private readonly provider: Provider;
@@ -34,8 +37,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
         liquidityQueue: ILiquidityQueue,
         providerId: u256,
         amountIn: u128,
-        receiver: string,
-        private readonly stakingAddress: Address,
+        receiver: Uint8Array,
+        receiverStr: string, // Ensure we recompute the right string
         usePriorityQueue: boolean,
         isForInitialLiquidity: boolean = false,
     ) {
@@ -45,6 +48,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.amountIn = amountIn;
         this.amountIn256 = amountIn.toU256();
         this.receiver = receiver;
+        this.receiverStr = receiverStr;
         this.usePriorityQueue = usePriorityQueue;
         this.isForInitialLiquidity = isForInitialLiquidity;
 
@@ -67,6 +71,12 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
         if (!deltaHalf.isZero()) {
             this.liquidityQueue.increaseVirtualTokenReserve(deltaHalf.toU256());
+        }
+    }
+
+    private ensureValidReceiverAddress(receiver: string): void {
+        if (Blockchain.validateBitcoinAddress(receiver) == false) {
+            throw new Revert('NATIVE_SWAP: Invalid receiver address.');
         }
     }
 
@@ -105,10 +115,28 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private assignReceiver(): void {
-        if (this.provider.hasReservedAmount() && this.provider.getBtcReceiver() !== this.receiver) {
+        const hasReceiver: boolean = this.provider.hasReservedAmount();
+        if (hasReceiver && this.provider.getBtcReceiver() !== this.receiverStr) {
             throw new Revert('NATIVE_SWAP: Cannot change receiver address while reserved.');
-        } else if (!this.provider.hasReservedAmount()) {
-            this.provider.setBtcReceiver(this.receiver);
+        } else if (!hasReceiver) {
+            this.verifyReceiverAddress();
+
+            this.provider.setBtcReceiver(this.receiverStr);
+        }
+    }
+
+    private verifyReceiverAddress(): void {
+        const isValidCSV = BitcoinAddresses.verifyCsvP2wshAddress(
+            this.receiver,
+            CSV_BLOCKS_REQUIRED,
+            this.receiverStr,
+            Network.hrp(Blockchain.network),
+        );
+
+        if (!isValidCSV) {
+            throw new Revert(
+                `NATIVE_SWAP: Invalid receiver address. Expected CSV P2WSH address with ${CSV_BLOCKS_REQUIRED} blocks.`,
+            );
         }
     }
 
@@ -129,12 +157,10 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private calculateTax(): u128 {
-        const tokensForPriorityQueue: u128 = SafeMath.div128(
+        return SafeMath.div128(
             SafeMath.mul128(this.amountIn, PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX),
             PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
         );
-
-        return tokensForPriorityQueue;
     }
 
     private checkPreConditions(): void {
@@ -142,6 +168,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
             this.ensureEnoughPriorityFees();
         }
 
+        this.ensureValidReceiverAddress(this.receiverStr);
         this.ensureAmountInIsNotZero();
         this.ensureNoLiquidityOverflow();
         this.ensureNoActivePositionInPriorityQueue();
@@ -166,14 +193,14 @@ export class ListTokensForSaleOperation extends BaseOperation {
                 this.provider.subtractFromLiquidityAmount(tax);
                 this.liquidityQueue.decreaseTotalReserve(tax256);
                 this.liquidityQueue.increaseVirtualTokenReserve(tax256);
-                TransferHelper.safeTransfer(this.liquidityQueue.token, this.stakingAddress, tax256);
+                addAmountToStakingContract(tax256);
             }
         }
     }
 
     private emitLiquidityListedEvent(): void {
         Blockchain.emit(
-            new LiquidityListedEvent(this.provider.getLiquidityAmount(), this.receiver),
+            new LiquidityListedEvent(this.provider.getLiquidityAmount(), this.receiverStr),
         );
     }
 
@@ -222,7 +249,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private ensureNoActiveReservation(): void {
         if (this.provider.hasReservedAmount()) {
             throw new Revert(
-                `'NATIVE_SWAP: All active reservations on your listing must be completed before listing again.`,
+                `NATIVE_SWAP: All active reservations on your listing must be completed before listing again.`,
             );
         }
     }
@@ -230,7 +257,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private ensureProviderIsNotPurged(): void {
         if (this.provider.isPurged()) {
             throw new Revert(
-                `'NATIVE_SWAP: You are in the purge queue. Your current listing must be bought before listing again.`,
+                `NATIVE_SWAP: You are in the purge queue. Your current listing must be bought before listing again.`,
             );
         }
     }

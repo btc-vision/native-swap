@@ -1,4 +1,9 @@
-import { clearCachedProviders, Provider } from '../models/Provider';
+import {
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+    Provider,
+} from '../models/Provider';
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { NORMAL_QUEUE_POINTER, NORMAL_QUEUE_PURGED_RESERVATION } from '../constants/StoredPointers';
 import {
@@ -11,17 +16,18 @@ import {
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { PurgedProviderQueue } from '../managers/PurgedProviderQueue';
 import {
-    ALLOW_DIRTY,
     ENABLE_INDEX_VERIFICATION,
     INDEX_NOT_SET_VALUE,
     MAXIMUM_NUMBER_OF_PROVIDERS,
 } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
+import { ILiquidityQueueReserve } from '../managers/interfaces/ILiquidityQueueReserve';
+import { LiquidityQueueReserve } from '../models/LiquidityQueueReserve';
 
 const QUOTE = u256.fromU64(100000000);
 
 function createNormalPurgedQueue(
-    allowDirty: boolean = ALLOW_DIRTY,
+    liquidityQueueReserve: ILiquidityQueueReserve,
     enableIndexVerification: boolean = ENABLE_INDEX_VERIFICATION,
 ): PurgedProviderQueue {
     const queue: PurgedProviderQueue = new PurgedProviderQueue(
@@ -29,32 +35,26 @@ function createNormalPurgedQueue(
         NORMAL_QUEUE_PURGED_RESERVATION,
         tokenIdUint8Array1,
         enableIndexVerification,
-        allowDirty,
+        liquidityQueueReserve,
     );
 
     return queue;
 }
 
-function createNormalQueue(): ProviderQueue {
+function createNormalQueue(liquidityQueueReserve: ILiquidityQueueReserve): ProviderQueue {
     const queue: ProviderQueue = new ProviderQueue(
         tokenAddress1,
         NORMAL_QUEUE_POINTER,
         tokenIdUint8Array1,
         ENABLE_INDEX_VERIFICATION,
         MAXIMUM_NUMBER_OF_PROVIDERS,
+        liquidityQueueReserve,
     );
 
     return queue;
 }
 
 describe('PurgedProviderQueue tests', () => {
-    beforeEach(() => {
-        clearCachedProviders();
-        Blockchain.clearStorage();
-        Blockchain.clearMockedResults();
-        TransferHelper.clearMockedResults();
-    });
-
     describe('PurgedProviderQueue – getters', () => {
         beforeEach(() => {
             clearCachedProviders();
@@ -64,7 +64,9 @@ describe('PurgedProviderQueue tests', () => {
         });
 
         it('should have a 0 length after creation', () => {
-            const queue: PurgedProviderQueue = createNormalPurgedQueue();
+            const queue: PurgedProviderQueue = createNormalPurgedQueue(
+                new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1),
+            );
 
             expect(queue.length).toStrictEqual(0);
         });
@@ -79,7 +81,9 @@ describe('PurgedProviderQueue tests', () => {
         });
 
         it('should return INDEX_NOT_SET_VALUE if initial provider', () => {
-            const queue: PurgedProviderQueue = createNormalPurgedQueue();
+            const queue: PurgedProviderQueue = createNormalPurgedQueue(
+                new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1),
+            );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             provider.markInitialLiquidityProvider();
 
@@ -90,7 +94,9 @@ describe('PurgedProviderQueue tests', () => {
 
         it('should revert if provider is already purged', () => {
             expect(() => {
-                const queue: PurgedProviderQueue = createNormalPurgedQueue();
+                const queue: PurgedProviderQueue = createNormalPurgedQueue(
+                    new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1),
+                );
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider.markPurged();
 
@@ -100,7 +106,9 @@ describe('PurgedProviderQueue tests', () => {
 
         it('should revert if provider is pending removal', () => {
             expect(() => {
-                const queue: PurgedProviderQueue = createNormalPurgedQueue();
+                const queue: PurgedProviderQueue = createNormalPurgedQueue(
+                    new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1),
+                );
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1, true);
 
                 queue.add(provider);
@@ -109,7 +117,9 @@ describe('PurgedProviderQueue tests', () => {
 
         it('should revert if provider is priority', () => {
             expect(() => {
-                const queue: PurgedProviderQueue = createNormalPurgedQueue();
+                const queue: PurgedProviderQueue = createNormalPurgedQueue(
+                    new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1),
+                );
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider.markPriority();
                 queue.add(provider);
@@ -118,7 +128,9 @@ describe('PurgedProviderQueue tests', () => {
 
         it('should revert if provider queue index is not set', () => {
             expect(() => {
-                const queue: PurgedProviderQueue = createNormalPurgedQueue();
+                const queue: PurgedProviderQueue = createNormalPurgedQueue(
+                    new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1),
+                );
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider.setQueueIndex(INDEX_NOT_SET_VALUE);
                 queue.add(provider);
@@ -126,7 +138,9 @@ describe('PurgedProviderQueue tests', () => {
         });
 
         it('should mark the provider as purged, add to the queue and set purged index', () => {
-            const queue: PurgedProviderQueue = createNormalPurgedQueue();
+            const queue: PurgedProviderQueue = createNormalPurgedQueue(
+                new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1),
+            );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             provider.setQueueIndex(0);
 
@@ -144,13 +158,19 @@ describe('PurgedProviderQueue tests', () => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should revert if provider queue index is not set', () => {
             expect(() => {
-                const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+                const purgedQueue: PurgedProviderQueue =
+                    createNormalPurgedQueue(liquidityQueueReserve);
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
                 const index = purgedQueue.add(provider);
 
@@ -162,8 +182,14 @@ describe('PurgedProviderQueue tests', () => {
 
         it('should revert if provider id is not valid', () => {
             expect(() => {
-                const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+                const purgedQueue: PurgedProviderQueue =
+                    createNormalPurgedQueue(liquidityQueueReserve);
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider);
                 const index = purgedQueue.add(provider);
@@ -176,8 +202,14 @@ describe('PurgedProviderQueue tests', () => {
 
         it('should revert if provider is not purged', () => {
             expect(() => {
-                const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+                const purgedQueue: PurgedProviderQueue =
+                    createNormalPurgedQueue(liquidityQueueReserve);
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
 
                 queue.add(provider);
@@ -189,8 +221,13 @@ describe('PurgedProviderQueue tests', () => {
         });
 
         it('should return the provider when available liquidity meet minimum amount', () => {
-            const queue: ProviderQueue = createNormalQueue();
-            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
+            const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(liquidityQueueReserve);
 
             const providers = createProviders(10);
             for (let i = 0; i < providers.length; i++) {
@@ -207,8 +244,16 @@ describe('PurgedProviderQueue tests', () => {
 
         it('should revert when purge index and previous offset does not match', () => {
             expect(() => {
-                const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(
+                    liquidityQueueReserve,
+                    true,
+                );
 
                 const providers = createProviders(10);
                 for (let i = 0; i < providers.length; i++) {
@@ -224,8 +269,16 @@ describe('PurgedProviderQueue tests', () => {
 
         it('should revert when enableIndexVerification and queue index does not match', () => {
             expect(() => {
-                const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(
+                    liquidityQueueReserve,
+                    true,
+                );
 
                 const providers = createProviders(10);
                 for (let i = 0; i < providers.length; i++) {
@@ -241,8 +294,16 @@ describe('PurgedProviderQueue tests', () => {
 
         it('should revert if returned provider is initial provider', () => {
             expect(() => {
-                const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(ALLOW_DIRTY, true);
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(
+                    liquidityQueueReserve,
+                    true,
+                );
 
                 const providers = createProviders(10);
                 for (let i = 0; i < providers.length; i++) {
@@ -257,12 +318,18 @@ describe('PurgedProviderQueue tests', () => {
         });
 
         it('should return null when available liquidity is 0', () => {
-            const queue: ProviderQueue = createNormalQueue();
-            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
+            const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(liquidityQueueReserve);
 
             const providers = createProviders(10);
             for (let i = 0; i < providers.length; i++) {
                 providers[i].setLiquidityAmount(u128.Zero);
+                providers[i].setReservedAmount(u128.Zero);
                 queue.add(providers[i]);
                 purgedQueue.add(providers[i]);
             }
@@ -272,8 +339,12 @@ describe('PurgedProviderQueue tests', () => {
         });
 
         it('should return null and not reset the provider when available liquidity < minimum required but have reserved amount', () => {
-            const queue: ProviderQueue = createNormalQueue();
-            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+            const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(liquidityQueueReserve);
 
             const providers = createProviders(10);
             for (let i = 0; i < providers.length; i++) {
@@ -290,8 +361,16 @@ describe('PurgedProviderQueue tests', () => {
         });
 
         it('should return null and reset the provider when available liquidity < minimum required and no reserved amount', () => {
-            const queue: ProviderQueue = createNormalQueue();
-            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
+            const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(liquidityQueueReserve);
+
+            liquidityQueueReserve.addToTotalReserve(u256.fromU32(1100));
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(11000));
 
             const providers = createProviders(10);
             for (let i = 0; i < providers.length; i++) {
@@ -304,12 +383,20 @@ describe('PurgedProviderQueue tests', () => {
             expect(provider1).toBeNull();
             expect(providers[0].isPurged()).toBeFalsy();
             expect(providers[0].isActive()).toBeFalsy();
+            expect(liquidityQueueReserve.liquidity).toStrictEqual(u256.Zero);
         });
 
         it('should return null, reset the provider, transfer remaining liquidity when available liquidity < minimum required and no reserved amount', () => {
-            const queue: ProviderQueue = createNormalQueue();
-            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
 
+            const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(liquidityQueueReserve);
+
+            liquidityQueueReserve.addToTotalReserve(u256.fromU32(1100));
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(11000));
             const providers = createProviders(10);
             for (let i = 0; i < providers.length; i++) {
                 providers[i].setLiquidityAmount(u128.fromU32(110));
@@ -317,20 +404,31 @@ describe('PurgedProviderQueue tests', () => {
                 purgedQueue.add(providers[i]);
             }
 
-            const provider1Index = providers[0].getQueueIndex();
+            const provider = purgedQueue.get(queue, u256.fromU32(100000000));
+            expect(provider).toBeNull();
 
-            const provider1 = purgedQueue.get(queue, u256.fromU32(100000000));
-            expect(provider1).toBeNull();
-            expect(providers[0].isPurged()).toBeFalsy();
-            expect(providers[0].isActive()).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
-            expect(queue.getAt(provider1Index)).toStrictEqual(u256.Zero);
+            for (let i = 0; i < providers.length; i++) {
+                expect(providers[i].isPurged()).toBeFalsy();
+                expect(providers[i].isActive()).toBeFalsy();
+                expect(queue.getAt(i)).toStrictEqual(u256.Zero);
+            }
+
+            expect(getPendingStakingContractAmount()).toStrictEqual(
+                u256.fromU32(providers.length * 110),
+            );
+            expect(liquidityQueueReserve.liquidity).toStrictEqual(u256.Zero);
         });
 
         it('should revert when provider not purged, available liquidity < minimum required and no reserved amount', () => {
             expect(() => {
-                const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+                const purgedQueue: PurgedProviderQueue =
+                    createNormalPurgedQueue(liquidityQueueReserve);
 
                 const providers = createProviders(10);
                 for (let i = 0; i < providers.length; i++) {
@@ -342,27 +440,6 @@ describe('PurgedProviderQueue tests', () => {
                 providers[0].clearPurged();
                 purgedQueue.get(queue, u256.fromU32(100000000));
             }).toThrow();
-        });
-
-        it('should return null, reset the provider but no delete it, transfer remaining liquidity when available liquidity < minimum required and no reserved amount', () => {
-            const queue: ProviderQueue = createNormalQueue();
-            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
-
-            const providers = createProviders(10);
-            for (let i = 0; i < providers.length; i++) {
-                providers[i].setLiquidityAmount(u128.fromU32(110));
-                queue.add(providers[i]);
-                purgedQueue.add(providers[i]);
-            }
-
-            const provider1Index = providers[0].getQueueIndex();
-            providers[0].markInitialLiquidityProvider();
-            const provider1 = purgedQueue.get(queue, u256.fromU32(100000000));
-            expect(provider1).toBeNull();
-            expect(providers[0].isPurged()).toBeFalsy();
-            expect(providers[0].isActive()).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
-            expect(queue.getAt(provider1Index)).not.toStrictEqual(u256.Zero);
         });
     });
 
@@ -376,8 +453,14 @@ describe('PurgedProviderQueue tests', () => {
 
         it('should revert if purger provider queue index is not set', () => {
             expect(() => {
-                const queue: ProviderQueue = createNormalQueue();
-                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+                const purgedQueue: PurgedProviderQueue =
+                    createNormalPurgedQueue(liquidityQueueReserve);
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
                 purgedQueue.add(provider);
                 provider.setPurgedIndex(INDEX_NOT_SET_VALUE);
@@ -387,7 +470,12 @@ describe('PurgedProviderQueue tests', () => {
         });
 
         it('should properly remove the provider', () => {
-            const queue: PurgedProviderQueue = createNormalPurgedQueue();
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
+            const queue: PurgedProviderQueue = createNormalPurgedQueue(liquidityQueueReserve);
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             provider.setQueueIndex(0);
 
@@ -398,20 +486,6 @@ describe('PurgedProviderQueue tests', () => {
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(provider.isPurged()).toBeFalsy();
             expect(queue.length).toStrictEqual(0);
-        });
-
-        it('should properly remove the provider and delete it from the queue if dirty not allowed', () => {
-            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(false);
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setQueueIndex(0);
-
-            purgedQueue.add(provider);
-
-            purgedQueue.remove(provider);
-
-            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-            expect(provider.isPurged()).toBeFalsy();
-            expect(purgedQueue.length).toStrictEqual(0);
         });
     });
 
@@ -424,8 +498,12 @@ describe('PurgedProviderQueue tests', () => {
         });
 
         it('should save correctly', () => {
-            const queue: ProviderQueue = createNormalQueue();
-            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue();
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+            const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(liquidityQueueReserve);
 
             const providers = createProviders(10);
             for (let i = 0; i < providers.length; i++) {
@@ -436,8 +514,9 @@ describe('PurgedProviderQueue tests', () => {
             purgedQueue.save();
             clearCachedProviders();
 
-            const queue2: ProviderQueue = createNormalQueue();
-            const purgedQueue2: PurgedProviderQueue = createNormalPurgedQueue();
+            const queue2: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+            const purgedQueue2: PurgedProviderQueue =
+                createNormalPurgedQueue(liquidityQueueReserve);
 
             expect(purgedQueue2.length).toStrictEqual(purgedQueue.length);
         });

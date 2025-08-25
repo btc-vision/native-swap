@@ -22,7 +22,7 @@ export interface ILiquidityQueue {
     virtualSatoshisReserve: u64;
     virtualTokenReserve: u256;
 
-    accruePenalty(penalty: u128, half: u128, stakingAddress: Address): void;
+    accruePenalty(penalty: u128, half: u128): void;
 
     addReservation(reservation: Reservation): void;
 
@@ -44,7 +44,7 @@ export interface ILiquidityQueue {
 
     decreaseVirtualTokenReserve(value: u256): void;
 
-    distributeFee(totalFee: u256, stakingAddress: Address): void;
+    distributeFee(totalFee: u256): void;
 
     isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean;
 
@@ -64,7 +64,8 @@ export interface ILiquidityQueue {
 
     getUtilizationRatio(): u256;
 
-    hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean;
+    //!!! TO remove
+    //hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean;
 
     increaseTotalSatoshisExchangedForTokens(value: u64): void;
 

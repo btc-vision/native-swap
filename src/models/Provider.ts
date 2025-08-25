@@ -1,9 +1,11 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
+    Address,
     AdvancedStoredString,
     Potential,
     Revert,
     SafeMath,
+    TransferHelper,
     u256To30Bytes,
 } from '@btc-vision/btc-runtime/runtime';
 import { ProviderData } from './ProviderData';
@@ -52,6 +54,10 @@ export class Provider {
      * @returns {boolean} - true if token amount is GE; false if not.
      */
     public static meetsMinimumReservationAmount(tokenAmount: u128, currentQuote: u256): boolean {
+        if (tokenAmount.isZero()) {
+            return false;
+        }
+
         const maxCostInSatoshis: u64 = tokensToSatoshis(tokenAmount.toU256(), currentQuote);
         return maxCostInSatoshis >= STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT;
     }
@@ -447,6 +453,7 @@ export class Provider {
 }
 
 const cache: Array<Provider> = new Array<Provider>();
+let pendingStakingContractAmount: u256 = u256.Zero;
 
 function findProvider(id: u256): Provider | null {
     for (let i: i32 = 0; i < cache.length; i++) {
@@ -482,4 +489,33 @@ export function getProvider(providerId: u256): Provider {
     }
 
     return provider;
+}
+
+export function clearPendingStakingContractAmount(): void {
+    pendingStakingContractAmount = u256.Zero;
+}
+
+export function addAmountToStakingContract(amount: u256): void {
+    pendingStakingContractAmount = SafeMath.add(pendingStakingContractAmount, amount);
+}
+
+export function transferPendingAmountToStakingContract(
+    tokenAddress: Address,
+    stakingContractAddress: Address,
+): void {
+    if (!pendingStakingContractAmount.isZero()) {
+        if (stakingContractAddress.isZero() || stakingContractAddress.isDead()) {
+            throw new Revert('NATIVE_SWAP: Staking contract address is not set.');
+        }
+
+        TransferHelper.safeTransfer(
+            tokenAddress,
+            stakingContractAddress,
+            pendingStakingContractAmount,
+        );
+    }
+}
+
+export function getPendingStakingContractAmount(): u256 {
+    return pendingStakingContractAmount;
 }

@@ -4,31 +4,31 @@ import {
     Potential,
     Revert,
     StoredU32Array,
-    TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
 import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
-import { getProvider, Provider } from '../models/Provider';
+import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
+import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
+import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 
 export class PurgedProviderQueue {
     protected readonly token: Address;
     protected readonly queue: StoredU32Array;
     protected readonly enableIndexVerification: boolean;
-    protected readonly allowDirty: boolean;
+    protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
 
     constructor(
         token: Address,
         pointer: u16,
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
-        allowDirty: boolean,
+        liquidityQueueReserve: ILiquidityQueueReserve,
     ) {
         this.token = token;
         this.queue = new StoredU32Array(pointer, subPointer, INDEX_NOT_SET_VALUE - 1);
         this.enableIndexVerification = enableIndexVerification;
-        this.allowDirty = allowDirty;
+        this.liquidityQueueReserve = liquidityQueueReserve;
     }
 
     public get length(): u32 {
@@ -53,39 +53,40 @@ export class PurgedProviderQueue {
         return index;
     }
 
-    public getAt(index: u32): u32 {
-        return this.queue.get(index);
-    }
-
     public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
-        const providerIndex: u32 = this.queue.next();
+        let result: Potential<Provider> = null;
+        const queueLength: u32 = this.queue.getLength();
+        let count: u32 = 0;
 
-        this.ensureProviderQueueIndexIsValid(providerIndex);
+        while (count < queueLength && result === null) {
+            const providerIndex: u32 = this.queue.next();
+            this.ensureProviderQueueIndexIsValid(providerIndex);
 
-        const providerId = associatedQueue.getAt(providerIndex);
-        this.ensureProviderIdIsValid(providerId);
+            const providerId = associatedQueue.getAt(providerIndex);
+            this.ensureProviderIdIsValid(providerId);
 
-        const provider = getProvider(providerId);
-        this.ensureProviderPurged(provider);
+            const provider = getProvider(providerId);
+            this.ensureProviderPurged(provider);
 
-        if (provider.getPurgedIndex() !== this.queue.previousOffset) {
-            throw new Revert(
-                'Impossible state: provider.getPurgedIndex() !== this.queue.previousOffset',
-            );
+            if (provider.getPurgedIndex() !== this.queue.previousOffset) {
+                throw new Revert(
+                    `Impossible state: Provider: ${provider.getId()} getPurgedIndex(${provider.getPurgedIndex()}) !== previousOffset(${this.queue.previousOffset}).`,
+                );
+            }
+
+            result = this.returnProvider(associatedQueue, provider, providerIndex, quote);
+            count++;
         }
 
-        return this.returnProvider(associatedQueue, provider, providerIndex, quote);
+        return result;
     }
 
+    /*
+    This remove the provider at current index. Be careful to ensure the provided provider is
+     also the current in the queue.
+     */
     public remove(provider: Provider): void {
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
-
-        // Technically, we don't need to remove the provider from the queue because we should theoretically process
-        // "dirty" states correctly due to wrap around.
-        if (!this.allowDirty) {
-            this.queue.delete(provider.getPurgedIndex());
-        }
-
         this.queue.removeItemFromLength();
         this.queue.applyNextOffsetToStartingIndex();
 
@@ -130,23 +131,27 @@ export class PurgedProviderQueue {
     }
 
     private resetProvider(provider: Provider, associatedQueue: ProviderQueue): void {
+        let stakedAmount: u256 = u256.Zero;
         this.ensureProviderPurged(provider);
+        this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
 
         if (provider.hasLiquidityAmount()) {
-            TransferHelper.safeTransfer(
-                this.token,
-                Address.dead(),
-                provider.getLiquidityAmount().toU256(),
-            );
+            stakedAmount = provider.getLiquidityAmount().toU256();
+
+            this.liquidityQueueReserve.subFromTotalReserve(stakedAmount);
+            this.liquidityQueueReserve.subFromVirtualTokenReserve(stakedAmount);
+            addAmountToStakingContract(stakedAmount);
         }
 
-        if (!provider.isInitialLiquidityProvider()) {
-            associatedQueue.remove(provider);
-        }
+        // Remove from normal/priority queue
+        associatedQueue.remove(provider);
+
+        this.queue.removeItemFromLength();
+        this.queue.applyNextOffsetToStartingIndex();
 
         provider.resetListingProviderValues();
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), false, false));
+        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), false, false, stakedAmount));
     }
 
     // TODO: Potential optimization. we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
@@ -159,26 +164,24 @@ export class PurgedProviderQueue {
         let result: Potential<Provider> = null;
         const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
 
-        if (!availableLiquidity.isZero()) {
-            if (this.enableIndexVerification) {
-                if (provider.getQueueIndex() !== index) {
-                    throw new Revert(
-                        `Impossible state: provider.getQueueIndex (${provider.getQueueIndex()}) does not match index (${index}).`,
-                    );
-                }
-
-                if (provider.isInitialLiquidityProvider()) {
-                    throw new Revert(
-                        'Impossible state: Initial liquidity provider cannot be returned here.',
-                    );
-                }
+        if (this.enableIndexVerification) {
+            if (provider.getQueueIndex() !== index) {
+                throw new Revert(
+                    `Impossible state: provider.getQueueIndex (${provider.getQueueIndex()}) does not match index (${index}).`,
+                );
             }
 
-            if (Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
-                result = provider;
-            } else if (!provider.hasReservedAmount()) {
-                this.resetProvider(provider, associatedQueue);
+            if (provider.isInitialLiquidityProvider()) {
+                throw new Revert(
+                    'Impossible state: Initial liquidity provider cannot be returned here.',
+                );
             }
+        }
+
+        if (Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
+            result = provider;
+        } else if (!provider.hasReservedAmount()) {
+            this.resetProvider(provider, associatedQueue);
         }
 
         return result;

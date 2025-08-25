@@ -5,18 +5,19 @@ import {
     Potential,
     Revert,
     StoredU256Array,
-    TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
-import { getProvider, Provider } from '../models/Provider';
-import { FulfilledProviderEvent } from '../events/FulfilledProviderEvent';
+import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
+import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
+import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 
 export class ProviderQueue {
     protected readonly token: Address;
     protected readonly queue: StoredU256Array;
     protected readonly enableIndexVerification: boolean;
     protected readonly maximumNumberOfProvider: u32;
+    protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
 
     constructor(
         token: Address,
@@ -24,11 +25,13 @@ export class ProviderQueue {
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
         maximumNumberOfProvider: u32,
+        liquidityQueueReserve: ILiquidityQueueReserve,
     ) {
         this.queue = new StoredU256Array(pointer, subPointer, MAXIMUM_VALID_INDEX);
         this.token = token;
         this.enableIndexVerification = enableIndexVerification;
         this.maximumNumberOfProvider = maximumNumberOfProvider;
+        this.liquidityQueueReserve = liquidityQueueReserve;
     }
 
     protected _currentIndex: u32 = 0;
@@ -121,14 +124,15 @@ export class ProviderQueue {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
+        let stakedAmount: u256 = u256.Zero;
         this.ensureProviderNotAlreadyPurged(provider);
 
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
-            TransferHelper.safeTransfer(
-                this.token,
-                Address.dead(),
-                provider.getLiquidityAmount().toU256(),
-            );
+            stakedAmount = provider.getLiquidityAmount().toU256();
+
+            this.liquidityQueueReserve.subFromTotalReserve(stakedAmount);
+            this.liquidityQueueReserve.subFromVirtualTokenReserve(stakedAmount);
+            addAmountToStakingContract(stakedAmount);
         }
 
         if (!provider.isInitialLiquidityProvider()) {
@@ -137,7 +141,9 @@ export class ProviderQueue {
 
         provider.resetListingProviderValues();
 
-        Blockchain.emit(new FulfilledProviderEvent(provider.getId(), canceled, false));
+        Blockchain.emit(
+            new ProviderFulfilledEvent(provider.getId(), canceled, false, stakedAmount),
+        );
     }
 
     public restoreCurrentIndex(index: u32): void {
@@ -160,6 +166,22 @@ export class ProviderQueue {
         if (provider.isPurged()) {
             throw new Revert(
                 `Impossible state: Provider has already been purged. ProviderId: ${provider.getId()}`,
+            );
+        }
+    }
+
+    protected ensureProviderLiquidityIsValid(provider: Provider): void {
+        if (u128.lt(provider.getLiquidityAmount(), provider.getReservedAmount())) {
+            throw new Revert(
+                `Impossible state: Provider liquidity < reserved. ProviderId: ${provider.getId()}.`,
+            );
+        }
+    }
+
+    protected ensureProviderIsNotInPurgeQueue(provider: Provider): void {
+        if (provider.isPurged()) {
+            throw new Revert(
+                `Impossible state: Provider is in purge queue but purge queue is empty. ProviderId: ${provider.getId()} (indexed at ${provider.getQueueIndex()}, purgedAt: ${provider.getPurgedIndex()}).`,
             );
         }
     }
@@ -200,22 +222,6 @@ export class ProviderQueue {
         }
 
         return result;
-    }
-
-    protected ensureProviderLiquidityIsValid(provider: Provider): void {
-        if (u128.lt(provider.getLiquidityAmount(), provider.getReservedAmount())) {
-            throw new Revert(
-                `Impossible state: Provider liquidity < reserved. ProviderId: ${provider.getId()}.`,
-            );
-        }
-    }
-
-    protected ensureProviderIsNotInPurgeQueue(provider: Provider): void {
-        if (provider.isPurged()) {
-            throw new Revert(
-                `Impossible state: Provider is in purge queue but purge queue is empty. ProviderId: ${provider.getId()} (indexed at ${provider.getQueueIndex()}, purgedAt: ${provider.getPurgedIndex()}).`,
-            );
-        }
     }
 
     private ensureProviderIsNotInitialProvider(provider: Provider): void {

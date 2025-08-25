@@ -11,6 +11,7 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 import { PriorityProviderQueue } from '../managers/PriorityProviderQueue';
 import { PRIORITY_QUEUE_POINTER } from '../constants/StoredPointers';
 import { ENABLE_INDEX_VERIFICATION, MAXIMUM_NUMBER_OF_PROVIDERS } from '../constants/Contract';
+import { LiquidityQueueReserve } from '../models/LiquidityQueueReserve';
 
 const QUOTE = u256.fromU64(100000000);
 
@@ -31,12 +32,17 @@ describe('PriorityProviderQueue tests', () => {
         });
 
         it('adds provider and sets queueIndex', () => {
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
             const queue: PriorityProviderQueue = new PriorityProviderQueue(
                 tokenAddress1,
                 PRIORITY_QUEUE_POINTER,
                 tokenIdUint8Array1,
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
+                liquidityQueueReserve,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -48,12 +54,17 @@ describe('PriorityProviderQueue tests', () => {
 
         it('reverts when adding more provider than maximum provider count', () => {
             expect(() => {
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
                 const queue: PriorityProviderQueue = new PriorityProviderQueue(
                     tokenAddress1,
                     PRIORITY_QUEUE_POINTER,
                     tokenIdUint8Array1,
                     ENABLE_INDEX_VERIFICATION,
                     5,
+                    liquidityQueueReserve,
                 );
 
                 const providers: Provider[] = createProviders(6, 0);
@@ -76,12 +87,17 @@ describe('PriorityProviderQueue tests', () => {
 
         it('throws if provider is not priority', () => {
             expect(() => {
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
                 const queue: PriorityProviderQueue = new PriorityProviderQueue(
                     tokenAddress1,
                     PRIORITY_QUEUE_POINTER,
                     tokenIdUint8Array1,
                     ENABLE_INDEX_VERIFICATION,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
+                    liquidityQueueReserve,
                 );
 
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);

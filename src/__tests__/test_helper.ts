@@ -3,6 +3,7 @@ import {
     ADDRESS_BYTE_LENGTH,
     Blockchain,
     BytesWriter,
+    Networks,
     StoredBooleanArray,
     StoredU128Array,
     StoredU256Array,
@@ -15,8 +16,8 @@ import { LiquidityQueue } from '../managers/LiquidityQueue';
 import { ProviderManager } from '../managers/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import {
-    ALLOW_DIRTY,
     AT_LEAST_PROVIDERS_TO_PURGE,
+    CSV_BLOCKS_REQUIRED,
     ENABLE_INDEX_VERIFICATION,
 } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
@@ -34,6 +35,9 @@ import { DynamicFee } from '../managers/DynamicFee';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
+
+// IF YOU CHANGE NETWORK MAKE SURE TO CHANGE THIS AS WELL.
+Blockchain.network = Networks.Regtest;
 
 export const testStackingContractAddress: Address = new Address([
     99, 103, 209, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
@@ -67,6 +71,11 @@ export const providerAddress5: Address = new Address([
 
 export const providerAddress6: Address = new Address([
     200, 33, 11, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
+    209, 126, 10, 49, 77, 37, 107, 101, 67, 88,
+]);
+
+export const providerAddress7: Address = new Address([
+    210, 23, 12, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
     209, 126, 10, 49, 77, 37, 107, 101, 67, 88,
 ]);
 
@@ -138,17 +147,46 @@ export const ownerAddress3: Address = new Address([
     151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 34,
 ]);
 
-export const receiverAddress1: string = 'wjo29i3d02jd208j3';
+export const receiverAddress1: Uint8Array = new Uint8Array(33);
+receiverAddress1.set([
+    0x02, 0x03, 0x73, 0x62, 0x6d, 0x31, 0x7a, 0xe8, 0x78, 0x8c, 0xe3, 0x28, 0x0b, 0x49, 0x10, 0x68,
+    0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x0a, 0xf5,
+    0x2c,
+]);
 
-export const receiverAddress2: string = 'cmewj390ujllq23u9';
+export const receiverAddress1CSV: string = Address.toCSV(receiverAddress1, CSV_BLOCKS_REQUIRED);
 
-export const receiverAddress3: string = 'peijkwhjbnafewr27';
+export const receiverAddress2: Uint8Array = new Uint8Array(33);
+receiverAddress2.set([
+    0x22, 0x33, 0x83, 0x62, 0x6d, 0x31, 0x7a, 0xe8, 0x78, 0x8c, 0xe3, 0x28, 0x0b, 0x49, 0x10, 0x68,
+    0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x0b, 0xf6,
+    0x2d,
+]);
+export const receiverAddress2CSV: string = Address.toCSV(receiverAddress2, CSV_BLOCKS_REQUIRED);
 
-export const receiverAddress4: string = 'cxdkidw9823yh099';
+export const receiverAddress3: Uint8Array = new Uint8Array(33);
+receiverAddress3.set([
+    0x32, 0x43, 0x93, 0x72, 0x6d, 0x31, 0x7a, 0xe8, 0x78, 0x8c, 0xe3, 0x28, 0x0b, 0x49, 0x10, 0x68,
+    0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x57, 0x1b, 0xe6,
+    0x1d,
+]);
+export const receiverAddress3CSV: string = Address.toCSV(receiverAddress3, CSV_BLOCKS_REQUIRED);
 
-export const receiverAddress5: string = 'jiojijoijoji8j23';
+export const receiverAddress4: Uint8Array = new Uint8Array(33);
+receiverAddress4.set([
+    0x62, 0x63, 0x63, 0x12, 0x5d, 0x31, 0x7a, 0xe8, 0x78, 0x8c, 0xe3, 0x28, 0x0b, 0x49, 0x10, 0x68,
+    0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x03, 0xf4,
+    0x25,
+]);
+export const receiverAddress4CSV: string = Address.toCSV(receiverAddress4, CSV_BLOCKS_REQUIRED);
 
-export const receiverAddress6: string = 'fded0e32398hhd2i';
+export const receiverAddress5: Uint8Array = new Uint8Array(33);
+receiverAddress5.set([
+    0x72, 0x63, 0x43, 0x82, 0x3d, 0x31, 0x7a, 0xe8, 0x78, 0x8c, 0xe3, 0x28, 0x0b, 0x49, 0x10, 0x68,
+    0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x12, 0x44,
+    0x1e,
+]);
+export const receiverAddress5CSV: string = Address.toCSV(receiverAddress5, CSV_BLOCKS_REQUIRED);
 
 export function addressToPointerU256(address: Address, token: Address): u256 {
     const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
@@ -295,6 +333,12 @@ export function createReservationId(tokenAddress: Address, providerAddress: Addr
     return u128.fromBytes(reservationArrayId, true);
 }
 
+const regtestChainId = new Uint8Array(32);
+regtestChainId.set([
+    0x0f, 0x91, 0x88, 0xf1, 0x3c, 0xb7, 0xb2, 0xc7, 0x1f, 0x2a, 0x33, 0x5e, 0x3a, 0x4f, 0xc3, 0x28,
+    0xbf, 0x5b, 0xeb, 0x43, 0x60, 0x12, 0xaf, 0xca, 0x59, 0x0b, 0x1a, 0x11, 0x46, 0x6e, 0x22, 0x06,
+]);
+
 export function setBlockchainEnvironment(
     currentBlock: u64,
     sender: Address = msgSender1,
@@ -302,7 +346,7 @@ export function setBlockchainEnvironment(
 ): void {
     const medianTimestamp: u64 = 87129871;
     const writer: BytesWriter = new BytesWriter(
-        32 + 2 * U64_BYTE_LENGTH + 4 * ADDRESS_BYTE_LENGTH + txId1.length + txHash1.length,
+        32 + 2 * U64_BYTE_LENGTH + 4 * ADDRESS_BYTE_LENGTH + txId1.length + txHash1.length + 64,
     );
 
     writer.writeBytes(new Uint8Array(32));
@@ -317,6 +361,9 @@ export function setBlockchainEnvironment(
 
     writer.writeAddress(sender);
     writer.writeAddress(origin);
+
+    writer.writeBytes(regtestChainId); // chain id
+    writer.writeBytes(new Uint8Array(32)); // protocol id
 
     Blockchain.setEnvironmentVariables(writer.getBuffer());
 }
@@ -367,8 +414,6 @@ export interface ITestReservationManager extends IReservationManager {
     callgetActiveListForBlock(blockNumber: u64): StoredBooleanArray;
 
     setAtLeastProvidersToPurge(value: u32): void;
-
-    setAllowDirty(value: boolean): void;
 }
 
 export interface ITestLiquidityQueue extends ILiquidityQueue {
@@ -419,7 +464,12 @@ export function createLiquidityQueue(
 ): CreateLiquidityQueueResult {
     const quoteManager: IQuoteManager = getQuoteManager(tokenId);
     const liquidityQueueReserve: ILiquidityQueueReserve = getLiquidityQueueReserve(token, tokenId);
-    const providerManager: ITestProviderManager = getProviderManager(token, tokenId, quoteManager);
+    const providerManager: ITestProviderManager = getProviderManager(
+        token,
+        tokenId,
+        quoteManager,
+        liquidityQueueReserve,
+    );
     const reservationManager: ITestReservationManager = getReservationManager(
         token,
         tokenId,
@@ -465,8 +515,15 @@ export function getProviderManager(
     token: Address,
     tokenId: Uint8Array,
     quoteManager: IQuoteManager,
+    liquidityQueueReserve: ILiquidityQueueReserve,
 ): ITestProviderManager {
-    return new TestProviderManager(token, tokenId, quoteManager, ENABLE_INDEX_VERIFICATION);
+    return new TestProviderManager(
+        token,
+        tokenId,
+        quoteManager,
+        ENABLE_INDEX_VERIFICATION,
+        liquidityQueueReserve,
+    );
 }
 
 export function getLiquidityQueueReserve(
@@ -488,7 +545,6 @@ export function getReservationManager(
         providerManager,
         liquidityQueueReserve,
         AT_LEAST_PROVIDERS_TO_PURGE,
-        ALLOW_DIRTY,
     );
 }
 
@@ -641,10 +697,6 @@ export class TestReservationManager extends ReservationManager implements ITestR
 
     public setAtLeastProvidersToPurge(value: u32): void {
         this.atLeastProvidersToPurge = value;
-    }
-
-    public setAllowDirty(value: boolean): void {
-        this.allowDirty = value;
     }
 
     protected override pushToReservationList(blockNumber: u64, reservationId: u128): u32 {

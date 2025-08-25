@@ -37,7 +37,6 @@ export class ReservationManager implements IReservationManager {
     protected readonly blocksWithReservations: StoredU64Array;
     protected readonly tokenIdUint8Array: Uint8Array;
     protected atLeastProvidersToPurge: u32;
-    protected allowDirty: boolean;
     private readonly token: Address;
     private readonly providerManager: IProviderManager;
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
@@ -48,7 +47,6 @@ export class ReservationManager implements IReservationManager {
         providerManager: IProviderManager,
         liquidityQueueReserve: ILiquidityQueueReserve,
         atLeastProvidersToPurge: u32,
-        allowDirty: boolean,
     ) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
@@ -59,7 +57,6 @@ export class ReservationManager implements IReservationManager {
             tokenIdUint8Array,
         );
         this.atLeastProvidersToPurge = atLeastProvidersToPurge;
-        this.allowDirty = allowDirty;
     }
 
     public addReservation(blockNumber: u64, reservation: Reservation): void {
@@ -86,7 +83,7 @@ export class ReservationManager implements IReservationManager {
     public getReservationIdAtIndex(blockNumber: u64, index: u32): u128 {
         const reservationList: StoredU128Array = this.getReservationListForBlock(blockNumber);
 
-        return reservationList.get(index); //!!! no check if index >= length???
+        return reservationList.get(index);
     }
 
     public getReservationWithExpirationChecks(owner: Address): Reservation {
@@ -99,7 +96,7 @@ export class ReservationManager implements IReservationManager {
     public isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean {
         const activeReservationList: StoredBooleanArray = this.getActiveListForBlock(blockNumber);
 
-        return activeReservationList.get(index) ? true : false;
+        return !!activeReservationList.get(index);
     }
 
     public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
@@ -273,9 +270,9 @@ export class ReservationManager implements IReservationManager {
                 this.ensureReservationPurgeIndexMatch(reservation, index);
 
                 const providerCount: u32 = reservation.getProviderCount();
-                const freed: u256 = this.restoreReservation(reservation);
+                const freed: u256 = this.restoreReservation(reservation, providerCount);
                 totalFreed = SafeMath.add(totalFreed, freed);
-                totalProvidersPurged += reservation.getProviderCount();
+                totalProvidersPurged += providerCount;
 
                 actives.set(index, false);
 
@@ -287,6 +284,7 @@ export class ReservationManager implements IReservationManager {
                             Blockchain.block.number,
                             blockNumber,
                             providerCount,
+                            freed,
                         ),
                     );
                 }
@@ -325,9 +323,8 @@ export class ReservationManager implements IReservationManager {
         return this.getPurgeIndexStore(blockNumber).get(0);
     }
 
-    private restoreReservation(reservation: Reservation): u256 {
+    private restoreReservation(reservation: Reservation, providerCount: u32): u256 {
         let restoredLiquidity: u256 = u256.Zero;
-        const providerCount: u32 = reservation.getProviderCount();
 
         for (let index: u32 = 0; index < providerCount; index++) {
             const data: ReservationProviderData = reservation.getProviderAt(index);
@@ -337,12 +334,9 @@ export class ReservationManager implements IReservationManager {
             restoredLiquidity = SafeMath.add(restoredLiquidity, data.providedAmount.toU256());
         }
 
-        if (!this.allowDirty) {
-            reservation.delete(true);
-        } else {
-            reservation.timeoutUser();
-            reservation.save();
-        }
+        reservation.setPurged(true);
+        reservation.timeoutUser();
+        reservation.save();
 
         return restoredLiquidity;
     }

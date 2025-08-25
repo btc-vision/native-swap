@@ -129,7 +129,12 @@ export class ReserveLiquidityOperation extends BaseOperation {
             ),
         );
 
-        this.emitLiquidityReservedEvent(provider.getId(), provider.getBtcReceiver(), satoshis);
+        this.emitLiquidityReservedEvent(
+            provider.getId(),
+            provider.getBtcReceiver(),
+            satoshis,
+            tokens,
+        );
     }
 
     private checkPreConditions(): void {
@@ -149,6 +154,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         reservation.setActivationDelay(this.activationDelay);
         reservation.setCreationBlock(Blockchain.block.number);
+        reservation.setSwapped(false);
+        reservation.setPurged(false);
         reservation.save();
 
         return reservation;
@@ -156,7 +163,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
     private computeTokenRemaining(): void {
         const tokens: u256 = satoshisToTokens(this.maximumAmountInSats, this.currentQuote);
-
         const limitedByLiquidity: u256 = this.limitByAvailableLiquidity(tokens);
         this.ensureAvailableLiquidityNonZero(limitedByLiquidity);
 
@@ -213,8 +219,11 @@ export class ReserveLiquidityOperation extends BaseOperation {
         providerId: u256,
         btcReceiver: string,
         costInSatoshis: u64,
+        tokenAmount: u128,
     ): void {
-        Blockchain.emit(new LiquidityReservedEvent(btcReceiver, costInSatoshis, providerId));
+        Blockchain.emit(
+            new LiquidityReservedEvent(btcReceiver, costInSatoshis, tokenAmount, providerId),
+        );
     }
 
     private ensureActivationDelayValid(): void {
@@ -322,7 +331,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     private ensureNoActiveReservation(reservation: Reservation): void {
         if (reservation.isExpired()) {
             if (reservation.isDirty()) {
-                reservation.delete(false); // Ensure this is always before a timeout check.
+                reservation.delete(false); // Ensure reservation is reset
             }
         } else {
             throw new Revert(
@@ -390,12 +399,26 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
     private handleProviderPurgeQueues(provider: Provider): void {
         if (provider.isPurged()) {
+            if (
+                !Provider.meetsMinimumReservationAmount(
+                    provider.getAvailableLiquidityAmount(),
+                    this.currentQuote,
+                )
+            ) {
+                // Here, the provider will always have a reserved amount
+                // so no needs to check if we need to reset the provider
+                this.liquidityQueue.removeFromPurgeQueue(provider);
+            }
+
+            /*!!!!! TO remove
             const hasEnoughLiquidityLeft: boolean =
                 this.liquidityQueue.hasEnoughLiquidityLeftProvider(provider, this.currentQuote);
 
             if (!hasEnoughLiquidityLeft) {
                 this.liquidityQueue.removeFromPurgeQueue(provider);
             }
+
+             */
         }
     }
 

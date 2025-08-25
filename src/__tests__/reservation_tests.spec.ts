@@ -51,6 +51,8 @@ describe('Reservation tests', () => {
             expect(reservation.getPurgeIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(reservation.getId()).toStrictEqual(reservationId);
             expect(reservation.getActivationDelay()).toStrictEqual(0);
+            expect(reservation.getSwapped()).toBeFalsy();
+            expect(reservation.getPurged()).toBeFalsy();
         });
 
         it('should return an empty reservation when loading a non existing reservationId', () => {
@@ -67,6 +69,8 @@ describe('Reservation tests', () => {
             expect(reservation.getPurgeIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(reservation.getId()).toStrictEqual(reservationId);
             expect(reservation.getActivationDelay()).toStrictEqual(0);
+            expect(reservation.getSwapped()).toBeFalsy();
+            expect(reservation.getPurged()).toBeFalsy();
         });
 
         it('should correctly load a reservation when loading an existing reservationId', () => {
@@ -81,6 +85,8 @@ describe('Reservation tests', () => {
             reservation.setPurgeIndex(20);
             reservation.setActivationDelay(2);
             reservation.timeoutUser();
+            reservation.setSwapped(true);
+            reservation.setPurged(true);
             reservation.addProvider(
                 new ReservationProviderData(
                     1,
@@ -107,7 +113,8 @@ describe('Reservation tests', () => {
             expect(reservation2.getExpirationBlock()).toStrictEqual(
                 10 + RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
             );
-
+            expect(reservation2.getSwapped()).toBeTruthy();
+            expect(reservation2.getPurged()).toBeTruthy();
             expect(reservation2.getPurgeIndex()).toStrictEqual(20);
             expect(reservation2.getActivationDelay()).toStrictEqual(2);
             expect(reservation2.getUserTimeoutBlockExpiration()).toStrictEqual(
@@ -339,6 +346,34 @@ describe('Reservation tests', () => {
             expect(reservation.getPurgeIndex()).toStrictEqual(10);
         });
 
+        it('should correctly get/set the swapped flag', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+            setBlockchainEnvironment(1);
+
+            reservation.setSwapped(true);
+
+            expect(reservation.getSwapped()).toBeTruthy();
+
+            reservation.setSwapped(false);
+
+            expect(reservation.getSwapped()).toBeFalsy();
+        });
+
+        it('should correctly get/set the purged flag', () => {
+            const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
+
+            setBlockchainEnvironment(1);
+
+            reservation.setPurged(true);
+
+            expect(reservation.getPurged()).toBeTruthy();
+
+            reservation.setPurged(false);
+
+            expect(reservation.getPurged()).toBeFalsy();
+        });
+
         it('should correctly return the user timeout block expiration when user is timeout', () => {
             const reservation: Reservation = new Reservation(tokenAddress1, providerAddress1);
 
@@ -405,6 +440,8 @@ describe('Reservation tests', () => {
             reservation.setCreationBlock(1000);
             reservation.setPurgeIndex(10);
             reservation.setActivationDelay(2);
+            reservation.setSwapped(true);
+            reservation.setPurged(true);
             reservation.addProvider(
                 new ReservationProviderData(1, u128.fromU64(1000), ProviderTypes.Normal, 1000),
             );
@@ -424,6 +461,7 @@ describe('Reservation tests', () => {
             expect(reservation2.getActivationDelay()).toStrictEqual(2);
             expect(reservation2.getUserTimeoutBlockExpiration()).toStrictEqual(0);
             expect(reservation2.getProviderCount()).toStrictEqual(2);
+            expect(reservation2.getPurged()).toBeTruthy();
 
             const pd1: ReservationProviderData = reservation2.getProviderAt(0);
             expect(pd1.providerIndex).toStrictEqual(1);
@@ -439,6 +477,9 @@ describe('Reservation tests', () => {
 
             reservation2.delete(false);
 
+            // Swapped should not be reset on delete
+            expect(reservation2.getSwapped()).toBeTruthy();
+            expect(reservation2.getPurged()).toBeFalsy();
             expect(reservation2.getProviderCount()).toStrictEqual(0);
             expect(reservation2.getPurgeIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(reservation2.getExpirationBlock()).toStrictEqual(
@@ -457,6 +498,7 @@ describe('Reservation tests', () => {
             );
             expect(reservation3.getUserTimeoutBlockExpiration()).toStrictEqual(0);
             expect(reservation3.getActivationDelay()).toStrictEqual(0);
+            expect(reservation3.getPurged()).toBeFalsy();
         });
     });
 });

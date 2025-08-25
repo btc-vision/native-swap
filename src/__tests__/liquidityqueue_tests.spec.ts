@@ -1,6 +1,10 @@
-import { clearCachedProviders, Provider } from '../models/Provider';
 import {
-    Address,
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+    Provider,
+} from '../models/Provider';
+import {
     Blockchain,
     SafeMath,
     StoredBooleanArray,
@@ -11,6 +15,7 @@ import {
 import {
     createLiquidityQueue,
     createProvider,
+    createProviderId,
     createProviders,
     createReservation,
     ITestLiquidityQueue,
@@ -492,6 +497,76 @@ describe('Liquidity queue tests', () => {
             expect(queue2.timeOutEnabled).toBeTruthy();
         });
 
+        it('should gets the normal queue starting index', () => {
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+            expect(queue.getNormalQueueStartingIndex()).toStrictEqual(0);
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+                true,
+            );
+
+            const provider1 = new Provider(createProviderId(providerAddress1, tokenAddress1));
+            const provider2 = new Provider(createProviderId(providerAddress2, tokenAddress1));
+
+            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
+            provider1.activate();
+            provider2.activate();
+            queue2.addToNormalQueue(provider1);
+            queue2.addToNormalQueue(provider2);
+            provider1.save();
+            provider2.save();
+
+            queue2.removeFromNormalQueue(provider1);
+            provider1.save();
+
+            createQueueResult2.providerManager.cleanUpQueues();
+            expect(queue2.getNormalQueueStartingIndex()).toStrictEqual(1);
+        });
+
+        it('should gets the priority queue starting index', () => {
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+            expect(queue.getPriorityQueueStartingIndex()).toStrictEqual(0);
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+                true,
+            );
+
+            const provider1 = new Provider(createProviderId(providerAddress1, tokenAddress1));
+            const provider2 = new Provider(createProviderId(providerAddress2, tokenAddress1));
+
+            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
+            provider1.activate();
+            provider2.activate();
+            provider1.markPriority();
+            provider2.markPriority();
+            queue2.addToPriorityQueue(provider1);
+            queue2.addToPriorityQueue(provider2);
+            provider1.save();
+            provider2.save();
+
+            queue2.removeFromPriorityQueue(provider1);
+            provider1.save();
+
+            createQueueResult2.providerManager.cleanUpQueues();
+            expect(queue2.getPriorityQueueStartingIndex()).toStrictEqual(1);
+        });
+
         it('should get the length of the block with reservation queue', () => {
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
@@ -886,10 +961,10 @@ describe('Liquidity queue tests', () => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
-            TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
-        it('should increase token reserve with penalty, decrease total reserve with half and call safetransfer', () => {
+        it('should increase token reserve with penalty, decrease total reserve with half and add to staking contract', () => {
             setBlockchainEnvironment(1);
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
@@ -905,14 +980,14 @@ describe('Liquidity queue tests', () => {
             queue.increaseTotalReserve(u256.fromU64(10000));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(5000), Address.dead());
+            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(5000));
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(5000));
             expect(queue.liquidity).toStrictEqual(u256.Zero);
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`10000`));
         });
 
-        it('should not increase token reserve with penalty penaltyLeft is penaltyLeft is Zero', () => {
+        it('should not increase token reserve with penalty when penaltyLeft is Zero', () => {
             setBlockchainEnvironment(1);
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
@@ -928,11 +1003,11 @@ describe('Liquidity queue tests', () => {
             queue.increaseTotalReserve(u256.fromU64(10000));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(10000), Address.dead());
+            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(10000));
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(0));
             expect(queue.liquidity).toStrictEqual(u256.Zero);
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`10000`));
         });
 
         it('should do nothing when penalty is Zero', () => {
@@ -951,11 +1026,11 @@ describe('Liquidity queue tests', () => {
             queue.increaseTotalReserve(u256.fromU64(10000));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-            queue.accruePenalty(u128.Zero, u128.Zero, Address.dead());
+            queue.accruePenalty(u128.Zero, u128.Zero);
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(0));
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
-            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
         });
 
         it('should revert when penalty is less than half value', () => {
@@ -975,7 +1050,7 @@ describe('Liquidity queue tests', () => {
                 queue.increaseTotalReserve(u256.fromU64(10000));
                 expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
-                queue.accruePenalty(u128.fromU64(10000), u128.fromU64(15000), Address.dead());
+                queue.accruePenalty(u128.fromU64(10000), u128.fromU64(15000));
             }).toThrow();
         });
     });
@@ -1015,6 +1090,7 @@ describe('Liquidity queue tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should correctly compute the fees', () => {
@@ -1041,8 +1117,6 @@ describe('Liquidity queue tests', () => {
         });
 
         it('should correctly distribute the fee to the staking contract', () => {
-            TransferHelper.clearMockedResults();
-
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -1051,18 +1125,15 @@ describe('Liquidity queue tests', () => {
 
             const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
 
-            queue.setLiquidity(u256.fromU32(10000));
-            queue.virtualTokenReserve = u256.Zero;
-            queue.distributeFee(u256.fromU32(10000), Address.dead());
-
+            queue.setLiquidity(u256.fromU32(15000));
+            queue.virtualTokenReserve = u256.fromU32(15000);
+            queue.distributeFee(u256.fromU32(10000));
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(5000));
             expect(queue.liquidity).toStrictEqual(u256.fromU32(5000));
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`10000`));
         });
 
         it('should not call safetransfer when moto fee = 0', () => {
-            TransferHelper.clearMockedResults();
-
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
                 tokenIdUint8Array1,
@@ -1073,11 +1144,11 @@ describe('Liquidity queue tests', () => {
 
             queue.setLiquidity(u256.fromU32(10000));
             queue.virtualTokenReserve = u256.Zero;
-            queue.distributeFee(u256.Zero, Address.dead());
+            queue.distributeFee(u256.Zero);
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
             expect(queue.liquidity).toStrictEqual(u256.fromU32(10000));
-            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
         });
     });
 
@@ -1740,7 +1811,8 @@ describe('Liquidity queue tests', () => {
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.addToNormalQueue(provider);
-
+            queue.setLiquidity(provider.getLiquidityAmount().toU256());
+            queue.increaseVirtualTokenReserve(u256.fromU32(100000));
             queue.resetProvider(provider, true, false);
 
             expect(createQueueResult.providerManager.resetProviderCalled).toBeTruthy();
@@ -1830,34 +1902,35 @@ describe('Liquidity queue tests', () => {
 
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
         });
-
-        it('should return true if provider has enough liquidity left', () => {
-            setBlockchainEnvironment(1000);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
-
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setLiquidityAmount(u128.fromU32(200000));
-            provider.setReservedAmount(u128.fromU32(20000));
-            provider.save();
-            queue.save();
-
-            const createQueueResult2 = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-
-            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
-            const result = queue2.hasEnoughLiquidityLeftProvider(provider, u256.fromU64(666666666));
-
-            expect(result).toBeTruthy();
-        });
+        /*!!! TO remove
+                it('should return true if provider has enough liquidity left', () => {
+                    setBlockchainEnvironment(1000);
+        
+                    const createQueueResult = createLiquidityQueue(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                        false,
+                    );
+                    const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+        
+                    const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+                    provider.setLiquidityAmount(u128.fromU32(200000));
+                    provider.setReservedAmount(u128.fromU32(20000));
+                    provider.save();
+                    queue.save();
+        
+                    const createQueueResult2 = createLiquidityQueue(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                        false,
+                    );
+        
+                    const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+                    const result = queue2.hasEnoughLiquidityLeftProvider(provider, u256.fromU64(666666666));
+        
+                    expect(result).toBeTruthy();
+                });
+                */
     });
 
     describe('Cap', () => {

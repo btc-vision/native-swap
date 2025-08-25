@@ -1,15 +1,16 @@
-import { clearCachedProviders, getProvider } from '../models/Provider';
 import {
-    Address,
-    Blockchain,
-    TransactionOutput,
-    TransferHelper,
-} from '@btc-vision/btc-runtime/runtime';
+    clearCachedProviders,
+    clearPendingStakingContractAmount,
+    getPendingStakingContractAmount,
+    getProvider,
+} from '../models/Provider';
+import { Blockchain, TransactionOutput, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import {
     createLiquidityQueue,
     createProvider,
     providerAddress1,
     receiverAddress1,
+    receiverAddress1CSV,
     setBlockchainEnvironment,
     tokenAddress1,
     tokenIdUint8Array1,
@@ -27,6 +28,7 @@ describe('ListTokenForSaleOperation tests', () => {
         clearCachedProviders();
         Blockchain.clearStorage();
         Blockchain.clearMockedResults();
+        Blockchain.mockValidateBitcoinAddressResult(true);
         TransferHelper.clearMockedResults();
     });
 
@@ -35,7 +37,31 @@ describe('ListTokenForSaleOperation tests', () => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
+            Blockchain.mockValidateBitcoinAddressResult(true);
             TransferHelper.clearMockedResults();
+        });
+
+        it('should revert if the receiver address is invalid', () => {
+            expect(() => {
+                Blockchain.mockValidateBitcoinAddressResult(false);
+                setBlockchainEnvironment(100);
+                FeeManager.onDeploy();
+                const provider = createProvider(providerAddress1, tokenAddress1);
+                provider.activate();
+
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+                const operation = new ListTokensForSaleOperation(
+                    queue.liquidityQueue,
+                    provider.getId(),
+                    u128.fromU64(100),
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    false,
+                );
+
+                operation.execute();
+            }).toThrow();
         });
 
         it('should revert if use priority queue and not enough fees collected', () => {
@@ -57,9 +83,8 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     true,
-                    false,
                 );
 
                 operation.execute();
@@ -101,7 +126,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     true,
                     false,
                 );
@@ -121,7 +146,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u256.fromU64(111),
                     u128.Zero,
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -145,7 +170,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -169,7 +194,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -193,7 +218,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -218,7 +243,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -245,7 +270,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -271,7 +296,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -295,7 +320,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -319,7 +344,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     false,
                     false,
                 );
@@ -334,7 +359,9 @@ describe('ListTokenForSaleOperation tests', () => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
+            Blockchain.mockValidateBitcoinAddressResult(true);
             TransferHelper.clearMockedResults();
+            clearPendingStakingContractAmount();
         });
 
         it('should transfer token from user to contract', () => {
@@ -371,7 +398,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -413,7 +440,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     true,
                     false,
                 );
@@ -453,7 +480,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     true,
                     false,
                 );
@@ -497,7 +524,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -544,7 +571,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -568,7 +595,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider2.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -619,7 +646,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -653,7 +680,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider3.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -689,7 +716,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -713,7 +740,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider2.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -750,7 +777,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -783,7 +810,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider3.getId(),
                 u128.fromU64(10000000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -819,7 +846,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 false,
             );
@@ -853,7 +880,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 true,
             );
@@ -883,7 +910,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 true,
             );
@@ -909,7 +936,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 true,
             );
@@ -935,14 +962,14 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 true,
             );
 
             operation.execute();
 
-            expect(provider.getBtcReceiver()).toStrictEqual(receiverAddress1);
+            expect(provider.getBtcReceiver()).toStrictEqual(receiverAddress1CSV);
         });
 
         it('should revert if provider has reservation and btc receiver addresses differ', () => {
@@ -964,9 +991,36 @@ describe('ListTokenForSaleOperation tests', () => {
                     provider.getId(),
                     u128.fromU64(100000000),
                     receiverAddress1,
-                    Address.dead(),
+                    receiverAddress1CSV,
                     false,
-                    true,
+                    false,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
+
+        it('should revert if btc receiver addresses is invalid', () => {
+            setBlockchainEnvironment(100);
+
+            expect(() => {
+                const provider = createProvider(providerAddress1, tokenAddress1);
+                provider.deactivate();
+                provider.clearPriority();
+                provider.setLiquidityAmount(u128.fromU32(10000));
+
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+                queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
+                queue.liquidityQueue.virtualSatoshisReserve = 100;
+
+                const operation = new ListTokensForSaleOperation(
+                    queue.liquidityQueue,
+                    provider.getId(),
+                    u128.fromU64(100000000),
+                    receiverAddress1,
+                    'invalidfakeaddress',
+                    false,
+                    false,
                 );
 
                 operation.execute();
@@ -992,7 +1046,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 true,
             );
@@ -1025,7 +1079,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 true,
                 false,
             );
@@ -1033,7 +1087,7 @@ describe('ListTokenForSaleOperation tests', () => {
             operation.execute();
 
             // Tax should be:3000000
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(3000000));
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(97010000));
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(54000000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(97000000));
@@ -1062,13 +1116,14 @@ describe('ListTokenForSaleOperation tests', () => {
                 provider.getId(),
                 u128.fromU64(100000000),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 false,
             );
 
             operation.execute();
 
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(100010000));
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(51000000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(100000000));
@@ -1109,13 +1164,14 @@ describe('ListTokenForSaleOperation tests', () => {
                 initialProvider.getId(),
                 u128.fromString(`1000000000000000000`),
                 receiverAddress1,
-                Address.dead(),
+                receiverAddress1CSV,
                 false,
                 true,
             );
 
             operation.execute();
 
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
             expect(initialProvider.getLiquidityAmount()).toStrictEqual(
                 u128.fromString(`1000000000000000000`),
             );
