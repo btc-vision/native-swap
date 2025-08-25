@@ -115,12 +115,10 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private assignReceiver(): void {
-        if (
-            this.provider.hasReservedAmount() &&
-            this.provider.getBtcReceiver() !== this.receiverStr
-        ) {
+        const hasReceiver: boolean = this.provider.hasReservedAmount();
+        if (hasReceiver && this.provider.getBtcReceiver() !== this.receiverStr) {
             throw new Revert('NATIVE_SWAP: Cannot change receiver address while reserved.');
-        } else if (!this.provider.hasReservedAmount()) {
+        } else if (!hasReceiver) {
             this.verifyReceiverAddress();
 
             this.provider.setBtcReceiver(this.receiverStr);

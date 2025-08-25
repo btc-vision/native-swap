@@ -358,8 +358,14 @@ export class NativeSwap extends ReentrancyGuard {
 
         const floorPrice: u256 = calldata.readU256();
         const initialLiquidity: u128 = calldata.readU128();
-        const receiver: Uint8Array = calldata.readBytes(33);
+
+        const receiver: Uint8Array = calldata.readBytesWithLength();
+        if (receiver.length !== 33) {
+            throw new Revert('Invalid receiver length');
+        }
+
         const receiverStr: string = calldata.readStringWithLength();
+
         const antiBotEnabledFor: u16 = calldata.readU16();
         const antiBotMaximumTokensPerReservation: u256 = calldata.readU256();
         const maxReservesIn5BlocksPercent: u16 = calldata.readU16();
@@ -393,7 +399,12 @@ export class NativeSwap extends ReentrancyGuard {
         this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
-        const receiver: Uint8Array = calldata.readBytes(33);
+        const receiver: Uint8Array = calldata.readBytesWithLength();
+
+        if (receiver.length !== 33) {
+            throw new Revert('Invalid receiver length');
+        }
+
         const receiverStr: string = calldata.readStringWithLength();
         this._tokenAddress = token.clone();
 
