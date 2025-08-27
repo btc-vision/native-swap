@@ -3,11 +3,7 @@ import { CompletedTrade } from '../models/CompletedTrade';
 import { Blockchain, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Provider } from '../models/Provider';
-import {
-    CappedTokensResult,
-    satoshisToTokens128,
-    tokensToSatoshis,
-} from '../utils/SatoshisConversion';
+import { CappedTokensResult, satoshisToTokens128, tokensToSatoshis, } from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
 import {
@@ -300,6 +296,8 @@ export class TradeManager implements ITradeManager {
 
             this.emitProviderConsumedEvent(provider, actualTokens);
 
+            this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
+
             // If partial fill, provider liquidity must be available again.
             // If not purged, check if the provider needs to be reset.
             // If purged, the reset will be done by the purge queue later.
@@ -312,7 +310,6 @@ export class TradeManager implements ITradeManager {
             this.increaseTokenReserved(requestedTokens);
             this.increaseTotalTokensPurchased(actualTokens256);
             this.increaseSatoshisSpent(actualTokensSatoshis);
-            this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
         } else {
             this.restoreReservedLiquidityForProvider(provider, requestedTokens);
             this.addProviderToPurgeQueue(provider);
@@ -331,12 +328,10 @@ export class TradeManager implements ITradeManager {
     }
 
     private getProvider(providerData: ReservationProviderData): Provider {
-        const provider: Provider = this.providerManager.getProviderFromQueue(
+        return this.providerManager.getProviderFromQueue(
             providerData.providerIndex,
             providerData.providerType,
         );
-
-        return provider;
     }
 
     private getTargetTokens(satoshis: u64, requestedTokens: u128, providerLiquidity: u128): u128 {
@@ -419,9 +414,10 @@ export class TradeManager implements ITradeManager {
             provider.subtractFromLiquidityAmount(actualTokens);
 
             this.emitProviderConsumedEvent(provider, actualTokens);
+            this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
+
             this.increaseTotalTokensPurchased(actualTokens256);
             this.increaseSatoshisSpent(actualTokensSatoshis);
-            this.reportUTXOUsed(provider.getBtcReceiver(), actualTokensSatoshis);
         }
 
         // Always push the provider to the purge queue.
