@@ -21,12 +21,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
-import {
-    getProvider,
-    Provider,
-    saveAllProviders,
-    transferPendingAmountToStakingContract,
-} from '../models/Provider';
+import { getProvider, Provider, saveAllProviders, transferPendingAmountToStakingContract, } from '../models/Provider';
 import { FeeManager } from '../managers/FeeManager';
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
@@ -34,11 +29,7 @@ import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperati
 import { CancelListingOperation } from '../operations/CancelListingOperation';
 import { SwapOperation } from '../operations/SwapOperation';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import {
-    CONTRACT_PAUSED_POINTER,
-    STAKING_CA_POINTER,
-    WITHDRAW_MODE_POINTER,
-} from '../constants/StoredPointers';
+import { CONTRACT_PAUSED_POINTER, STAKING_CA_POINTER, WITHDRAW_MODE_POINTER, } from '../constants/StoredPointers';
 import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
 import {
     AT_LEAST_PROVIDERS_TO_PURGE,
@@ -610,6 +601,17 @@ export class NativeSwap extends ReentrancyGuard {
         return this._getReserve(token);
     }
 
+    private ensureNotContract(): void {
+        if (!Blockchain.tx.sender.equals(Blockchain.tx.origin)) {
+            throw new Revert('NATIVE_SWAP: origin must be the sender.');
+        }
+
+        const isContract: boolean = Blockchain.isContract(Blockchain.tx.sender);
+        if (isContract) {
+            throw new Revert('NATIVE_SWAP: sender must be EOA');
+        }
+    }
+
     private _getReserve(token: Address): BytesWriter {
         this.ensureValidTokenAddress(token);
 
@@ -861,6 +863,8 @@ export class NativeSwap extends ReentrancyGuard {
         if (this._isPaused.value) {
             throw new Revert(`NATIVE_SWAP: Contract is currently paused. Try again later.`);
         }
+
+        this.ensureNotContract();
     }
 
     private ensureWithdrawModeActive(): void {
