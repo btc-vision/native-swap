@@ -315,7 +315,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
         return this.providerManager.hasEnoughLiquidityLeftProvider(provider, quote);
     }
-    
+
      */
 
     public increaseTotalSatoshisExchangedForTokens(value: u64): void {
@@ -407,6 +407,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void {
+        Blockchain.log(`LiquidityQueue.resetProvider: providerId=${provider.getId()}`);
         this.providerManager.resetProvider(provider, burnRemainingFunds, canceled);
     }
 

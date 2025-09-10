@@ -52,6 +52,11 @@ export class ProviderQueue {
         this.ensureMaximumProviderCountNotReached(ProviderTypes.Normal);
 
         const index: u32 = this.queue.push(provider.getId(), true);
+
+        Blockchain.log(
+            `ProviderQueue.add: Added provider ${provider.getId()} at physical index ${index}, queue length now ${this.queue.getLength()}`,
+        );
+
         provider.setQueueIndex(index);
 
         return index;
@@ -61,14 +66,21 @@ export class ProviderQueue {
         const length: u32 = this.length;
         let index: u32 = previousStartingIndex;
 
+        Blockchain.log(
+            `ProviderQueue.cleanUp: Starting from index ${previousStartingIndex}, length=${length}`,
+        );
+
         while (index < length) {
             const providerId: u256 = this.queue.get_physical(index);
+
+            Blockchain.log(`ProviderQueue.cleanUp: At index ${index}, providerId=${providerId}`);
 
             if (!providerId.isZero()) {
                 const provider: Provider = getProvider(providerId);
 
                 if (provider.isActive()) {
                     this.queue.setStartingIndex(index);
+                    Blockchain.log(`ProviderQueue.cleanUp: Set starting index to ${index}`);
                     break;
                 } else {
                     throw new Revert(
@@ -77,6 +89,9 @@ export class ProviderQueue {
                 }
             } else {
                 this.queue.setStartingIndex(index);
+                Blockchain.log(
+                    `ProviderQueue.cleanUp: Found zero at index ${index}, setting as starting index`,
+                );
             }
 
             index++;
@@ -115,6 +130,9 @@ export class ProviderQueue {
     }
 
     public remove(provider: Provider): void {
+        Blockchain.log(
+            `ProviderQueue.remove: Removing provider ${provider.getId()} at index ${provider.getQueueIndex()}`,
+        );
         this.queue.delete_physical(provider.getQueueIndex());
         provider.setQueueIndex(INDEX_NOT_SET_VALUE);
     }
@@ -124,6 +142,7 @@ export class ProviderQueue {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
+        Blockchain.log(`ProviderQueue.resetProvider: Resetting provider ${provider.getId()}`);
         let stakedAmount: u256 = u256.Zero;
         this.ensureProviderNotAlreadyPurged(provider);
 
@@ -136,6 +155,9 @@ export class ProviderQueue {
         }
 
         if (!provider.isInitialLiquidityProvider()) {
+            Blockchain.log(
+                `ProviderQueue.resetProvider: Removing provider ${provider.getId()} at index ${provider.getQueueIndex()}`,
+            );
             this.queue.delete_physical(provider.getQueueIndex());
         }
 
@@ -270,9 +292,33 @@ export class ProviderQueue {
             this.ensureProviderIsNotInPurgeQueue(provider);
             result = provider;
         } else if (!provider.hasReservedAmount()) {
+            Blockchain.log(
+                `ProviderQueue.returnProvider: About to reset provider ${provider.getId()} at index ${index}, isPurged=${provider.isPurged()}, purgedIndex=${provider.getPurgedIndex()}`,
+            );
             this.resetProvider(provider);
         }
 
         return result;
     }
+    /*private returnProvider(provider: Provider, index: u32, currentQuote: u256): Provider | null {
+        let result: Potential<Provider> = null;
+        const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
+
+        if (availableLiquidity.isZero()) {
+            return null;
+        }
+
+        if (this.enableIndexVerification) {
+            this.performIndexVerification(provider, index);
+        }
+
+        if (Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)) {
+            this.ensureProviderIsNotInPurgeQueue(provider);
+            result = provider;
+        } else if (!provider.hasReservedAmount()) {
+            this.resetProvider(provider);
+        }
+
+        return result;
+    }*/
 }

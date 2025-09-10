@@ -13,8 +13,8 @@ import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 
 export class PurgedProviderQueue {
+    readonly queue: StoredU32Array;
     protected readonly token: Address;
-    protected readonly queue: StoredU32Array;
     protected readonly enableIndexVerification: boolean;
     protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
 
@@ -47,11 +47,32 @@ export class PurgedProviderQueue {
 
             index = this.queue.push(provider.getQueueIndex(), false);
 
+            // LOG what we're storing
+            Blockchain.log(
+                `PurgedProviderQueue.add: Storing queueIndex=${provider.getQueueIndex()} at purgedIndex=${index} for providerId=${provider.getId()}`,
+            );
+
             provider.setPurgedIndex(index);
         }
 
         return index;
     }
+
+    /*public removeStaleEntries(associatedQueue: ProviderQueue): void {
+        // Only process if we have entries
+        if (this.queue.getLength() === 0) return;
+
+        // Check from the current position without iterating everything
+        const currentPos = this.queue.currentOffset;
+        const providerIndex = this.queue.getAt(currentPos);
+        const providerId = associatedQueue.getAt(providerIndex);
+
+        if (providerId.isZero()) {
+            // This entry is stale, remove it
+            this.queue.removeItemFromLength();
+            this.queue.applyNextOffsetToStartingIndex();
+        }
+    }*/
 
     public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
         let result: Potential<Provider> = null;
@@ -60,9 +81,23 @@ export class PurgedProviderQueue {
 
         while (count < queueLength && result === null) {
             const providerIndex: u32 = this.queue.next();
-            this.ensureProviderQueueIndexIsValid(providerIndex);
+            if (providerIndex === INDEX_NOT_SET_VALUE) {
+                count++;
+                continue;
+            }
+
+            // Log what we're about to look up
+            Blockchain.log(
+                `PurgedProviderQueue.get: About to look up index ${providerIndex} in main queue`,
+            );
 
             const providerId = associatedQueue.getAt(providerIndex);
+
+            // Log what we got back
+            Blockchain.log(
+                `PurgedProviderQueue.get: Got providerId=${providerId} from index ${providerIndex}`,
+            );
+
             this.ensureProviderIdIsValid(providerId);
 
             const provider = getProvider(providerId);
@@ -131,6 +166,10 @@ export class PurgedProviderQueue {
     }
 
     private resetProvider(provider: Provider, associatedQueue: ProviderQueue): void {
+        Blockchain.log(
+            `PurgedProviderQueue.resetProvider: providerId=${provider.getId()}, purgedIndex=${provider.getPurgedIndex()}`,
+        );
+
         let stakedAmount: u256 = u256.Zero;
         this.ensureProviderPurged(provider);
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());

@@ -1,6 +1,7 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Address,
+    Blockchain,
     BytesWriter,
     Revert,
     StoredU256,
@@ -19,10 +20,7 @@ import { getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
 import { PriorityProviderQueue } from './PriorityProviderQueue';
 
-import {
-    INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    MAXIMUM_NUMBER_OF_PROVIDERS,
-} from '../constants/Contract';
+import { INITIAL_LIQUIDITY_PROVIDER_INDEX, MAXIMUM_NUMBER_OF_PROVIDERS, } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { IProviderManager } from './interfaces/IProviderManager';
 import { PurgedProviderQueue } from './PurgedProviderQueue';
@@ -155,9 +153,13 @@ export class ProviderManager implements IProviderManager {
     }
 
     public cleanUpQueues(): void {
+        //this.normalPurgedQueue.removeStaleEntries(this.normalQueue);
+        //this.priorityPurgedQueue.removeStaleEntries(this.priorityQueue);
+
         this.previousNormalStartingIndex = this.normalQueue.cleanUp(
             this.previousNormalStartingIndex,
         );
+
         this.previousPriorityStartingIndex = this.priorityQueue.cleanUp(
             this.previousPriorityStartingIndex,
         );
@@ -279,10 +281,15 @@ export class ProviderManager implements IProviderManager {
 
         return result;
     }
-    
+
      */
 
     public purgeAndRestoreProvider(data: ReservationProviderData): void {
+        const indexValue = this.getIdFromQueue(data.providerIndex, data.providerType);
+        Blockchain.log(
+            `purgeAndRestoreProvider: providerIndex=${data.providerIndex}, type=${data.providerType}, valueAtIndex=${indexValue}`,
+        );
+
         const provider: Provider = this.getProviderFromQueue(data.providerIndex, data.providerType);
 
         this.ensureReservedAmountValid(provider, data.providedAmount);
@@ -305,11 +312,27 @@ export class ProviderManager implements IProviderManager {
         }
     }
 
+    /*public resetProvider(
+        provider: Provider,
+        burnRemainingFunds: boolean = true,
+        canceled: boolean = false,
+    ): void {
+        if (provider.isPriority()) {
+            this.priorityQueue.resetProvider(provider, burnRemainingFunds, canceled);
+        } else {
+            this.normalQueue.resetProvider(provider, burnRemainingFunds, canceled);
+        }
+    }*/
+
     public resetProvider(
         provider: Provider,
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
+        Blockchain.log(
+            `ProviderManager.resetProvider: providerId=${provider.getId()}, queueIndex=${provider.getQueueIndex()}, purgedIndex=${provider.getPurgedIndex()}, isPriority=${provider.isPriority()}, isPurged=${provider.isPurged()}`,
+        );
+
         if (provider.isPriority()) {
             this.priorityQueue.resetProvider(provider, burnRemainingFunds, canceled);
         } else {
@@ -397,6 +420,9 @@ export class ProviderManager implements IProviderManager {
         provider: Provider,
         data: ReservationProviderData,
     ): void {
+        Blockchain.log(
+            `ProviderManager.purgeAndRestoreNormalPriorityProvider: providerId=${provider.getId()}, providedAmount=${data.providedAmount.toString()}`,
+        );
         provider.subtractFromReservedAmount(data.providedAmount);
 
         const quote: u256 = this.quoteManager.getValidBlockQuote(data.creationBlock);
