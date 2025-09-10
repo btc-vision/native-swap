@@ -1,10 +1,4 @@
-import {
-    Address,
-    Blockchain,
-    Potential,
-    Revert,
-    StoredU32Array,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, Potential, Revert, StoredU32Array, } from '@btc-vision/btc-runtime/runtime';
 import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
@@ -86,6 +80,63 @@ export class PurgedProviderQueue {
                 continue;
             }
 
+            const providerId = associatedQueue.getAt(providerIndex);
+
+            // Handle empty slot
+            if (providerId.isZero()) {
+                Blockchain.log(
+                    `PurgedProviderQueue.get: Index ${providerIndex} is empty, removing stale entry`,
+                );
+                this.queue.removeItemFromLength();
+                this.queue.applyNextOffsetToStartingIndex();
+                count++;
+                continue;
+            }
+
+            const provider = getProvider(providerId);
+
+            // Handle wrong provider (index was reused)
+            if (!provider.isPurged()) {
+                Blockchain.log(
+                    `PurgedProviderQueue.get: Provider ${providerId} at index ${providerIndex} is not purged (index was reused), removing stale entry`,
+                );
+                this.queue.removeItemFromLength();
+                this.queue.applyNextOffsetToStartingIndex();
+                count++;
+                continue;
+            }
+
+            // Additional validation: verify the purged index matches
+            if (provider.getPurgedIndex() !== this.queue.previousOffset) {
+                Blockchain.log(
+                    `PurgedProviderQueue.get: Provider purged index mismatch, removing stale entry`,
+                );
+                this.queue.removeItemFromLength();
+                this.queue.applyNextOffsetToStartingIndex();
+                count++;
+                continue;
+            }
+
+            // Now we know it's the RIGHT provider
+            result = this.returnProvider(associatedQueue, provider, providerIndex, quote);
+            count++;
+        }
+
+        return result;
+    }
+
+    /*public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
+        let result: Potential<Provider> = null;
+        const queueLength: u32 = this.queue.getLength();
+        let count: u32 = 0;
+
+        while (count < queueLength && result === null) {
+            const providerIndex: u32 = this.queue.next();
+            if (providerIndex === INDEX_NOT_SET_VALUE) {
+                count++;
+                continue;
+            }
+
             // Log what we're about to look up
             Blockchain.log(
                 `PurgedProviderQueue.get: About to look up index ${providerIndex} in main queue`,
@@ -114,7 +165,7 @@ export class PurgedProviderQueue {
         }
 
         return result;
-    }
+    }*/
 
     /*
     This remove the provider at current index. Be careful to ensure the provided provider is

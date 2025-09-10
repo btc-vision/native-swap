@@ -20,7 +20,10 @@ import { getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
 import { PriorityProviderQueue } from './PriorityProviderQueue';
 
-import { INITIAL_LIQUIDITY_PROVIDER_INDEX, MAXIMUM_NUMBER_OF_PROVIDERS, } from '../constants/Contract';
+import {
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAXIMUM_NUMBER_OF_PROVIDERS,
+} from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { IProviderManager } from './interfaces/IProviderManager';
 import { PurgedProviderQueue } from './PurgedProviderQueue';
@@ -153,9 +156,6 @@ export class ProviderManager implements IProviderManager {
     }
 
     public cleanUpQueues(): void {
-        //this.normalPurgedQueue.removeStaleEntries(this.normalQueue);
-        //this.priorityPurgedQueue.removeStaleEntries(this.priorityQueue);
-
         this.previousNormalStartingIndex = this.normalQueue.cleanUp(
             this.previousNormalStartingIndex,
         );
