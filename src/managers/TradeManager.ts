@@ -3,11 +3,7 @@ import { CompletedTrade } from '../models/CompletedTrade';
 import { Blockchain, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Provider } from '../models/Provider';
-import {
-    CappedTokensResult,
-    satoshisToTokens128,
-    tokensToSatoshis,
-} from '../utils/SatoshisConversion';
+import { CappedTokensResult, satoshisToTokens128, tokensToSatoshis, } from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
 import {
@@ -29,7 +25,6 @@ export class TradeManager implements ITradeManager {
     private readonly providerManager: IProviderManager;
     private readonly reservationManager: IReservationManager;
     private readonly quoteManager: IQuoteManager;
-    private readonly tokenIdUint8Array: Uint8Array;
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
     private totalTokensPurchased: u256 = u256.Zero;
     private totalTokensRefunded: u256 = u256.Zero;
@@ -39,13 +34,11 @@ export class TradeManager implements ITradeManager {
     private quoteToUse: u256 = u256.Zero;
 
     constructor(
-        tokenIdUint8Array: Uint8Array,
         quoteManager: IQuoteManager,
         providerManager: IProviderManager,
         liquidityQueueReserve: ILiquidityQueueReserve,
         reservationManager: IReservationManager,
     ) {
-        this.tokenIdUint8Array = tokenIdUint8Array;
         this.quoteManager = quoteManager;
         this.providerManager = providerManager;
         this.liquidityQueueReserve = liquidityQueueReserve;
