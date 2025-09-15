@@ -23,8 +23,8 @@ export const INITIAL_LIQUIDITY_PROVIDER_INDEX: u32 = u32.MAX_VALUE - 1;
 export const MAXIMUM_VALID_INDEX: u32 = u32.MAX_VALUE - 2;
 export const BLOCK_NOT_SET_VALUE: u64 = U64.MAX_VALUE;
 
-export const EMIT_PURGE_EVENTS: boolean = true;
-export const EMIT_PROVIDERCONSUMED_EVENTS: boolean = true;
+export const EMIT_PURGE_EVENTS: boolean = false;
+export const EMIT_PROVIDERCONSUMED_EVENTS: boolean = false;
 export const CSV_BLOCKS_REQUIRED: i32 = 1;
 
 /**

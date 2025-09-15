@@ -54,6 +54,8 @@ export class SwapOperation extends BaseOperation {
 
             this.sendToken(totalTokensPurchased);
             totalFees = u256.sub(initialTotalTokensPurchased, totalTokensPurchased);
+        } else {
+            throw new Revert('NATIVE_SWAP: No tokens purchased in swap.');
         }
 
         this.emitSwapExecutedEvent(
