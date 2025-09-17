@@ -1,8 +1,7 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 export const INITIAL_FEE_COLLECT_ADDRESS: string =
-    'bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh';
-//'tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c';
+    'tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c'; //'bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh';
 
 export const QUOTE_SCALE: u256 = u256.fromU64(100_000_000);
 export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 20;
@@ -24,8 +23,8 @@ export const INITIAL_LIQUIDITY_PROVIDER_INDEX: u32 = u32.MAX_VALUE - 1;
 export const MAXIMUM_VALID_INDEX: u32 = u32.MAX_VALUE - 2;
 export const BLOCK_NOT_SET_VALUE: u64 = U64.MAX_VALUE;
 
-export const EMIT_PURGE_EVENTS: boolean = true;
-export const EMIT_PROVIDERCONSUMED_EVENTS: boolean = true;
+export const EMIT_PURGE_EVENTS: boolean = false;
+export const EMIT_PROVIDERCONSUMED_EVENTS: boolean = false;
 export const CSV_BLOCKS_REQUIRED: i32 = 1;
 
 /**

@@ -187,19 +187,35 @@ export class LiquidityQueue implements ILiquidityQueue {
             this.ensurePenaltyNotLessThanHalf(penalty, half);
 
             const penaltyU256: u256 = penalty.toU256();
-            // we have to subtract the 50% we already applied to the pool.
             const penaltyLeft = SafeMath.sub128(penalty, half);
             const penaltyLeftU256: u256 = penaltyLeft.toU256();
 
-            this.decreaseTotalReserve(penaltyU256); // we are sending the tokens out of the contract.
+            this.decreaseTotalReserve(penaltyU256);
 
             if (!penaltyLeftU256.isZero()) {
-                // slashed tokens instantly become pool inventory, in this version they are sent to the staking address since
-                // the pool doesn't have liquidity providers enabled.
-                this.increaseVirtualTokenReserve(penaltyLeftU256);
+                // Get current state BEFORE modifications
+                const currentBTC = u256.fromU64(this.virtualSatoshisReserve);
+                const currentTokens = this.virtualTokenReserve;
+
+                if (!currentBTC.isZero() && !currentTokens.isZero()) {
+                    // Calculate BTC to remove BEFORE modifying tokens
+                    const btcToRemove = SafeMath.div(
+                        SafeMath.mul(penaltyLeftU256, currentBTC),
+                        currentTokens,
+                    );
+
+                    // Now remove BOTH
+                    this.decreaseVirtualTokenReserve(penaltyLeftU256);
+
+                    if (
+                        !btcToRemove.isZero() &&
+                        btcToRemove.toU64() <= this.virtualSatoshisReserve
+                    ) {
+                        this.decreaseVirtualSatoshisReserve(btcToRemove.toU64());
+                    }
+                }
             }
 
-            // TODO: When adding lp, remove this and use this.increaseTotalReserve(penalty);
             addAmountToStakingContract(penaltyU256);
         }
     }
@@ -315,7 +331,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
         return this.providerManager.hasEnoughLiquidityLeftProvider(provider, quote);
     }
-    
+
      */
 
     public increaseTotalSatoshisExchangedForTokens(value: u64): void {

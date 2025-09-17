@@ -491,7 +491,6 @@ export function createLiquidityQueue(
     );
 
     const tradeManager: ITestTradeManager = new TestTradeManager(
-        tokenId,
         quoteManager,
         providerManager,
         liquidityQueueReserve,

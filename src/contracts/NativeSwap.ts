@@ -740,7 +740,6 @@ export class NativeSwap extends ReentrancyGuard {
         );
 
         const tradeManager: TradeManager = new TradeManager(
-            tokenId,
             quoteManager,
             providerManager,
             liquidityQueueReserve,

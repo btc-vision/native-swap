@@ -70,6 +70,21 @@ export class ListTokensForSaleOperation extends BaseOperation {
         const deltaHalf: u128 = SafeMath.sub128(newHalfCred, oldHalfCred);
 
         if (!deltaHalf.isZero()) {
+            // ENTRY-PRICE TRACKING: Accumulate BTC contribution for new tokens
+            const currentQuote = this.liquidityQueue.quote();
+            if (!currentQuote.isZero()) {
+                // Calculate BTC value of the NEW tokens being added (not the total)
+                const newTokensBtcValue = tokensToSatoshis(this.amountIn256, currentQuote);
+
+                // Get existing contribution and add the new amount
+                const existingContribution = this.provider.getVirtualBTCContribution();
+                const updatedContribution = existingContribution + newTokensBtcValue;
+
+                // Store the accumulated total
+                this.provider.setVirtualBTCContribution(updatedContribution);
+            }
+
+            // Add half tokens to virtual reserves (causes price drop)
             this.liquidityQueue.increaseVirtualTokenReserve(deltaHalf.toU256());
         }
     }

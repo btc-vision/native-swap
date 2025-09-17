@@ -63,6 +63,7 @@ export class PurgedProviderQueue {
             this.ensureProviderQueueIndexIsValid(providerIndex);
 
             const providerId = associatedQueue.getAt(providerIndex);
+
             this.ensureProviderIdIsValid(providerId);
 
             const provider = getProvider(providerId);
@@ -182,8 +183,10 @@ export class PurgedProviderQueue {
             result = provider;
         } else if (!provider.hasReservedAmount()) {
             this.resetProvider(provider, associatedQueue);
+        } else
+        {
+            this.remove(provider);
         }
-
         return result;
     }
 }

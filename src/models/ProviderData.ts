@@ -43,6 +43,23 @@ export class ProviderData {
         this.amountPointer = encodePointer(AMOUNT_POINTER, subPointer);
     }
 
+    // Add this new private field
+    private _virtualBTCContribution: u64 = 0;
+
+    // Add getter and setter
+    public get virtualBTCContribution(): u64 {
+        this.ensureValues();
+        return this._virtualBTCContribution;
+    }
+
+    public set virtualBTCContribution(value: u64) {
+        this.ensureValues();
+        if (this._virtualBTCContribution !== value) {
+            this._virtualBTCContribution = value;
+            this.stateChanged = true;
+        }
+    }
+
     private _active: boolean = false;
 
     /**
@@ -397,8 +414,9 @@ export class ProviderData {
      */
     private packValues(): Uint8Array {
         const writer: BytesWriter = new BytesWriter(
-            U8_BYTE_LENGTH + 2 * U32_BYTE_LENGTH + U64_BYTE_LENGTH,
+            U8_BYTE_LENGTH + U32_BYTE_LENGTH + U32_BYTE_LENGTH + U64_BYTE_LENGTH + U64_BYTE_LENGTH,
         );
+
         const flag: u8 =
             (this._active ? 1 : 0) |
             ((this._priority ? 1 : 0) << 1) |
@@ -410,6 +428,7 @@ export class ProviderData {
         writer.writeU32(this._queueIndex);
         writer.writeU64(this._listedTokenAtBlock);
         writer.writeU32(this._purgedIndex);
+        writer.writeU64(this._virtualBTCContribution);
 
         return writer.getBuffer();
     }
@@ -474,5 +493,6 @@ export class ProviderData {
         this._queueIndex = reader.readU32();
         this._listedTokenAtBlock = reader.readU64();
         this._purgedIndex = reader.readU32();
+        this._virtualBTCContribution = reader.readU64();
     }
 }

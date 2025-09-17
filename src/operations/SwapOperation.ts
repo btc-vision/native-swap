@@ -54,6 +54,8 @@ export class SwapOperation extends BaseOperation {
 
             this.sendToken(totalTokensPurchased);
             totalFees = u256.sub(initialTotalTokensPurchased, totalTokensPurchased);
+        } else {
+            throw new Revert('NATIVE_SWAP: No tokens purchased in swap.');
         }
 
         this.emitSwapExecutedEvent(
@@ -138,7 +140,10 @@ export class SwapOperation extends BaseOperation {
         reservation.ensureCanBeConsumed();
         reservation.setSwapped(true);
 
-        const tradeResult: CompletedTrade = this.tradeManager.executeTradeNotExpired(reservation);
+        const tradeResult: CompletedTrade = this.tradeManager.executeTradeNotExpired(
+            reservation,
+            this.liquidityQueue.quote(),
+        );
 
         reservation.save();
 
