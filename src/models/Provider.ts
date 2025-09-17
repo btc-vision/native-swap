@@ -74,7 +74,7 @@ export class Provider {
      * @description Sets the virtual BTC contribution.
      * @param value
      */
-    public setVirtualBTCContribution(value: u64) {
+    public setVirtualBTCContribution(value: u64): void {
         this.providerData.virtualBTCContribution = value;
     }
 
