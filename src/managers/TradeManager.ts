@@ -80,6 +80,7 @@ export class TradeManager implements ITradeManager {
                     provider,
                     satoshisSent,
                     providerData.providedAmount,
+                    currentQuote,
                 );
             } else {
                 this.addProviderToPurgeQueue(provider);
@@ -97,7 +98,7 @@ export class TradeManager implements ITradeManager {
         );
     }
 
-    public executeTradeNotExpired(reservation: Reservation): CompletedTrade {
+    public executeTradeNotExpired(reservation: Reservation, currentQuote: u256): CompletedTrade {
         this.ensureReservationIsValid(reservation);
         this.ensurePurgeIndexIsValid(reservation.getPurgeIndex());
         this.getValidBlockQuote(reservation.getCreationBlock());
@@ -116,6 +117,7 @@ export class TradeManager implements ITradeManager {
                     provider,
                     providerData.providedAmount,
                     satoshisSent,
+                    currentQuote,
                 );
             } else {
                 this.restoreReservedLiquidityForProvider(provider, providerData.providedAmount);
@@ -169,22 +171,26 @@ export class TradeManager implements ITradeManager {
         return totalSatoshis - consumedSatoshis;
     }
 
-    private activateProvider(provider: Provider): void {
+    private activateProvider(provider: Provider, currentQuote: u256): void {
         provider.allowLiquidityProvision();
         const totalLiquidity: u128 = provider.getLiquidityAmount();
 
-        // floor(totalLiquidity / 2)
+        // Calculate half for slashing mechanism
         const halfFloor: u128 = SafeMath.div128(totalLiquidity, u128.fromU32(2));
+        const halfCred: u128 = u128.add(halfFloor, u128.and(totalLiquidity, u128.One));
 
-        // CEIL = floor + (totalLiquidity & 1)
-        const halfCred: u128 = u128.add(
-            halfFloor,
-            u128.and(totalLiquidity, u128.One), // adds 1 iff odd
-        );
+        // ENTRY-PRICE TRACKING: Only record if provider has no contribution yet
+        // This handles edge case where provider gets activated without going through listing
+        if (!currentQuote.isZero() && provider.getVirtualBTCContribution() === 0) {
+            // Record their entire liquidity value since they bypassed normal listing
+            const btcContribution = tokensToSatoshis(totalLiquidity.toU256(), currentQuote);
+            provider.setVirtualBTCContribution(btcContribution);
+        }
+        // Note: If they already have a contribution from listing, we don't modify it
+        // Their contribution was already properly accumulated during listing
 
-        // track that we virtually added those tokens to the pool
+        // Continue with half-slashing activation
         this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
-
         this.emitProviderActivatedEvent(provider);
     }
 
@@ -268,6 +274,7 @@ export class TradeManager implements ITradeManager {
         provider: Provider,
         requestedTokens: u128,
         satoshisSent: u64,
+        currentQuote: u256,
     ): void {
         const actualTokens: u128 = this.getTargetTokens(
             satoshisSent,
@@ -289,7 +296,7 @@ export class TradeManager implements ITradeManager {
                 !provider.isLiquidityProvisionAllowed() &&
                 provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX
             ) {
-                this.activateProvider(provider);
+                this.activateProvider(provider, currentQuote);
             }
 
             this.emitProviderConsumedEvent(provider, actualTokens);
@@ -389,6 +396,7 @@ export class TradeManager implements ITradeManager {
         provider: Provider,
         satoshisSent: u64,
         originalTokenAmount: u128,
+        currentQuote: u256,
     ): void {
         const actualTokens: u128 = this.getMaximumPossibleTargetTokens(
             satoshisSent,
@@ -406,7 +414,7 @@ export class TradeManager implements ITradeManager {
                 !provider.isLiquidityProvisionAllowed() &&
                 provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX
             ) {
-                this.activateProvider(provider);
+                this.activateProvider(provider, currentQuote);
             }
 
             provider.subtractFromLiquidityAmount(actualTokens);

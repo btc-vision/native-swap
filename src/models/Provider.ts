@@ -17,7 +17,6 @@ import { ProviderTypes } from '../types/ProviderTypes';
 export class Provider {
     private readonly providerData: ProviderData;
     private readonly providerBuffer: Uint8Array;
-    private fromRemovalQueue: boolean;
     private readonly id: u256;
     private _btcReceiver: Potential<AdvancedStoredString> = null;
 
@@ -27,7 +26,6 @@ export class Provider {
      */
     constructor(providerId: u256) {
         this.id = providerId;
-        this.fromRemovalQueue = false;
 
         const providerBuffer: Uint8Array = u256To30Bytes(providerId);
         this.providerBuffer = providerBuffer;
@@ -60,6 +58,24 @@ export class Provider {
 
         const maxCostInSatoshis: u64 = tokensToSatoshis(tokenAmount.toU256(), currentQuote);
         return maxCostInSatoshis >= STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT;
+    }
+
+    /**
+     * @method virtualBTCContribution
+     * @description Gets the virtual BTC contribution.
+     * @returns {u64} - The virtual BTC contribution.
+     */
+    public getVirtualBTCContribution(): u64 {
+        return this.providerData.virtualBTCContribution;
+    }
+
+    /**
+     * @method virtualBTCContribution
+     * @description Sets the virtual BTC contribution.
+     * @param value
+     */
+    public setVirtualBTCContribution(value: u64) {
+        this.providerData.virtualBTCContribution = value;
     }
 
     /**

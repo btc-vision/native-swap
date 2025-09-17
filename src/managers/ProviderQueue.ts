@@ -128,6 +128,10 @@ export class ProviderQueue {
         let stakedAmount: u256 = u256.Zero;
         this.ensureProviderNotAlreadyPurged(provider);
 
+        // ENTRY-PRICE TRACKING: Get the BTC contribution before modifications
+        const btcContribution = provider.getVirtualBTCContribution();
+        const hasContribution = btcContribution > 0;
+
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
             stakedAmount = provider.getLiquidityAmount().toU256();
 
@@ -157,6 +161,17 @@ export class ProviderQueue {
             }
 
             addAmountToStakingContract(stakedAmount);
+        }
+
+        // ENTRY-PRICE TRACKING: Remove the entry-price BTC contribution
+        // This represents removing the baseline liquidity depth this provider contributed
+        if (hasContribution) {
+            // We remove the full contribution regardless of partial/full consumption
+            // because when a provider exits, their entire liquidity depth leaves the system
+            if (btcContribution <= this.liquidityQueueReserve.virtualSatoshisReserve) {
+                this.liquidityQueueReserve.subFromVirtualSatoshisReserve(btcContribution);
+            }
+            provider.setVirtualBTCContribution(0);
         }
 
         if (!provider.isInitialLiquidityProvider()) {

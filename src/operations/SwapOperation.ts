@@ -140,7 +140,10 @@ export class SwapOperation extends BaseOperation {
         reservation.ensureCanBeConsumed();
         reservation.setSwapped(true);
 
-        const tradeResult: CompletedTrade = this.tradeManager.executeTradeNotExpired(reservation);
+        const tradeResult: CompletedTrade = this.tradeManager.executeTradeNotExpired(
+            reservation,
+            this.liquidityQueue.quote(),
+        );
 
         reservation.save();
 
