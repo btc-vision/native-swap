@@ -184,6 +184,7 @@ export class TradeManager implements ITradeManager {
 
         // track that we virtually added those tokens to the pool
         this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
+
         this.emitProviderActivatedEvent(provider);
     }
 
