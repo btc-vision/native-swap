@@ -183,8 +183,7 @@ export class PurgedProviderQueue {
             result = provider;
         } else if (!provider.hasReservedAmount()) {
             this.resetProvider(provider, associatedQueue);
-        } else
-        {
+        } else {
             this.remove(provider);
         }
         return result;
