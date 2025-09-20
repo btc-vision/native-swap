@@ -614,12 +614,18 @@ export class LiquidityQueue implements ILiquidityQueue {
         );*/
 
         const queuedTokens = this.liquidity;
-
         if (queuedTokens.isZero()) {
             return u256.Zero;
         }
 
-        return SafeMath.sqrt(SafeMath.mul(queuedTokens, this.virtualTokenReserve));
+        // Impact = Q * T / (Q + T)
+        // This is the harmonic mean of Q and T
+        const numerator = SafeMath.mul(queuedTokens, this.virtualTokenReserve);
+        const denominator = SafeMath.add(queuedTokens, this.virtualTokenReserve);
+
+        return SafeMath.div(numerator, denominator);
+
+        //return SafeMath.sqrt(SafeMath.mul(queuedTokens, this.virtualTokenReserve));
     }
 
     private computeInitialSatoshisReserve(initialLiquidity: u256, floorPrice: u256): u64 {
