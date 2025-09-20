@@ -1,32 +1,17 @@
-import {
-    Address,
-    Blockchain,
-    Revert,
-    SafeMath,
-    StoredU256,
-    StoredU64,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, Revert, SafeMath, StoredU256, StoredU64, } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
-import {
-    ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
-    RESERVATION_SETTINGS_POINTER,
-} from '../constants/StoredPointers';
+import { ANTI_BOT_MAX_TOKENS_PER_RESERVATION, RESERVATION_SETTINGS_POINTER, } from '../constants/StoredPointers';
 
 import { addAmountToStakingContract, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
-import {
-    MAX_TOTAL_SATOSHIS,
-    QUOTE_SCALE,
-    VOLATILITY_WINDOW_IN_BLOCKS,
-} from '../constants/Contract';
+import { MAX_TOTAL_SATOSHIS, QUOTE_SCALE, VOLATILITY_WINDOW_IN_BLOCKS, } from '../constants/Contract';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
 import { IReservationManager } from './interfaces/IReservationManager';
 import { ILiquidityQueue } from './interfaces/ILiquidityQueue';
 import { IDynamicFee } from './interfaces/IDynamicFee';
-import { preciseLog } from '../utils/MathUtils';
 
 const ENABLE_FEES: bool = true;
 
@@ -407,6 +392,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         const effectiveT = SafeMath.add(TOKEN, queueImpact);
 
         const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
+
         return SafeMath.div(scaled, u256.fromU64(BTC));
     }
 
@@ -588,7 +574,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.lastVirtualUpdateBlock = currentBlock;
     }*/
 
-    private calculateQueueImpact(): u256 {
+    /*private calculateQueueImpact(): u256 {
         const queuedTokens = this.liquidity;
 
         if (queuedTokens.isZero()) {
@@ -603,6 +589,37 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         // Impact = T * ln(1 + Q/T) / 1e6 (since log is scaled)
         return SafeMath.div(SafeMath.mul(this.virtualTokenReserve, lnValue), u256.fromU64(1000000));
+    }*/
+
+    private calculateQueueImpact(): u256 {
+        /*const queuedTokens = this.liquidity;
+
+        if (queuedTokens.isZero()) {
+            return u256.Zero;
+        }
+
+        // Calculate ratio = 1 + Q/T
+        const ratio = SafeMath.add(u256.One, SafeMath.div(queuedTokens, this.virtualTokenReserve));
+
+        // Use precise logarithm calculation
+        const lnValue = preciseLog(ratio);
+
+        // Square the logarithm for more aggressive scaling
+        const lnSquared = SafeMath.div(SafeMath.mul(lnValue, lnValue), u256.fromU64(1000000));
+
+        // Impact = T * ln(1 + Q/T)^2 / 1e6
+        return SafeMath.div(
+            SafeMath.mul(this.virtualTokenReserve, lnSquared),
+            u256.fromU64(1000000),
+        );*/
+
+        const queuedTokens = this.liquidity;
+
+        if (queuedTokens.isZero()) {
+            return u256.Zero;
+        }
+
+        return SafeMath.sqrt(SafeMath.mul(queuedTokens, this.virtualTokenReserve));
     }
 
     private computeInitialSatoshisReserve(initialLiquidity: u256, floorPrice: u256): u64 {

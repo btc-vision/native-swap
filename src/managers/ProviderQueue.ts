@@ -1,5 +1,11 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Address, Blockchain, Potential, Revert, StoredU256Array, } from '@btc-vision/btc-runtime/runtime';
+import {
+    Address,
+    Blockchain,
+    Potential,
+    Revert,
+    StoredU256Array,
+} from '@btc-vision/btc-runtime/runtime';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
@@ -140,13 +146,10 @@ export class ProviderQueue {
         if (hasContribution) {
             // We remove the full contribution regardless of partial/full consumption
             // because when a provider exits, their entire liquidity depth leaves the system
-            if (this.liquidityQueueReserve.virtualSatoshisReserve < btcContribution) {
-                throw new Revert(
-                    `Impossible state: virtualSatoshisReserve (${this.liquidityQueueReserve.virtualSatoshisReserve}) is less than or equal to the provider's BTC contribution (${btcContribution}).`,
-                );
+            if (this.liquidityQueueReserve.virtualSatoshisReserve >= btcContribution) {
+                this.liquidityQueueReserve.subFromVirtualSatoshisReserve(btcContribution);
             }
 
-            this.liquidityQueueReserve.subFromVirtualSatoshisReserve(btcContribution);
             provider.setVirtualBTCContribution(0);
         }
 
