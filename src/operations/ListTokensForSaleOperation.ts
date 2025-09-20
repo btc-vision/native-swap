@@ -85,7 +85,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
             }
 
             // Add half tokens to virtual reserves (causes price drop)
-            this.liquidityQueue.increaseVirtualTokenReserve(deltaHalf.toU256());
+            this.liquidityQueue.increaseTotalTokensSellActivated(deltaHalf.toU256()); // same as addToTotalTokensSellActivated
         }
     }
 
@@ -198,19 +198,27 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
     }
 
-    private deductTaxIfPriority(): void {
-        if (this.usePriorityQueue) {
-            const tax: u128 = this.calculateTax();
-
-            if (!tax.isZero()) {
-                const tax256: u256 = tax.toU256();
-
-                this.provider.subtractFromLiquidityAmount(tax);
-                this.liquidityQueue.decreaseTotalReserve(tax256);
-                this.liquidityQueue.increaseVirtualTokenReserve(tax256);
-                addAmountToStakingContract(tax256);
-            }
+    private deductTaxIfPriority(): u256 {
+        if (!this.usePriorityQueue) {
+            return u256.Zero;
         }
+
+        const tax: u128 = this.calculateTax();
+
+        if (tax.isZero()) {
+            return u256.Zero;
+        }
+
+        const tax256: u256 = tax.toU256();
+
+        // Only deduct from provider's amount
+        this.provider.subtractFromLiquidityAmount(tax);
+
+        // Send to staking
+        addAmountToStakingContract(tax256);
+
+        // Return tax amount so caller can adjust what goes into reserves
+        return tax256;
     }
 
     private emitLiquidityListedEvent(): void {
@@ -305,10 +313,6 @@ export class ListTokensForSaleOperation extends BaseOperation {
         return u128.add(halfFloor, u128.and(value, u128.One));
     }
 
-    private increaseTotalReserve(): void {
-        this.liquidityQueue.increaseTotalReserve(this.amountIn256);
-    }
-
     private pullInTokens(): void {
         TransferHelper.safeTransferFrom(
             this.liquidityQueue.token,
@@ -329,8 +333,13 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.updateProviderLiquidity();
         this.assignBlockNumber();
         this.assignReceiver();
-        this.increaseTotalReserve();
-        this.deductTaxIfPriority();
+
+        // Calculate tax (if any) and get net amount
+        const taxAmount = this.deductTaxIfPriority();
+        const netAmount = SafeMath.sub(this.amountIn256, taxAmount);
+
+        // Only add net amount to reserves
+        this.liquidityQueue.increaseTotalReserve(netAmount);
 
         if (!this.isForInitialLiquidity) {
             this.activateSlashing();

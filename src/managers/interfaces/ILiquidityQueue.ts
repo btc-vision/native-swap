@@ -32,7 +32,7 @@ export interface ILiquidityQueue {
 
     blockWithReservationsLength(): u32;
 
-    buyTokens(tokensOut: u256, satoshisIn: u64): void;
+    recordTradeVolumes(tokensOut: u256, satoshisIn: u64): void;
 
     computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256;
 
