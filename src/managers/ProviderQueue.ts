@@ -140,7 +140,7 @@ export class ProviderQueue {
         if (hasContribution) {
             // We remove the full contribution regardless of partial/full consumption
             // because when a provider exits, their entire liquidity depth leaves the system
-            if (btcContribution <= this.liquidityQueueReserve.virtualSatoshisReserve) {
+            if (this.liquidityQueueReserve.virtualSatoshisReserve < btcContribution) {
                 throw new Revert(
                     `Impossible state: virtualSatoshisReserve (${this.liquidityQueueReserve.virtualSatoshisReserve}) is less than or equal to the provider's BTC contribution (${btcContribution}).`,
                 );
