@@ -1,11 +1,25 @@
-import { Address, Blockchain, Revert, SafeMath, StoredU256, StoredU64, } from '@btc-vision/btc-runtime/runtime';
+import {
+    Address,
+    Blockchain,
+    Revert,
+    SafeMath,
+    StoredU256,
+    StoredU64,
+} from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
-import { ANTI_BOT_MAX_TOKENS_PER_RESERVATION, RESERVATION_SETTINGS_POINTER, } from '../constants/StoredPointers';
+import {
+    ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
+    RESERVATION_SETTINGS_POINTER,
+} from '../constants/StoredPointers';
 
 import { addAmountToStakingContract, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
-import { MAX_TOTAL_SATOSHIS, QUOTE_SCALE, VOLATILITY_WINDOW_IN_BLOCKS, } from '../constants/Contract';
+import {
+    MAX_TOTAL_SATOSHIS,
+    QUOTE_SCALE,
+    VOLATILITY_WINDOW_IN_BLOCKS,
+} from '../constants/Contract';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
