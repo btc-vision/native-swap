@@ -161,6 +161,6 @@ export class SwapOperation extends BaseOperation {
     ): void {
         this.liquidityQueue.decreaseTotalReserved(totalTokensReserved);
         this.liquidityQueue.decreaseTotalReserve(totalTokensPurchased);
-        this.liquidityQueue.buyTokens(totalTokensPurchased, totalSatoshisSpent);
+        this.liquidityQueue.recordTradeVolumes(totalTokensPurchased, totalSatoshisSpent);
     }
 }

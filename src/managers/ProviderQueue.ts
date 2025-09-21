@@ -4,7 +4,6 @@ import {
     Blockchain,
     Potential,
     Revert,
-    SafeMath,
     StoredU256Array,
 } from '@btc-vision/btc-runtime/runtime';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
@@ -135,30 +134,9 @@ export class ProviderQueue {
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
             stakedAmount = provider.getLiquidityAmount().toU256();
 
-            // Get current reserves BEFORE any modifications
-            const currentBTC = u256.fromU64(this.liquidityQueueReserve.virtualSatoshisReserve);
-            const currentTokens = this.liquidityQueueReserve.virtualTokenReserve;
-
             // Remove from total reserve (accounting only)
             this.liquidityQueueReserve.subFromTotalReserve(stakedAmount);
-
-            if (!currentBTC.isZero() && !currentTokens.isZero() && !stakedAmount.isZero()) {
-                // Calculate proportional BTC based on ORIGINAL state
-                const btcToRemove = SafeMath.div(
-                    SafeMath.mul(stakedAmount, currentBTC),
-                    currentTokens,
-                );
-
-                // Now remove BOTH to maintain the invariant
-                this.liquidityQueueReserve.subFromVirtualTokenReserve(stakedAmount);
-
-                if (
-                    !btcToRemove.isZero() &&
-                    btcToRemove.toU64() <= this.liquidityQueueReserve.virtualSatoshisReserve
-                ) {
-                    this.liquidityQueueReserve.subFromVirtualSatoshisReserve(btcToRemove.toU64());
-                }
-            }
+            this.liquidityQueueReserve.subFromVirtualTokenReserve(stakedAmount);
 
             addAmountToStakingContract(stakedAmount);
         }
@@ -168,9 +146,10 @@ export class ProviderQueue {
         if (hasContribution) {
             // We remove the full contribution regardless of partial/full consumption
             // because when a provider exits, their entire liquidity depth leaves the system
-            if (btcContribution <= this.liquidityQueueReserve.virtualSatoshisReserve) {
+            if (this.liquidityQueueReserve.virtualSatoshisReserve >= btcContribution) {
                 this.liquidityQueueReserve.subFromVirtualSatoshisReserve(btcContribution);
             }
+
             provider.setVirtualBTCContribution(0);
         }
 

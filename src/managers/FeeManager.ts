@@ -5,7 +5,7 @@ import { INITIAL_FEE_COLLECT_ADDRESS } from '../constants/Contract';
 class FeeManagerBase {
     private static CAP_RESERVATION_BASE_FEE: u64 = 100_000;
     private static CAP_PRIORITY_QUEUE_BASE_FEE: u64 = 500_000;
-    private static DEFAULT_RESERVATION_BASE_FEE: u64 = 10_000;
+    private static DEFAULT_RESERVATION_BASE_FEE: u64 = 5_000;
     private static DEFAULT_PRIORITY_QUEUE_BASE_FEE: u64 = 50_000;
 
     private readonly settings: StoredU64 = new StoredU64(FEE_SETTINGS_POINTER, new Uint8Array(30));

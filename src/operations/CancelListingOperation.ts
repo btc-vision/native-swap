@@ -57,9 +57,8 @@ export class CancelListingOperation extends BaseOperation {
         const halfCred: u128 = u128.add(halfFloor, u128.and(initialAmount, u128.One)); // +1 if odd
 
         /* Amount that still has to be booked into pool inventory */
-        const halfToCharge: u128 = u128.lt(penaltyAmount, halfCred) ? penaltyAmount : halfCred;
 
-        return halfToCharge;
+        return u128.lt(penaltyAmount, halfCred) ? penaltyAmount : halfCred;
     }
 
     private calculateRefund(amount: u128, penalty: u128): u256 {
