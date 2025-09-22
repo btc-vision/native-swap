@@ -18,6 +18,7 @@ import { Reservation } from '../models/Reservation';
 import {
     MAX_TOTAL_SATOSHIS,
     QUOTE_SCALE,
+    TEN_THOUSAND_U256,
     VOLATILITY_WINDOW_IN_BLOCKS,
 } from '../constants/Contract';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
@@ -31,14 +32,18 @@ const ENABLE_FEES: bool = true;
 
 export class LiquidityQueue implements ILiquidityQueue {
     public readonly token: Address;
+
     protected readonly providerManager: IProviderManager;
     protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
     protected readonly quoteManager: IQuoteManager;
     protected readonly reservationManager: IReservationManager;
     protected readonly dynamicFee: IDynamicFee;
+
     private readonly settings: StoredU64;
     private readonly _maxTokensPerReservation: StoredU256;
     private readonly timeoutEnabled: boolean;
+
+    private _calculatedQuote: u256 | null = null;
 
     constructor(
         token: Address,
@@ -314,6 +319,14 @@ export class LiquidityQueue implements ILiquidityQueue {
         return reservation;
     }
 
+    //!!! To remove
+    /*
+    public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
+        return this.providerManager.hasEnoughLiquidityLeftProvider(provider, quote);
+    }
+
+     */
+
     public getUtilizationRatio(): u256 {
         if (this.liquidity.isZero()) {
             return u256.Zero;
@@ -324,14 +337,6 @@ export class LiquidityQueue implements ILiquidityQueue {
             this.liquidity,
         );
     }
-
-    //!!! To remove
-    /*
-    public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
-        return this.providerManager.hasEnoughLiquidityLeftProvider(provider, quote);
-    }
-
-     */
 
     public increaseTotalSatoshisExchangedForTokens(value: u64): void {
         this.liquidityQueueReserve.addToTotalSatoshisExchangedForTokens(value);
@@ -388,26 +393,29 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     // Return number of tokens per satoshi
     public quote(): u256 {
-        const TOKEN: u256 = this.virtualTokenReserve;
-        const BTC: u64 = this.virtualSatoshisReserve;
+        if (this._calculatedQuote === null) {
+            const TOKEN: u256 = this.virtualTokenReserve;
+            const BTC: u64 = this.virtualSatoshisReserve;
 
-        if (TOKEN.isZero()) {
-            return u256.Zero;
+            if (TOKEN.isZero()) {
+                return u256.Zero;
+            }
+
+            if (BTC === 0) {
+                throw new Revert(`Impossible state: Not enough liquidity.`);
+            }
+
+            // Calculate queue impact
+            const queueImpact = this.calculateQueueImpact();
+
+            // Add impact to token reserves ONLY for price calculation
+            const effectiveT = SafeMath.add(TOKEN, queueImpact);
+            const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
+
+            this._calculatedQuote = SafeMath.div(scaled, u256.fromU64(BTC));
         }
 
-        if (BTC === 0) {
-            throw new Revert(`Impossible state: Not enough liquidity.`);
-        }
-
-        // Calculate queue impact
-        const queueImpact = this.calculateQueueImpact();
-
-        // Add impact to token reserves ONLY for price calculation
-        const effectiveT = SafeMath.add(TOKEN, queueImpact);
-
-        const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
-
-        return SafeMath.div(scaled, u256.fromU64(BTC));
+        return this._calculatedQuote as u256;
     }
 
     public removeFromNormalQueue(provider: Provider): void {
@@ -444,6 +452,7 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         let B: u256 = u256.fromU64(this.virtualSatoshisReserve);
         let T: u256 = this.virtualTokenReserve;
+
         const initialK = SafeMath.mul(B, T);
 
         // Add tokens from deltaTokensAdd (SELL SIDE)
@@ -452,16 +461,15 @@ export class LiquidityQueue implements ILiquidityQueue {
             T = SafeMath.add(T, dT_add);
             B = SafeMath.div(initialK, T);
 
+            // No artificial checks - just verify K is maintained
             const newK = SafeMath.mul(B, T);
             const diff =
                 newK > initialK ? SafeMath.sub(newK, initialK) : SafeMath.sub(initialK, newK);
 
-            // Use relative tolerance here too!
             const relativeTolerance = SafeMath.div(initialK, u256.fromU64(100000));
-
             if (diff > relativeTolerance) {
                 throw new Revert(
-                    `Impossible state: Constant product broken after adding liquidity. Initial k: ${initialK}, New k: ${newK}, Diff: ${diff}`,
+                    `Constant product broken after adding liquidity. Initial k: ${initialK}, New k: ${newK}`,
                 );
             }
         }
@@ -471,22 +479,18 @@ export class LiquidityQueue implements ILiquidityQueue {
         if (!dT_buy.isZero()) {
             const beforeBuyK = SafeMath.mul(B, T);
 
-            T = T >= dT_buy ? SafeMath.sub(T, dT_buy) : u256.One;
             B = SafeMath.div(beforeBuyK, T);
 
-            // Allow for rounding error in the constant product check
             const afterBuyK = SafeMath.mul(B, T);
             const diff =
                 afterBuyK > beforeBuyK
                     ? SafeMath.sub(afterBuyK, beforeBuyK)
                     : SafeMath.sub(beforeBuyK, afterBuyK);
 
-            // Use relative tolerance: 0.001% of k (1 part in 100,000)
             const relativeTolerance = SafeMath.div(beforeBuyK, u256.fromU64(100000));
-
             if (diff > relativeTolerance) {
                 throw new Revert(
-                    `Impossible state: Constant product broken after buy. Before k: ${beforeBuyK}, After k: ${afterBuyK}, Diff: ${diff}`,
+                    `Constant product broken after buy. Before k: ${beforeBuyK}, After k: ${afterBuyK}`,
                 );
             }
         }
@@ -671,7 +675,7 @@ export class LiquidityQueue implements ILiquidityQueue {
                 diff = u256.mul(diff, u256.fromI64(-1));
             }
 
-            volatility = SafeMath.div(SafeMath.mul(diff, u256.fromU64(10000)), oldQuote);
+            volatility = SafeMath.div(SafeMath.mul(diff, TEN_THOUSAND_U256), oldQuote);
         }
 
         return volatility;

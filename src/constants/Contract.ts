@@ -16,6 +16,12 @@ export const TIMEOUT_AFTER_EXPIRATION_BLOCKS: u8 = 2;
 export const MAX_TOTAL_SATOSHIS: u256 = u256.fromU64(21_000_000 * 100_000_000);
 export const MAX_ACTIVATION_DELAY: u8 = 3;
 
+export const MIN_SATOSHI_RESERVE: u256 = u256.fromU64(100_000); // 0.001 BTC
+export const MAX_PRICE_IMPACT_BPS = u256.fromU64(30_00); // 40%
+export const MAX_CUMULATIVE_IMPACT_BPS = u256.fromU32(70_000);
+
+export const TEN_THOUSAND_U256: u256 = u256.fromU32(10_000);
+
 // By design, Array does not contain more than U32.MAX_VALUE - 1 elements.
 // And max index is U32.MAX_VALUE - 2.
 export const INDEX_NOT_SET_VALUE: u32 = U32.MAX_VALUE;

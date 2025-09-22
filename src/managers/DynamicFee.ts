@@ -2,6 +2,7 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 import { SafeMath, StoredU256 } from '@btc-vision/btc-runtime/runtime';
 import { VOLATILITY_POINTER } from '../constants/StoredPointers';
 import { IDynamicFee } from './interfaces/IDynamicFee';
+import { TEN_THOUSAND_U256 } from '../constants/Contract';
 
 const REF_TRADE_SIZE: u256 = u256.fromU64(200_000);
 
@@ -90,6 +91,6 @@ export class DynamicFee implements IDynamicFee {
      * e.g. fee = (amount * feeBP) / 10000
      */
     public computeFeeAmount(amount: u256, feeBP: u64): u256 {
-        return SafeMath.div(SafeMath.mul(amount, u256.fromU64(feeBP)), u256.fromU64(10000));
+        return SafeMath.div(SafeMath.mul(amount, u256.fromU64(feeBP)), TEN_THOUSAND_U256);
     }
 }

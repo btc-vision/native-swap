@@ -17,9 +17,15 @@ import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import {
     CSV_BLOCKS_REQUIRED,
     INDEX_NOT_SET_VALUE,
+    MAX_CUMULATIVE_IMPACT_BPS,
+    MAX_PRICE_IMPACT_BPS,
+    MAX_TOTAL_SATOSHIS,
+    MIN_SATOSHI_RESERVE,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
     PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
     PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX,
+    QUOTE_SCALE,
+    TEN_THOUSAND_U256,
 } from '../constants/Contract';
 
 export class ListTokensForSaleOperation extends BaseOperation {
@@ -70,22 +76,95 @@ export class ListTokensForSaleOperation extends BaseOperation {
         const deltaHalf: u128 = SafeMath.sub128(newHalfCred, oldHalfCred);
 
         if (!deltaHalf.isZero()) {
-            // ENTRY-PRICE TRACKING: Accumulate BTC contribution for new tokens
+            const currentB = u256.fromU64(this.liquidityQueue.virtualSatoshisReserve);
+            const currentT = this.liquidityQueue.virtualTokenReserve;
+            const k = SafeMath.mul(currentB, currentT);
+
+            // Get current price before adding
+            const priceBefore = this.liquidityQueue.quote();
+
+            // Simulate adding deltaHalf to token reserves
+            const newT = SafeMath.add(currentT, deltaHalf.toU256());
+            const newB = SafeMath.div(k, newT);
+
+            // Calculate new price after adding
+            const priceAfter = SafeMath.div(SafeMath.mul(newT, QUOTE_SCALE), newB);
+
+            // Calculate price impact (how much price drops)
+            const priceImpact = SafeMath.div(
+                SafeMath.mul(SafeMath.sub(priceBefore, priceAfter), TEN_THOUSAND_U256),
+                priceBefore,
+            );
+
+            if (priceImpact > MAX_PRICE_IMPACT_BPS) {
+                throw new Revert(
+                    `NATIVE_SWAP: Adding liquidity would cause ${priceImpact} bps price drop. ` +
+                        `Maximum allowed is ${MAX_PRICE_IMPACT_BPS} bps. ` +
+                        `Reduce amount or wait for better market conditions.`,
+                );
+            }
+
+            // Check minimum satoshi reserve
+            if (newB < MIN_SATOSHI_RESERVE) {
+                throw new Revert(
+                    `NATIVE_SWAP: Adding liquidity would push satoshi reserves too low ` +
+                        `(would be ${newB}, minimum ${MIN_SATOSHI_RESERVE}). ` +
+                        `Price is too low for more liquidity.`,
+                );
+            }
+
+            // Check if pending operations would compound the issue
+            const pendingSells = this.liquidityQueue.totalTokensSellActivated;
+            const pendingBuys = this.liquidityQueue.totalTokensExchangedForSatoshis;
+
+            // Apply pending sells to see cumulative impact
+            let futureT = SafeMath.add(newT, pendingSells);
+            let futureB = SafeMath.div(k, futureT);
+
+            // Calculate total price impact including pending operations
+            const totalPriceAfter = SafeMath.div(SafeMath.mul(futureT, QUOTE_SCALE), futureB);
+
+            const totalPriceImpact = SafeMath.div(
+                SafeMath.mul(SafeMath.sub(priceBefore, totalPriceAfter), TEN_THOUSAND_U256),
+                priceBefore,
+            );
+
+            // Stricter limit for cumulative impact
+            if (totalPriceImpact > MAX_CUMULATIVE_IMPACT_BPS) {
+                throw new Revert(
+                    `NATIVE_SWAP: Cumulative price impact too high (${totalPriceImpact} bps). ` +
+                        `Wait for pending queue to clear.`,
+                );
+            }
+
+            // Check future buy overflow
+            if (!pendingBuys.isZero()) {
+                const futureK = SafeMath.mul(futureB, futureT);
+                futureT = SafeMath.sub(futureT, pendingBuys);
+                if (futureT.isZero()) {
+                    throw new Revert(`NATIVE_SWAP: Pool would be drained by pending operations.`);
+                }
+
+                futureB = SafeMath.div(futureK, futureT);
+
+                if (futureB > MAX_TOTAL_SATOSHIS) {
+                    throw new Revert(
+                        `NATIVE_SWAP: Adding liquidity would cause pool overflow after pending buys.`,
+                    );
+                }
+            }
+
+            // Track BTC contribution
             const currentQuote = this.liquidityQueue.quote();
             if (!currentQuote.isZero()) {
-                // Calculate BTC value of the NEW tokens being added (not the total)
                 const newTokensBtcValue = tokensToSatoshis(this.amountIn256, currentQuote);
-
-                // Get existing contribution and add the new amount
                 const existingContribution = this.provider.getVirtualBTCContribution();
                 const updatedContribution = existingContribution + newTokensBtcValue;
-
-                // Store the accumulated total
                 this.provider.setVirtualBTCContribution(updatedContribution);
             }
 
-            // Add half tokens to virtual reserves (causes price drop)
-            this.liquidityQueue.increaseTotalTokensSellActivated(deltaHalf.toU256()); // same as addToTotalTokensSellActivated
+            // Safe to add tokens to virtual reserves
+            this.liquidityQueue.increaseTotalTokensSellActivated(deltaHalf.toU256());
         }
     }
 
