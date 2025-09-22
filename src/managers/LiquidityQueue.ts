@@ -393,7 +393,7 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     // Return number of tokens per satoshi
     public quote(): u256 {
-        if (this._calculatedQuote === null) {
+        if (!this._calculatedQuote) {
             const TOKEN: u256 = this.virtualTokenReserve;
             const BTC: u64 = this.virtualSatoshisReserve;
 
