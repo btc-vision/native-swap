@@ -1229,7 +1229,7 @@ describe('Liquidity queue tests', () => {
             queue.totalSatoshisExchangedForTokens = 999900001;
             queue.updateVirtualPoolIfNeeded();
 
-            expect(queue.virtualSatoshisReserve).toStrictEqual(1000000001);
+            expect(queue.virtualSatoshisReserve).toStrictEqual(1000000000);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(1));
         });
 
@@ -1250,7 +1250,7 @@ describe('Liquidity queue tests', () => {
             queue.totalSatoshisExchangedForTokens = 999990000;
             queue.updateVirtualPoolIfNeeded();
 
-            expect(queue.virtualSatoshisReserve).toStrictEqual(1000090000);
+            expect(queue.virtualSatoshisReserve).toStrictEqual(1000000000);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(1));
         });
 

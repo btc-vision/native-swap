@@ -240,7 +240,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
 
             operation.execute();
 
-            expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10005));
+            expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(90000));
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5005));
             expect(TransferHelper.safeTransferCalled).toBeTruthy();

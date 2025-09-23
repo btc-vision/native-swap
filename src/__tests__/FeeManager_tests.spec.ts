@@ -57,7 +57,7 @@ describe('FeeManagerBase tests', () => {
     it('should set default fees in onDeploy()', () => {
         FeeManager.onDeploy();
 
-        expect(FeeManager.reservationBaseFee).toStrictEqual(10_000);
+        expect(FeeManager.reservationBaseFee).toStrictEqual(5_000);
         expect(FeeManager.priorityQueueBaseFee).toStrictEqual(50_000);
         expect(FeeManager.feesAddress).toStrictEqual(INITIAL_FEE_COLLECT_ADDRESS);
     });
