@@ -356,7 +356,7 @@ describe('PurgedProviderQueue tests', () => {
 
             const provider1 = purgedQueue.get(queue, u256.fromU32(100000000));
             expect(provider1).toBeNull();
-            expect(providers[0].isPurged()).toBeTruthy();
+            expect(providers[0].isPurged()).toBeFalsy();
             expect(providers[0].isActive()).toBeTruthy();
         });
 

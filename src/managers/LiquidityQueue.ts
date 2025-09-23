@@ -310,14 +310,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         );
     }
 
-    //!!! To remove
-    /*
-    public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
-        return this.providerManager.hasEnoughLiquidityLeftProvider(provider, quote);
-    }
-    
-     */
-
     public increaseTotalSatoshisExchangedForTokens(value: u64): void {
         this.liquidityQueueReserve.addToTotalSatoshisExchangedForTokens(value);
     }

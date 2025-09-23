@@ -264,24 +264,6 @@ export class ProviderManager implements IProviderManager {
         return writer.getBuffer();
     }
 
-    /*!!! TO remove
-    public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
-        let result: boolean = false;
-        const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
-
-        if (!availableLiquidity.isZero()) {
-            result = this.verifyProviderRemainingLiquidityAndReset(
-                provider,
-                availableLiquidity,
-                quote,
-            );
-        }
-
-        return result;
-    }
-    
-     */
-
     public purgeAndRestoreProvider(data: ReservationProviderData): void {
         const provider: Provider = this.getProviderFromQueue(data.providerIndex, data.providerType);
 
@@ -415,25 +397,4 @@ export class ProviderManager implements IProviderManager {
             }
         }
     }
-
-    /* !!!! TO remove
-    private verifyProviderRemainingLiquidityAndReset(
-        provider: Provider,
-        availableLiquidity: u128,
-        quote: u256,
-    ): boolean {
-        let result: boolean = true;
-
-        if (!Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
-            if (!provider.hasReservedAmount()) {
-                this.resetProvider(provider);
-            }
-
-            result = false;
-        }
-
-        return result;
-    }
-
-     */
 }

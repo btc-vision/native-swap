@@ -452,7 +452,7 @@ export class Provider {
     }
 }
 
-const cache: Array<Provider> = new Array<Provider>();
+let cache: Array<Provider> = new Array<Provider>();
 let pendingStakingContractAmount: u256 = u256.Zero;
 
 function findProvider(id: u256): Provider | null {
@@ -472,7 +472,7 @@ export function saveAllProviders(): void {
 }
 
 export function clearCachedProviders(): void {
-    cache.length = 0;
+    cache = [];
 }
 
 export function getProviderCacheLength(): number {
