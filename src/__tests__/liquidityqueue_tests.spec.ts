@@ -462,7 +462,7 @@ describe('Liquidity queue tests', () => {
                 false,
             );
             const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            queue.buyTokens(u256.fromU32(10000), 888888);
+            queue.recordTradeVolumes(u256.fromU32(10000), 888888);
 
             expect(queue.totalSatoshisExchangedForTokens).toStrictEqual(888888);
             expect(queue.totalTokensExchangedForSatoshis).toStrictEqual(u256.fromU32(10000));
@@ -1902,6 +1902,35 @@ describe('Liquidity queue tests', () => {
 
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
         });
+        /*!!! TO remove
+                it('should return true if provider has enough liquidity left', () => {
+                    setBlockchainEnvironment(1000);
+
+                    const createQueueResult = createLiquidityQueue(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                        false,
+                    );
+                    const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+                    const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+                    provider.setLiquidityAmount(u128.fromU32(200000));
+                    provider.setReservedAmount(u128.fromU32(20000));
+                    provider.save();
+                    queue.save();
+
+                    const createQueueResult2 = createLiquidityQueue(
+                        tokenAddress1,
+                        tokenIdUint8Array1,
+                        false,
+                    );
+
+                    const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+                    const result = queue2.hasEnoughLiquidityLeftProvider(provider, u256.fromU64(666666666));
+
+                    expect(result).toBeTruthy();
+                });
+                */
     });
 
     describe('Cap', () => {

@@ -140,7 +140,10 @@ export class SwapOperation extends BaseOperation {
         reservation.ensureCanBeConsumed();
         reservation.setSwapped(true);
 
-        const tradeResult: CompletedTrade = this.tradeManager.executeTradeNotExpired(reservation);
+        const tradeResult: CompletedTrade = this.tradeManager.executeTradeNotExpired(
+            reservation,
+            this.liquidityQueue.quote(),
+        );
 
         reservation.save();
 
@@ -158,6 +161,6 @@ export class SwapOperation extends BaseOperation {
     ): void {
         this.liquidityQueue.decreaseTotalReserved(totalTokensReserved);
         this.liquidityQueue.decreaseTotalReserve(totalTokensPurchased);
-        this.liquidityQueue.buyTokens(totalTokensPurchased, totalSatoshisSpent);
+        this.liquidityQueue.recordTradeVolumes(totalTokensPurchased, totalSatoshisSpent);
     }
 }
