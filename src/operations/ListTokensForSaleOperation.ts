@@ -83,31 +83,37 @@ export class ListTokensForSaleOperation extends BaseOperation {
             // Get current price before adding
             const priceBefore = this.liquidityQueue.quote();
 
-            // Simulate adding deltaHalf to token reserves
+            // Simulate adding deltaHalf to token reserves via constant product
             const newT = SafeMath.add(currentT, deltaHalf.toU256());
             const newB = SafeMath.div(k, newT);
 
             // Calculate new price after adding
-            const priceAfter = SafeMath.div(SafeMath.mul(newT, QUOTE_SCALE), newB);
+            // Queue impact stays the same since liquidity doesn't change
+            const queuedTokens = this.liquidityQueue.liquidity;
+            const queueImpact = this.calculateNewQueueImpact(queuedTokens, newT);
+            const effectiveNewT = SafeMath.add(newT, queueImpact);
+            const priceAfter = SafeMath.div(SafeMath.mul(effectiveNewT, QUOTE_SCALE), newB);
 
-            // Calculate price impact (how much price drops)
-            const priceImpact = SafeMath.div(
-                SafeMath.mul(SafeMath.sub(priceBefore, priceAfter), TEN_THOUSAND_U256),
-                priceBefore,
-            );
-
-            if (priceImpact > MAX_PRICE_IMPACT_BPS) {
-                throw new Revert(
-                    `NATIVE_SWAP: Adding liquidity would cause ${priceImpact} bps price drop. ` +
-                        `Maximum allowed is ${MAX_PRICE_IMPACT_BPS} bps. ` +
-                        `Reduce amount or wait for better market conditions.`,
+            // Price increases when adding tokens (tokens become cheaper)
+            if (priceAfter > priceBefore) {
+                const priceImpact = SafeMath.div(
+                    SafeMath.mul(SafeMath.sub(priceAfter, priceBefore), TEN_THOUSAND_U256),
+                    priceBefore,
                 );
+
+                if (priceImpact > MAX_PRICE_IMPACT_BPS) {
+                    throw new Revert(
+                        `NATIVE_SWAP: Listing this amount of token would devalue tokens by ${priceImpact} bps. ` +
+                            `Maximum allowed is ${MAX_PRICE_IMPACT_BPS} bps. ` +
+                            `Reduce amount or wait for better market conditions.`,
+                    );
+                }
             }
 
             // Check minimum satoshi reserve
             if (newB < MIN_SATOSHI_RESERVE) {
                 throw new Revert(
-                    `NATIVE_SWAP: Adding liquidity would push satoshi reserves too low ` +
+                    `NATIVE_SWAP: Listing this amount of token would push satoshi reserves too low ` +
                         `(would be ${newB}, minimum ${MIN_SATOSHI_RESERVE}). ` +
                         `Price is too low for more liquidity.`,
                 );
@@ -117,39 +123,47 @@ export class ListTokensForSaleOperation extends BaseOperation {
             const pendingSells = this.liquidityQueue.totalTokensSellActivated;
             const pendingBuys = this.liquidityQueue.totalTokensExchangedForSatoshis;
 
-            // Apply pending sells to see cumulative impact
-            let futureT = SafeMath.add(newT, pendingSells);
-            let futureB = SafeMath.div(k, futureT);
+            // Apply ALL pending sells (current deltaHalf + existing pending)
+            const totalPendingSells = SafeMath.add(deltaHalf.toU256(), pendingSells);
+            const futureT = SafeMath.add(currentT, totalPendingSells);
+            const futureB = SafeMath.div(k, futureT);
 
-            // Calculate total price impact including pending operations
-            const totalPriceAfter = SafeMath.div(SafeMath.mul(futureT, QUOTE_SCALE), futureB);
-
-            const totalPriceImpact = SafeMath.div(
-                SafeMath.mul(SafeMath.sub(priceBefore, totalPriceAfter), TEN_THOUSAND_U256),
-                priceBefore,
+            // Calculate future price with queue impact
+            const futureQueueImpact = this.calculateNewQueueImpact(queuedTokens, futureT);
+            const effectiveFutureT = SafeMath.add(futureT, futureQueueImpact);
+            const totalPriceAfter = SafeMath.div(
+                SafeMath.mul(effectiveFutureT, QUOTE_SCALE),
+                futureB,
             );
 
-            // Stricter limit for cumulative impact
-            if (totalPriceImpact > MAX_CUMULATIVE_IMPACT_BPS) {
-                throw new Revert(
-                    `NATIVE_SWAP: Cumulative price impact too high (${totalPriceImpact} bps). ` +
-                        `Wait for pending queue to clear.`,
+            if (totalPriceAfter > priceBefore) {
+                const totalPriceImpact = SafeMath.div(
+                    SafeMath.mul(SafeMath.sub(totalPriceAfter, priceBefore), TEN_THOUSAND_U256),
+                    priceBefore,
                 );
+
+                if (totalPriceImpact > MAX_CUMULATIVE_IMPACT_BPS) {
+                    throw new Revert(
+                        `NATIVE_SWAP: Cumulative token devaluation too high (${totalPriceImpact} bps). ` +
+                            `Wait for pending queue to clear.`,
+                    );
+                }
             }
 
             // Check future buy overflow
             if (!pendingBuys.isZero()) {
-                const futureK = SafeMath.mul(futureB, futureT);
-                futureT = SafeMath.sub(futureT, pendingBuys);
-                if (futureT.isZero()) {
+                // First check if buys would drain the pool
+                if (pendingBuys >= futureT) {
                     throw new Revert(`NATIVE_SWAP: Pool would be drained by pending operations.`);
                 }
 
-                futureB = SafeMath.div(futureK, futureT);
+                const futureK = SafeMath.mul(futureB, futureT);
+                const newFutureT = SafeMath.sub(futureT, pendingBuys);
+                const newFutureB = SafeMath.div(futureK, newFutureT);
 
-                if (futureB > MAX_TOTAL_SATOSHIS) {
+                if (newFutureB > MAX_TOTAL_SATOSHIS) {
                     throw new Revert(
-                        `NATIVE_SWAP: Adding liquidity would cause pool overflow after pending buys.`,
+                        `NATIVE_SWAP: Listing this amount of token would cause pool overflow after pending buys.`,
                     );
                 }
             }
@@ -163,9 +177,21 @@ export class ListTokensForSaleOperation extends BaseOperation {
                 this.provider.setVirtualBTCContribution(updatedContribution);
             }
 
-            // Safe to add tokens to virtual reserves
+            // Safe to add tokens to pending operations
             this.liquidityQueue.increaseTotalTokensSellActivated(deltaHalf.toU256());
         }
+    }
+
+    private calculateNewQueueImpact(queuedTokens: u256, newTokenReserve: u256): u256 {
+        if (queuedTokens.isZero()) {
+            return u256.Zero;
+        }
+
+        // Using the same harmonic mean formula from LiquidityQueue.calculateQueueImpact()
+        const numerator = SafeMath.mul(queuedTokens, newTokenReserve);
+        const denominator = SafeMath.add(queuedTokens, newTokenReserve);
+
+        return SafeMath.div(numerator, denominator);
     }
 
     private ensureValidReceiverAddress(receiver: string): void {

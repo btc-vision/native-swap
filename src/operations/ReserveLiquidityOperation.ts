@@ -18,7 +18,6 @@ import {
     INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAX_ACTIVATION_DELAY,
-    MAX_TOTAL_SATOSHIS,
     MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
     MINIMUM_TRADE_SIZE_IN_SAT,
     RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
@@ -167,10 +166,10 @@ export class ReserveLiquidityOperation extends BaseOperation {
         const limitedByLiquidity: u256 = this.limitByAvailableLiquidity(tokens);
 
         // Check against FUTURE pool state after pending trades
-        const limitedByFuturePool: u256 = this.limitByFuturePoolState(limitedByLiquidity);
-        this.ensureAvailableLiquidityNonZero(limitedByFuturePool);
+        //const limitedByFuturePool: u256 = this.limitByFuturePoolState(limitedByLiquidity);
+        this.ensureAvailableLiquidityNonZero(limitedByLiquidity);
 
-        const limitedByCap: u256 = this.limitByReservationCap(limitedByFuturePool);
+        const limitedByCap: u256 = this.limitByReservationCap(limitedByLiquidity);
         this.ensureCapNotReached(limitedByCap);
         this.ensureMinimumReservationMet(limitedByCap);
         this.ensureBelowMaxTokensPerReservation(limitedByCap);
@@ -178,7 +177,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.remainingTokens = limitedByCap;
     }
 
-    private limitByFuturePoolState(requestedTokens: u256): u256 {
+    /*private limitByFuturePoolState(requestedTokens: u256): u256 {
         // Get current state
         let B = u256.fromU64(this.liquidityQueue.virtualSatoshisReserve);
         let T = this.liquidityQueue.virtualTokenReserve;
@@ -227,7 +226,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         }
 
         return requestedTokens;
-    }
+    }*/
 
     private computeTokensToReserve(availableLiquidity: u128): u128 {
         let targetTokensToReserve: u128;
