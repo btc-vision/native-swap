@@ -314,7 +314,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private pullInTokens(): void {
-        TransferHelper.safeTransferFrom(
+        TransferHelper.transferFrom(
             this.liquidityQueue.token,
             Blockchain.tx.sender,
             Blockchain.contractAddress,

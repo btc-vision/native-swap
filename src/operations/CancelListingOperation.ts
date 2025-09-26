@@ -143,7 +143,7 @@ export class CancelListingOperation extends BaseOperation {
 
     private transferLiquidityBack(amount: u256): void {
         if (!amount.isZero()) {
-            TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
+            TransferHelper.transfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
         }
     }
 }
