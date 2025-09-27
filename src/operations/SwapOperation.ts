@@ -151,7 +151,7 @@ export class SwapOperation extends BaseOperation {
     }
 
     private sendToken(amount: u256): void {
-        TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
+        TransferHelper.transfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
     }
 
     private updateLiquidityQueue(

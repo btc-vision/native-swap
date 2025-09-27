@@ -63,7 +63,6 @@ export class PurgedProviderQueue {
             this.ensureProviderQueueIndexIsValid(providerIndex);
 
             const providerId = associatedQueue.getAt(providerIndex);
-
             this.ensureProviderIdIsValid(providerId);
 
             const provider = getProvider(providerId);

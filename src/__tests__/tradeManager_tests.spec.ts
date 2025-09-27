@@ -50,7 +50,10 @@ describe('TradeManager tests', () => {
 
                 reservation.timeoutUser();
 
-                queue.tradeManager.executeTradeNotExpired(reservation);
+                queue.tradeManager.executeTradeNotExpired(
+                    reservation,
+                    queue.liquidityQueue.quote(),
+                );
             }).toThrow('No active reservation for this address.');
         });
 
@@ -72,7 +75,10 @@ describe('TradeManager tests', () => {
                     ),
                 );
 
-                queue.tradeManager.executeTradeNotExpired(reservation);
+                queue.tradeManager.executeTradeNotExpired(
+                    reservation,
+                    queue.liquidityQueue.quote(),
+                );
             }).toThrow();
         });
 
@@ -126,7 +132,7 @@ describe('TradeManager tests', () => {
 
             Blockchain.mockTransactionOutput(txOut);
 
-            queue.tradeManager.executeTradeNotExpired(reservation);
+            queue.tradeManager.executeTradeNotExpired(reservation, queue.liquidityQueue.quote());
 
             expect(reservation.isValid()).toBeFalsy();
         });
@@ -208,7 +214,7 @@ describe('TradeManager tests', () => {
             Blockchain.mockTransactionOutput(txOut);
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
 
-            queue4.tradeManager.executeTradeNotExpired(reservation2);
+            queue4.tradeManager.executeTradeNotExpired(reservation2, queue4.liquidityQueue.quote());
 
             expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(provider.getReservedAmount()).toStrictEqual(u128.fromU64(7000));
@@ -293,7 +299,10 @@ describe('TradeManager tests', () => {
 
                 Blockchain.mockTransactionOutput(txOut);
 
-                queue4.tradeManager.executeTradeNotExpired(reservation2);
+                queue4.tradeManager.executeTradeNotExpired(
+                    reservation2,
+                    queue4.liquidityQueue.quote(),
+                );
             }).toThrow();
         });
 
@@ -377,7 +386,7 @@ describe('TradeManager tests', () => {
 
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
 
-            queue4.tradeManager.executeTradeNotExpired(reservation2);
+            queue4.tradeManager.executeTradeNotExpired(reservation2, queue4.liquidityQueue.quote());
 
             expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(provider.getReservedAmount()).toStrictEqual(u128.fromU64(7000));
@@ -462,7 +471,7 @@ describe('TradeManager tests', () => {
 
             Blockchain.mockTransactionOutput(txOut);
 
-            queue4.tradeManager.executeTradeNotExpired(reservation2);
+            queue4.tradeManager.executeTradeNotExpired(reservation2, queue4.liquidityQueue.quote());
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(995000));
             expect(queue4.liquidityQueue.totalTokensSellActivated).toStrictEqual(
                 u256.fromU64(497500),
@@ -548,7 +557,7 @@ describe('TradeManager tests', () => {
             Blockchain.mockTransactionOutput(txOut);
 
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-            queue4.tradeManager.executeTradeNotExpired(reservation2);
+            queue4.tradeManager.executeTradeNotExpired(reservation2, queue4.liquidityQueue.quote());
             expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
         });
 

@@ -463,16 +463,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 // so no needs to check if we need to reset the provider
                 this.liquidityQueue.removeFromPurgeQueue(provider);
             }
-
-            /*!!!!! TO remove
-            const hasEnoughLiquidityLeft: boolean =
-                this.liquidityQueue.hasEnoughLiquidityLeftProvider(provider, this.currentQuote);
-
-            if (!hasEnoughLiquidityLeft) {
-                this.liquidityQueue.removeFromPurgeQueue(provider);
-            }
-
-             */
         }
     }
 

@@ -403,72 +403,6 @@ describe('ProviderManager tests', () => {
             expect(manager.currentIndexPriority).toStrictEqual(200);
         });
 
-        /*!!! To remove
-        it('should return true when a provider has enough remaining liquidity', () => {
-            const quoteManager = new QuoteManager(tokenIdUint8Array1);
-            const manager: ProviderManager = new ProviderManager(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                quoteManager,
-                ENABLE_INDEX_VERIFICATION, liquidityQueueReserve,
-            );
-
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setLiquidityAmount(u128.fromU32(200000));
-            provider.setReservedAmount(u128.fromU32(20000));
-            const result = manager.hasEnoughLiquidityLeftProvider(provider, u256.fromU32(1000));
-
-            expect(result).toBeTruthy();
-        });
-
-        it('should return false and reset the provider when a provider do not have enough remaining liquidity and do not have reserved amount', () => {
-            const quoteManager = new QuoteManager(tokenIdUint8Array1);
-            const manager: ProviderManager = new ProviderManager(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                quoteManager,
-                ENABLE_INDEX_VERIFICATION, liquidityQueueReserve,
-            );
-
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setLiquidityAmount(u128.fromU32(100));
-            provider.setReservedAmount(u128.fromU32(0));
-            provider.activate();
-
-            const result = manager.hasEnoughLiquidityLeftProvider(
-                provider,
-                u256.fromU32(100000000),
-            );
-
-            expect(result).toBeFalsy();
-            expect(provider.isActive()).toBeFalsy();
-        });
-
-        it('should return false and not reset the provider when a provider do not have enough remaining liquidity but have reserved amount', () => {
-            const quoteManager = new QuoteManager(tokenIdUint8Array1);
-            const manager: ProviderManager = new ProviderManager(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                quoteManager,
-                ENABLE_INDEX_VERIFICATION, liquidityQueueReserve,
-            );
-
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setLiquidityAmount(u128.fromU32(100));
-            provider.setReservedAmount(u128.fromU32(10));
-            provider.activate();
-
-            const result = manager.hasEnoughLiquidityLeftProvider(
-                provider,
-                u256.fromU32(100000000),
-            );
-
-            expect(result).toBeFalsy();
-            expect(provider.isActive()).toBeTruthy();
-        });
-
-         */
-
         it('should get the queue data', () => {
             const quoteManager = new QuoteManager(tokenIdUint8Array1);
             const liquidityQueueReserve = new LiquidityQueueReserve(
@@ -1223,8 +1157,10 @@ describe('ProviderManager tests', () => {
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            manager.addToNormalQueue(provider);
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
             liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(10000));
+
             manager.resetProvider(provider, true);
 
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
@@ -1247,6 +1183,7 @@ describe('ProviderManager tests', () => {
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            manager.addToNormalQueue(provider);
             provider.setLiquidityAmount(u128.Zero);
             manager.resetProvider(provider, true);
 
@@ -1269,6 +1206,7 @@ describe('ProviderManager tests', () => {
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            manager.addToNormalQueue(provider);
             provider.setLiquidityAmount(u128.Zero);
             manager.resetProvider(provider, false);
 
