@@ -524,7 +524,7 @@ export function transferPendingAmountToStakingContract(
             throw new Revert('NATIVE_SWAP: Staking contract address is not set.');
         }
 
-        TransferHelper.safeTransfer(
+        TransferHelper.transfer(
             tokenAddress,
             stakingContractAddress,
             pendingStakingContractAmount,
