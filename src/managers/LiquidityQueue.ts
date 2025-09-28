@@ -27,6 +27,7 @@ import { IProviderManager } from './interfaces/IProviderManager';
 import { IReservationManager } from './interfaces/IReservationManager';
 import { ILiquidityQueue } from './interfaces/ILiquidityQueue';
 import { IDynamicFee } from './interfaces/IDynamicFee';
+import { preciseLog } from '../utils/MathUtils';
 
 const ENABLE_FEES: bool = true;
 
@@ -610,7 +611,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     }*/
 
     private calculateQueueImpact(): u256 {
-        /*const queuedTokens = this.liquidity;
+        const queuedTokens = this.liquidity;
 
         if (queuedTokens.isZero()) {
             return u256.Zero;
@@ -618,20 +619,16 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         // Calculate ratio = 1 + Q/T
         const ratio = SafeMath.add(u256.One, SafeMath.div(queuedTokens, this.virtualTokenReserve));
-
-        // Use precise logarithm calculation
         const lnValue = preciseLog(ratio);
-
-        // Square the logarithm for more aggressive scaling
         const lnSquared = SafeMath.div(SafeMath.mul(lnValue, lnValue), u256.fromU64(1000000));
 
         // Impact = T * ln(1 + Q/T)^2 / 1e6
         return SafeMath.div(
             SafeMath.mul(this.virtualTokenReserve, lnSquared),
             u256.fromU64(1000000),
-        );*/
+        );
 
-        const queuedTokens = this.liquidity;
+        /*const queuedTokens = this.liquidity;
         if (queuedTokens.isZero()) {
             return u256.Zero;
         }
@@ -641,7 +638,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         const numerator = SafeMath.mul(queuedTokens, this.virtualTokenReserve);
         const denominator = SafeMath.add(queuedTokens, this.virtualTokenReserve);
 
-        return SafeMath.div(numerator, denominator);
+        return SafeMath.div(numerator, denominator);*/
 
         //return SafeMath.sqrt(SafeMath.mul(queuedTokens, this.virtualTokenReserve));
     }
