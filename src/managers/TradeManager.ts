@@ -3,11 +3,7 @@ import { CompletedTrade } from '../models/CompletedTrade';
 import { Blockchain, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Provider } from '../models/Provider';
-import {
-    CappedTokensResult,
-    satoshisToTokens128,
-    tokensToSatoshis,
-} from '../utils/SatoshisConversion';
+import { CappedTokensResult, satoshisToTokens128, tokensToSatoshis, } from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
 import {
@@ -175,23 +171,16 @@ export class TradeManager implements ITradeManager {
         return totalSatoshis - consumedSatoshis;
     }
 
-    /*private activateProvider(provider: Provider, currentQuote: u256): void {
+    private activateProvider(provider: Provider, currentQuote: u256): void {
         provider.allowLiquidityProvision();
 
-        const totalLiquidity: u256 = provider.getLiquidityAmount().toU256();
-
-        // ENTRY-PRICE TRACKING: Only record if provider has no contribution yet
-        if (!currentQuote.isZero() && provider.getVirtualBTCContribution() === 0) {
-            const btcContribution = tokensToSatoshis(totalLiquidity, currentQuote);
-            provider.setVirtualBTCContribution(btcContribution);
-        }
-
-        this.liquidityQueueReserve.addToTotalTokensSellActivated(totalLiquidity);
+        // Remove all the slashing/activation logic
+        // Just mark the provider as active, nothing else
 
         this.emitProviderActivatedEvent(provider);
-    }*/
+    }
 
-    private activateProvider(provider: Provider, currentQuote: u256): void {
+    /*private activateProvider(provider: Provider, currentQuote: u256): void {
         provider.allowLiquidityProvision();
         const totalLiquidity: u128 = provider.getLiquidityAmount();
 
@@ -209,10 +198,12 @@ export class TradeManager implements ITradeManager {
         // Note: If they already have a contribution from listing, we don't modify it
         // Their contribution was already properly accumulated during listing
 
+        const btcToRemove = tokensToSatoshis(halfCred.toU256(), currentQuote);
+
         // Continue with half-slashing activation
         this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
         this.emitProviderActivatedEvent(provider);
-    }
+    }*/
 
     private addProviderToPurgeQueue(provider: Provider): void {
         if (!provider.isPurged() && provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX) {
