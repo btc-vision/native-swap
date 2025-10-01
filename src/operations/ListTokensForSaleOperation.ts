@@ -69,16 +69,24 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.emitLiquidityListedEvent();
     }
 
-    private activateSlashing(): void {
+    /*private activateSlashing(): void {
         const deltaTokens: u256 = this.amountIn256;
+
+        Blockchain.log(`[activateSlashing] Starting with deltaTokens=${deltaTokens}`);
 
         if (!deltaTokens.isZero()) {
             const currentB = u256.fromU64(this.liquidityQueue.virtualSatoshisReserve);
             const currentT = this.liquidityQueue.virtualTokenReserve;
             const k = SafeMath.mul(currentB, currentT);
 
+            Blockchain.log(
+                `[activateSlashing] Current state: B=${currentB}, T=${currentT}, k=${k}`,
+            );
+
             // Get current price before adding
             const priceBefore = this.liquidityQueue.quote();
+
+            Blockchain.log(`[activateSlashing] Price before: ${priceBefore}`);
 
             // Simulate adding deltaTokens to token reserves via constant product
             const newT = SafeMath.add(currentT, deltaTokens);
@@ -170,15 +178,25 @@ export class ListTokensForSaleOperation extends BaseOperation {
                 const newTokensBtcValue = tokensToSatoshis(deltaTokens, currentQuote);
                 const existingContribution = this.provider.getVirtualBTCContribution();
                 const updatedContribution = existingContribution + newTokensBtcValue;
+
+                Blockchain.log(
+                    `[activateSlashing] BTC contribution: existing=${existingContribution}, new=${newTokensBtcValue}, updated=${updatedContribution}`,
+                );
+
                 this.provider.setVirtualBTCContribution(updatedContribution);
             }
 
             // Safe to add tokens to pending operations
+            Blockchain.log(`[activateSlashing] Adding ${deltaTokens} to totalTokensSellActivated`);
             this.liquidityQueue.increaseTotalTokensSellActivated(deltaTokens);
-        }
-    }
 
-    /*private activateSlashing(): void {
+            Blockchain.log(
+                `[activateSlashing] New totalTokensSellActivated: ${this.liquidityQueue.totalTokensSellActivated}`,
+            );
+        }
+    }*/
+
+    private activateSlashing(): void {
         const newTotal: u128 = SafeMath.add128(this.oldLiquidity, this.amountIn);
         const oldHalfCred: u128 = this.half(this.oldLiquidity);
         const newHalfCred: u128 = this.half(newTotal);
@@ -289,7 +307,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
             // Safe to add tokens to pending operations
             this.liquidityQueue.increaseTotalTokensSellActivated(deltaHalf.toU256());
         }
-    }*/
+    }
 
     private calculateNewQueueImpact(queuedTokens: u256, newTokenReserve: u256): u256 {
         if (queuedTokens.isZero()) {

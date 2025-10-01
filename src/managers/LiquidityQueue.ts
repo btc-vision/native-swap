@@ -1,7 +1,17 @@
-import { Address, Blockchain, Revert, SafeMath, StoredU256, StoredU64, } from '@btc-vision/btc-runtime/runtime';
+import {
+    Address,
+    Blockchain,
+    Revert,
+    SafeMath,
+    StoredU256,
+    StoredU64,
+} from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
-import { ANTI_BOT_MAX_TOKENS_PER_RESERVATION, RESERVATION_SETTINGS_POINTER, } from '../constants/StoredPointers';
+import {
+    ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
+    RESERVATION_SETTINGS_POINTER,
+} from '../constants/StoredPointers';
 
 import { addAmountToStakingContract, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
@@ -239,6 +249,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256 {
         const utilizationRatio = this.getUtilizationRatio();
         const feeBP = this.dynamicFee.getDynamicFeeBP(totalSatoshisSpent, utilizationRatio);
+
         return this.dynamicFee.computeFeeAmount(totalTokensPurchased, feeBP);
     }
 
@@ -275,7 +286,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         const capScaled = SafeMath.div(SafeMath.mul(totalScaled, maxPercentage), u256.fromU32(100));
 
         let availableScaled = u256.Zero;
-
         if (reservedScaled < capScaled) {
             availableScaled = SafeMath.div(SafeMath.sub(capScaled, reservedScaled), QUOTE_SCALE);
         }
@@ -309,14 +319,6 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         return reservation;
     }
-
-    //!!! To remove
-    /*
-    public hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean {
-        return this.providerManager.hasEnoughLiquidityLeftProvider(provider, quote);
-    }
-
-     */
 
     public getUtilizationRatio(): u256 {
         if (this.liquidity.isZero()) {
@@ -456,6 +458,7 @@ export class LiquidityQueue implements ILiquidityQueue {
             const newK = SafeMath.mul(B, T);
             const diff =
                 newK > initialK ? SafeMath.sub(newK, initialK) : SafeMath.sub(initialK, newK);
+
             const relativeTolerance = SafeMath.div(initialK, u256.fromU64(100000));
             if (diff > relativeTolerance) {
                 throw new Revert(
@@ -469,14 +472,8 @@ export class LiquidityQueue implements ILiquidityQueue {
         const dB_buy: u256 = u256.fromU64(this.totalSatoshisExchangedForTokens);
 
         if (!dT_buy.isZero() || !dB_buy.isZero()) {
-            // These values come from actual executed trades
             T = T > dT_buy ? SafeMath.sub(T, dT_buy) : u256.One;
             B = SafeMath.add(B, dB_buy);
-
-            // Don't verify constant k here because:
-            // Fees cause k to increase
-            // The actual trades already happened at specific prices
-            // We're just updating our accounting to match reality
         }
 
         if (T.isZero()) {
@@ -500,154 +497,6 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         this.lastVirtualUpdateBlock = currentBlock;
     }
-
-    /*public updateVirtualPoolIfNeeded(): void {
-        const currentBlock: u64 = Blockchain.block.number;
-        if (currentBlock <= this.lastVirtualUpdateBlock) {
-            return;
-        }
-
-        let B: u256 = u256.fromU64(this.virtualSatoshisReserve);
-        let T: u256 = this.virtualTokenReserve;
-
-        const initialK = SafeMath.mul(B, T);
-
-        // Add tokens from deltaTokensAdd (SELL SIDE)
-        const dT_add: u256 = this.totalTokensSellActivated;
-        if (!dT_add.isZero()) {
-            T = SafeMath.add(T, dT_add);
-            B = SafeMath.div(initialK, T);
-
-            // No artificial checks - just verify K is maintained
-            const newK = SafeMath.mul(B, T);
-            const diff =
-                newK > initialK ? SafeMath.sub(newK, initialK) : SafeMath.sub(initialK, newK);
-
-            const relativeTolerance = SafeMath.div(initialK, u256.fromU64(100000));
-            if (diff > relativeTolerance) {
-                throw new Revert(
-                    `Constant product broken after adding liquidity. Initial k: ${initialK}, New k: ${newK}`,
-                );
-            }
-        }
-
-        // Apply net "buys" (BUY SIDE)
-        const dT_buy: u256 = this.totalTokensExchangedForSatoshis;
-        if (!dT_buy.isZero()) {
-            const beforeBuyK = SafeMath.mul(B, T);
-
-            B = SafeMath.div(beforeBuyK, T);
-
-            const afterBuyK = SafeMath.mul(B, T);
-            const diff =
-                afterBuyK > beforeBuyK
-                    ? SafeMath.sub(afterBuyK, beforeBuyK)
-                    : SafeMath.sub(beforeBuyK, afterBuyK);
-
-            const relativeTolerance = SafeMath.div(beforeBuyK, u256.fromU64(100000));
-            if (diff > relativeTolerance) {
-                throw new Revert(
-                    `Constant product broken after buy. Before k: ${beforeBuyK}, After k: ${afterBuyK}`,
-                );
-            }
-        }
-
-        if (T.isZero()) {
-            T = u256.One;
-        }
-
-        if (B > MAX_TOTAL_SATOSHIS) {
-            throw new Revert(
-                `Impossible state: New virtual satoshis reserve out of range. Value: ${B}`,
-            );
-        }
-
-        this.virtualSatoshisReserve = B.toU64();
-        this.virtualTokenReserve = T;
-        this.resetAccumulators();
-
-        this.dynamicFee.volatility = this.computeVolatility(
-            currentBlock,
-            VOLATILITY_WINDOW_IN_BLOCKS,
-        );
-
-        this.lastVirtualUpdateBlock = currentBlock;
-    }*/
-
-    /*public updateVirtualPoolIfNeeded(): void {
-        const currentBlock: u64 = Blockchain.block.number;
-
-        if (currentBlock <= this.lastVirtualUpdateBlock) {
-            return;
-        }
-
-        let B: u256 = u256.fromU64(this.virtualSatoshisReserve);
-        let T: u256 = this.virtualTokenReserve;
-
-        // Add tokens from deltaTokensAdd
-        //const dT_add: u256 = this.totalTokensSellActivated;
-        //if (!dT_add.isZero()) {
-        //    T = SafeMath.add(T, dT_add);
-        //}
-
-        const dT_add: u256 = this.totalTokensSellActivated;
-        if (!dT_add.isZero()) {
-            // Apply constant product for sells: k = B * T must remain constant
-            const k = SafeMath.mul(B, T);
-            T = SafeMath.add(T, dT_add);
-            B = SafeMath.div(k, T);
-        }
-
-        // apply net "buys"
-        const dB_buy: u256 = u256.fromU64(this.totalSatoshisExchangedForTokens);
-        const dT_buy: u256 = this.totalTokensExchangedForSatoshis;
-
-        if (!dT_buy.isZero()) {
-            let Tprime = T >= dT_buy ? SafeMath.sub(T, dT_buy) : u256.One;
-            let Bprime = SafeMath.div(SafeMath.mul(B, T), Tprime);
-            const incB = SafeMath.sub(Bprime, B);
-
-            if (incB > dB_buy) {
-                Bprime = SafeMath.add(B, dB_buy);
-                Tprime = SafeMath.div(SafeMath.mul(B, T), Bprime);
-
-                if (Tprime < u256.One) {
-                    Tprime = u256.One;
-                }
-            } else if (incB < dB_buy) {
-                Bprime = SafeMath.add(B, dB_buy);
-                Tprime = SafeMath.div(SafeMath.mul(B, T), Bprime);
-
-                if (Tprime < u256.One) {
-                    Tprime = u256.One;
-                }
-            }
-
-            B = Bprime;
-            T = Tprime;
-        }
-
-        if (T.isZero()) {
-            T = u256.One;
-        }
-
-        if (B > MAX_TOTAL_SATOSHIS) {
-            throw new Revert(
-                `Impossible state: New virtual satoshis reserve out of range. Value: ${B}`,
-            );
-        }
-
-        this.virtualSatoshisReserve = B.toU64();
-        this.virtualTokenReserve = T;
-        this.resetAccumulators();
-
-        this.dynamicFee.volatility = this.computeVolatility(
-            currentBlock,
-            VOLATILITY_WINDOW_IN_BLOCKS,
-        );
-
-        this.lastVirtualUpdateBlock = currentBlock;
-    }*/
 
     /*private calculateQueueImpact(): u256 {
         const queuedTokens = this.liquidity;
