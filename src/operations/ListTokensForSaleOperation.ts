@@ -17,9 +17,15 @@ import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import {
     CSV_BLOCKS_REQUIRED,
     INDEX_NOT_SET_VALUE,
+    MAX_CUMULATIVE_IMPACT_BPS,
+    MAX_PRICE_IMPACT_BPS,
+    MAX_TOTAL_SATOSHIS,
+    MIN_SATOSHI_RESERVE,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
     PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
     PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX,
+    QUOTE_SCALE,
+    TEN_THOUSAND_U256,
 } from '../constants/Contract';
 
 export class ListTokensForSaleOperation extends BaseOperation {
@@ -63,6 +69,133 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.emitLiquidityListedEvent();
     }
 
+    /*private activateSlashing(): void {
+        const deltaTokens: u256 = this.amountIn256;
+
+        Blockchain.log(`[activateSlashing] Starting with deltaTokens=${deltaTokens}`);
+
+        if (!deltaTokens.isZero()) {
+            const currentB = u256.fromU64(this.liquidityQueue.virtualSatoshisReserve);
+            const currentT = this.liquidityQueue.virtualTokenReserve;
+            const k = SafeMath.mul(currentB, currentT);
+
+            Blockchain.log(
+                `[activateSlashing] Current state: B=${currentB}, T=${currentT}, k=${k}`,
+            );
+
+            // Get current price before adding
+            const priceBefore = this.liquidityQueue.quote();
+
+            Blockchain.log(`[activateSlashing] Price before: ${priceBefore}`);
+
+            // Simulate adding deltaTokens to token reserves via constant product
+            const newT = SafeMath.add(currentT, deltaTokens);
+            const newB = SafeMath.div(k, newT);
+
+            // Calculate new price after adding
+            const queuedTokens = this.liquidityQueue.liquidity;
+            const queueImpact = this.calculateNewQueueImpact(queuedTokens, newT);
+            const effectiveNewT = SafeMath.add(newT, queueImpact);
+            const priceAfter = SafeMath.div(SafeMath.mul(effectiveNewT, QUOTE_SCALE), newB);
+
+            // Price increases when adding tokens (tokens become cheaper)
+            if (priceAfter > priceBefore) {
+                const priceImpact = SafeMath.div(
+                    SafeMath.mul(SafeMath.sub(priceAfter, priceBefore), TEN_THOUSAND_U256),
+                    priceBefore,
+                );
+
+                if (priceImpact > MAX_PRICE_IMPACT_BPS) {
+                    throw new Revert(
+                        `NATIVE_SWAP: Listing this amount of token would devalue tokens by ${priceImpact} bps. ` +
+                            `Maximum allowed is ${MAX_PRICE_IMPACT_BPS} bps. ` +
+                            `Reduce amount or wait for better market conditions.`,
+                    );
+                }
+            }
+
+            // Check minimum satoshi reserve
+            if (newB < MIN_SATOSHI_RESERVE) {
+                throw new Revert(
+                    `NATIVE_SWAP: Listing this amount of token would push satoshi reserves too low ` +
+                        `(would be ${newB}, minimum ${MIN_SATOSHI_RESERVE}). ` +
+                        `Price is too low for more liquidity.`,
+                );
+            }
+
+            // Check if pending operations would compound the issue
+            const pendingSells = this.liquidityQueue.totalTokensSellActivated;
+            const pendingBuys = this.liquidityQueue.totalTokensExchangedForSatoshis;
+
+            // Apply ALL pending sells (current deltaTokens + existing pending)
+            const totalPendingSells = SafeMath.add(deltaTokens, pendingSells);
+            const futureT = SafeMath.add(currentT, totalPendingSells);
+            const futureB = SafeMath.div(k, futureT);
+
+            // Calculate future price with queue impact
+            const futureQueueImpact = this.calculateNewQueueImpact(queuedTokens, futureT);
+            const effectiveFutureT = SafeMath.add(futureT, futureQueueImpact);
+            const totalPriceAfter = SafeMath.div(
+                SafeMath.mul(effectiveFutureT, QUOTE_SCALE),
+                futureB,
+            );
+
+            if (totalPriceAfter > priceBefore) {
+                const totalPriceImpact = SafeMath.div(
+                    SafeMath.mul(SafeMath.sub(totalPriceAfter, priceBefore), TEN_THOUSAND_U256),
+                    priceBefore,
+                );
+
+                if (totalPriceImpact > MAX_CUMULATIVE_IMPACT_BPS) {
+                    throw new Revert(
+                        `NATIVE_SWAP: Cumulative token devaluation too high (${totalPriceImpact} bps). ` +
+                            `Wait for pending queue to clear.`,
+                    );
+                }
+            }
+
+            // Check future buy overflow
+            if (!pendingBuys.isZero()) {
+                // First check if buys would drain the pool
+                if (pendingBuys >= futureT) {
+                    throw new Revert(`NATIVE_SWAP: Pool would be drained by pending operations.`);
+                }
+
+                const futureK = SafeMath.mul(futureB, futureT);
+                const newFutureT = SafeMath.sub(futureT, pendingBuys);
+                const newFutureB = SafeMath.div(futureK, newFutureT);
+
+                if (newFutureB > MAX_TOTAL_SATOSHIS) {
+                    throw new Revert(
+                        `NATIVE_SWAP: Listing this amount of token would cause pool overflow after pending buys.`,
+                    );
+                }
+            }
+
+            // Track BTC contribution
+            const currentQuote = this.liquidityQueue.quote();
+            if (!currentQuote.isZero()) {
+                const newTokensBtcValue = tokensToSatoshis(deltaTokens, currentQuote);
+                const existingContribution = this.provider.getVirtualBTCContribution();
+                const updatedContribution = existingContribution + newTokensBtcValue;
+
+                Blockchain.log(
+                    `[activateSlashing] BTC contribution: existing=${existingContribution}, new=${newTokensBtcValue}, updated=${updatedContribution}`,
+                );
+
+                this.provider.setVirtualBTCContribution(updatedContribution);
+            }
+
+            // Safe to add tokens to pending operations
+            Blockchain.log(`[activateSlashing] Adding ${deltaTokens} to totalTokensSellActivated`);
+            this.liquidityQueue.increaseTotalTokensSellActivated(deltaTokens);
+
+            Blockchain.log(
+                `[activateSlashing] New totalTokensSellActivated: ${this.liquidityQueue.totalTokensSellActivated}`,
+            );
+        }
+    }*/
+
     private activateSlashing(): void {
         const newTotal: u128 = SafeMath.add128(this.oldLiquidity, this.amountIn);
         const oldHalfCred: u128 = this.half(this.oldLiquidity);
@@ -70,23 +203,122 @@ export class ListTokensForSaleOperation extends BaseOperation {
         const deltaHalf: u128 = SafeMath.sub128(newHalfCred, oldHalfCred);
 
         if (!deltaHalf.isZero()) {
-            // ENTRY-PRICE TRACKING: Accumulate BTC contribution for new tokens
+            const currentB = u256.fromU64(this.liquidityQueue.virtualSatoshisReserve);
+            const currentT = this.liquidityQueue.virtualTokenReserve;
+            const k = SafeMath.mul(currentB, currentT);
+
+            // Get current price before adding
+            const priceBefore = this.liquidityQueue.quote();
+
+            // Simulate adding deltaHalf to token reserves via constant product
+            const newT = SafeMath.add(currentT, deltaHalf.toU256());
+            const newB = SafeMath.div(k, newT);
+
+            // Calculate new price after adding
+            // Queue impact stays the same since liquidity doesn't change
+            const queuedTokens = this.liquidityQueue.liquidity;
+            const queueImpact = this.calculateNewQueueImpact(queuedTokens, newT);
+            const effectiveNewT = SafeMath.add(newT, queueImpact);
+            const priceAfter = SafeMath.div(SafeMath.mul(effectiveNewT, QUOTE_SCALE), newB);
+
+            // Price increases when adding tokens (tokens become cheaper)
+            if (priceAfter > priceBefore) {
+                const priceImpact = SafeMath.div(
+                    SafeMath.mul(SafeMath.sub(priceAfter, priceBefore), TEN_THOUSAND_U256),
+                    priceBefore,
+                );
+
+                if (priceImpact > MAX_PRICE_IMPACT_BPS) {
+                    throw new Revert(
+                        `NATIVE_SWAP: Listing this amount of token would devalue tokens by ${priceImpact} bps. ` +
+                            `Maximum allowed is ${MAX_PRICE_IMPACT_BPS} bps. ` +
+                            `Reduce amount or wait for better market conditions.`,
+                    );
+                }
+            }
+
+            // Check minimum satoshi reserve
+            if (newB < MIN_SATOSHI_RESERVE) {
+                throw new Revert(
+                    `NATIVE_SWAP: Listing this amount of token would push satoshi reserves too low ` +
+                        `(would be ${newB}, minimum ${MIN_SATOSHI_RESERVE}). ` +
+                        `Price is too low for more liquidity.`,
+                );
+            }
+
+            // Check if pending operations would compound the issue
+            const pendingSells = this.liquidityQueue.totalTokensSellActivated;
+            const pendingBuys = this.liquidityQueue.totalTokensExchangedForSatoshis;
+
+            // Apply ALL pending sells (current deltaHalf + existing pending)
+            const totalPendingSells = SafeMath.add(deltaHalf.toU256(), pendingSells);
+            const futureT = SafeMath.add(currentT, totalPendingSells);
+            const futureB = SafeMath.div(k, futureT);
+
+            // Calculate future price with queue impact
+            const futureQueueImpact = this.calculateNewQueueImpact(queuedTokens, futureT);
+            const effectiveFutureT = SafeMath.add(futureT, futureQueueImpact);
+            const totalPriceAfter = SafeMath.div(
+                SafeMath.mul(effectiveFutureT, QUOTE_SCALE),
+                futureB,
+            );
+
+            if (totalPriceAfter > priceBefore) {
+                const totalPriceImpact = SafeMath.div(
+                    SafeMath.mul(SafeMath.sub(totalPriceAfter, priceBefore), TEN_THOUSAND_U256),
+                    priceBefore,
+                );
+
+                if (totalPriceImpact > MAX_CUMULATIVE_IMPACT_BPS) {
+                    throw new Revert(
+                        `NATIVE_SWAP: Cumulative token devaluation too high (${totalPriceImpact} bps). ` +
+                            `Wait for pending queue to clear.`,
+                    );
+                }
+            }
+
+            // Check future buy overflow
+            if (!pendingBuys.isZero()) {
+                // First check if buys would drain the pool
+                if (pendingBuys >= futureT) {
+                    throw new Revert(`NATIVE_SWAP: Pool would be drained by pending operations.`);
+                }
+
+                const futureK = SafeMath.mul(futureB, futureT);
+                const newFutureT = SafeMath.sub(futureT, pendingBuys);
+                const newFutureB = SafeMath.div(futureK, newFutureT);
+
+                if (newFutureB > MAX_TOTAL_SATOSHIS) {
+                    throw new Revert(
+                        `NATIVE_SWAP: Listing this amount of token would cause pool overflow after pending buys.`,
+                    );
+                }
+            }
+
+            // Track BTC contribution
             const currentQuote = this.liquidityQueue.quote();
             if (!currentQuote.isZero()) {
-                // Calculate BTC value of the NEW tokens being added (not the total)
                 const newTokensBtcValue = tokensToSatoshis(this.amountIn256, currentQuote);
-
-                // Get existing contribution and add the new amount
                 const existingContribution = this.provider.getVirtualBTCContribution();
                 const updatedContribution = existingContribution + newTokensBtcValue;
-
-                // Store the accumulated total
                 this.provider.setVirtualBTCContribution(updatedContribution);
             }
 
-            // Add half tokens to virtual reserves (causes price drop)
-            this.liquidityQueue.increaseTotalTokensSellActivated(deltaHalf.toU256()); // same as addToTotalTokensSellActivated
+            // Safe to add tokens to pending operations
+            this.liquidityQueue.increaseTotalTokensSellActivated(deltaHalf.toU256());
         }
+    }
+
+    private calculateNewQueueImpact(queuedTokens: u256, newTokenReserve: u256): u256 {
+        if (queuedTokens.isZero()) {
+            return u256.Zero;
+        }
+
+        // Using the same harmonic mean formula from LiquidityQueue.calculateQueueImpact()
+        const numerator = SafeMath.mul(queuedTokens, newTokenReserve);
+        const denominator = SafeMath.add(queuedTokens, newTokenReserve);
+
+        return SafeMath.div(numerator, denominator);
     }
 
     private ensureValidReceiverAddress(receiver: string): void {
@@ -314,7 +546,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private pullInTokens(): void {
-        TransferHelper.safeTransferFrom(
+        TransferHelper.transferFrom(
             this.liquidityQueue.token,
             Blockchain.tx.sender,
             Blockchain.contractAddress,

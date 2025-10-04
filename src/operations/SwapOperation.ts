@@ -1,11 +1,5 @@
 import { BaseOperation } from './BaseOperation';
-import {
-    Address,
-    Blockchain,
-    Revert,
-    SafeMath,
-    TransferHelper,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, Revert, SafeMath, TransferHelper, } from '@btc-vision/btc-runtime/runtime';
 import { SwapExecutedEvent } from '../events/SwapExecutedEvent';
 import { Reservation } from '../models/Reservation';
 import { u256 } from '@btc-vision/as-bignum/assembly';
@@ -151,7 +145,7 @@ export class SwapOperation extends BaseOperation {
     }
 
     private sendToken(amount: u256): void {
-        TransferHelper.safeTransfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
+        TransferHelper.transfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
     }
 
     private updateLiquidityQueue(

@@ -164,6 +164,9 @@ export class ReserveLiquidityOperation extends BaseOperation {
     private computeTokenRemaining(): void {
         const tokens: u256 = satoshisToTokens(this.maximumAmountInSats, this.currentQuote);
         const limitedByLiquidity: u256 = this.limitByAvailableLiquidity(tokens);
+
+        // Check against FUTURE pool state after pending trades
+        //const limitedByFuturePool: u256 = this.limitByFuturePoolState(limitedByLiquidity);
         this.ensureAvailableLiquidityNonZero(limitedByLiquidity);
 
         const limitedByCap: u256 = this.limitByReservationCap(limitedByLiquidity);
@@ -173,6 +176,57 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         this.remainingTokens = limitedByCap;
     }
+
+    /*private limitByFuturePoolState(requestedTokens: u256): u256 {
+        // Get current state
+        let B = u256.fromU64(this.liquidityQueue.virtualSatoshisReserve);
+        let T = this.liquidityQueue.virtualTokenReserve;
+
+        // Apply pending sells first
+        const pendingSells = this.liquidityQueue.totalTokensSellActivated;
+        if (!pendingSells.isZero()) {
+            const k = SafeMath.mul(B, T);
+            T = SafeMath.add(T, pendingSells);
+            B = SafeMath.div(k, T);
+        }
+
+        // Apply pending buys
+        const pendingBuys = this.liquidityQueue.totalTokensExchangedForSatoshis;
+        if (!pendingBuys.isZero()) {
+            const k = SafeMath.mul(B, T);
+            if (pendingBuys >= T) {
+                // Already broken, no new reservations
+                return u256.Zero;
+            }
+            T = SafeMath.sub(T, pendingBuys);
+            B = SafeMath.div(k, T);
+        }
+
+        // Now check if THIS reservation would break things
+        const totalNewBuys = SafeMath.add(requestedTokens, pendingBuys);
+        if (totalNewBuys >= T) {
+            return u256.Zero; // Would consume entire pool
+        }
+
+        const k = SafeMath.mul(B, T);
+        const finalT = SafeMath.sub(T, totalNewBuys);
+        const finalB = SafeMath.div(k, finalT);
+
+        if (finalB > MAX_TOTAL_SATOSHIS) {
+            // Calculate max that can be bought
+            const minT = SafeMath.div(k, MAX_TOTAL_SATOSHIS);
+            if (minT >= T) {
+                return u256.Zero; // Already at limit
+            }
+            const maxTotal = SafeMath.sub(T, minT);
+            if (pendingBuys >= maxTotal) {
+                return u256.Zero; // Pending buys already max out capacity
+            }
+            return SafeMath.sub(maxTotal, pendingBuys);
+        }
+
+        return requestedTokens;
+    }*/
 
     private computeTokensToReserve(availableLiquidity: u128): u128 {
         let targetTokensToReserve: u128;
@@ -409,16 +463,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 // so no needs to check if we need to reset the provider
                 this.liquidityQueue.removeFromPurgeQueue(provider);
             }
-
-            /*!!!!! TO remove
-            const hasEnoughLiquidityLeft: boolean =
-                this.liquidityQueue.hasEnoughLiquidityLeftProvider(provider, this.currentQuote);
-
-            if (!hasEnoughLiquidityLeft) {
-                this.liquidityQueue.removeFromPurgeQueue(provider);
-            }
-
-             */
         }
     }
 

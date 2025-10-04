@@ -32,9 +32,6 @@ export interface IProviderManager {
 
     getProviderFromQueue(index: u32, type: ProviderTypes): Provider;
 
-    //!!! TO remove
-    //hasEnoughLiquidityLeftProvider(provider: Provider, quote: u256): boolean;
-
     getNextProviderWithLiquidity(quote: u256): Provider | null;
 
     getQueueData(): Uint8Array;

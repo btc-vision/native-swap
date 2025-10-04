@@ -178,15 +178,8 @@ export class TradeManager implements ITradeManager {
     /*private activateProvider(provider: Provider, currentQuote: u256): void {
         provider.allowLiquidityProvision();
 
-        const totalLiquidity: u256 = provider.getLiquidityAmount().toU256();
-
-        // ENTRY-PRICE TRACKING: Only record if provider has no contribution yet
-        if (!currentQuote.isZero() && provider.getVirtualBTCContribution() === 0) {
-            const btcContribution = tokensToSatoshis(totalLiquidity, currentQuote);
-            provider.setVirtualBTCContribution(btcContribution);
-        }
-
-        this.liquidityQueueReserve.addToTotalTokensSellActivated(totalLiquidity);
+        // Remove all the slashing/activation logic
+        // Just mark the provider as active, nothing else
 
         this.emitProviderActivatedEvent(provider);
     }*/
@@ -195,22 +188,27 @@ export class TradeManager implements ITradeManager {
         provider.allowLiquidityProvision();
         const totalLiquidity: u128 = provider.getLiquidityAmount();
 
-        // Calculate half for slashing mechanism
+        // Calculate the second half (matching the rounding from listing)
         const halfFloor: u128 = SafeMath.div128(totalLiquidity, u128.fromU32(2));
         const halfCred: u128 = u128.add(halfFloor, u128.and(totalLiquidity, u128.One));
 
-        // ENTRY-PRICE TRACKING: Only record if provider has no contribution yet
-        // This handles edge case where provider gets activated without going through listing
+        // EDGE CASE: Handle providers who bypassed normal listing
         if (!currentQuote.isZero() && provider.getVirtualBTCContribution() === 0) {
-            // Record their entire liquidity value since they bypassed normal listing
+            // They bypassed listing, so record their FULL value now
             const btcContribution = tokensToSatoshis(totalLiquidity.toU256(), currentQuote);
             provider.setVirtualBTCContribution(btcContribution);
-        }
-        // Note: If they already have a contribution from listing, we don't modify it
-        // Their contribution was already properly accumulated during listing
 
-        // Continue with half-slashing activation
-        this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
+            // Since they bypassed listing, we need to apply BOTH halves now
+            this.liquidityQueueReserve.addToTotalTokensSellActivated(totalLiquidity.toU256());
+        } else {
+            // Normal case: Apply the SECOND 50% of tokens to the virtual reserves
+            // (First 50% was already applied during listing)
+            this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
+        }
+
+        // Remove the btcToRemove calculation - it's not needed!
+        // The BTC contribution stays as-is for cancellation tracking
+
         this.emitProviderActivatedEvent(provider);
     }
 

@@ -1,10 +1,13 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 export const INITIAL_FEE_COLLECT_ADDRESS: string =
-    'tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c'; //''; //'bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh';
+    'bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh';
+
+// tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c
+// bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh
 
 export const QUOTE_SCALE: u256 = u256.fromU64(100_000_000);
-export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 20;
+export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 8;
 export const VOLATILITY_WINDOW_IN_BLOCKS: u32 = 5;
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT: u64 = 600;
 export const MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT: u64 = 1000;
@@ -15,6 +18,12 @@ export const PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX: u128 = u128.fromU32(1000);
 export const TIMEOUT_AFTER_EXPIRATION_BLOCKS: u8 = 2;
 export const MAX_TOTAL_SATOSHIS: u256 = u256.fromU64(21_000_000 * 100_000_000);
 export const MAX_ACTIVATION_DELAY: u8 = 3;
+
+export const MIN_SATOSHI_RESERVE: u256 = u256.fromU64(100_000); // 0.001 BTC
+export const MAX_PRICE_IMPACT_BPS = u256.fromU64(30_00); // 40%
+export const MAX_CUMULATIVE_IMPACT_BPS = u256.fromU32(70_000);
+
+export const TEN_THOUSAND_U256: u256 = u256.fromU32(10_000);
 
 // By design, Array does not contain more than U32.MAX_VALUE - 1 elements.
 // And max index is U32.MAX_VALUE - 2.

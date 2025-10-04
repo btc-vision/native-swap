@@ -1229,7 +1229,7 @@ describe('Liquidity queue tests', () => {
             queue.totalSatoshisExchangedForTokens = 999900001;
             queue.updateVirtualPoolIfNeeded();
 
-            expect(queue.virtualSatoshisReserve).toStrictEqual(1000000001);
+            expect(queue.virtualSatoshisReserve).toStrictEqual(1000000000);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(1));
         });
 
@@ -1250,7 +1250,7 @@ describe('Liquidity queue tests', () => {
             queue.totalSatoshisExchangedForTokens = 999990000;
             queue.updateVirtualPoolIfNeeded();
 
-            expect(queue.virtualSatoshisReserve).toStrictEqual(1000090000);
+            expect(queue.virtualSatoshisReserve).toStrictEqual(1000000000);
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(1));
         });
 
@@ -1902,35 +1902,6 @@ describe('Liquidity queue tests', () => {
 
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
         });
-        /*!!! TO remove
-                it('should return true if provider has enough liquidity left', () => {
-                    setBlockchainEnvironment(1000);
-
-                    const createQueueResult = createLiquidityQueue(
-                        tokenAddress1,
-                        tokenIdUint8Array1,
-                        false,
-                    );
-                    const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
-
-                    const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-                    provider.setLiquidityAmount(u128.fromU32(200000));
-                    provider.setReservedAmount(u128.fromU32(20000));
-                    provider.save();
-                    queue.save();
-
-                    const createQueueResult2 = createLiquidityQueue(
-                        tokenAddress1,
-                        tokenIdUint8Array1,
-                        false,
-                    );
-
-                    const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
-                    const result = queue2.hasEnoughLiquidityLeftProvider(provider, u256.fromU64(666666666));
-
-                    expect(result).toBeTruthy();
-                });
-                */
     });
 
     describe('Cap', () => {
