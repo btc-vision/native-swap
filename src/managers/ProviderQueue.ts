@@ -7,10 +7,10 @@ import {
     StoredU256Array,
 } from '@btc-vision/btc-runtime/runtime';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
-import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
+import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 
 export class ProviderQueue {
     protected readonly token: Address;
@@ -119,7 +119,7 @@ export class ProviderQueue {
         provider.setQueueIndex(INDEX_NOT_SET_VALUE);
     }
 
-    public resetProvider(
+    /*public resetProvider(
         provider: Provider,
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
@@ -150,6 +150,54 @@ export class ProviderQueue {
                 this.liquidityQueueReserve.subFromVirtualSatoshisReserve(btcContribution);
             }
 
+            provider.setVirtualBTCContribution(0);
+        }
+
+        if (!provider.isInitialLiquidityProvider()) {
+            this.queue.delete_physical(provider.getQueueIndex());
+        }
+
+        provider.resetListingProviderValues();
+
+        Blockchain.emit(
+            new ProviderFulfilledEvent(provider.getId(), canceled, false, stakedAmount),
+        );
+    }*/
+
+    public resetProvider(
+        provider: Provider,
+        burnRemainingFunds: boolean = true,
+        canceled: boolean = false,
+    ): void {
+        let stakedAmount: u256 = u256.Zero;
+        this.ensureProviderNotAlreadyPurged(provider);
+
+        // ENTRY-PRICE TRACKING: Get the BTC contribution before modifications
+        const btcContribution = provider.getVirtualBTCContribution();
+        const hasContribution = btcContribution > 0;
+
+        if (burnRemainingFunds && provider.hasLiquidityAmount()) {
+            stakedAmount = provider.getLiquidityAmount().toU256();
+
+            // Remove from total reserve (accounting only)
+            this.liquidityQueueReserve.subFromTotalReserve(stakedAmount);
+            this.liquidityQueueReserve.subFromVirtualTokenReserve(stakedAmount);
+
+            addAmountToStakingContract(stakedAmount);
+        }
+
+        // ENTRY-PRICE TRACKING: Remove the entry-price BTC contribution
+        // This represents the baseline liquidity depth this provider contributed
+        if (hasContribution) {
+            // CRITICAL FIX: Only remove BTC contribution if it's a cancellation
+            // For normal trades, the BTC contribution should NOT be removed from reserves
+            if (canceled) {
+                // We're canceling a listing, so reverse the virtual BTC adjustment
+                if (this.liquidityQueueReserve.virtualSatoshisReserve >= btcContribution) {
+                    this.liquidityQueueReserve.subFromVirtualSatoshisReserve(btcContribution);
+                }
+            }
+            // Always clear the tracking value regardless of canceled status
             provider.setVirtualBTCContribution(0);
         }
 
