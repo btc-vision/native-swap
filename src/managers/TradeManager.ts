@@ -3,11 +3,7 @@ import { CompletedTrade } from '../models/CompletedTrade';
 import { Blockchain, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Provider } from '../models/Provider';
-import {
-    CappedTokensResult,
-    satoshisToTokens128,
-    tokensToSatoshis,
-} from '../utils/SatoshisConversion';
+import { CappedTokensResult, satoshisToTokens128, tokensToSatoshis, } from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
 import {
@@ -174,15 +170,6 @@ export class TradeManager implements ITradeManager {
 
         return totalSatoshis - consumedSatoshis;
     }
-
-    /*private activateProvider(provider: Provider, currentQuote: u256): void {
-        provider.allowLiquidityProvision();
-
-        // Remove all the slashing/activation logic
-        // Just mark the provider as active, nothing else
-
-        this.emitProviderActivatedEvent(provider);
-    }*/
 
     private activateProvider(provider: Provider, currentQuote: u256): void {
         provider.allowLiquidityProvision();
