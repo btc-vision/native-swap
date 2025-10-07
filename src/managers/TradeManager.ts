@@ -206,9 +206,6 @@ export class TradeManager implements ITradeManager {
             this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
         }
 
-        // Remove the btcToRemove calculation - it's not needed!
-        // The BTC contribution stays as-is for cancellation tracking
-
         this.emitProviderActivatedEvent(provider);
     }
 
