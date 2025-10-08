@@ -72,11 +72,11 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.settings = new StoredU64(RESERVATION_SETTINGS_POINTER, tokenIdUint8Array);
         this.timeoutEnabled = timeoutEnabled;
 
-        if (purgeOldReservations) {
-            this.purgeReservationsAndRestoreProviders();
-        }
-
         this.updateVirtualPoolIfNeeded();
+
+        if (purgeOldReservations && this.virtualSatoshisReserve > 0) {
+            this.purgeReservationsAndRestoreProviders(this.quote());
+        }
     }
 
     public get antiBotExpirationBlock(): u64 {
@@ -378,9 +378,14 @@ export class LiquidityQueue implements ILiquidityQueue {
         return this.reservationManager.isReservationActiveAtIndex(blockNumber, index);
     }
 
-    public purgeReservationsAndRestoreProviders(): void {
+    public cleanUpQueues(currentQuote: u256): void {
+        this.providerManager.cleanUpQueues(currentQuote);
+    }
+
+    public purgeReservationsAndRestoreProviders(currentQuote: u256): void {
         this.lastPurgedBlock = this.reservationManager.purgeReservationsAndRestoreProviders(
             this.lastPurgedBlock,
+            currentQuote,
         );
     }
 

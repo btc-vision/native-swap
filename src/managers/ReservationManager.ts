@@ -99,7 +99,7 @@ export class ReservationManager implements IReservationManager {
         return !!activeReservationList.get(index);
     }
 
-    public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
+    public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64, currentQuote: u256): u64 {
         const currentBlockNumber: u64 = Blockchain.block.number;
 
         if (currentBlockNumber <= RESERVATION_EXPIRE_AFTER_IN_BLOCKS) {
@@ -107,7 +107,6 @@ export class ReservationManager implements IReservationManager {
         }
 
         const maxBlockToPurge: u64 = currentBlockNumber - RESERVATION_EXPIRE_AFTER_IN_BLOCKS;
-
         if (maxBlockToPurge <= lastPurgedBlock) {
             this.providerManager.restoreCurrentIndex();
             return lastPurgedBlock;
@@ -157,7 +156,7 @@ export class ReservationManager implements IReservationManager {
             this.blocksWithReservations.save();
         }
 
-        this.providerManager.cleanUpQueues();
+        this.providerManager.cleanUpQueues(currentQuote);
 
         if (touched) {
             this.liquidityQueueReserve.subFromTotalReserved(freed);
@@ -167,7 +166,6 @@ export class ReservationManager implements IReservationManager {
         }
 
         let newLastPurgedBlock: u64 = lastPurgedBlock;
-
         if (shifted) {
             if (this.blocksWithReservations.getLength() === 0) {
                 newLastPurgedBlock = maxBlockToPurge; // queue empty

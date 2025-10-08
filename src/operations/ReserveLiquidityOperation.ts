@@ -63,7 +63,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.checkPreConditions();
         const reservation: Reservation = this.createReservation();
         this.getValidQuote();
-        this.liquidityQueue.purgeReservationsAndRestoreProviders();
+        this.liquidityQueue.purgeReservationsAndRestoreProviders(this.currentQuote);
         this.ensureEnoughLiquidity();
         this.computeTokenRemaining();
         this.reserve(reservation);
@@ -71,6 +71,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.liquidityQueue.increaseTotalReserved(this.reservedTokens);
         this.liquidityQueue.addReservation(reservation);
         this.liquidityQueue.setBlockQuote();
+        this.liquidityQueue.cleanUpQueues(this.currentQuote);
         this.emitReservationCreatedEvent();
     }
 
