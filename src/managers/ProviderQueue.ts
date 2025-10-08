@@ -11,7 +11,6 @@ import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract'
 import { ProviderTypes } from '../types/ProviderTypes';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
-import { tokensToSatoshis128 } from '../utils/SatoshisConversion';
 
 export class ProviderQueue {
     protected readonly token: Address;
@@ -67,7 +66,6 @@ export class ProviderQueue {
 
             if (!providerId.isZero()) {
                 const provider: Provider = getProvider(providerId);
-
                 const meetMinLiquidity = Provider.meetsMinimumReservationAmount(
                     provider.getAvailableLiquidityAmount(),
                     currentQuote,
@@ -77,19 +75,18 @@ export class ProviderQueue {
                     if (provider.hasReservedAmount() || provider.isPurged()) {
                         // TODO: IMPORTANT! IF THE USER COMPLETE HIS SWAP WITH THE RESERVED TOKENS AND THE PROVIDER
                         //  HAS DUST LEFT, HE SHOULD BE RESET AND THE DURST BURNED!
-
-                        const worthSat = tokensToSatoshis128(
+                        /*const worthSat = tokensToSatoshis128(
                             provider.getAvailableLiquidityAmount(),
                             currentQuote,
                         );
 
                         Blockchain.log(
                             `----- Provider at index ${index} does not meet minimum reservation. Skipping from queue. (${provider.getAvailableLiquidityAmount()} tokens left, worth ${worthSat} sat, quote: ${currentQuote}). Will get restored eventually from the purge queue. -----`,
-                        );
+                        );*/
                     } else {
-                        Blockchain.log(
+                        /*Blockchain.log(
                             `!---! Resetting provider at index ${index}. Minimum liquidity not met. !---!`,
-                        );
+                        );*/
 
                         // This provider must be purged safely.
                         this.resetProvider(provider);
@@ -128,11 +125,6 @@ export class ProviderQueue {
 
         while (this._currentIndex < length && result === null) {
             const candidate: Provider | null = this.tryNextCandidate(currentQuote);
-
-            Blockchain.log(
-                `Tried next candidate at index ${this._currentIndex}, found: ${candidate !== null}`,
-            );
-
             if (candidate !== null) {
                 result = candidate;
             }
