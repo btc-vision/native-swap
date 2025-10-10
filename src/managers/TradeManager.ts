@@ -175,15 +175,6 @@ export class TradeManager implements ITradeManager {
         return totalSatoshis - consumedSatoshis;
     }
 
-    /*private activateProvider(provider: Provider, currentQuote: u256): void {
-        provider.allowLiquidityProvision();
-
-        // Remove all the slashing/activation logic
-        // Just mark the provider as active, nothing else
-
-        this.emitProviderActivatedEvent(provider);
-    }*/
-
     private activateProvider(provider: Provider, currentQuote: u256): void {
         provider.allowLiquidityProvision();
         const totalLiquidity: u128 = provider.getLiquidityAmount();
@@ -205,9 +196,6 @@ export class TradeManager implements ITradeManager {
             // (First 50% was already applied during listing)
             this.liquidityQueueReserve.addToTotalTokensSellActivated(halfCred.toU256());
         }
-
-        // Remove the btcToRemove calculation - it's not needed!
-        // The BTC contribution stays as-is for cancellation tracking
 
         this.emitProviderActivatedEvent(provider);
     }

@@ -22,7 +22,7 @@ export interface IProviderManager {
 
     addToPriorityPurgedQueue(provider: Provider): u32;
 
-    cleanUpQueues(): void;
+    cleanUpQueues(currentQuote: u256): void;
 
     getIdFromQueue(index: u32, type: ProviderTypes): u256;
 

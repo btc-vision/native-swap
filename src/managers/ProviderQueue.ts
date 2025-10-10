@@ -57,7 +57,7 @@ export class ProviderQueue {
         return index;
     }
 
-    public cleanUp(previousStartingIndex: u32): u32 {
+    public cleanUp(previousStartingIndex: u32, currentQuote: u256): u32 {
         const length: u32 = this.length;
         let index: u32 = previousStartingIndex;
 
@@ -66,14 +66,40 @@ export class ProviderQueue {
 
             if (!providerId.isZero()) {
                 const provider: Provider = getProvider(providerId);
+                const meetMinLiquidity = Provider.meetsMinimumReservationAmount(
+                    provider.getAvailableLiquidityAmount(),
+                    currentQuote,
+                );
 
-                if (provider.isActive()) {
-                    this.queue.setStartingIndex(index);
-                    break;
+                if (!meetMinLiquidity) {
+                    if (provider.hasReservedAmount() || provider.isPurged()) {
+                        // TODO: IMPORTANT! IF THE USER COMPLETE HIS SWAP WITH THE RESERVED TOKENS AND THE PROVIDER
+                        //  HAS DUST LEFT, HE SHOULD BE RESET AND THE DURST BURNED!
+                        /*const worthSat = tokensToSatoshis128(
+                            provider.getAvailableLiquidityAmount(),
+                            currentQuote,
+                        );
+
+                        Blockchain.log(
+                            `----- Provider at index ${index} does not meet minimum reservation. Skipping from queue. (${provider.getAvailableLiquidityAmount()} tokens left, worth ${worthSat} sat, quote: ${currentQuote}). Will get restored eventually from the purge queue. -----`,
+                        );*/
+                    } else {
+                        /*Blockchain.log(
+                            `!---! Resetting provider at index ${index}. Minimum liquidity not met. !---!`,
+                        );*/
+
+                        // This provider must be purged safely.
+                        this.resetProvider(provider);
+                    }
                 } else {
-                    throw new Revert(
-                        `Impossible state: Provider is no longer active and should have been removed from normal/priority queue. ProviderId: ${providerId}`,
-                    );
+                    if (provider.isActive()) {
+                        this.queue.setStartingIndex(index);
+                        break;
+                    } else {
+                        throw new Revert(
+                            `Impossible state: Provider is no longer active and should have been removed from normal/priority queue. ProviderId: ${providerId}`,
+                        );
+                    }
                 }
             } else {
                 this.queue.setStartingIndex(index);
@@ -99,7 +125,6 @@ export class ProviderQueue {
 
         while (this._currentIndex < length && result === null) {
             const candidate: Provider | null = this.tryNextCandidate(currentQuote);
-
             if (candidate !== null) {
                 result = candidate;
             }
@@ -169,7 +194,13 @@ export class ProviderQueue {
         burnRemainingFunds: boolean = true,
         canceled: boolean = false,
     ): void {
-        let stakedAmount: u256 = u256.Zero;
+        if (burnRemainingFunds && canceled) {
+            throw new Revert(
+                'Invalid parameters: Cannot burn remaining funds when canceling a listing.',
+            );
+        }
+
+        let liquidityToBurn: u256 = u256.Zero;
         this.ensureProviderNotAlreadyPurged(provider);
 
         // ENTRY-PRICE TRACKING: Get the BTC contribution before modifications
@@ -177,13 +208,15 @@ export class ProviderQueue {
         const hasContribution = btcContribution > 0;
 
         if (burnRemainingFunds && provider.hasLiquidityAmount()) {
-            stakedAmount = provider.getLiquidityAmount().toU256();
+            liquidityToBurn = provider.getLiquidityAmount().toU256();
 
             // Remove from total reserve (accounting only)
-            this.liquidityQueueReserve.subFromTotalReserve(stakedAmount);
-            this.liquidityQueueReserve.subFromVirtualTokenReserve(stakedAmount);
+            this.liquidityQueueReserve.subFromTotalReserve(liquidityToBurn);
+            this.liquidityQueueReserve.subFromVirtualTokenReserve(liquidityToBurn);
 
-            addAmountToStakingContract(stakedAmount);
+            addAmountToStakingContract(liquidityToBurn);
+
+            // We don't adjust BTC here because the burned tokens were not traded for any BTC.
         }
 
         // ENTRY-PRICE TRACKING: Remove the entry-price BTC contribution
@@ -197,6 +230,7 @@ export class ProviderQueue {
                     this.liquidityQueueReserve.subFromVirtualSatoshisReserve(btcContribution);
                 }
             }
+
             // Always clear the tracking value regardless of canceled status
             provider.setVirtualBTCContribution(0);
         }
@@ -208,7 +242,7 @@ export class ProviderQueue {
         provider.resetListingProviderValues();
 
         Blockchain.emit(
-            new ProviderFulfilledEvent(provider.getId(), canceled, false, stakedAmount),
+            new ProviderFulfilledEvent(provider.getId(), canceled, false, liquidityToBurn),
         );
     }
 

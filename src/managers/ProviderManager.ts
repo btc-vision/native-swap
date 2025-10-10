@@ -154,12 +154,15 @@ export class ProviderManager implements IProviderManager {
         return this.priorityPurgedQueue.add(provider);
     }
 
-    public cleanUpQueues(): void {
+    public cleanUpQueues(currentQuote: u256): void {
         this.previousNormalStartingIndex = this.normalQueue.cleanUp(
             this.previousNormalStartingIndex,
+            currentQuote,
         );
+
         this.previousPriorityStartingIndex = this.priorityQueue.cleanUp(
             this.previousPriorityStartingIndex,
+            currentQuote,
         );
     }
 
@@ -356,7 +359,6 @@ export class ProviderManager implements IProviderManager {
         this.ensureInitialProviderIsNotPurged(initialProvider);
 
         const availableLiquidity = initialProvider.getAvailableLiquidityAmount();
-
         if (availableLiquidity.isZero()) {
             return null;
         }
