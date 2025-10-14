@@ -20,8 +20,8 @@ export const MAX_TOTAL_SATOSHIS: u256 = u256.fromU64(21_000_000 * 100_000_000);
 export const MAX_ACTIVATION_DELAY: u8 = 3;
 
 export const MIN_SATOSHI_RESERVE: u256 = u256.fromU64(100_000); // 0.001 BTC
-export const MAX_PRICE_IMPACT_BPS = u256.fromU64(3_000); // 40% 3_000 15_000
-export const MAX_CUMULATIVE_IMPACT_BPS = u256.fromU32(9_000);
+export const MAX_PRICE_IMPACT_BPS = u256.fromU64(10_000); // 40% 3_000 15_000
+export const MAX_CUMULATIVE_IMPACT_BPS = u256.fromU32(20_000);
 
 export const TEN_THOUSAND_U256: u256 = u256.fromU32(10_000);
 
