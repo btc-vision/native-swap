@@ -6,6 +6,7 @@ export const INITIAL_FEE_COLLECT_ADDRESS: string =
 // tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c
 // bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh
 
+export const ENABLE_FEES: bool = true;
 export const QUOTE_SCALE: u256 = u256.fromU64(100_000_000);
 export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 8;
 export const VOLATILITY_WINDOW_IN_BLOCKS: u32 = 5;

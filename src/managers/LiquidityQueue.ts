@@ -16,6 +16,7 @@ import {
 import { addAmountToStakingContract, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
 import {
+    ENABLE_FEES,
     MAX_TOTAL_SATOSHIS,
     QUOTE_SCALE,
     TEN_THOUSAND_U256,
@@ -28,8 +29,6 @@ import { IReservationManager } from './interfaces/IReservationManager';
 import { ILiquidityQueue } from './interfaces/ILiquidityQueue';
 import { IDynamicFee } from './interfaces/IDynamicFee';
 import { preciseLog } from '../utils/MathUtils';
-
-const ENABLE_FEES: bool = true;
 
 export class LiquidityQueue implements ILiquidityQueue {
     public readonly token: Address;
