@@ -1,17 +1,7 @@
-import {
-    Address,
-    Blockchain,
-    Revert,
-    SafeMath,
-    StoredU256,
-    StoredU64,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, Revert, SafeMath, StoredU256, StoredU64, } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
-import {
-    ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
-    RESERVATION_SETTINGS_POINTER,
-} from '../constants/StoredPointers';
+import { ANTI_BOT_MAX_TOKENS_PER_RESERVATION, RESERVATION_SETTINGS_POINTER, } from '../constants/StoredPointers';
 
 import { addAmountToStakingContract, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
@@ -241,9 +231,79 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public recordTradeVolumes(tokensOut: u256, satoshisIn: u64): void {
+        // Get current state
+        const currentVirtualT = this.virtualTokenReserve;
+        const currentVirtualB = u256.fromU64(this.virtualSatoshisReserve);
+
+        // Get current accumulators
+        const currentPendingSells = this.totalTokensSellActivated;
+        const currentPendingBuys = this.totalTokensExchangedForSatoshis;
+        const currentPendingBTC = u256.fromU64(this.totalSatoshisExchangedForTokens);
+
+        // Calculate what would happen in next update
+        // Apply pending sells (maintains constant product)
+        let projectedT = currentVirtualT;
+        let projectedB = currentVirtualB;
+
+        if (!currentPendingSells.isZero()) {
+            const k = SafeMath.mul(currentVirtualB, currentVirtualT);
+            projectedT = SafeMath.add(currentVirtualT, currentPendingSells);
+            projectedB = SafeMath.div(k, projectedT);
+        }
+
+        // Check if buys (including this new trade) would exceed projected reserves
+        const totalBuysAfterThisTrade = SafeMath.add(currentPendingBuys, tokensOut);
+        const totalBTCAfterThisTrade = SafeMath.add(currentPendingBTC, u256.fromU64(satoshisIn));
+
+        // Critical check: Would the buys exceed available tokens?
+        if (totalBuysAfterThisTrade >= projectedT) {
+            throw new Revert(
+                `IMPOSSIBLE STATE: Trade would cause virtual pool exhaustion. ` +
+                    `Current virtual T: ${currentVirtualT}, B: ${currentVirtualB}. ` +
+                    `Pending sells to apply: ${currentPendingSells}. ` +
+                    `Projected T after sells: ${projectedT}. ` +
+                    `Current pending buys: ${currentPendingBuys}. ` +
+                    `This trade size: ${tokensOut}. ` +
+                    `Total buys would be: ${totalBuysAfterThisTrade}. ` +
+                    `This exceeds projected reserves (${totalBuysAfterThisTrade} >= ${projectedT})`,
+            );
+        }
+
+        // Additional sanity check: Would BTC reserves overflow?
+        const projectedBAfterBuys = SafeMath.add(projectedB, totalBTCAfterThisTrade);
+        if (projectedBAfterBuys > MAX_TOTAL_SATOSHIS) {
+            throw new Revert(
+                `IMPOSSIBLE STATE: Trade would cause BTC reserve overflow. ` +
+                    `Projected BTC after all operations: ${projectedBAfterBuys} > ${MAX_TOTAL_SATOSHIS}`,
+            );
+        }
+
+        // Additional sanity check: Is the trade size itself reasonable?
+        if (tokensOut > this.liquidity) {
+            throw new Revert(
+                `IMPOSSIBLE STATE: Trade trying to buy ${tokensOut} tokens but total liquidity is only ${this.liquidity}`,
+            );
+        }
+
+        // Log for debugging
+        /*if (totalBuysAfterThisTrade > SafeMath.div(projectedT, u256.fromU64(2))) {
+            // Warning: Getting close to exhaustion
+            Blockchain.log(
+                `WARNING: High accumulator usage. ` +
+                    `Buys: ${totalBuysAfterThisTrade}, Projected T: ${projectedT}, ` +
+                    `Usage: ${SafeMath.div(SafeMath.mul(totalBuysAfterThisTrade, u256.fromU64(100)), projectedT)}%`,
+            );
+        }*/
+
+        // All checks passed - safe to record
         this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
         this.increaseTotalTokensExchangedForSatoshis(tokensOut);
     }
+
+    /*public recordTradeVolumes(tokensOut: u256, satoshisIn: u64): void {
+        this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
+        this.increaseTotalTokensExchangedForSatoshis(tokensOut);
+    }*/
 
     public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256 {
         const utilizationRatio = this.getUtilizationRatio();
@@ -443,9 +503,10 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     public updateVirtualPoolIfNeeded(): void {
         const currentBlock: u64 = Blockchain.block.number;
-        if (currentBlock <= this.lastVirtualUpdateBlock) {
+        // disabled for live recalc of virtual reserves
+        /*if (currentBlock <= this.lastVirtualUpdateBlock) {
             return;
-        }
+        }*/
 
         let B: u256 = u256.fromU64(this.virtualSatoshisReserve);
         let T: u256 = this.virtualTokenReserve;
@@ -476,8 +537,23 @@ export class LiquidityQueue implements ILiquidityQueue {
         const dB_buy: u256 = u256.fromU64(this.totalSatoshisExchangedForTokens);
 
         if (!dT_buy.isZero() || !dB_buy.isZero()) {
-            T = T > dT_buy ? SafeMath.sub(T, dT_buy) : u256.One;
-            B = SafeMath.add(B, dB_buy);
+            //T = T > dT_buy ? SafeMath.sub(T, dT_buy) : u256.One;
+            //B = SafeMath.add(B, dB_buy);
+
+            if (dT_buy >= T) {
+                throw new Revert(
+                    `Impossible state: Cannot buy ${dT_buy} tokens, only ${T} available`,
+                );
+            }
+
+            // Get k after sells were applied
+            const k = SafeMath.mul(B, T);
+
+            // Remove tokens bought
+            T = SafeMath.sub(T, dT_buy);
+
+            // Calculate B to maintain constant product
+            B = SafeMath.div(k, T);
         }
 
         if (T.isZero()) {
