@@ -1,47 +1,47 @@
 {
-  "name": "@btc-vision/native-swap",
-  "version": "0.0.1",
-  "description": "Native swap contract for OP_NET",
-  "main": "index.js",
-  "scripts": {
-    "build": "asc src/index.ts --target release --measure --uncheckedBehavior never && copy .\\build\\*.wasm ..\\opnet-unit-test\\bytecode\\ /Y",
-    "b": "asc src/index.ts --target release --measure --uncheckedBehavior never",
-    "test": "asp --config as-pect.config.js --verbose --no-logo",
-    "test:ci": "asp --config as-pect.config.js --summary --no-logo"
-  },
-  "author": "MotoSwap",
-  "license": "MIT",
-  "devDependencies": {
-    "@types/node": "^24.10.0",
-    "assemblyscript": "^0.28.9",
-    "prettier": "^3.6.2"
-  },
-  "keywords": [
-    "bitcoin",
-    "smart",
-    "contract",
-    "runtime",
-    "opnet",
-    "OP_NET",
-    "wrapped bitcoin",
-    "wbtc"
-  ],
-  "homepage": "https://opnet.org",
-  "type": "module",
-  "dependencies": {
-    "@assemblyscript/loader": "^0.28.9",
-    "@btc-vision/as-bignum": "^0.0.5",
-    "@btc-vision/as-covers-assembly": "^0.4.4",
-    "@btc-vision/as-covers-transform": "^0.4.4",
-    "@btc-vision/as-pect-assembly": "^8.2.0",
-    "@btc-vision/as-pect-cli": "^8.2.0",
-    "@btc-vision/as-pect-transform": "^8.2.0",
-    "@btc-vision/btc-runtime": "^1.9.14",
-    "@btc-vision/opnet-transform": "^0.1.12",
-    "@eslint/js": "9.38.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.3",
-    "yaml": "^2.8.1"
-  }
+    "name": "@btc-vision/native-swap",
+    "version": "0.0.1",
+    "description": "Native swap contract for OP_NET",
+    "main": "index.js",
+    "scripts": {
+        "build": "asc src/index.ts --target release --measure --uncheckedBehavior never && copy .\\build\\*.wasm ..\\opnet-unit-test\\bytecode\\ /Y",
+        "b": "asc src/index.ts --target release --measure --uncheckedBehavior never",
+        "test": "asp --config as-pect.config.js --verbose --no-logo",
+        "test:ci": "asp --config as-pect.config.js --summary --no-logo"
+    },
+    "author": "MotoSwap",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^24.10.0",
+        "assemblyscript": "^0.28.9",
+        "prettier": "^3.6.2"
+    },
+    "keywords": [
+        "bitcoin",
+        "smart",
+        "contract",
+        "runtime",
+        "opnet",
+        "OP_NET",
+        "wrapped bitcoin",
+        "wbtc"
+    ],
+    "homepage": "https://opnet.org",
+    "type": "module",
+    "dependencies": {
+        "@assemblyscript/loader": "^0.28.9",
+        "@btc-vision/as-bignum": "^0.0.5",
+        "@btc-vision/as-covers-assembly": "^0.4.4",
+        "@btc-vision/as-covers-transform": "^0.4.4",
+        "@btc-vision/as-pect-assembly": "^8.2.0",
+        "@btc-vision/as-pect-cli": "^8.2.0",
+        "@btc-vision/as-pect-transform": "^8.2.0",
+        "@btc-vision/btc-runtime": "^1.9.16",
+        "@btc-vision/opnet-transform": "^0.1.12",
+        "@eslint/js": "^9.39.1",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.46.3",
+        "yaml": "^2.8.1"
+    }
 }
