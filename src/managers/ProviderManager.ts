@@ -9,8 +9,10 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import {
     INITIAL_LIQUIDITY_PROVIDER_POINTER,
+    NORMAL_QUEUE_FULFILLED,
     NORMAL_QUEUE_POINTER,
     NORMAL_QUEUE_PURGED_RESERVATION,
+    PRIORITY_QUEUE_FULFILLED,
     PRIORITY_QUEUE_POINTER,
     PRIORITY_QUEUE_PURGED_RESERVATION,
     STARTING_INDEX_POINTER,
@@ -30,6 +32,7 @@ import { PriorityPurgedProviderQueue } from './PriorityPurgedProviderQueue';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
+import { FulfilledProviderQueue } from './FulfilledProviderQueue';
 
 export class ProviderManager implements IProviderManager {
     protected readonly token: Address;
@@ -38,6 +41,8 @@ export class ProviderManager implements IProviderManager {
     protected readonly priorityQueue: PriorityProviderQueue;
     protected readonly normalPurgedQueue: PurgedProviderQueue;
     protected readonly priorityPurgedQueue: PriorityPurgedProviderQueue;
+    protected readonly normalFulfilledQueue: FulfilledProviderQueue;
+    protected readonly priorityFulfilledQueue: FulfilledProviderQueue;
 
     protected readonly quoteManager: IQuoteManager;
     private readonly _startingIndex: StoredU32;
@@ -49,6 +54,7 @@ export class ProviderManager implements IProviderManager {
         quoteManager: IQuoteManager,
         enableIndexVerification: boolean,
         liquidityQueueReserve: ILiquidityQueueReserve,
+        maximumResetsBeforeQueuing: u8,
     ) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
@@ -75,12 +81,24 @@ export class ProviderManager implements IProviderManager {
             tokenIdUint8Array,
             enableIndexVerification,
             liquidityQueueReserve,
+            maximumResetsBeforeQueuing,
         );
         this.priorityPurgedQueue = new PriorityPurgedProviderQueue(
             token,
             PRIORITY_QUEUE_PURGED_RESERVATION,
             tokenIdUint8Array,
             enableIndexVerification,
+            liquidityQueueReserve,
+            maximumResetsBeforeQueuing,
+        );
+        this.normalFulfilledQueue = new FulfilledProviderQueue(
+            NORMAL_QUEUE_FULFILLED,
+            tokenIdUint8Array,
+            liquidityQueueReserve,
+        );
+        this.priorityFulfilledQueue = new FulfilledProviderQueue(
+            PRIORITY_QUEUE_FULFILLED,
+            tokenIdUint8Array,
             liquidityQueueReserve,
         );
         this._initialLiquidityProviderId = new StoredU256(
@@ -192,11 +210,19 @@ export class ProviderManager implements IProviderManager {
         let result: Provider | null = null;
 
         if (this.priorityPurgedQueue.length > 0) {
-            result = this.priorityPurgedQueue.get(this.priorityQueue, currentQuote);
+            result = this.priorityPurgedQueue.get(
+                this.priorityQueue,
+                this.priorityFulfilledQueue,
+                currentQuote,
+            );
         }
 
         if (result === null && this.normalPurgedQueue.length > 0) {
-            result = this.normalPurgedQueue.get(this.normalQueue, currentQuote);
+            result = this.normalPurgedQueue.get(
+                this.normalQueue,
+                this.normalFulfilledQueue,
+                currentQuote,
+            );
         }
 
         return result;
@@ -290,6 +316,11 @@ export class ProviderManager implements IProviderManager {
         }
     }
 
+    public resetFulfilledProviders(count: u32): void {
+        this.priorityFulfilledQueue.reset(count, this.priorityQueue);
+        this.normalFulfilledQueue.reset(count, this.normalQueue);
+    }
+
     public resetProvider(
         provider: Provider,
         burnRemainingFunds: boolean = true,
@@ -322,6 +353,8 @@ export class ProviderManager implements IProviderManager {
         this.priorityQueue.save();
         this.normalPurgedQueue.save();
         this.priorityPurgedQueue.save();
+        this.normalFulfilledQueue.save();
+        this.priorityFulfilledQueue.save();
     }
 
     private ensureInitialProviderIsNotPurged(provider: Provider): void {

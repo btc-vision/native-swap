@@ -106,6 +106,33 @@ export class Provider {
     }
 
     /**
+     * @method isFulfilled
+     * @description Gets the fulfilled state.
+     * @returns {boolean} - true if the provider is fulfilled; false if not.
+     */
+    public isFulfilled(): boolean {
+        return this.providerData.fulfilled;
+    }
+
+    /**
+     * @method markFulfilled
+     * @description Mark the provider as fulfilled.
+     * @returns {void}
+     */
+    public markFulfilled(): void {
+        this.providerData.fulfilled = true;
+    }
+
+    /**
+     * @method clearFulfilled
+     * @description Clear the provider as fulfilled.
+     * @returns {void}
+     */
+    public clearFulfilled(): void {
+        this.providerData.fulfilled = false;
+    }
+    
+    /**
      * @method isInitialLiquidityProvider
      * @description Gets if the provider is an initial liquidity provider.
      * @returns {boolean} - true if an initial liquidity provider; false if not.
@@ -524,11 +551,7 @@ export function transferPendingAmountToStakingContract(
             throw new Revert('NATIVE_SWAP: Staking contract address is not set.');
         }
 
-        TransferHelper.transfer(
-            tokenAddress,
-            stakingContractAddress,
-            pendingStakingContractAmount,
-        );
+        TransferHelper.transfer(tokenAddress, stakingContractAddress, pendingStakingContractAmount);
     }
 }
 

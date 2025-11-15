@@ -43,3 +43,5 @@ export const PURGE_RESERVATION_INDEX_POINTER: u16 = Blockchain.nextPointer;
 export const CONTRACT_PAUSED_POINTER: u16 = Blockchain.nextPointer;
 export const FEES_ADDRESS_POINTER: u16 = Blockchain.nextPointer;
 export const WITHDRAW_MODE_POINTER: u16 = Blockchain.nextPointer;
+export const NORMAL_QUEUE_FULFILLED: u16 = Blockchain.nextPointer;
+export const PRIORITY_QUEUE_FULFILLED: u16 = Blockchain.nextPointer;

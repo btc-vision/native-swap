@@ -9,14 +9,17 @@ import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
+import { FulfilledProviderQueue } from './FulfilledProviderQueue';
+import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 
 export class PurgedProviderQueue {
     protected readonly token: Address;
     protected readonly queue: StoredU32Array;
     protected readonly enableIndexVerification: boolean;
     protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
+    private providerResetCount: u8;
+    private readonly maximumResetsBeforeQueuing: u8;
 
     constructor(
         token: Address,
@@ -24,11 +27,14 @@ export class PurgedProviderQueue {
         subPointer: Uint8Array,
         enableIndexVerification: boolean,
         liquidityQueueReserve: ILiquidityQueueReserve,
+        maximumResetsBeforeQueuing: u8,
     ) {
         this.token = token;
         this.queue = new StoredU32Array(pointer, subPointer, INDEX_NOT_SET_VALUE - 1);
         this.enableIndexVerification = enableIndexVerification;
         this.liquidityQueueReserve = liquidityQueueReserve;
+        this.providerResetCount = 0;
+        this.maximumResetsBeforeQueuing = maximumResetsBeforeQueuing;
     }
 
     public get length(): u32 {
@@ -53,7 +59,11 @@ export class PurgedProviderQueue {
         return index;
     }
 
-    public get(associatedQueue: ProviderQueue, quote: u256): Provider | null {
+    public get(
+        associatedQueue: ProviderQueue,
+        fulfilledQueue: FulfilledProviderQueue,
+        quote: u256,
+    ): Provider | null {
         let result: Potential<Provider> = null;
         const queueLength: u32 = this.queue.getLength();
         let count: u32 = 0;
@@ -74,7 +84,13 @@ export class PurgedProviderQueue {
                 );
             }
 
-            result = this.returnProvider(associatedQueue, provider, providerIndex, quote);
+            result = this.returnProvider(
+                associatedQueue,
+                fulfilledQueue,
+                provider,
+                providerIndex,
+                quote,
+            );
             count++;
         }
 
@@ -101,6 +117,12 @@ export class PurgedProviderQueue {
     protected ensureProviderIdIsValid(id: u256): void {
         if (id.isZero()) {
             throw new Revert(`Impossible state: providerId cannot be zero.`);
+        }
+    }
+
+    protected ensureProviderIsNotFulfilled(state: boolean): void {
+        if (state) {
+            throw new Revert('Impossible state: provider is in reset queue.');
         }
     }
 
@@ -132,6 +154,7 @@ export class PurgedProviderQueue {
 
     private resetProvider(provider: Provider, associatedQueue: ProviderQueue): void {
         let stakedAmount: u256 = u256.Zero;
+
         this.ensureProviderPurged(provider);
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
 
@@ -154,9 +177,27 @@ export class PurgedProviderQueue {
         Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), false, false, stakedAmount));
     }
 
+    private addProviderToFulfilledQueue(
+        provider: Provider,
+        fulfilledQueue: FulfilledProviderQueue,
+    ): void {
+        this.ensureProviderPurged(provider);
+        this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
+
+        // Remove from purged queue
+        this.queue.removeItemFromLength();
+        this.queue.applyNextOffsetToStartingIndex();
+        provider.clearPurged();
+
+        // Add to fulfilled queue
+        provider.markFulfilled();
+        fulfilledQueue.add(provider.getQueueIndex());
+    }
+
     // TODO: Potential optimization. we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
     private returnProvider(
         associatedQueue: ProviderQueue,
+        fulfilledQueue: FulfilledProviderQueue,
         provider: Provider,
         index: u32,
         quote: u256,
@@ -178,13 +219,21 @@ export class PurgedProviderQueue {
             }
         }
 
+        this.ensureProviderIsNotFulfilled(provider.isFulfilled());
+
         if (Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
             result = provider;
         } else if (!provider.hasReservedAmount()) {
-            this.resetProvider(provider, associatedQueue);
+            if (this.providerResetCount > this.maximumResetsBeforeQueuing) {
+                this.addProviderToFulfilledQueue(provider, fulfilledQueue);
+            } else {
+                this.resetProvider(provider, associatedQueue);
+                this.providerResetCount++;
+            }
         } else {
             this.remove(provider);
         }
+
         return result;
     }
 }

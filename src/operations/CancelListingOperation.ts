@@ -70,6 +70,7 @@ export class CancelListingOperation extends BaseOperation {
         this.ensureProviderIsActive();
         this.ensureNoActiveReservation();
         this.ensureProviderIsNotPurged();
+        this.ensureProviderIsNotFulfilled();
         this.ensureLiquidityNotZero();
         this.ensureProviderNotProvideLiquidity();
         this.ensureNotInitialProvider();
@@ -116,6 +117,14 @@ export class CancelListingOperation extends BaseOperation {
     private ensureProviderIsActive(): void {
         if (!this.provider.isActive()) {
             throw new Revert("NATIVE_SWAP: Provider is not active or doesn't exist.");
+        }
+    }
+
+    private ensureProviderIsNotFulfilled(): void {
+        if (this.provider.isFulfilled()) {
+            throw new Revert(
+                'NATIVE_SWAP: You cannot cancel this listing at the moment. Provider is in the reset queue and needs to be resets first. Try again in a few blocks.',
+            );
         }
     }
 

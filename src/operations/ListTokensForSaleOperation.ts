@@ -422,6 +422,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.ensureProviderNotAlreadyProvidingLiquidity();
         this.ensureNoActiveReservation();
         this.ensureProviderIsNotPurged();
+        this.ensureProviderIsNotFulfilled();
 
         if (!this.isForInitialLiquidity) {
             this.ensurePriceIsNotZero();
@@ -505,6 +506,14 @@ export class ListTokensForSaleOperation extends BaseOperation {
         if (this.provider.hasReservedAmount()) {
             throw new Revert(
                 `NATIVE_SWAP: All active reservations on your listing must be completed before listing again.`,
+            );
+        }
+    }
+
+    private ensureProviderIsNotFulfilled(): void {
+        if (this.provider.isFulfilled()) {
+            throw new Revert(
+                'NATIVE_SWAP: Provider is in the reset queue and needs to be resets first. Try again in a few blocks.',
             );
         }
     }

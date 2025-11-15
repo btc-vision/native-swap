@@ -245,6 +245,10 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.increaseTotalTokensExchangedForSatoshis(tokensOut);
     }
 
+    public resetFulfilledProviders(count: u32): void {
+        this.providerManager.resetFulfilledProviders(count);
+    }
+
     public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256 {
         const utilizationRatio = this.getUtilizationRatio();
         const feeBP = this.dynamicFee.getDynamicFeeBP(totalSatoshisSpent, utilizationRatio);

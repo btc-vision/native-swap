@@ -44,6 +44,8 @@ export interface IProviderManager {
 
     removeFromPurgeQueue(provider: Provider): void;
 
+    resetFulfilledProviders(count: u32): void;
+    
     resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void;
 
     resetStartingIndex(): void;

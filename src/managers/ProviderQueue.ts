@@ -286,6 +286,14 @@ export class ProviderQueue {
         }
     }
 
+    protected ensureProviderIsNotFulfilled(provider: Provider): void {
+        if (provider.isFulfilled()) {
+            throw new Revert(
+                `Impossible state: Provider is in reset queue. ProviderId: ${provider.getId()}.`,
+            );
+        }
+    }
+
     protected ensureStartingIndexIsValid(): void {
         if (this.startingIndex > this.length) {
             throw new Revert('Impossible state: Starting index exceeds queue length.');
@@ -365,6 +373,8 @@ export class ProviderQueue {
         if (this.enableIndexVerification) {
             this.performIndexVerification(provider, index);
         }
+
+        this.ensureProviderIsNotFulfilled(provider);
 
         if (Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)) {
             this.ensureProviderIsNotInPurgeQueue(provider);
