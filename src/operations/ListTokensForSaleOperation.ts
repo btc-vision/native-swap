@@ -20,6 +20,7 @@ import {
     MAX_CUMULATIVE_IMPACT_BPS,
     MAX_PRICE_IMPACT_BPS,
     MAX_TOTAL_SATOSHIS,
+    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS,
     MIN_SATOSHI_RESERVE,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
     PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
@@ -67,6 +68,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.checkPreConditions();
         this.transferToken();
         this.emitLiquidityListedEvent();
+        this.liquidityQueue.resetFulfilledProviders(MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS);
     }
 
     /*private activateSlashing(): void {

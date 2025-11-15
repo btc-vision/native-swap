@@ -25,16 +25,10 @@ export class FulfilledProviderQueue {
     public reset(count: u32, associatedQueue: ProviderQueue): void {
         const countToResets: u32 = min(count, this.queue.getLength());
 
-        Blockchain.log(`count ${countToResets}`);
-        Blockchain.log(`length ${this.queue.getLength()}`);
-        Blockchain.log(`token: ${this.queue.subPointer.toString()}`);
-
         for (let index: u32 = 0; index < countToResets; index++) {
             const providerIndex: u32 = this.queue.next();
             this.resetProvider(providerIndex, associatedQueue);
         }
-
-        Blockchain.log(`length ${this.queue.getLength()}`);
     }
 
     public save(): void {
@@ -51,8 +45,6 @@ export class FulfilledProviderQueue {
         let stakedAmount: u256 = u256.Zero;
         const providerId: u256 = associatedQueue.getAt(providerIndex);
         const provider: Provider = getProvider(providerId);
-
-        Blockchain.log(`resetting: ${providerId}`);
 
         this.ensureProviderIsFulfilled(provider);
 
