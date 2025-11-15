@@ -3,6 +3,7 @@ import {
     ADDRESS_BYTE_LENGTH,
     Blockchain,
     BytesWriter,
+    ExtendedAddress,
     Networks,
     StoredBooleanArray,
     StoredU128Array,
@@ -15,11 +16,7 @@ import { Reservation } from '../models/Reservation';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
 import { ProviderManager } from '../managers/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import {
-    AT_LEAST_PROVIDERS_TO_PURGE,
-    CSV_BLOCKS_REQUIRED,
-    ENABLE_INDEX_VERIFICATION,
-} from '../constants/Contract';
+import { AT_LEAST_PROVIDERS_TO_PURGE, CSV_BLOCKS_REQUIRED, ENABLE_INDEX_VERIFICATION, } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
 
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
@@ -154,7 +151,10 @@ receiverAddress1.set([
     0x2c,
 ]);
 
-export const receiverAddress1CSV: string = Address.toCSV(receiverAddress1, CSV_BLOCKS_REQUIRED);
+export const receiverAddress1CSV: string = ExtendedAddress.toCSV(
+    receiverAddress1,
+    CSV_BLOCKS_REQUIRED,
+);
 
 export const receiverAddress2: Uint8Array = new Uint8Array(33);
 receiverAddress2.set([
@@ -162,7 +162,10 @@ receiverAddress2.set([
     0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x0b, 0xf6,
     0x2d,
 ]);
-export const receiverAddress2CSV: string = Address.toCSV(receiverAddress2, CSV_BLOCKS_REQUIRED);
+export const receiverAddress2CSV: string = ExtendedAddress.toCSV(
+    receiverAddress2,
+    CSV_BLOCKS_REQUIRED,
+);
 
 export const receiverAddress3: Uint8Array = new Uint8Array(33);
 receiverAddress3.set([
@@ -170,7 +173,10 @@ receiverAddress3.set([
     0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x57, 0x1b, 0xe6,
     0x1d,
 ]);
-export const receiverAddress3CSV: string = Address.toCSV(receiverAddress3, CSV_BLOCKS_REQUIRED);
+export const receiverAddress3CSV: string = ExtendedAddress.toCSV(
+    receiverAddress3,
+    CSV_BLOCKS_REQUIRED,
+);
 
 export const receiverAddress4: Uint8Array = new Uint8Array(33);
 receiverAddress4.set([
@@ -178,7 +184,10 @@ receiverAddress4.set([
     0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x03, 0xf4,
     0x25,
 ]);
-export const receiverAddress4CSV: string = Address.toCSV(receiverAddress4, CSV_BLOCKS_REQUIRED);
+export const receiverAddress4CSV: string = ExtendedAddress.toCSV(
+    receiverAddress4,
+    CSV_BLOCKS_REQUIRED,
+);
 
 export const receiverAddress5: Uint8Array = new Uint8Array(33);
 receiverAddress5.set([
@@ -186,7 +195,10 @@ receiverAddress5.set([
     0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x12, 0x44,
     0x1e,
 ]);
-export const receiverAddress5CSV: string = Address.toCSV(receiverAddress5, CSV_BLOCKS_REQUIRED);
+export const receiverAddress5CSV: string = ExtendedAddress.toCSV(
+    receiverAddress5,
+    CSV_BLOCKS_REQUIRED,
+);
 
 export function addressToPointerU256(address: Address, token: Address): u256 {
     const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
