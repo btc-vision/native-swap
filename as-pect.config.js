@@ -35,23 +35,29 @@ export default {
      * Add your required AssemblyScript imports here.
      */
     async instantiate(memory, createImports, instantiate, binary) {
-        let memory2;
-        const resp = instantiate(
-            binary,
-            createImports({
-                env: {
-                    memory,
-                    'console.log': (data) => {
-                        log(data, memory2);
+        try {
+            let memory2;
+            const resp = instantiate(
+                binary,
+                createImports({
+                    env: {
+                        memory,
+                        'console.log': (data) => {
+                            log(data, memory2);
+                        },
                     },
-                },
-            }),
-        );
+                }),
+            );
 
-        const { exports } = await resp;
-        memory2 = exports.memory || memory;
+            const { exports } = await resp;
+            memory2 = exports.memory || memory;
 
-        return resp;
+            return resp;
+        } catch (e) {
+            console.log(e);
+        }
+
+        throw new Error(`Something went wrong`);
     },
     /** Enable code coverage. */
     coverage: [

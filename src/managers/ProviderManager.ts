@@ -67,6 +67,7 @@ export class ProviderManager implements IProviderManager {
             MAXIMUM_NUMBER_OF_PROVIDERS,
             liquidityQueueReserve,
         );
+
         this.priorityQueue = new PriorityProviderQueue(
             token,
             PRIORITY_QUEUE_POINTER,
@@ -75,6 +76,7 @@ export class ProviderManager implements IProviderManager {
             MAXIMUM_NUMBER_OF_PROVIDERS,
             liquidityQueueReserve,
         );
+
         this.normalPurgedQueue = new PurgedProviderQueue(
             token,
             NORMAL_QUEUE_PURGED_RESERVATION,
@@ -83,6 +85,7 @@ export class ProviderManager implements IProviderManager {
             liquidityQueueReserve,
             maximumResetsBeforeQueuing,
         );
+
         this.priorityPurgedQueue = new PriorityPurgedProviderQueue(
             token,
             PRIORITY_QUEUE_PURGED_RESERVATION,
@@ -91,20 +94,24 @@ export class ProviderManager implements IProviderManager {
             liquidityQueueReserve,
             maximumResetsBeforeQueuing,
         );
+
         this.normalFulfilledQueue = new FulfilledProviderQueue(
             NORMAL_QUEUE_FULFILLED,
             tokenIdUint8Array,
             liquidityQueueReserve,
         );
+
         this.priorityFulfilledQueue = new FulfilledProviderQueue(
             PRIORITY_QUEUE_FULFILLED,
             tokenIdUint8Array,
             liquidityQueueReserve,
         );
+
         this._initialLiquidityProviderId = new StoredU256(
             INITIAL_LIQUIDITY_PROVIDER_POINTER,
             tokenIdUint8Array,
         );
+
         this._startingIndex = new StoredU32(STARTING_INDEX_POINTER, tokenIdUint8Array);
     }
 

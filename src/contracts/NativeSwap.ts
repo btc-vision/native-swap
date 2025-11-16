@@ -95,12 +95,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     public get stakingContractAddress(): Address {
-        const address: Address = this._stakingContractAddress.value;
-        if (address.isZero()) {
-            return Address.dead();
-        }
-
-        return address;
+        return this._stakingContractAddress.value;
     }
 
     public override onDeployment(_calldata: Calldata): void {
@@ -849,7 +844,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private ensureValidTokenAddress(token: Address): void {
-        if (token.isZero() || token.equals(Blockchain.DEAD_ADDRESS)) {
+        if (token.isZero()) {
             throw new Revert('NATIVE_SWAP: Invalid token address.');
         }
     }
@@ -913,10 +908,6 @@ export class NativeSwap extends ReentrancyGuard {
     private ensureStakingContractAddressIsValid(address: Address): void {
         if (address.isZero()) {
             throw new Revert('NATIVE_SWAP: Staking contract address cannot be empty.');
-        }
-
-        if (address.isDead()) {
-            throw new Revert('NATIVE_SWAP: Staking contract address cannot be dead address.');
         }
     }
 

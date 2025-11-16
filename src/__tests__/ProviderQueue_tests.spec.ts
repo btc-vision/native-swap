@@ -463,7 +463,7 @@ describe('ProviderQueue tests', () => {
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
             );
-            const result: u32 = queue.cleanUp(0);
+            const result: u32 = queue.cleanUp(0, u256.fromU32(10000000));
             expect(result).toStrictEqual(0);
         });
 
@@ -494,7 +494,7 @@ describe('ProviderQueue tests', () => {
             queue.remove(p2);
             queue.remove(p3);
 
-            const result: u32 = queue.cleanUp(0);
+            const result: u32 = queue.cleanUp(0, u256.fromU32(10000000));
             expect(result).toStrictEqual(2);
             expect(queue.startingIndex).toStrictEqual(2);
         });
@@ -518,7 +518,7 @@ describe('ProviderQueue tests', () => {
                 p1.deactivate();
                 queue.add(p1);
 
-                queue.cleanUp(0);
+                queue.cleanUp(0, u256.fromU32(10000000));
             }).toThrow();
         });
 
@@ -546,7 +546,7 @@ describe('ProviderQueue tests', () => {
 
             queue.remove(p1);
 
-            const result: u32 = queue.cleanUp(0);
+            const result: u32 = queue.cleanUp(0, u256.fromU32(10000000));
 
             expect(result).toStrictEqual(0);
             expect(queue.startingIndex).toStrictEqual(1);
@@ -566,10 +566,11 @@ describe('ProviderQueue tests', () => {
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
             );
+
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(p1);
 
-            const result = queue.cleanUp(1);
+            const result = queue.cleanUp(1, u256.fromU32(10000000));
             expect(result).toStrictEqual(0);
         });
     });
@@ -786,7 +787,7 @@ describe('ProviderQueue tests', () => {
                 liquidityQueueReserve,
             );
             liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
-            
+
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
             queue.add(provider1);

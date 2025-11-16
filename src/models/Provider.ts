@@ -131,7 +131,7 @@ export class Provider {
     public clearFulfilled(): void {
         this.providerData.fulfilled = false;
     }
-    
+
     /**
      * @method isInitialLiquidityProvider
      * @description Gets if the provider is an initial liquidity provider.
@@ -547,7 +547,7 @@ export function transferPendingAmountToStakingContract(
     stakingContractAddress: Address,
 ): void {
     if (!pendingStakingContractAmount.isZero()) {
-        if (stakingContractAddress.isZero() || stakingContractAddress.isDead()) {
+        if (stakingContractAddress.isZero()) {
             throw new Revert('NATIVE_SWAP: Staking contract address is not set.');
         }
 

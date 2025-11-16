@@ -3,6 +3,7 @@ import {
     ADDRESS_BYTE_LENGTH,
     Blockchain,
     BytesWriter,
+    ConsensusRules,
     ExtendedAddress,
     Networks,
     StoredBooleanArray,
@@ -16,7 +17,12 @@ import { Reservation } from '../models/Reservation';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
 import { ProviderManager } from '../managers/ProviderManager';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import { AT_LEAST_PROVIDERS_TO_PURGE, CSV_BLOCKS_REQUIRED, ENABLE_INDEX_VERIFICATION, } from '../constants/Contract';
+import {
+    AT_LEAST_PROVIDERS_TO_PURGE,
+    CSV_BLOCKS_REQUIRED,
+    ENABLE_INDEX_VERIFICATION,
+    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+} from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
 
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
@@ -41,50 +47,93 @@ export const testStackingContractAddress: Address = new Address([
     192, 64, 105, 97, 112, 200, 3, 234, 133, 17, 88,
 ]);
 
-export const providerAddress1: Address = new Address([
-    68, 153, 66, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
-    192, 64, 105, 97, 112, 200, 3, 234, 133, 60, 241,
-]);
+export const providerAddress1: ExtendedAddress = new ExtendedAddress(
+    [
+        68, 153, 66, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220,
+        185, 192, 64, 105, 97, 112, 200, 3, 234, 133, 60, 241,
+    ],
+    [
+        3, 153, 66, 199, 127, 168, 221, 3, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101, 220, 185,
+        192, 64, 105, 97, 112, 200, 3, 234, 133, 60, 2,
+    ],
+);
 
-export const providerAddress2: Address = new Address([
-    196, 73, 104, 227, 216, 12, 216, 134, 87, 166, 168, 44, 5, 101, 71, 69, 204, 213, 154, 86, 76,
-    124, 186, 77, 90, 216, 39, 6, 239, 122, 100, 1,
-]);
+export const providerAddress2: ExtendedAddress = new ExtendedAddress(
+    [
+        196, 73, 104, 227, 216, 12, 216, 134, 87, 166, 168, 44, 5, 101, 71, 69, 204, 213, 154, 86,
+        76, 124, 186, 77, 90, 216, 39, 6, 239, 122, 100, 1,
+    ],
+    [
+        1, 73, 104, 227, 216, 12, 216, 134, 87, 166, 168, 44, 5, 101, 71, 69, 204, 213, 154, 86, 76,
+        124, 186, 77, 90, 216, 39, 6, 239, 122, 2, 1,
+    ],
+);
 
-export const providerAddress3: Address = new Address([
-    84, 79, 41, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
-    209, 126, 10, 49, 77, 37, 107, 101, 113, 216,
-]);
+export const providerAddress3: ExtendedAddress = new ExtendedAddress(
+    [
+        84, 79, 41, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71,
+        53, 209, 126, 10, 49, 77, 37, 107, 101, 113, 216,
+    ],
+    [
+        4, 79, 41, 213, 125, 76, 182, 184, 94, 6, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71,
+        53, 209, 126, 10, 49, 77, 37, 107, 101, 113, 23,
+    ],
+);
 
-export const providerAddress4: Address = new Address([
-    43, 11, 41, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
-    209, 126, 10, 49, 77, 37, 107, 101, 67, 34,
-]);
+export const providerAddress4: ExtendedAddress = new ExtendedAddress(
+    [
+        43, 11, 41, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71,
+        53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 34,
+    ],
+    [
+        6, 11, 41, 213, 125, 76, 182, 184, 94, 6, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71,
+        53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 8,
+    ],
+);
 
-export const providerAddress5: Address = new Address([
-    109, 98, 200, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71,
-    53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 211,
-]);
+export const providerAddress5: ExtendedAddress = new ExtendedAddress(
+    [
+        109, 98, 200, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31,
+        71, 53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 211,
+    ],
+    [
+        2, 98, 200, 213, 125, 76, 182, 184, 94, 85, 54, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71,
+        53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 5,
+    ],
+);
 
-export const providerAddress6: Address = new Address([
-    200, 33, 11, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
-    209, 126, 10, 49, 77, 37, 107, 101, 67, 88,
-]);
+export const providerAddress6: ExtendedAddress = new ExtendedAddress(
+    [
+        200, 33, 11, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71,
+        53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 88,
+    ],
+    [
+        4, 33, 11, 213, 125, 76, 182, 184, 94, 85, 157, 6, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
+        209, 126, 10, 49, 77, 37, 107, 89, 67, 88,
+    ],
+);
 
-export const providerAddress7: Address = new Address([
-    210, 23, 12, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71, 53,
-    209, 126, 10, 49, 77, 37, 107, 101, 67, 88,
-]);
+export const providerAddress7: ExtendedAddress = new ExtendedAddress(
+    [
+        210, 23, 12, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71,
+        53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 88,
+    ],
+    [
+        5, 23, 12, 213, 125, 76, 182, 184, 94, 85, 157, 217, 19, 45, 4, 70, 179, 164, 179, 31, 71,
+        53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 5,
+    ],
+);
 
-export const msgSender1: Address = new Address([
-    56, 172, 228, 82, 23, 145, 109, 98, 102, 186, 35, 65, 115, 253, 83, 104, 64, 71, 143, 47, 250,
-    36, 107, 117, 250, 119, 149, 253, 56, 102, 51, 108,
-]);
-
-export const txOrigin1: Address = new Address([
-    113, 221, 31, 226, 33, 248, 28, 254, 8, 16, 106, 44, 26, 240, 107, 94, 38, 154, 85, 230, 151,
-    248, 2, 44, 146, 20, 195, 28, 32, 155, 140, 210,
-]);
+export const msgSender1: ExtendedAddress = new ExtendedAddress(
+    [
+        56, 172, 228, 82, 23, 145, 109, 98, 102, 186, 35, 65, 115, 253, 83, 104, 64, 71, 143, 47,
+        250, 36, 107, 117, 250, 119, 149, 253, 56, 102, 51, 108,
+    ],
+    [
+        56, 172, 228, 82, 23, 145, 109, 98, 102, 186, 35, 65, 115, 253, 83, 104, 64, 71, 143, 47,
+        250, 36, 107, 117, 250, 119, 149, 253, 56, 102, 51, 107,
+    ],
+);
 
 export const contractDeployer1: Address = new Address([
     204, 190, 163, 95, 110, 134, 1, 4, 104, 204, 197, 231, 62, 122, 115, 178, 237, 191, 201, 77,
@@ -120,29 +169,22 @@ export const tokenAddress1: Address = new Address([
 ]);
 
 export const tokenIdUint8Array1: Uint8Array = ripemd160(tokenAddress1);
-export const tokenId1: u256 = u256.fromBytes(tokenAddress1, true);
 
 export const tokenAddress2: Address = new Address([
     222, 40, 197, 58, 44, 174, 172, 146, 11, 2, 236, 98, 173, 123, 172, 221, 45, 8, 99, 251, 190,
     151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 245,
 ]);
-export const tokenIdUint8Array2: Uint8Array = ripemd160(tokenAddress2);
-export const tokenId2: u256 = u256.fromBytes(tokenAddress2, true);
 
-export const ownerAddress1: Address = new Address([
-    221, 41, 197, 58, 44, 174, 172, 146, 11, 2, 236, 98, 173, 123, 172, 221, 45, 8, 99, 251, 190,
-    151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 240,
-]);
-
-export const ownerAddress2: Address = new Address([
-    214, 32, 197, 58, 44, 174, 172, 146, 11, 2, 236, 98, 173, 123, 172, 221, 45, 8, 99, 251, 190,
-    151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 24,
-]);
-
-export const ownerAddress3: Address = new Address([
-    116, 12, 197, 58, 44, 174, 172, 146, 11, 2, 236, 98, 173, 123, 172, 221, 45, 8, 99, 251, 190,
-    151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 34,
-]);
+export const ownerAddress1: ExtendedAddress = new ExtendedAddress(
+    [
+        221, 41, 197, 58, 44, 174, 172, 146, 11, 2, 236, 98, 173, 123, 172, 221, 45, 8, 99, 251,
+        190, 151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 240,
+    ],
+    [
+        2, 41, 197, 58, 44, 174, 172, 146, 11, 2, 236, 98, 173, 123, 172, 221, 45, 8, 99, 251, 190,
+        151, 230, 90, 170, 2, 198, 68, 224, 254, 129, 239,
+    ],
+);
 
 export const receiverAddress1: Uint8Array = new Uint8Array(33);
 receiverAddress1.set([
@@ -162,6 +204,7 @@ receiverAddress2.set([
     0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x0b, 0xf6,
     0x2d,
 ]);
+
 export const receiverAddress2CSV: string = ExtendedAddress.toCSV(
     receiverAddress2,
     CSV_BLOCKS_REQUIRED,
@@ -173,6 +216,7 @@ receiverAddress3.set([
     0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x57, 0x1b, 0xe6,
     0x1d,
 ]);
+
 export const receiverAddress3CSV: string = ExtendedAddress.toCSV(
     receiverAddress3,
     CSV_BLOCKS_REQUIRED,
@@ -184,6 +228,7 @@ receiverAddress4.set([
     0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x03, 0xf4,
     0x25,
 ]);
+
 export const receiverAddress4CSV: string = ExtendedAddress.toCSV(
     receiverAddress4,
     CSV_BLOCKS_REQUIRED,
@@ -195,6 +240,7 @@ receiverAddress5.set([
     0x61, 0x0d, 0x84, 0x0c, 0x23, 0xec, 0xb6, 0x4c, 0x14, 0x07, 0x5b, 0xbb, 0x9f, 0x67, 0x12, 0x44,
     0x1e,
 ]);
+
 export const receiverAddress5CSV: string = ExtendedAddress.toCSV(
     receiverAddress5,
     CSV_BLOCKS_REQUIRED,
@@ -351,14 +397,24 @@ regtestChainId.set([
     0xbf, 0x5b, 0xeb, 0x43, 0x60, 0x12, 0xaf, 0xca, 0x59, 0x0b, 0x1a, 0x11, 0x46, 0x6e, 0x22, 0x06,
 ]);
 
+const consensusRules = new ConsensusRules();
+consensusRules.insertFlag(ConsensusRules.UNSAFE_QUANTUM_SIGNATURES_ALLOWED);
+
 export function setBlockchainEnvironment(
     currentBlock: u64,
     sender: Address = msgSender1,
-    origin: Address = msgSender1,
+    origin: ExtendedAddress = msgSender1,
 ): void {
     const medianTimestamp: u64 = 87129871;
     const writer: BytesWriter = new BytesWriter(
-        32 + 2 * U64_BYTE_LENGTH + 4 * ADDRESS_BYTE_LENGTH + txId1.length + txHash1.length + 64,
+        32 +
+            2 * U64_BYTE_LENGTH +
+            4 * ADDRESS_BYTE_LENGTH +
+            txId1.length +
+            txHash1.length +
+            64 +
+            32 +
+            8,
     );
 
     writer.writeBytes(new Uint8Array(32));
@@ -376,6 +432,8 @@ export function setBlockchainEnvironment(
 
     writer.writeBytes(regtestChainId); // chain id
     writer.writeBytes(new Uint8Array(32)); // protocol id
+    writer.writeBytes(origin.tweakedPublicKey); // tweaked public key
+    writer.writeU64(consensusRules.asU64());
 
     Blockchain.setEnvironmentVariables(writer.getBuffer());
 }
@@ -399,7 +457,7 @@ export interface ITestProviderManager extends IProviderManager {
 
     clearMockedResults(): void;
 
-    cleanUpQueues(): void;
+    cleanUpQueues(currentQuote: u256): void;
 
     getNextProviderWithLiquidity(currentQuote: u256): Provider | null;
 
@@ -481,15 +539,17 @@ export function createLiquidityQueue(
         tokenId,
         quoteManager,
         liquidityQueueReserve,
+        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     );
+
     const reservationManager: ITestReservationManager = getReservationManager(
         token,
         tokenId,
         providerManager,
         liquidityQueueReserve,
     );
-    const dynamicFee: IDynamicFee = getDynamicFee(tokenId);
 
+    const dynamicFee: IDynamicFee = getDynamicFee(tokenId);
     const liquidityQueue: ITestLiquidityQueue = new TestLiquidityQueue(
         token,
         tokenId,
@@ -527,6 +587,7 @@ export function getProviderManager(
     tokenId: Uint8Array,
     quoteManager: IQuoteManager,
     liquidityQueueReserve: ILiquidityQueueReserve,
+    maximumResetsBeforeQueuing: u8,
 ): ITestProviderManager {
     return new TestProviderManager(
         token,
@@ -534,6 +595,7 @@ export function getProviderManager(
         quoteManager,
         ENABLE_INDEX_VERIFICATION,
         liquidityQueueReserve,
+        maximumResetsBeforeQueuing,
     );
 }
 
@@ -632,9 +694,9 @@ export class TestProviderManager extends ProviderManager implements ITestProvide
         this._resetProviderCalled = false;
     }
 
-    public cleanUpQueues(): void {
+    public cleanUpQueues(currentQuote: u256): void {
         this._cleanUpQueuesCalled = true;
-        super.cleanUpQueues();
+        super.cleanUpQueues(currentQuote);
     }
 
     public getNextProviderWithLiquidity(currentQuote: u256): Provider | null {
@@ -690,10 +752,10 @@ export class TestReservationManager extends ReservationManager implements ITestR
         return super.getActiveListForBlock(blockNumber);
     }
 
-    override purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
+    override purgeReservationsAndRestoreProviders(lastPurgedBlock: u64, currentQuote: u256): u64 {
         this._purgeReservationsAndRestoreProvidersCalled = true;
 
-        return super.purgeReservationsAndRestoreProviders(lastPurgedBlock);
+        return super.purgeReservationsAndRestoreProviders(lastPurgedBlock, currentQuote);
     }
 
     public lastBlockReservation(): u64 {
