@@ -315,8 +315,8 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.increaseTotalTokensExchangedForSatoshis(tokensOut);
     }*/
 
-    public resetFulfilledProviders(count: u32): void {
-        this.providerManager.resetFulfilledProviders(count);
+    public resetFulfilledProviders(count: u32): u32 {
+        return this.providerManager.resetFulfilledProviders(count);
     }
 
     public computeFees(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256 {

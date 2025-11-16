@@ -98,7 +98,7 @@ export interface ILiquidityQueue {
 
     removeFromPurgeQueue(provider: Provider): void;
 
-    resetFulfilledProviders(count: u32): void;
+    resetFulfilledProviders(count: u32): u32;
 
     resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void; //false,true
 

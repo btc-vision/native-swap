@@ -22,13 +22,15 @@ export class FulfilledProviderQueue {
         this.queue.push(providerIndex, true);
     }
 
-    public reset(count: u32, associatedQueue: ProviderQueue): void {
+    public reset(count: u32, associatedQueue: ProviderQueue): u32 {
         const countToResets: u32 = min(count, this.queue.getLength());
 
         for (let index: u32 = 0; index < countToResets; index++) {
             const providerIndex: u32 = this.queue.next();
             this.resetProvider(providerIndex, associatedQueue);
         }
+
+        return countToResets;
     }
 
     public save(): void {

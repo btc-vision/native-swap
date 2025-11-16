@@ -323,9 +323,19 @@ export class ProviderManager implements IProviderManager {
         }
     }
 
-    public resetFulfilledProviders(count: u32): void {
-        this.priorityFulfilledQueue.reset(count, this.priorityQueue);
-        this.normalFulfilledQueue.reset(count, this.normalQueue);
+    public resetFulfilledProviders(count: u32): u32 {
+        let totalResets: u32 = 0;
+
+        totalResets = this.priorityFulfilledQueue.reset(count, this.priorityQueue);
+
+        if (totalResets < count) {
+            const remaining: u32 = count - totalResets;
+            if (remaining > 0) {
+                totalResets += this.normalFulfilledQueue.reset(remaining, this.normalQueue);
+            }
+        }
+
+        return totalResets;
     }
 
     public resetProvider(
