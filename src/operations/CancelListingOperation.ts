@@ -121,7 +121,7 @@ export class CancelListingOperation extends BaseOperation {
     }
 
     private ensureProviderIsNotFulfilled(): void {
-        if (this.provider.isFulfilled()) {
+        if (this.provider.toReset()) {
             throw new Revert(
                 'NATIVE_SWAP: You cannot cancel this listing at the moment. Provider is in the reset queue and needs to be resets first. Try again in a few blocks.',
             );

@@ -106,30 +106,30 @@ export class Provider {
     }
 
     /**
-     * @method isFulfilled
-     * @description Gets the fulfilled state.
-     * @returns {boolean} - true if the provider is fulfilled; false if not.
+     * @method toReset
+     * @description Gets if the provider needs to be resets.
+     * @returns {boolean} - true if the provider needs to be resets; false if not.
      */
-    public isFulfilled(): boolean {
-        return this.providerData.fulfilled;
+    public toReset(): boolean {
+        return this.providerData.toReset;
     }
 
     /**
-     * @method markFulfilled
-     * @description Mark the provider as fulfilled.
+     * @method markToReset
+     * @description Mark the provider to be resets.
      * @returns {void}
      */
-    public markFulfilled(): void {
-        this.providerData.fulfilled = true;
+    public markToReset(): void {
+        this.providerData.toReset = true;
     }
 
     /**
-     * @method clearFulfilled
-     * @description Clear the provider as fulfilled.
+     * @method clearToReset
+     * @description Clear the provider as to be resets.
      * @returns {void}
      */
-    public clearFulfilled(): void {
-        this.providerData.fulfilled = false;
+    public clearToReset(): void {
+        this.providerData.toReset = false;
     }
 
     /**

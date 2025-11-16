@@ -520,7 +520,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     }
 
     private ensureProviderIsNotFulfilled(): void {
-        if (this.provider.isFulfilled()) {
+        if (this.provider.toReset()) {
             throw new Revert(
                 'NATIVE_SWAP: Provider is in the reset queue and needs to be resets first. Try again in a few blocks.',
             );

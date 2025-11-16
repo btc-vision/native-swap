@@ -825,7 +825,7 @@ export class NativeSwap extends ReentrancyGuard {
         writer.writeU64(provider.getListedTokenAtBlock());
         writer.writeBoolean(provider.isPurged());
         writer.writeBoolean(provider.isLiquidityProvisionAllowed());
-        writer.writeBoolean(provider.isFulfilled());
+        writer.writeBoolean(provider.toReset());
         return writer;
     }
 

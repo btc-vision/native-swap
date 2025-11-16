@@ -69,7 +69,7 @@ export class TradeManager implements ITradeManager {
             const provider: Provider = this.getProvider(providerData);
 
             // Skip if the provider is fulfilled.
-            if (provider.isFulfilled()) {
+            if (provider.toReset()) {
                 continue;
             }
 

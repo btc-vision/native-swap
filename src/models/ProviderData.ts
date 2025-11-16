@@ -43,6 +43,32 @@ export class ProviderData {
         this.amountPointer = encodePointer(AMOUNT_POINTER, subPointer);
     }
 
+    private _toReset: boolean = false;
+
+    /**
+     * @method toReset
+     * @description Gets if the provider is fulfilled and needs to be resets.
+     * @returns {boolean} - true if fulfilled; false if not.
+     */
+    @inline
+    public get toReset(): boolean {
+        this.ensureValues();
+        return this._toReset;
+    }
+
+    /**
+     * @method toReset
+     * @description Sets if the provider is fulfilled and needs to be resets.
+     * @param {boolean} value - true if fulfilled; false if not.
+     */
+    public set toReset(value: boolean) {
+        this.ensureValues();
+        if (this._toReset !== value) {
+            this._toReset = value;
+            this.stateChanged = true;
+        }
+    }
+
     // Add this new private field
     private _virtualBTCContribution: u64 = 0;
 
@@ -82,32 +108,6 @@ export class ProviderData {
         this.ensureValues();
         if (this._active !== value) {
             this._active = value;
-            this.stateChanged = true;
-        }
-    }
-
-    private _fulfilled: boolean = false;
-
-    /**
-     * @method fulfilled
-     * @description Gets if the provider is fulfilled and needs to be resets.
-     * @returns {boolean} - true if fulfilled; false if not.
-     */
-    @inline
-    public get fulfilled(): boolean {
-        this.ensureValues();
-        return this._fulfilled;
-    }
-
-    /**
-     * @method fulfilled
-     * @description Sets if the provider is fulfilled.
-     * @param {boolean} value - true if fulfilled; false if not.
-     */
-    public set fulfilled(value: boolean) {
-        this.ensureValues();
-        if (this._fulfilled !== value) {
-            this._fulfilled = value;
             this.stateChanged = true;
         }
     }
@@ -364,7 +364,7 @@ export class ProviderData {
     public resetListingProviderValues(): void {
         this.active = false;
         this.priority = false;
-        this.fulfilled = false;
+        this.toReset = false;
         this.liquidityProvisionAllowed = false;
         this.liquidityAmount = u128.Zero;
         this.reservedAmount = u128.Zero;
@@ -372,6 +372,8 @@ export class ProviderData {
         this.purgedIndex = INDEX_NOT_SET_VALUE;
         this.listedTokenAtBlock = BLOCK_NOT_SET_VALUE;
 
+        //!!!
+        //this.virtualBTCContribution = 0;?????
         if (this.queueIndex !== INITIAL_LIQUIDITY_PROVIDER_INDEX) {
             this.queueIndex = INDEX_NOT_SET_VALUE;
         }
@@ -450,7 +452,7 @@ export class ProviderData {
             ((this._liquidityProvisionAllowed ? 1 : 0) << 2) |
             ((this._initialLiquidityProvider ? 1 : 0) << 3) |
             ((this._purged ? 1 : 0) << 4) |
-            ((this._fulfilled ? 1 : 0) << 5);
+            ((this._toReset ? 1 : 0) << 5);
 
         writer.writeU8(flag);
         writer.writeU32(this._queueIndex);
@@ -517,7 +519,7 @@ export class ProviderData {
         this._liquidityProvisionAllowed = ((flag >> 2) & 1) === 1;
         this._initialLiquidityProvider = ((flag >> 3) & 1) === 1;
         this._purged = ((flag >> 4) & 1) === 1;
-        this._fulfilled = ((flag >> 5) & 1) === 1;
+        this._toReset = ((flag >> 5) & 1) === 1;
 
         this._queueIndex = reader.readU32();
         this._listedTokenAtBlock = reader.readU64();

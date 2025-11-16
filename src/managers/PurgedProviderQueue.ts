@@ -138,6 +138,14 @@ export class PurgedProviderQueue {
         }
     }
 
+    protected ensureProviderNotAlreadyFulfilled(provider: Provider): void {
+        if (provider.toReset()) {
+            throw new Revert(
+                `Impossible state: Provider is already marked as fulfilled. ProviderId: ${provider.getId()}`,
+            );
+        }
+    }
+
     protected ensureProviderPurged(provider: Provider): void {
         if (!provider.isPurged()) {
             throw new Revert(`Impossible state: provider has not been purged.`);
@@ -183,6 +191,7 @@ export class PurgedProviderQueue {
     ): void {
         this.ensureProviderPurged(provider);
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
+        this.ensureProviderNotAlreadyFulfilled(provider);
 
         // Remove from purged queue
         this.queue.removeItemFromLength();
@@ -190,7 +199,7 @@ export class PurgedProviderQueue {
         provider.clearPurged();
 
         // Add to fulfilled queue
-        provider.markFulfilled();
+        provider.markToReset();
         fulfilledQueue.add(provider.getQueueIndex());
     }
 
@@ -219,7 +228,7 @@ export class PurgedProviderQueue {
             }
         }
 
-        this.ensureProviderIsNotFulfilled(provider.isFulfilled());
+        this.ensureProviderIsNotFulfilled(provider.toReset());
 
         if (Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
             result = provider;

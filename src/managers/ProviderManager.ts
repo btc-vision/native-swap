@@ -66,6 +66,7 @@ export class ProviderManager implements IProviderManager {
             enableIndexVerification,
             MAXIMUM_NUMBER_OF_PROVIDERS,
             liquidityQueueReserve,
+            maximumResetsBeforeQueuing,
         );
 
         this.priorityQueue = new PriorityProviderQueue(
@@ -75,6 +76,7 @@ export class ProviderManager implements IProviderManager {
             enableIndexVerification,
             MAXIMUM_NUMBER_OF_PROVIDERS,
             liquidityQueueReserve,
+            maximumResetsBeforeQueuing,
         );
 
         this.normalPurgedQueue = new PurgedProviderQueue(
@@ -180,13 +182,15 @@ export class ProviderManager implements IProviderManager {
     }
 
     public cleanUpQueues(currentQuote: u256): void {
-        this.previousNormalStartingIndex = this.normalQueue.cleanUp(
-            this.previousNormalStartingIndex,
+        this.previousPriorityStartingIndex = this.priorityQueue.cleanUp(
+            this.priorityFulfilledQueue,
+            this.previousPriorityStartingIndex,
             currentQuote,
         );
 
-        this.previousPriorityStartingIndex = this.priorityQueue.cleanUp(
-            this.previousPriorityStartingIndex,
+        this.previousNormalStartingIndex = this.normalQueue.cleanUp(
+            this.normalFulfilledQueue,
+            this.previousNormalStartingIndex,
             currentQuote,
         );
     }
@@ -245,8 +249,10 @@ export class ProviderManager implements IProviderManager {
             return purgedProvider;
         }
 
-        const priorityProvider: Provider | null =
-            this.priorityQueue.getNextWithLiquidity(currentQuote);
+        const priorityProvider: Provider | null = this.priorityQueue.getNextWithLiquidity(
+            this.priorityFulfilledQueue,
+            currentQuote,
+        );
 
         if (priorityProvider !== null) {
             this.previousPriorityStartingIndex =
@@ -257,7 +263,10 @@ export class ProviderManager implements IProviderManager {
             return priorityProvider;
         }
 
-        const provider: Provider | null = this.normalQueue.getNextWithLiquidity(currentQuote);
+        const provider: Provider | null = this.normalQueue.getNextWithLiquidity(
+            this.normalFulfilledQueue,
+            currentQuote,
+        );
 
         if (provider !== null) {
             this.previousNormalStartingIndex =

@@ -38,7 +38,7 @@ export class FulfilledProviderQueue {
     }
 
     protected ensureProviderIsFulfilled(provider: Provider): void {
-        if (!provider.isFulfilled()) {
+        if (!provider.toReset()) {
             throw new Revert(`Impossible state: provider is not fulfilled.`);
         }
     }
@@ -50,7 +50,12 @@ export class FulfilledProviderQueue {
 
         this.ensureProviderIsFulfilled(provider);
 
-        associatedQueue.remove(provider);
+        if (!provider.isInitialLiquidityProvider()) {
+            associatedQueue.remove(provider);
+        }
+
+        const btcContribution = provider.getVirtualBTCContribution();
+        const hasContribution = btcContribution > 0;
 
         if (provider.hasLiquidityAmount()) {
             stakedAmount = provider.getLiquidityAmount().toU256();
@@ -58,6 +63,11 @@ export class FulfilledProviderQueue {
             this.liquidityQueueReserve.subFromTotalReserve(stakedAmount);
             this.liquidityQueueReserve.subFromVirtualTokenReserve(stakedAmount);
             addAmountToStakingContract(stakedAmount);
+        }
+
+        //!!!! purged???
+        if (hasContribution) {
+            provider.setVirtualBTCContribution(0);
         }
 
         this.queue.removeItemFromLength();

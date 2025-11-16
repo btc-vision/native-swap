@@ -362,7 +362,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     }
 
     private ensureProviderNotFulfilled(provider: Provider): void {
-        if (provider.isFulfilled()) {
+        if (provider.toReset()) {
             throw new Revert(`Impossible state: provider ${provider.getId()} is fulfilled.`);
         }
     }
