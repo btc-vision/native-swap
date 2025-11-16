@@ -239,10 +239,6 @@ describe('Provider tests', () => {
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU64(3999));
 
             expect(() => {
-                transferPendingAmountToStakingContract(tokenAddress1, Address.dead());
-            }).toThrow();
-
-            expect(() => {
                 transferPendingAmountToStakingContract(tokenAddress1, Address.zero());
             }).toThrow();
         });

@@ -43,6 +43,8 @@ import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion'
 import {
     AT_LEAST_PROVIDERS_TO_PURGE,
     ENABLE_INDEX_VERIFICATION,
+    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS,
+    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
     QUOTE_SCALE,
 } from '../constants/Contract';
@@ -93,12 +95,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     public get stakingContractAddress(): Address {
-        const address: Address = this._stakingContractAddress.value;
-        if (address.isZero()) {
-            return Address.dead();
-        }
-
-        return address;
+        return this._stakingContractAddress.value;
     }
 
     public override onDeployment(_calldata: Calldata): void {
@@ -499,6 +496,7 @@ export class NativeSwap extends ReentrancyGuard {
             minimumAmountOut,
             activationDelay,
             MAXIMUM_PROVIDER_PER_RESERVATIONS,
+            MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS,
         );
 
         operation.execute();
@@ -765,6 +763,7 @@ export class NativeSwap extends ReentrancyGuard {
             quoteManager,
             ENABLE_INDEX_VERIFICATION,
             liquidityQueueReserve,
+            MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
         );
     }
 
@@ -808,7 +807,7 @@ export class NativeSwap extends ReentrancyGuard {
                 U128_BYTE_LENGTH * 2 +
                 (U32_BYTE_LENGTH + provider.getBtcReceiver().length) +
                 2 * U32_BYTE_LENGTH +
-                4 * BOOLEAN_BYTE_LENGTH +
+                5 * BOOLEAN_BYTE_LENGTH +
                 U64_BYTE_LENGTH,
         );
 
@@ -826,6 +825,7 @@ export class NativeSwap extends ReentrancyGuard {
         writer.writeU64(provider.getListedTokenAtBlock());
         writer.writeBoolean(provider.isPurged());
         writer.writeBoolean(provider.isLiquidityProvisionAllowed());
+        writer.writeBoolean(provider.isFulfilled());
         return writer;
     }
 
@@ -844,7 +844,7 @@ export class NativeSwap extends ReentrancyGuard {
     }
 
     private ensureValidTokenAddress(token: Address): void {
-        if (token.isZero() || token.equals(Blockchain.DEAD_ADDRESS)) {
+        if (token.isZero()) {
             throw new Revert('NATIVE_SWAP: Invalid token address.');
         }
     }
@@ -908,10 +908,6 @@ export class NativeSwap extends ReentrancyGuard {
     private ensureStakingContractAddressIsValid(address: Address): void {
         if (address.isZero()) {
             throw new Revert('NATIVE_SWAP: Staking contract address cannot be empty.');
-        }
-
-        if (address.isDead()) {
-            throw new Revert('NATIVE_SWAP: Staking contract address cannot be dead address.');
         }
     }
 

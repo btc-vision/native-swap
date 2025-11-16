@@ -20,6 +20,7 @@ import {
     MAX_CUMULATIVE_IMPACT_BPS,
     MAX_PRICE_IMPACT_BPS,
     MAX_TOTAL_SATOSHIS,
+    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS,
     MIN_SATOSHI_RESERVE,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
     PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
@@ -67,6 +68,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.checkPreConditions();
         this.transferToken();
         this.emitLiquidityListedEvent();
+
+        this.liquidityQueue.resetFulfilledProviders(MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS);
     }
 
     /*private activateSlashing(): void {
@@ -296,7 +299,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
             }
 
             // Track BTC contribution
-            const currentQuote = this.liquidityQueue.quote();
+            let currentQuote = this.liquidityQueue.quote();
             if (!currentQuote.isZero()) {
                 const newTokensBtcValue = tokensToSatoshis(this.amountIn256, currentQuote);
                 const existingContribution = this.provider.getVirtualBTCContribution();
@@ -306,6 +309,12 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
             // Safe to add tokens to pending operations
             this.liquidityQueue.increaseTotalTokensSellActivated(deltaHalf.toU256());
+
+            // Clean up reservations and restore providers
+            this.liquidityQueue.updateVirtualPoolIfNeeded();
+
+            currentQuote = this.liquidityQueue.quote(true);
+            this.liquidityQueue.purgeReservationsAndRestoreProviders(currentQuote);
         }
     }
 
@@ -422,6 +431,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.ensureProviderNotAlreadyProvidingLiquidity();
         this.ensureNoActiveReservation();
         this.ensureProviderIsNotPurged();
+        this.ensureProviderIsNotFulfilled();
 
         if (!this.isForInitialLiquidity) {
             this.ensurePriceIsNotZero();
@@ -505,6 +515,14 @@ export class ListTokensForSaleOperation extends BaseOperation {
         if (this.provider.hasReservedAmount()) {
             throw new Revert(
                 `NATIVE_SWAP: All active reservations on your listing must be completed before listing again.`,
+            );
+        }
+    }
+
+    private ensureProviderIsNotFulfilled(): void {
+        if (this.provider.isFulfilled()) {
+            throw new Revert(
+                'NATIVE_SWAP: Provider is in the reset queue and needs to be resets first. Try again in a few blocks.',
             );
         }
     }

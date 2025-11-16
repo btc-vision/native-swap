@@ -495,8 +495,11 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
+            const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(
+                Blockchain.block.number,
+            );
             const manager = createLiquidityQueueResult.reservationManager;
-            const result = manager.purgeReservationsAndRestoreProviders(0);
+            const result = manager.purgeReservationsAndRestoreProviders(0, quote);
 
             expect(result).toStrictEqual(0);
         });
@@ -510,8 +513,11 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
+            const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(
+                Blockchain.block.number,
+            );
             const manager = createLiquidityQueueResult.reservationManager;
-            const result = manager.purgeReservationsAndRestoreProviders(0);
+            const result = manager.purgeReservationsAndRestoreProviders(0, quote);
 
             expect(result).toStrictEqual(95);
         });
@@ -525,8 +531,11 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
+            const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(
+                Blockchain.block.number,
+            );
             const manager = createLiquidityQueueResult.reservationManager;
-            const result = manager.purgeReservationsAndRestoreProviders(96);
+            const result = manager.purgeReservationsAndRestoreProviders(96, quote);
 
             expect(result).toStrictEqual(96);
         });
@@ -606,9 +615,12 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
+            const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(
+                Blockchain.block.number,
+            );
             const manager2 = createLiquidityQueueResult2.reservationManager;
             manager2.setAtLeastProvidersToPurge(2);
-            manager2.purgeReservationsAndRestoreProviders(100);
+            manager2.purgeReservationsAndRestoreProviders(100, quote);
 
             expect(createLiquidityQueueResult.liquidityQueue.reservedLiquidity).toStrictEqual(
                 u256.fromU64(150000),
@@ -689,8 +701,11 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
+            const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(
+                Blockchain.block.number,
+            );
             const manager2 = createLiquidityQueueResult2.reservationManager;
-            manager2.purgeReservationsAndRestoreProviders(100);
+            manager2.purgeReservationsAndRestoreProviders(100, quote);
 
             expect(createLiquidityQueueResult.liquidityQueue.reservedLiquidity).toStrictEqual(
                 u256.fromU64(0),
@@ -722,8 +737,11 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
+            const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(
+                Blockchain.block.number,
+            );
             const manager2 = createLiquidityQueueResult2.reservationManager;
-            const lastPurgedBlock = manager2.purgeReservationsAndRestoreProviders(100);
+            const lastPurgedBlock = manager2.purgeReservationsAndRestoreProviders(100, quote);
 
             expect(lastPurgedBlock).toStrictEqual(100);
         });
@@ -778,8 +796,11 @@ describe('Reservation manager tests', () => {
                     false,
                 );
 
+                const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(
+                    Blockchain.block.number,
+                );
                 const manager2 = createLiquidityQueueResult2.reservationManager;
-                manager2.purgeReservationsAndRestoreProviders(100);
+                manager2.purgeReservationsAndRestoreProviders(100, quote);
             }).toThrow();
         });
 
@@ -834,8 +855,11 @@ describe('Reservation manager tests', () => {
                     false,
                 );
 
+                const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(
+                    Blockchain.block.number,
+                );
                 const manager2 = createLiquidityQueueResult2.reservationManager;
-                manager2.purgeReservationsAndRestoreProviders(100);
+                manager2.purgeReservationsAndRestoreProviders(100, quote);
             }).toThrow();
         });
 
@@ -913,9 +937,14 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
+            const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(
+                Blockchain.block.number,
+            );
             const reservationManager3 = createLiquidityQueueResult3.reservationManager;
-            const newLastExpirationBlock =
-                reservationManager3.purgeReservationsAndRestoreProviders(100);
+            const newLastExpirationBlock = reservationManager3.purgeReservationsAndRestoreProviders(
+                100,
+                quote,
+            );
 
             expect(reservationManager3.blockWithReservationsLength()).toStrictEqual(1);
             expect(newLastExpirationBlock).toStrictEqual(101);

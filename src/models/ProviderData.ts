@@ -86,6 +86,32 @@ export class ProviderData {
         }
     }
 
+    private _fulfilled: boolean = false;
+
+    /**
+     * @method fulfilled
+     * @description Gets if the provider is fulfilled and needs to be resets.
+     * @returns {boolean} - true if fulfilled; false if not.
+     */
+    @inline
+    public get fulfilled(): boolean {
+        this.ensureValues();
+        return this._fulfilled;
+    }
+
+    /**
+     * @method fulfilled
+     * @description Sets if the provider is fulfilled.
+     * @param {boolean} value - true if fulfilled; false if not.
+     */
+    public set fulfilled(value: boolean) {
+        this.ensureValues();
+        if (this._fulfilled !== value) {
+            this._fulfilled = value;
+            this.stateChanged = true;
+        }
+    }
+
     private _initialLiquidityProvider: boolean = false;
 
     /**
@@ -338,6 +364,7 @@ export class ProviderData {
     public resetListingProviderValues(): void {
         this.active = false;
         this.priority = false;
+        this.fulfilled = false;
         this.liquidityProvisionAllowed = false;
         this.liquidityAmount = u128.Zero;
         this.reservedAmount = u128.Zero;
@@ -422,7 +449,8 @@ export class ProviderData {
             ((this._priority ? 1 : 0) << 1) |
             ((this._liquidityProvisionAllowed ? 1 : 0) << 2) |
             ((this._initialLiquidityProvider ? 1 : 0) << 3) |
-            ((this._purged ? 1 : 0) << 4);
+            ((this._purged ? 1 : 0) << 4) |
+            ((this._fulfilled ? 1 : 0) << 5);
 
         writer.writeU8(flag);
         writer.writeU32(this._queueIndex);
@@ -489,6 +517,7 @@ export class ProviderData {
         this._liquidityProvisionAllowed = ((flag >> 2) & 1) === 1;
         this._initialLiquidityProvider = ((flag >> 3) & 1) === 1;
         this._purged = ((flag >> 4) & 1) === 1;
+        this._fulfilled = ((flag >> 5) & 1) === 1;
 
         this._queueIndex = reader.readU32();
         this._listedTokenAtBlock = reader.readU64();

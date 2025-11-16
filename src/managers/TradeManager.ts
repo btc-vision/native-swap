@@ -68,6 +68,11 @@ export class TradeManager implements ITradeManager {
 
             const provider: Provider = this.getProvider(providerData);
 
+            // Skip if the provider is fulfilled.
+            if (provider.isFulfilled()) {
+                continue;
+            }
+
             // Skip if provider is no more active
             if (!provider.isActive()) {
                 continue;

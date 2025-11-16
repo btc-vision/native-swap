@@ -41,6 +41,7 @@ import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import {
     INDEX_NOT_SET_VALUE,
     INITIAL_FEE_COLLECT_ADDRESS,
+    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
 } from '../constants/Contract';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
@@ -128,6 +129,7 @@ function reserve(amount: u64): u256 {
         u256.Zero,
         0,
         MAXIMUM_PROVIDER_PER_RESERVATIONS,
+        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS,
     );
 
     reserveOp.execute();

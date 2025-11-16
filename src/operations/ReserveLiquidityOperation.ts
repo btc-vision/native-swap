@@ -39,6 +39,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     private reservedTokens: u256 = u256.Zero;
     private satoshisSpent: u64 = 0;
     private readonly maximumProvidersPerReservation: u8;
+    private readonly numberOfFulfilledProviderToResets: u32;
 
     constructor(
         liquidityQueue: ILiquidityQueue,
@@ -48,6 +49,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         minimumAmountOutTokens: u256,
         activationDelay: u8,
         maximumProvidersPerReservation: u8,
+        numberOfFulfilledProviderToResets: u32,
     ) {
         super(liquidityQueue);
 
@@ -57,6 +59,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.minimumAmountOutTokens = minimumAmountOutTokens;
         this.activationDelay = activationDelay;
         this.maximumProvidersPerReservation = maximumProvidersPerReservation;
+        this.numberOfFulfilledProviderToResets = numberOfFulfilledProviderToResets;
     }
 
     public override execute(): void {
@@ -72,6 +75,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.liquidityQueue.addReservation(reservation);
         this.liquidityQueue.setBlockQuote();
         this.liquidityQueue.cleanUpQueues(this.currentQuote);
+        this.liquidityQueue.resetFulfilledProviders(this.numberOfFulfilledProviderToResets);
         this.emitReservationCreatedEvent();
     }
 
@@ -357,6 +361,12 @@ export class ReserveLiquidityOperation extends BaseOperation {
         }
     }
 
+    private ensureProviderNotFulfilled(provider: Provider): void {
+        if (provider.isFulfilled()) {
+            throw new Revert(`Impossible state: provider ${provider.getId()} is fulfilled.`);
+        }
+    }
+
     private ensureNoRepeatedProvider(currentId: u256, lastId: u256): void {
         if (u256.eq(currentId, lastId)) {
             throw new Revert(`Impossible state: repeated provider, ${currentId} === ${lastId}.`);
@@ -516,6 +526,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
             }
 
             this.ensureNoRepeatedProvider(provider.getId(), lastProviderId);
+            this.ensureProviderNotFulfilled(provider);
 
             lastProviderId = provider.getId();
             lastIndex = provider.getQueueIndex();

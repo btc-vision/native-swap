@@ -527,7 +527,9 @@ describe('Liquidity queue tests', () => {
             queue2.removeFromNormalQueue(provider1);
             provider1.save();
 
-            createQueueResult2.providerManager.cleanUpQueues();
+            const quote = queue.quote();
+
+            createQueueResult2.providerManager.cleanUpQueues(quote);
             expect(queue2.getNormalQueueStartingIndex()).toStrictEqual(1);
         });
 
@@ -563,7 +565,9 @@ describe('Liquidity queue tests', () => {
             queue2.removeFromPriorityQueue(provider1);
             provider1.save();
 
-            createQueueResult2.providerManager.cleanUpQueues();
+            const quote = queue.quote();
+
+            createQueueResult2.providerManager.cleanUpQueues(quote);
             expect(queue2.getPriorityQueueStartingIndex()).toStrictEqual(1);
         });
 
