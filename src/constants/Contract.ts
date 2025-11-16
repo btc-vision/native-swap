@@ -20,8 +20,8 @@ export const TIMEOUT_AFTER_EXPIRATION_BLOCKS: u8 = 2;
 export const MAX_TOTAL_SATOSHIS: u256 = u256.fromU64(21_000_000 * 100_000_000);
 export const MAX_ACTIVATION_DELAY: u8 = 3;
 
-export const MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING: u8 = 40;
-export const MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS: u32 = 80;
+export const MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING: u8 = 100;
+export const MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS: u32 = 40;
 
 export const MIN_SATOSHI_RESERVE: u256 = u256.fromU64(100_000); // 0.001 BTC
 export const MAX_PRICE_IMPACT_BPS = u256.fromU64(10_000); // 40% 3_000 15_000
@@ -43,9 +43,9 @@ export const CSV_BLOCKS_REQUIRED: i32 = 1;
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
  */
-export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 200;
+export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 140;
 
-export const AT_LEAST_PROVIDERS_TO_PURGE: u32 = 150;
+export const AT_LEAST_PROVIDERS_TO_PURGE: u32 = 100;
 
 // 4 block grace period
 export const SLASH_GRACE_WINDOW: u64 = 4;

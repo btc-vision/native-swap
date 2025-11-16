@@ -300,11 +300,11 @@ export class ProviderManager implements IProviderManager {
         return writer.getBuffer();
     }
 
-    public purgeAndRestoreProvider(data: ReservationProviderData): void {
+    public purgeAndRestoreProvider(data: ReservationProviderData, quote: u256): void {
         const provider: Provider = this.getProviderFromQueue(data.providerIndex, data.providerType);
 
         this.ensureReservedAmountValid(provider, data.providedAmount);
-        this.purgeAndRestoreNormalPriorityProvider(provider, data);
+        this.purgeAndRestoreNormalPriorityProvider(provider, data, quote);
     }
 
     public removeFromNormalQueue(provider: Provider): void {
@@ -420,10 +420,9 @@ export class ProviderManager implements IProviderManager {
     private purgeAndRestoreNormalPriorityProvider(
         provider: Provider,
         data: ReservationProviderData,
+        quote: u256,
     ): void {
         provider.subtractFromReservedAmount(data.providedAmount);
-
-        const quote: u256 = this.quoteManager.getValidBlockQuote(data.creationBlock);
 
         if (
             !Provider.meetsMinimumReservationAmount(provider.getAvailableLiquidityAmount(), quote)

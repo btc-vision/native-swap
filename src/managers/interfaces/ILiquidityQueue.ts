@@ -89,7 +89,8 @@ export interface ILiquidityQueue {
 
     purgeReservationsAndRestoreProviders(currentQuote: u256): void;
 
-    quote(): u256;
+    // @ts-expect-error This is valid assemblyscript syntax
+    quote(recalc: boolean = false): u256;
 
     removeFromNormalQueue(provider: Provider): void;
 

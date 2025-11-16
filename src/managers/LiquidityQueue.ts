@@ -463,27 +463,9 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     // Return number of tokens per satoshi
-    public quote(): u256 {
-        if (!this._calculatedQuote) {
-            const TOKEN: u256 = this.virtualTokenReserve;
-            const BTC: u64 = this.virtualSatoshisReserve;
-
-            if (TOKEN.isZero()) {
-                return u256.Zero;
-            }
-
-            if (BTC === 0) {
-                throw new Revert(`Impossible state: Not enough liquidity.`);
-            }
-
-            // Calculate queue impact
-            const queueImpact = this.calculateQueueImpact();
-
-            // Add impact to token reserves ONLY for price calculation
-            const effectiveT = SafeMath.add(TOKEN, queueImpact);
-            const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
-
-            this._calculatedQuote = SafeMath.div(scaled, u256.fromU64(BTC));
+    public quote(recalc: boolean = false): u256 {
+        if (!this._calculatedQuote || recalc) {
+            this._calculatedQuote = this.calculateQuote();
         }
 
         return this._calculatedQuote as u256;
@@ -590,6 +572,28 @@ export class LiquidityQueue implements ILiquidityQueue {
         );
 
         this.lastVirtualUpdateBlock = currentBlock;
+    }
+
+    private calculateQuote(): u256 {
+        const TOKEN: u256 = this.virtualTokenReserve;
+        const BTC: u64 = this.virtualSatoshisReserve;
+
+        if (TOKEN.isZero()) {
+            return u256.Zero;
+        }
+
+        if (BTC === 0) {
+            throw new Revert(`Impossible state: Not enough liquidity.`);
+        }
+
+        // Calculate queue impact
+        const queueImpact = this.calculateQueueImpact();
+
+        // Add impact to token reserves ONLY for price calculation
+        const effectiveT = SafeMath.add(TOKEN, queueImpact);
+        const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
+
+        return SafeMath.div(scaled, u256.fromU64(BTC));
     }
 
     /*private calculateQueueImpact(): u256 {

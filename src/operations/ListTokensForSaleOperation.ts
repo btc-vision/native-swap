@@ -68,6 +68,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.checkPreConditions();
         this.transferToken();
         this.emitLiquidityListedEvent();
+
         this.liquidityQueue.resetFulfilledProviders(MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS);
     }
 
@@ -298,7 +299,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
             }
 
             // Track BTC contribution
-            const currentQuote = this.liquidityQueue.quote();
+            let currentQuote = this.liquidityQueue.quote();
             if (!currentQuote.isZero()) {
                 const newTokensBtcValue = tokensToSatoshis(this.amountIn256, currentQuote);
                 const existingContribution = this.provider.getVirtualBTCContribution();
@@ -308,6 +309,12 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
             // Safe to add tokens to pending operations
             this.liquidityQueue.increaseTotalTokensSellActivated(deltaHalf.toU256());
+
+            // Clean up reservations and restore providers
+            this.liquidityQueue.updateVirtualPoolIfNeeded();
+
+            currentQuote = this.liquidityQueue.quote(true);
+            this.liquidityQueue.purgeReservationsAndRestoreProviders(currentQuote);
         }
     }
 
