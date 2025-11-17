@@ -57,3 +57,5 @@ export const ENABLE_INDEX_VERIFICATION: boolean = false;
 
 export const MAXIMUM_QUOTE_INDEX: u64 = 500;
 export const MAXIMUM_NUMBER_OF_PROVIDERS: u32 = u32.MAX_VALUE - 1000;
+
+export let currentProviderResetCount: u8 = 0;

@@ -372,8 +372,6 @@ export class ProviderData {
         this.purgedIndex = INDEX_NOT_SET_VALUE;
         this.listedTokenAtBlock = BLOCK_NOT_SET_VALUE;
 
-        //!!!
-        //this.virtualBTCContribution = 0;?????
         if (this.queueIndex !== INITIAL_LIQUIDITY_PROVIDER_INDEX) {
             this.queueIndex = INDEX_NOT_SET_VALUE;
         }

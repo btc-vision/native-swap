@@ -65,7 +65,6 @@ export class FulfilledProviderQueue {
             addAmountToStakingContract(stakedAmount);
         }
 
-        //!!!! purged???
         if (hasContribution) {
             provider.setVirtualBTCContribution(0);
         }

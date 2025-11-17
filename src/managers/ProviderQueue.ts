@@ -7,7 +7,11 @@ import {
     StoredU256Array,
 } from '@btc-vision/btc-runtime/runtime';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
-import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
+import {
+    currentProviderResetCount,
+    INDEX_NOT_SET_VALUE,
+    MAXIMUM_VALID_INDEX,
+} from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
@@ -19,7 +23,6 @@ export class ProviderQueue {
     protected readonly enableIndexVerification: boolean;
     protected readonly maximumNumberOfProvider: u32;
     protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
-    private providerResetCount: u8;
     private readonly maximumResetsBeforeQueuing: u8;
 
     constructor(
@@ -36,7 +39,6 @@ export class ProviderQueue {
         this.enableIndexVerification = enableIndexVerification;
         this.maximumNumberOfProvider = maximumNumberOfProvider;
         this.liquidityQueueReserve = liquidityQueueReserve;
-        this.providerResetCount = 0;
         this.maximumResetsBeforeQueuing = maximumResetsBeforeQueuing;
     }
 
@@ -110,12 +112,12 @@ export class ProviderQueue {
                     );*/
 
                     // This provider must be purged safely.
-                    this.resetProvider(provider);
-                    if (this.providerResetCount > this.maximumResetsBeforeQueuing) {
+                    if (currentProviderResetCount > this.maximumResetsBeforeQueuing) {
                         this.addProviderToFulfilledQueue(provider, fulfilledQueue);
                     } else {
                         this.resetProvider(provider);
-                        this.providerResetCount++;
+                        // @ts-expect-error Valid code
+                        currentProviderResetCount++;
                     }
                 }
             } else {
@@ -204,7 +206,6 @@ export class ProviderQueue {
         // ENTRY-PRICE TRACKING: Remove the entry-price BTC contribution
         // This represents the baseline liquidity depth this provider contributed
         if (hasContribution) {
-            //!!! Why not in purged provider???
             // CRITICAL FIX: Only remove BTC contribution if it's a cancellation
             // For normal trades, the BTC contribution should NOT be removed from reserves
             if (canceled) {
@@ -396,11 +397,12 @@ export class ProviderQueue {
             this.ensureProviderIsNotInPurgeQueue(provider);
             result = provider;
         } else if (!provider.hasReservedAmount()) {
-            if (this.providerResetCount > this.maximumResetsBeforeQueuing) {
+            if (currentProviderResetCount > this.maximumResetsBeforeQueuing) {
                 this.addProviderToFulfilledQueue(provider, fulfilledQueue);
             } else {
                 this.resetProvider(provider);
-                this.providerResetCount++;
+                // @ts-expect-error Valid code
+                currentProviderResetCount++;
             }
         }
 

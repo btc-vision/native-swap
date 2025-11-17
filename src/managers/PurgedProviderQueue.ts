@@ -5,7 +5,7 @@ import {
     Revert,
     StoredU32Array,
 } from '@btc-vision/btc-runtime/runtime';
-import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
+import { currentProviderResetCount, INDEX_NOT_SET_VALUE } from '../constants/Contract';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import { ProviderQueue } from './ProviderQueue';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
@@ -18,7 +18,6 @@ export class PurgedProviderQueue {
     protected readonly queue: StoredU32Array;
     protected readonly enableIndexVerification: boolean;
     protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
-    private providerResetCount: u8;
     private readonly maximumResetsBeforeQueuing: u8;
 
     constructor(
@@ -33,7 +32,6 @@ export class PurgedProviderQueue {
         this.queue = new StoredU32Array(pointer, subPointer, INDEX_NOT_SET_VALUE - 1);
         this.enableIndexVerification = enableIndexVerification;
         this.liquidityQueueReserve = liquidityQueueReserve;
-        this.providerResetCount = 0;
         this.maximumResetsBeforeQueuing = maximumResetsBeforeQueuing;
     }
 
@@ -174,6 +172,8 @@ export class PurgedProviderQueue {
             addAmountToStakingContract(stakedAmount);
         }
 
+        provider.setVirtualBTCContribution(0);
+
         // Remove from normal/priority queue
         associatedQueue.remove(provider);
 
@@ -233,11 +233,12 @@ export class PurgedProviderQueue {
         if (Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
             result = provider;
         } else if (!provider.hasReservedAmount()) {
-            if (this.providerResetCount > this.maximumResetsBeforeQueuing) {
+            if (currentProviderResetCount > this.maximumResetsBeforeQueuing) {
                 this.addProviderToFulfilledQueue(provider, fulfilledQueue);
             } else {
                 this.resetProvider(provider, associatedQueue);
-                this.providerResetCount++;
+                // @ts-expect-error Valid code
+                currentProviderResetCount++;
             }
         } else {
             this.remove(provider);
