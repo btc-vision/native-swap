@@ -766,7 +766,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 // Force quote = 0
                 queue2.liquidityQueue.virtualTokenReserve = u256.Zero;
-
+                //queue2.liquidityQueue.reCalcQuote();
                 const reserveOp = new ReserveLiquidityOperation(
                     queue2.liquidityQueue,
                     providerId1,

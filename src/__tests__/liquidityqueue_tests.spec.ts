@@ -985,7 +985,7 @@ describe('Liquidity queue tests', () => {
             expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
 
             queue.accruePenalty(u128.fromU64(10000), u128.fromU64(5000));
-
+            queue.updateVirtualPoolIfNeeded();
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(5000));
             expect(queue.liquidity).toStrictEqual(u256.Zero);
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`10000`));

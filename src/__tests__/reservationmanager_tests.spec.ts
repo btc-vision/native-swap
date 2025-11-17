@@ -615,9 +615,7 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
-            const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(
-                Blockchain.block.number,
-            );
+            const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(100);
             const manager2 = createLiquidityQueueResult2.reservationManager;
             manager2.setAtLeastProvidersToPurge(2);
             manager2.purgeReservationsAndRestoreProviders(100, quote);
@@ -701,9 +699,7 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
-            const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(
-                Blockchain.block.number,
-            );
+            const quote = createLiquidityQueueResult.quoteManager.getBlockQuote(100);
             const manager2 = createLiquidityQueueResult2.reservationManager;
             manager2.purgeReservationsAndRestoreProviders(100, quote);
 

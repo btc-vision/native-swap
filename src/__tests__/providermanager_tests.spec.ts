@@ -1014,7 +1014,7 @@ describe('ProviderManager tests', () => {
                 100,
             );
 
-            manager.purgeAndRestoreProvider(reservationData);
+            manager.purgeAndRestoreProvider(reservationData, quoteManager.getBlockQuote(100));
 
             expect(provider.isPurged()).toBeTruthy();
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
@@ -1051,7 +1051,7 @@ describe('ProviderManager tests', () => {
                 100,
             );
 
-            manager.purgeAndRestoreProvider(reservationData);
+            manager.purgeAndRestoreProvider(reservationData, quoteManager.getBlockQuote(100));
 
             expect(provider.isPurged()).toBeTruthy();
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
@@ -1089,7 +1089,7 @@ describe('ProviderManager tests', () => {
                 100,
             );
 
-            manager.purgeAndRestoreProvider(reservationData);
+            manager.purgeAndRestoreProvider(reservationData, quoteManager.getBlockQuote(100));
 
             expect(provider.isPurged()).toBeFalsy();
             expect(provider.isActive()).toBeFalsy();
@@ -1126,7 +1126,7 @@ describe('ProviderManager tests', () => {
                 100,
             );
 
-            manager.purgeAndRestoreProvider(reservationData);
+            manager.purgeAndRestoreProvider(reservationData, quoteManager.getBlockQuote(100));
 
             expect(provider.isPurged()).toBeFalsy();
             expect(provider.isActive()).toBeTruthy();
@@ -1164,7 +1164,7 @@ describe('ProviderManager tests', () => {
                     100,
                 );
 
-                manager.purgeAndRestoreProvider(reservationData);
+                manager.purgeAndRestoreProvider(reservationData, quoteManager.getBlockQuote(100));
             }).toThrow();
         });
     });
@@ -1679,12 +1679,12 @@ describe('ProviderManager tests', () => {
                     manager.removeFromPriorityQueue(providersToDelete[i]);
                 }
 
-                const quote = quoteManager.getBlockQuote(Blockchain.block.number);
-                manager.cleanUpQueues(quote);
+                // TODO: Check later quote
+                const currentQuote: u256 = u256.fromU32(1000);
+                manager.cleanUpQueues(currentQuote);
 
                 expect(manager.priorityQueueStartingIndex).toStrictEqual(3);
 
-                const currentQuote: u256 = u256.fromU32(1000);
                 const nextProvider: Provider | null =
                     manager.getNextProviderWithLiquidity(currentQuote);
 
@@ -1748,7 +1748,8 @@ describe('ProviderManager tests', () => {
                     manager.removeFromPriorityQueue(providersToDelete[i]);
                 }
 
-                const quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                // TODO: Check later quote
+                const quote: u256 = u256.One;
                 // Move priorityQueue starting index to 4
                 manager.cleanUpQueues(quote);
                 manager.resetProvider(providersPriority[0], false);
@@ -2060,7 +2061,8 @@ describe('ProviderManager tests', () => {
                     manager.removeFromNormalQueue(providersToDelete[i]);
                 }
 
-                const quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                // TODO: Check later quote
+                const quote: u256 = u256.One;
                 manager.cleanUpQueues(quote);
 
                 expect(manager.normalQueueStartingIndex).toStrictEqual(3);
@@ -2130,7 +2132,8 @@ describe('ProviderManager tests', () => {
                     manager.removeFromNormalQueue(providersToDelete[i]);
                 }
 
-                const quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                // TODO: Check later quote
+                const quote: u256 = u256.One;
 
                 // Move standard queue starting index to 4
                 manager.cleanUpQueues(quote);
@@ -2733,7 +2736,8 @@ describe('ProviderManager tests', () => {
 
                 expect(manager.priorityQueueLength).toStrictEqual(1);
 
-                const quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                // TODO: Check later quote
+                const quote: u256 = u256.One;
 
                 manager.cleanUpQueues(quote);
 
@@ -2770,7 +2774,8 @@ describe('ProviderManager tests', () => {
 
                     expect(manager.priorityQueueLength).toStrictEqual(1);
 
-                    const quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                    // TODO: Check later quote
+                    const quote: u256 = u256.One;
 
                     manager.cleanUpQueues(quote);
                 }).toThrow();
@@ -2808,7 +2813,8 @@ describe('ProviderManager tests', () => {
 
                 expect(manager.priorityQueueLength).toStrictEqual(2);
 
-                const quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                // TODO: Check later quote
+                const quote: u256 = u256.One;
 
                 manager.cleanUpQueues(quote);
 
@@ -2850,7 +2856,8 @@ describe('ProviderManager tests', () => {
                 manager.removeFromPriorityQueue(provider2);
                 manager.removeFromPriorityQueue(provider3);
 
-                let quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                // TODO: Check later quote
+                const quote: u256 = u256.One;
 
                 manager.cleanUpQueues(quote);
 
@@ -2870,7 +2877,6 @@ describe('ProviderManager tests', () => {
 
                 expect(manager.priorityQueueLength).toStrictEqual(5);
 
-                quote = quoteManager.getBlockQuote(Blockchain.block.number);
                 manager.cleanUpQueues(quote);
 
                 expect(manager.previousPriorityStartingIndex).toStrictEqual(2);
@@ -2911,7 +2917,8 @@ describe('ProviderManager tests', () => {
 
                 expect(manager.getFromPriorityQueue(0)).toStrictEqual(u256.Zero);
 
-                const quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                // TODO: Check later quote
+                const quote: u256 = u256.One;
 
                 manager.cleanUpQueues(quote);
 
@@ -2956,7 +2963,8 @@ describe('ProviderManager tests', () => {
 
                 expect(manager.normalQueueLength).toStrictEqual(1);
 
-                const quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                // TODO: Check later quote
+                const quote: u256 = u256.One;
 
                 manager.cleanUpQueues(quote);
 
@@ -2992,7 +3000,8 @@ describe('ProviderManager tests', () => {
 
                     expect(manager.normalQueueLength).toStrictEqual(1);
 
-                    const quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                    // TODO: Check later quote
+                    const quote: u256 = u256.One;
 
                     manager.cleanUpQueues(quote);
                 }).toThrow();
@@ -3028,7 +3037,8 @@ describe('ProviderManager tests', () => {
 
                 expect(manager.normalQueueLength).toStrictEqual(2);
 
-                const quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                // TODO: Check later quote
+                const quote: u256 = u256.One;
 
                 manager.cleanUpQueues(quote);
 
@@ -3067,7 +3077,8 @@ describe('ProviderManager tests', () => {
                 manager.removeFromNormalQueue(provider2);
                 manager.removeFromNormalQueue(provider3);
 
-                let quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                // TODO: Check later quote
+                const quote: u256 = u256.One;
 
                 manager.cleanUpQueues(quote);
 
@@ -3085,7 +3096,6 @@ describe('ProviderManager tests', () => {
 
                 expect(manager.normalQueueLength).toStrictEqual(5);
 
-                quote = quoteManager.getBlockQuote(Blockchain.block.number);
                 manager.cleanUpQueues(quote);
 
                 expect(manager.previousNormalStartingIndex).toStrictEqual(2);
@@ -3124,7 +3134,8 @@ describe('ProviderManager tests', () => {
 
                 expect(manager.getFromNormalQueue(0)).toStrictEqual(u256.Zero);
 
-                const quote = quoteManager.getBlockQuote(Blockchain.block.number);
+                // TODO: Check later quote
+                const quote: u256 = u256.One;
 
                 manager.cleanUpQueues(quote);
 

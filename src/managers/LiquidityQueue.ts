@@ -1,6 +1,7 @@
 import {
     Address,
     Blockchain,
+    Potential,
     Revert,
     SafeMath,
     StoredU256,
@@ -42,8 +43,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     private readonly settings: StoredU64;
     private readonly _maxTokensPerReservation: StoredU256;
     private readonly timeoutEnabled: boolean;
-
-    private _calculatedQuote: u256 | null = null;
+    private _calculatedQuote: Potential<u256> = null;
 
     constructor(
         token: Address,
@@ -195,7 +195,6 @@ export class LiquidityQueue implements ILiquidityQueue {
             const penaltyLeftU256: u256 = penaltyLeft.toU256();
 
             this.decreaseTotalReserve(penaltyU256);
-
             if (!penaltyLeftU256.isZero()) {
                 // Get current state BEFORE modifications
                 const currentBTC = u256.fromU64(this.virtualSatoshisReserve);
@@ -239,6 +238,11 @@ export class LiquidityQueue implements ILiquidityQueue {
     public blockWithReservationsLength(): u32 {
         return this.reservationManager.blockWithReservationsLength();
     }
+
+    /*public recordTradeVolumes(tokensOut: u256, satoshisIn: u64): void {
+        this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
+        this.increaseTotalTokensExchangedForSatoshis(tokensOut);
+    }*/
 
     public recordTradeVolumes(tokensOut: u256, satoshisIn: u64): void {
         // Get current state
@@ -309,11 +313,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
         this.increaseTotalTokensExchangedForSatoshis(tokensOut);
     }
-
-    /*public recordTradeVolumes(tokensOut: u256, satoshisIn: u64): void {
-        this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
-        this.increaseTotalTokensExchangedForSatoshis(tokensOut);
-    }*/
 
     public resetFulfilledProviders(count: u32): u32 {
         return this.providerManager.resetFulfilledProviders(count);
@@ -463,13 +462,21 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     // Return number of tokens per satoshi
-    public quote(recalc: boolean = false): u256 {
-        if (!this._calculatedQuote || recalc) {
-            this._calculatedQuote = this.calculateQuote();
+    public quote(): u256 {
+        /*
+        if (this._calculatedQuote) {
+            return this._calculatedQuote as u256;
         }
 
+        this._calculatedQuote = this.calculateQuote();
         return this._calculatedQuote as u256;
+        */
+        return this.calculateQuote();
     }
+
+    /*public reCalcQuote(): void {
+        this._calculatedQuote = this.calculateQuote();
+    }*/
 
     public removeFromNormalQueue(provider: Provider): void {
         this.providerManager.removeFromNormalQueue(provider);
@@ -494,6 +501,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public setBlockQuote(): void {
+        //this.reCalcQuote();
         this.quoteManager.setBlockQuote(Blockchain.block.number, this.quote());
     }
 

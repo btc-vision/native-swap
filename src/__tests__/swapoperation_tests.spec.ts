@@ -389,7 +389,7 @@ describe('SwapOperation tests', () => {
             expect(queue4.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
                 u256.fromString(`9980000000000000000`),
             );
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
 
         it('should executeTrade with 2 different providers => 1 provider updated, liquidity queue update, safeTransfer called ', () => {
@@ -494,7 +494,7 @@ describe('SwapOperation tests', () => {
                 u256.fromString(`9990814375050294936`),
             );
             expect(reservationActiveList.get(0)).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
 
         it('should executeTrade with 2 different providers => 2 providers updated, liquidity queue update, safeTransfer called when satoshis = 15600 ', () => {
@@ -603,7 +603,7 @@ describe('SwapOperation tests', () => {
                 u128.fromString(`1000000000000000000000000`),
             );
             expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
             expect(reservationList.getLength()).toStrictEqual(1);
             expect(reservationActiveList.get(0)).toBeFalsy();
         });
@@ -732,7 +732,7 @@ describe('SwapOperation tests', () => {
                 u256.fromString(`10001584254652044528`),
             );
             expect(reservationActiveList.get(0)).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
     });
 
@@ -1158,7 +1158,7 @@ describe('SwapOperation tests', () => {
 
             const reservation = new Reservation(tokenAddress1, providerAddress3);
             expect(reservation.getSwapped()).toBeTruthy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
     });
 });

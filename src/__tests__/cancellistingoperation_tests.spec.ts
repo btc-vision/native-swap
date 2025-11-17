@@ -216,7 +216,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(0));
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5000));
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
 
         it('should apply more than 50 % penalty if outside of grace period', () => {
@@ -243,7 +243,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(90000));
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5005));
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
 
         it('should cap halfToCharge to penaltyAmount', () => {
@@ -270,7 +270,7 @@ describe('CancelListTokenForSaleOperation tests', () => {
             expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(89999));
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5000));
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
 
         it('should succeed: set provider liquidity to 0, call resetProvider, safeTransfer, update reserve, cleanUpQueues, emit event', () => {
@@ -295,10 +295,10 @@ describe('CancelListTokenForSaleOperation tests', () => {
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(provider.isActive()).toBeFalsy();
 
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(999990000));
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(5000));
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
     });
 });

@@ -313,7 +313,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
             // Clean up reservations and restore providers
             this.liquidityQueue.updateVirtualPoolIfNeeded();
 
-            currentQuote = this.liquidityQueue.quote(true);
+            //this.liquidityQueue.reCalcQuote();
+            currentQuote = this.liquidityQueue.quote();
             this.liquidityQueue.purgeReservationsAndRestoreProviders(currentQuote);
         }
     }

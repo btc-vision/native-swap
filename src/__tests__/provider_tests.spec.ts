@@ -223,14 +223,14 @@ describe('Provider tests', () => {
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU64(3999));
 
             transferPendingAmountToStakingContract(tokenAddress1, testStackingContractAddress);
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
 
         it('should not transfer the pendingStakingContractAmount to the staking contract when amount = 0', () => {
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
 
             transferPendingAmountToStakingContract(tokenAddress1, testStackingContractAddress);
-            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+            expect(TransferHelper.transferCalled).toBeFalsy();
         });
 
         it('should fail if staking contract address is not specified when calling pendingStakingContractAmount with amount > 0', () => {

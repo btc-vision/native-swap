@@ -51,6 +51,7 @@ function createPriorityQueue(liquidityQueueReserve: ILiquidityQueueReserve): Pri
         ENABLE_INDEX_VERIFICATION,
         MAXIMUM_NUMBER_OF_PROVIDERS,
         liquidityQueueReserve,
+        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     );
 }
 
