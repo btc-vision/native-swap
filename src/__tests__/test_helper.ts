@@ -9,6 +9,7 @@ import {
     StoredBooleanArray,
     StoredU128Array,
     StoredU256Array,
+    StoredU32Array,
     U64_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
@@ -38,6 +39,7 @@ import { DynamicFee } from '../managers/DynamicFee';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
+import { FulfilledProviderQueue } from '../managers/FulfilledProviderQueue';
 
 // IF YOU CHANGE NETWORK MAKE SURE TO CHANGE THIS AS WELL.
 Blockchain.network = Networks.Regtest;
@@ -269,6 +271,7 @@ export function createProvider(
     reserved: u128 = u128.fromU64(0),
     isActive: bool = true,
     isPriority: bool = false,
+    toReset: bool = false,
 ): Provider {
     const providerId: u256 = addressToPointerU256(providerAddress, tokenAddress);
     const provider: Provider = getProvider(providerId);
@@ -283,6 +286,12 @@ export function createProvider(
         provider.markPriority();
     } else {
         provider.clearPriority();
+    }
+
+    if (toReset) {
+        provider.markToReset();
+    } else {
+        provider.clearToReset();
     }
 
     provider.setLiquidityAmount(liquidity);
@@ -326,6 +335,7 @@ export function createProviders(
     reserved: u128 = u128.fromU64(0),
     isActive: bool = true,
     isPriority: bool = false,
+    toReset: bool = false,
 ): Provider[] {
     const providers: Provider[] = [];
 
@@ -377,6 +387,7 @@ export function createProviders(
             reserved,
             isActive,
             isPriority,
+            toReset,
         );
 
         providers.push(provider);
@@ -845,5 +856,11 @@ export class TestTradeManager extends TradeManager implements ITestTradeManager 
 
     public callGetSatoshisSent(address: string): u64 {
         return super.getSatoshisSent(address);
+    }
+}
+
+export class TestFulfilledProviderQueue extends FulfilledProviderQueue {
+    public get getQueue(): StoredU32Array {
+        return this.queue;
     }
 }
