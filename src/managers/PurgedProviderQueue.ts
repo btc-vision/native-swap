@@ -193,6 +193,14 @@ export class PurgedProviderQueue {
         this.ensureProviderQueueIndexIsValid(provider.getPurgedIndex());
         this.ensureProviderNotAlreadyFulfilled(provider);
 
+        // Remove from total reserve (accounting only)
+        if (provider.hasLiquidityAmount()) {
+            const liquidity = provider.getLiquidityAmount().toU256();
+            this.liquidityQueueReserve.subFromTotalReserve(liquidity);
+            this.liquidityQueueReserve.subFromVirtualTokenReserve(liquidity);
+            addAmountToStakingContract(liquidity);
+        }
+
         // Remove from purged queue
         this.queue.removeItemFromLength();
         this.queue.applyNextOffsetToStartingIndex();
@@ -233,7 +241,7 @@ export class PurgedProviderQueue {
         if (Provider.meetsMinimumReservationAmount(availableLiquidity, quote)) {
             result = provider;
         } else if (!provider.hasReservedAmount()) {
-            if (currentProviderResetCount > this.maximumResetsBeforeQueuing) {
+            if (currentProviderResetCount >= this.maximumResetsBeforeQueuing) {
                 this.addProviderToFulfilledQueue(provider, fulfilledQueue);
             } else {
                 this.resetProvider(provider, associatedQueue);

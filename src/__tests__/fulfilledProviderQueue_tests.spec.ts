@@ -4,7 +4,7 @@ import {
     getPendingStakingContractAmount,
     Provider,
 } from '../models/Provider';
-import { Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { NORMAL_QUEUE_FULFILLED, NORMAL_QUEUE_POINTER } from '../constants/StoredPointers';
 import { LiquidityQueueReserve } from '../models/LiquidityQueueReserve';
 import {
@@ -22,10 +22,9 @@ import {
 } from '../constants/Contract';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
-const initialTotalReserve = u256.fromU32(100000000);
-const initialVirtualTokenReserve = u256.fromU32(100000000);
-
 class TestInstances {
+    static initialTotalReserve: u256 = u256.fromU32(100000000);
+    static initialVirtualTokenReserve: u256 = u256.fromU32(100000000);
     public fulfilledQueue: TestFulfilledProviderQueue;
     public liquidityReserve: LiquidityQueueReserve;
     public normalProviderQueue: ProviderQueue;
@@ -43,8 +42,8 @@ class TestInstances {
 
 function createTestInstances(): TestInstances {
     const liquidityReserve = new LiquidityQueueReserve(tokenAddress1, tokenIdUint8Array1);
-    liquidityReserve.addToTotalReserve(initialTotalReserve);
-    liquidityReserve.addToVirtualTokenReserve(initialVirtualTokenReserve);
+    liquidityReserve.addToTotalReserve(TestInstances.initialTotalReserve);
+    liquidityReserve.addToVirtualTokenReserve(TestInstances.initialVirtualTokenReserve);
 
     const normalProviderQueue = new ProviderQueue(
         tokenAddress1,
@@ -128,10 +127,10 @@ describe('Fulfilled provider queue tests', () => {
                 expect(provider1.isActive()).toBeFalsy();
                 expect(provider1.getVirtualBTCContribution()).toStrictEqual(0);
                 expect(instances.liquidityReserve.virtualTokenReserve).toStrictEqual(
-                    SafeMath.sub(initialVirtualTokenReserve, liquidity),
+                    TestInstances.initialVirtualTokenReserve,
                 );
                 expect(instances.liquidityReserve.liquidity).toStrictEqual(
-                    SafeMath.sub(initialTotalReserve, liquidity),
+                    TestInstances.initialTotalReserve,
                 );
                 expect(getPendingStakingContractAmount()).toStrictEqual(liquidity);
                 expect(instances.fulfilledQueue.getQueue.getLength()).toStrictEqual(0);
@@ -166,10 +165,10 @@ describe('Fulfilled provider queue tests', () => {
                 expect(resetCount).toStrictEqual(count);
 
                 expect(instances.liquidityReserve.virtualTokenReserve).toStrictEqual(
-                    SafeMath.sub(initialVirtualTokenReserve, liquiditySum),
+                    TestInstances.initialVirtualTokenReserve,
                 );
                 expect(instances.liquidityReserve.liquidity).toStrictEqual(
-                    SafeMath.sub(initialTotalReserve, liquiditySum),
+                    TestInstances.initialTotalReserve,
                 );
                 expect(getPendingStakingContractAmount()).toStrictEqual(liquiditySum);
                 expect(instances.fulfilledQueue.getQueue.getLength()).toStrictEqual(0);
@@ -264,10 +263,10 @@ describe('Fulfilled provider queue tests', () => {
                 expect(provider1.isActive()).toBeFalsy();
                 expect(provider1.getVirtualBTCContribution()).toStrictEqual(0);
                 expect(instances.liquidityReserve.virtualTokenReserve).toStrictEqual(
-                    SafeMath.sub(initialVirtualTokenReserve, liquidity),
+                    TestInstances.initialVirtualTokenReserve,
                 );
                 expect(instances.liquidityReserve.liquidity).toStrictEqual(
-                    SafeMath.sub(initialTotalReserve, liquidity),
+                    TestInstances.initialTotalReserve,
                 );
                 expect(getPendingStakingContractAmount()).toStrictEqual(liquidity);
                 expect(instances.fulfilledQueue.getQueue.getLength()).toStrictEqual(0);
@@ -299,9 +298,11 @@ describe('Fulfilled provider queue tests', () => {
                 expect(provider1.isActive()).toBeFalsy();
                 expect(provider1.getVirtualBTCContribution()).toStrictEqual(0);
                 expect(instances.liquidityReserve.virtualTokenReserve).toStrictEqual(
-                    initialVirtualTokenReserve,
+                    TestInstances.initialVirtualTokenReserve,
                 );
-                expect(instances.liquidityReserve.liquidity).toStrictEqual(initialTotalReserve);
+                expect(instances.liquidityReserve.liquidity).toStrictEqual(
+                    TestInstances.initialTotalReserve,
+                );
                 expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
                 expect(instances.fulfilledQueue.getQueue.getLength()).toStrictEqual(0);
                 expect(instances.normalProviderQueue.getQueue().getLength()).toStrictEqual(1);
@@ -332,10 +333,10 @@ describe('Fulfilled provider queue tests', () => {
                 expect(provider1.isActive()).toBeFalsy();
                 expect(provider1.getVirtualBTCContribution()).toStrictEqual(0);
                 expect(instances.liquidityReserve.virtualTokenReserve).toStrictEqual(
-                    SafeMath.sub(initialVirtualTokenReserve, liquidity),
+                    TestInstances.initialVirtualTokenReserve,
                 );
                 expect(instances.liquidityReserve.liquidity).toStrictEqual(
-                    SafeMath.sub(initialTotalReserve, liquidity),
+                    TestInstances.initialTotalReserve,
                 );
                 expect(getPendingStakingContractAmount()).toStrictEqual(liquidity);
                 expect(instances.fulfilledQueue.getQueue.getLength()).toStrictEqual(0);

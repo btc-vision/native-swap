@@ -1,6 +1,6 @@
 import { Blockchain, Revert, StoredU32Array } from '@btc-vision/btc-runtime/runtime';
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
+import { getProvider, Provider } from '../models/Provider';
 import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { ProviderQueue } from './ProviderQueue';
@@ -23,14 +23,14 @@ export class FulfilledProviderQueue {
     }
 
     public reset(count: u32, associatedQueue: ProviderQueue): u32 {
-        const countToResets: u32 = min(count, this.queue.getLength());
+        const countToReset: u32 = min(count, this.queue.getLength());
 
-        for (let index: u32 = 0; index < countToResets; index++) {
+        for (let index: u32 = 0; index < countToReset; index++) {
             const providerIndex: u32 = this.queue.next();
             this.resetProvider(providerIndex, associatedQueue);
         }
 
-        return countToResets;
+        return countToReset;
     }
 
     public save(): void {
@@ -44,9 +44,9 @@ export class FulfilledProviderQueue {
     }
 
     private resetProvider(providerIndex: u32, associatedQueue: ProviderQueue): void {
-        let stakedAmount: u256 = u256.Zero;
         const providerId: u256 = associatedQueue.getAt(providerIndex);
         const provider: Provider = getProvider(providerId);
+        const stakedAmount: u256 = provider.getLiquidityAmount().toU256();
 
         this.ensureProviderIsFulfilled(provider);
 
@@ -54,20 +54,7 @@ export class FulfilledProviderQueue {
             associatedQueue.remove(provider);
         }
 
-        const btcContribution = provider.getVirtualBTCContribution();
-        const hasContribution = btcContribution > 0;
-
-        if (provider.hasLiquidityAmount()) {
-            stakedAmount = provider.getLiquidityAmount().toU256();
-
-            this.liquidityQueueReserve.subFromTotalReserve(stakedAmount);
-            this.liquidityQueueReserve.subFromVirtualTokenReserve(stakedAmount);
-            addAmountToStakingContract(stakedAmount);
-        }
-
-        if (hasContribution) {
-            provider.setVirtualBTCContribution(0);
-        }
+        provider.setVirtualBTCContribution(0);
 
         this.queue.removeItemFromLength();
         this.queue.applyNextOffsetToStartingIndex();

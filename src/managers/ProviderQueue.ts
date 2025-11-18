@@ -368,6 +368,14 @@ export class ProviderQueue {
         this.ensureProviderNotAlreadyPurged(provider);
         this.ensureProviderNotAlreadyFulfilled(provider);
 
+        // Remove from total reserve (accounting only)
+        if (provider.hasLiquidityAmount()) {
+            const liquidity = provider.getLiquidityAmount().toU256();
+            this.liquidityQueueReserve.subFromTotalReserve(liquidity);
+            this.liquidityQueueReserve.subFromVirtualTokenReserve(liquidity);
+            addAmountToStakingContract(liquidity);
+        }
+
         // Add to fulfilled queue
         provider.markToReset();
         fulfilledQueue.add(provider.getQueueIndex());
@@ -397,7 +405,7 @@ export class ProviderQueue {
             this.ensureProviderIsNotInPurgeQueue(provider);
             result = provider;
         } else if (!provider.hasReservedAmount()) {
-            if (currentProviderResetCount > this.maximumResetsBeforeQueuing) {
+            if (currentProviderResetCount >= this.maximumResetsBeforeQueuing) {
                 this.addProviderToFulfilledQueue(provider, fulfilledQueue);
             } else {
                 this.resetProvider(provider);
