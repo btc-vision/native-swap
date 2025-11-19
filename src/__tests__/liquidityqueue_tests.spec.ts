@@ -33,11 +33,7 @@ import { Reservation } from '../models/Reservation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
-import {
-    INDEX_NOT_SET_VALUE,
-    INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    MAX_TOTAL_SATOSHIS,
-} from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX, MAX_TOTAL_SATOSHIS, } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 
 describe('Liquidity queue tests', () => {
@@ -68,7 +64,7 @@ describe('Liquidity queue tests', () => {
 
             expect(queue.initialLiquidityProviderId).toStrictEqual(u256.Zero);
             expect(queue.virtualSatoshisReserve).toStrictEqual(0);
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.One);
             expect(queue.totalTokensSellActivated).toStrictEqual(u256.Zero);
             expect(queue.totalSatoshisExchangedForTokens).toStrictEqual(0);
             expect(queue.totalTokensExchangedForSatoshis).toStrictEqual(u256.Zero);
@@ -276,10 +272,22 @@ describe('Liquidity queue tests', () => {
         });
 
         it('should purge reservation when flag is set', () => {
-            const createQueueResult = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const createQueueResult1 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            createQueueResult1.liquidityQueue.virtualSatoshisReserve = 10000;
+            createQueueResult1.liquidityQueue.save();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                true,
+            );
 
             expect(
-                createQueueResult.reservationManager.purgeReservationsAndRestoreProvidersCalled,
+                createQueueResult2.reservationManager.purgeReservationsAndRestoreProvidersCalled,
             ).toBeTruthy();
         });
 
@@ -515,8 +523,14 @@ describe('Liquidity queue tests', () => {
 
             const provider1 = new Provider(createProviderId(providerAddress1, tokenAddress1));
             const provider2 = new Provider(createProviderId(providerAddress2, tokenAddress1));
+            provider2.setLiquidityAmount(u128.fromString(`1000000`));
 
-            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+            queue2.setLiquidity(u256.fromU64(1000000000000000));
+            queue2.virtualTokenReserve = u256.fromU64(100000000);
+            queue2.virtualSatoshisReserve = 1000000000000000;
+            queue2.save();
+
             provider1.activate();
             provider2.activate();
             queue2.addToNormalQueue(provider1);
@@ -527,9 +541,7 @@ describe('Liquidity queue tests', () => {
             queue2.removeFromNormalQueue(provider1);
             provider1.save();
 
-            const quote = queue.quote();
-
-            createQueueResult2.providerManager.cleanUpQueues(quote);
+            createQueueResult2.providerManager.cleanUpQueues(u256.fromU32(1));
             expect(queue2.getNormalQueueStartingIndex()).toStrictEqual(1);
         });
 
@@ -549,14 +561,21 @@ describe('Liquidity queue tests', () => {
                 true,
             );
 
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+            queue2.setLiquidity(u256.fromU64(1000000000000000));
+            queue2.virtualTokenReserve = u256.fromU64(100000000);
+            queue2.virtualSatoshisReserve = 1000000000000000;
+            queue2.save();
+
             const provider1 = new Provider(createProviderId(providerAddress1, tokenAddress1));
             const provider2 = new Provider(createProviderId(providerAddress2, tokenAddress1));
+            provider2.setLiquidityAmount(u128.fromString(`1000000`));
 
-            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
             provider1.activate();
             provider2.activate();
             provider1.markPriority();
             provider2.markPriority();
+
             queue2.addToPriorityQueue(provider1);
             queue2.addToPriorityQueue(provider2);
             provider1.save();
@@ -565,9 +584,7 @@ describe('Liquidity queue tests', () => {
             queue2.removeFromPriorityQueue(provider1);
             provider1.save();
 
-            const quote = queue.quote();
-
-            createQueueResult2.providerManager.cleanUpQueues(quote);
+            createQueueResult2.providerManager.cleanUpQueues(u256.fromU32(1));
             expect(queue2.getPriorityQueueStartingIndex()).toStrictEqual(1);
         });
 
