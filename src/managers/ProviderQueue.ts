@@ -7,10 +7,15 @@ import {
     StoredU256Array,
 } from '@btc-vision/btc-runtime/runtime';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
-import { INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX } from '../constants/Contract';
+import {
+    currentProviderResetCount,
+    INDEX_NOT_SET_VALUE,
+    MAXIMUM_VALID_INDEX,
+} from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
+import { FulfilledProviderQueue } from './FulfilledProviderQueue';
 
 export class ProviderQueue {
     protected readonly token: Address;
@@ -18,6 +23,7 @@ export class ProviderQueue {
     protected readonly enableIndexVerification: boolean;
     protected readonly maximumNumberOfProvider: u32;
     protected readonly liquidityQueueReserve: ILiquidityQueueReserve;
+    private readonly maximumResetsBeforeQueuing: u8;
 
     constructor(
         token: Address,
@@ -26,12 +32,14 @@ export class ProviderQueue {
         enableIndexVerification: boolean,
         maximumNumberOfProvider: u32,
         liquidityQueueReserve: ILiquidityQueueReserve,
+        maximumResetsBeforeQueuing: u8,
     ) {
         this.queue = new StoredU256Array(pointer, subPointer, MAXIMUM_VALID_INDEX);
         this.token = token;
         this.enableIndexVerification = enableIndexVerification;
         this.maximumNumberOfProvider = maximumNumberOfProvider;
         this.liquidityQueueReserve = liquidityQueueReserve;
+        this.maximumResetsBeforeQueuing = maximumResetsBeforeQueuing;
     }
 
     protected _currentIndex: u32 = 0;
@@ -57,52 +65,70 @@ export class ProviderQueue {
         return index;
     }
 
-    public cleanUp(previousStartingIndex: u32, currentQuote: u256): u32 {
+    public cleanUp(
+        fulfilledQueue: FulfilledProviderQueue,
+        previousStartingIndex: u32,
+        currentQuote: u256,
+    ): u32 {
         const length: u32 = this.length;
         let index: u32 = previousStartingIndex;
 
         while (index < length) {
             const providerId: u256 = this.queue.get_physical(index);
 
-            if (!providerId.isZero()) {
-                const provider: Provider = getProvider(providerId);
-                const meetMinLiquidity = Provider.meetsMinimumReservationAmount(
-                    provider.getAvailableLiquidityAmount(),
-                    currentQuote,
-                );
+            if (providerId.isZero()) {
+                this.queue.setStartingIndex(index);
+                index++;
+                continue;
+            }
 
-                if (!meetMinLiquidity) {
-                    if (provider.hasReservedAmount() || provider.isPurged()) {
-                        // TODO: IMPORTANT! IF THE USER COMPLETE HIS SWAP WITH THE RESERVED TOKENS AND THE PROVIDER
-                        //  HAS DUST LEFT, HE SHOULD BE RESET AND THE DURST BURNED!
-                        /*const worthSat = tokensToSatoshis128(
-                            provider.getAvailableLiquidityAmount(),
-                            currentQuote,
-                        );
+            const provider: Provider = getProvider(providerId);
+            if (provider.toReset()) {
+                this.queue.setStartingIndex(index);
+                index++;
+                continue;
+            }
 
-                        Blockchain.log(
-                            `----- Provider at index ${index} does not meet minimum reservation. Skipping from queue. (${provider.getAvailableLiquidityAmount()} tokens left, worth ${worthSat} sat, quote: ${currentQuote}). Will get restored eventually from the purge queue. -----`,
-                        );*/
-                    } else {
-                        /*Blockchain.log(
-                            `!---! Resetting provider at index ${index}. Minimum liquidity not met. !---!`,
-                        );*/
+            const meetMinLiquidity = Provider.meetsMinimumReservationAmount(
+                provider.getAvailableLiquidityAmount(),
+                currentQuote,
+            );
 
-                        // This provider must be purged safely.
-                        this.resetProvider(provider);
-                    }
+            if (!meetMinLiquidity) {
+                if (provider.hasReservedAmount() || provider.isPurged()) {
+                    // TODO: IMPORTANT! IF THE USER COMPLETE HIS SWAP WITH THE RESERVED TOKENS AND THE PROVIDER
+                    //  HAS DUST LEFT, HE SHOULD BE RESET AND THE DURST BURNED!
+                    /*const worthSat = tokensToSatoshis128(
+                        provider.getAvailableLiquidityAmount(),
+                        currentQuote,
+                    );
+
+                    Blockchain.log(
+                        `----- Provider at index ${index} does not meet minimum reservation. Skipping from queue. (${provider.getAvailableLiquidityAmount()} tokens left, worth ${worthSat} sat, quote: ${currentQuote}). Will get restored eventually from the purge queue. -----`,
+                    );*/
                 } else {
-                    if (provider.isActive()) {
-                        this.queue.setStartingIndex(index);
-                        break;
+                    /*Blockchain.log(
+                        `!---! Resetting provider at index ${index}. Minimum liquidity not met. !---!`,
+                    );*/
+
+                    // This provider must be purged safely.
+                    if (currentProviderResetCount > this.maximumResetsBeforeQueuing) {
+                        this.addProviderToFulfilledQueue(provider, fulfilledQueue);
                     } else {
-                        throw new Revert(
-                            `Impossible state: Provider is no longer active and should have been removed from normal/priority queue. ProviderId: ${providerId}`,
-                        );
+                        this.resetProvider(provider);
+                        // @ts-expect-error Valid code
+                        currentProviderResetCount++;
                     }
                 }
             } else {
-                this.queue.setStartingIndex(index);
+                if (provider.isActive()) {
+                    this.queue.setStartingIndex(index);
+                    break;
+                } else {
+                    throw new Revert(
+                        `Impossible state: Provider is no longer active and should have been removed from normal/priority queue. ProviderId: ${providerId}`,
+                    );
+                }
             }
 
             index++;
@@ -115,7 +141,10 @@ export class ProviderQueue {
         return this.queue.get_physical(index);
     }
 
-    public getNextWithLiquidity(currentQuote: u256): Provider | null {
+    public getNextWithLiquidity(
+        fulfilledQueue: FulfilledProviderQueue,
+        currentQuote: u256,
+    ): Provider | null {
         let result: Potential<Provider> = null;
 
         this.ensureStartingIndexIsValid();
@@ -124,7 +153,7 @@ export class ProviderQueue {
         const length: u32 = this.length;
 
         while (this._currentIndex < length && result === null) {
-            const candidate: Provider | null = this.tryNextCandidate(currentQuote);
+            const candidate: Provider | null = this.tryNextCandidate(currentQuote, fulfilledQueue);
             if (candidate !== null) {
                 result = candidate;
             }
@@ -225,6 +254,14 @@ export class ProviderQueue {
         }
     }
 
+    protected ensureProviderNotAlreadyFulfilled(provider: Provider): void {
+        if (provider.toReset()) {
+            throw new Revert(
+                `Impossible state: Provider is already marked as fulfilled. ProviderId: ${provider.getId()}`,
+            );
+        }
+    }
+
     protected ensureProviderLiquidityIsValid(provider: Provider): void {
         if (u128.lt(provider.getLiquidityAmount(), provider.getReservedAmount())) {
             throw new Revert(
@@ -237,6 +274,14 @@ export class ProviderQueue {
         if (provider.isPurged()) {
             throw new Revert(
                 `Impossible state: Provider is in purge queue but purge queue is empty. ProviderId: ${provider.getId()} (indexed at ${provider.getQueueIndex()}, purgedAt: ${provider.getPurgedIndex()}).`,
+            );
+        }
+    }
+
+    protected ensureProviderIsNotFulfilled(provider: Provider): void {
+        if (provider.toReset()) {
+            throw new Revert(
+                `Impossible state: Provider is in reset queue. ProviderId: ${provider.getId()}.`,
             );
         }
     }
@@ -264,7 +309,10 @@ export class ProviderQueue {
         return isActive;
     }
 
-    protected tryNextCandidate(currentQuote: u256): Provider | null {
+    protected tryNextCandidate(
+        currentQuote: u256,
+        fulfilledQueue: FulfilledProviderQueue,
+    ): Provider | null {
         let result: Potential<Provider> = null;
         const providerId: u256 = this.queue.get_physical(this._currentIndex);
 
@@ -272,7 +320,12 @@ export class ProviderQueue {
             const provider: Provider = getProvider(providerId);
 
             if (this.isEligible(provider)) {
-                result = this.returnProvider(provider, this._currentIndex, currentQuote);
+                result = this.returnProvider(
+                    fulfilledQueue,
+                    provider,
+                    this._currentIndex,
+                    currentQuote,
+                );
             }
         }
 
@@ -308,8 +361,33 @@ export class ProviderQueue {
         this.ensureProviderIsNotInitialProvider(provider);
     }
 
+    private addProviderToFulfilledQueue(
+        provider: Provider,
+        fulfilledQueue: FulfilledProviderQueue,
+    ): void {
+        this.ensureProviderNotAlreadyPurged(provider);
+        this.ensureProviderNotAlreadyFulfilled(provider);
+
+        // Remove from total reserve (accounting only)
+        if (provider.hasLiquidityAmount()) {
+            const liquidity = provider.getLiquidityAmount().toU256();
+            this.liquidityQueueReserve.subFromTotalReserve(liquidity);
+            this.liquidityQueueReserve.subFromVirtualTokenReserve(liquidity);
+            addAmountToStakingContract(liquidity);
+        }
+
+        // Add to fulfilled queue
+        provider.markToReset();
+        fulfilledQueue.add(provider.getQueueIndex());
+    }
+
     // TODO: Possible optimization. we could verify to check if we want to skip an index but this adds complexity, but it could save gas.
-    private returnProvider(provider: Provider, index: u32, currentQuote: u256): Provider | null {
+    private returnProvider(
+        fulfilledQueue: FulfilledProviderQueue,
+        provider: Provider,
+        index: u32,
+        currentQuote: u256,
+    ): Provider | null {
         let result: Potential<Provider> = null;
         const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
 
@@ -321,11 +399,19 @@ export class ProviderQueue {
             this.performIndexVerification(provider, index);
         }
 
+        this.ensureProviderIsNotFulfilled(provider);
+
         if (Provider.meetsMinimumReservationAmount(availableLiquidity, currentQuote)) {
             this.ensureProviderIsNotInPurgeQueue(provider);
             result = provider;
         } else if (!provider.hasReservedAmount()) {
-            this.resetProvider(provider);
+            if (currentProviderResetCount >= this.maximumResetsBeforeQueuing) {
+                this.addProviderToFulfilledQueue(provider, fulfilledQueue);
+            } else {
+                this.resetProvider(provider);
+                // @ts-expect-error Valid code
+                currentProviderResetCount++;
+            }
         }
 
         return result;

@@ -45,10 +45,6 @@ export class WithdrawListingOperation extends BaseOperation {
     }
 
     private transferLiquidityBack(amount: u128): void {
-        TransferHelper.safeTransfer(
-            this.liquidityQueue.token,
-            Blockchain.tx.sender,
-            amount.toU256(),
-        );
+        TransferHelper.transfer(this.liquidityQueue.token, Blockchain.tx.sender, amount.toU256());
     }
 }

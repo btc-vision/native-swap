@@ -134,7 +134,7 @@ export class ReservationManager implements IReservationManager {
             }
 
             const budget: u32 = this.atLeastProvidersToPurge - providersPurged;
-            const res: PurgedResult = this.purgeBlockIncremental(blk, budget);
+            const res: PurgedResult = this.purgeBlockIncremental(blk, budget, currentQuote);
 
             providersPurged += res.providersPurged;
             freed = SafeMath.add(freed, res.freed);
@@ -250,7 +250,11 @@ export class ReservationManager implements IReservationManager {
         return new StoredU32(PURGE_RESERVATION_INDEX_POINTER, writer.getBuffer());
     }
 
-    private purgeBlockIncremental(blockNumber: u64, nbProvidersToPurge: u32): PurgedResult {
+    private purgeBlockIncremental(
+        blockNumber: u64,
+        nbProvidersToPurge: u32,
+        quote: u256,
+    ): PurgedResult {
         const reservations = this.getReservationListForBlock(blockNumber);
         const actives = this.getActiveListForBlock(blockNumber);
         const reservationsLength: u32 = reservations.getLength();
@@ -268,7 +272,7 @@ export class ReservationManager implements IReservationManager {
                 this.ensureReservationPurgeIndexMatch(reservation, index);
 
                 const providerCount: u32 = reservation.getProviderCount();
-                const freed: u256 = this.restoreReservation(reservation, providerCount);
+                const freed: u256 = this.restoreReservation(reservation, providerCount, quote);
                 totalFreed = SafeMath.add(totalFreed, freed);
                 totalProvidersPurged += providerCount;
 
@@ -321,13 +325,13 @@ export class ReservationManager implements IReservationManager {
         return this.getPurgeIndexStore(blockNumber).get(0);
     }
 
-    private restoreReservation(reservation: Reservation, providerCount: u32): u256 {
+    private restoreReservation(reservation: Reservation, providerCount: u32, quote: u256): u256 {
         let restoredLiquidity: u256 = u256.Zero;
 
         for (let index: u32 = 0; index < providerCount; index++) {
             const data: ReservationProviderData = reservation.getProviderAt(index);
 
-            this.providerManager.purgeAndRestoreProvider(data);
+            this.providerManager.purgeAndRestoreProvider(data, quote);
 
             restoredLiquidity = SafeMath.add(restoredLiquidity, data.providedAmount.toU256());
         }

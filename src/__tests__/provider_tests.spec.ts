@@ -42,7 +42,6 @@ describe('Provider tests', () => {
             const providerId: u256 = addressToPointerU256(providerAddress1, tokenAddress1);
             const provider: Provider = getProvider(providerId);
             const btcReceiver: string = 'e123e2d23d233';
-            const liquidityProvided: u128 = u128.fromU64(129292);
             const liquidity: u128 = u128.fromU64(131292);
             const reserved: u128 = u128.fromU64(12918);
 
@@ -51,7 +50,10 @@ describe('Provider tests', () => {
             provider.setLiquidityAmount(liquidity);
             provider.setReservedAmount(reserved);
             provider.setBtcReceiver(btcReceiver);
+            provider.setVirtualBTCContribution(100);
             provider.allowLiquidityProvision();
+            provider.markToReset();
+            provider.markPurged();
 
             const provider2: Provider = getProvider(providerId);
 
@@ -62,16 +64,18 @@ describe('Provider tests', () => {
                 SafeMath.sub128(liquidity, reserved),
             );
             expect(provider2.getBtcReceiver()).toStrictEqual(btcReceiver);
+            expect(provider2.getVirtualBTCContribution()).toStrictEqual(100);
             expect(provider2.isLiquidityProvisionAllowed()).toBeTruthy();
             expect(provider2.isActive()).toBeTruthy();
             expect(provider2.isPriority()).toBeTruthy();
+            expect(provider2.toReset()).toBeTruthy();
+            expect(provider2.isPurged()).toBeTruthy();
         });
 
         it('should load a saved provider when provider id exists but not cached', () => {
             const providerId: u256 = addressToPointerU256(providerAddress1, tokenAddress1);
             const provider: Provider = getProvider(providerId);
             const btcReceiver: string = 'e123e2d23d233';
-            const liquidityProvided: u128 = u128.fromU64(129292);
             const liquidity: u128 = u128.fromU64(131292);
             const reserved: u128 = u128.fromU64(12918);
 
@@ -81,6 +85,10 @@ describe('Provider tests', () => {
             provider.setReservedAmount(reserved);
             provider.setBtcReceiver(btcReceiver);
             provider.allowLiquidityProvision();
+            provider.setVirtualBTCContribution(100);
+            provider.allowLiquidityProvision();
+            provider.markToReset();
+            provider.markPurged();
 
             saveAllProviders();
             clearCachedProviders();
@@ -99,13 +107,15 @@ describe('Provider tests', () => {
             expect(provider2.isLiquidityProvisionAllowed()).toBeTruthy();
             expect(provider2.isActive()).toBeTruthy();
             expect(provider2.isPriority()).toBeTruthy();
+            expect(provider2.toReset()).toBeTruthy();
+            expect(provider2.isPurged()).toBeTruthy();
+            expect(provider2.getVirtualBTCContribution()).toStrictEqual(100);
         });
 
         it('should load 3 different saved providers when providers id exists but not cached', () => {
             const providerId1: u256 = addressToPointerU256(providerAddress1, tokenAddress1);
             const provider1: Provider = getProvider(providerId1);
             const btcReceiver1: string = 'e123e2d23d233';
-            const liquidityProvided1: u128 = u128.fromU64(129292);
             const liquidity1: u128 = u128.fromU64(131292);
             const reserved1: u128 = u128.fromU64(12918);
 
@@ -119,7 +129,6 @@ describe('Provider tests', () => {
             const providerId2: u256 = addressToPointerU256(providerAddress2, tokenAddress1);
             const provider2: Provider = getProvider(providerId2);
             const btcReceiver2: string = 'd03kd339idjkdi';
-            const liquidityProvided2: u128 = u128.fromU64(837343);
             const liquidity2: u128 = u128.fromU64(56252);
             const reserved2: u128 = u128.fromU64(32837);
 
@@ -133,7 +142,6 @@ describe('Provider tests', () => {
             const providerId3: u256 = addressToPointerU256(providerAddress3, tokenAddress1);
             const provider3: Provider = getProvider(providerId3);
             const btcReceiver3: string = 'peiekje0393';
-            const liquidityProvided3: u128 = u128.fromU64(624262);
             const liquidity3: u128 = u128.fromU64(126367);
             const reserved3: u128 = u128.fromU64(49484);
 
@@ -199,6 +207,11 @@ describe('Provider tests', () => {
             expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
             expect(provider.isActive()).toBeFalsy();
             expect(provider.isPriority()).toBeFalsy();
+            expect(provider.toReset()).toBeFalsy();
+            expect(provider.isPurged()).toBeFalsy();
+            expect(provider.getVirtualBTCContribution()).toStrictEqual(0);
+            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(provider.getListedTokenAtBlock()).toStrictEqual(BLOCK_NOT_SET_VALUE);
         });
     });
 
@@ -223,24 +236,20 @@ describe('Provider tests', () => {
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU64(3999));
 
             transferPendingAmountToStakingContract(tokenAddress1, testStackingContractAddress);
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
 
         it('should not transfer the pendingStakingContractAmount to the staking contract when amount = 0', () => {
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
 
             transferPendingAmountToStakingContract(tokenAddress1, testStackingContractAddress);
-            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+            expect(TransferHelper.transferCalled).toBeFalsy();
         });
 
         it('should fail if staking contract address is not specified when calling pendingStakingContractAmount with amount > 0', () => {
             addAmountToStakingContract(u256.fromU64(1000));
             addAmountToStakingContract(u256.fromU64(2999));
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU64(3999));
-
-            expect(() => {
-                transferPendingAmountToStakingContract(tokenAddress1, Address.dead());
-            }).toThrow();
 
             expect(() => {
                 transferPendingAmountToStakingContract(tokenAddress1, Address.zero());
@@ -497,6 +506,24 @@ describe('Provider tests', () => {
         });
     });
 
+    describe('Provider – toReset flag', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
+
+        it('mark/clear toReset flag', () => {
+            const provider: Provider = new Provider(u256.fromU64(42));
+
+            provider.markToReset();
+            expect(provider.toReset()).toBeTruthy();
+            provider.clearToReset();
+            expect(provider.toReset()).toBeFalsy();
+        });
+    });
+
     describe('Provider – resetListingValues / resetLiquidityProviderValues / resetAll', () => {
         beforeEach(() => {
             clearCachedProviders();
@@ -630,6 +657,24 @@ describe('Provider tests', () => {
             const index: u32 = 5;
             provider.setQueueIndex(index);
             expect(provider.getQueueIndex()).toStrictEqual(index);
+        });
+    });
+
+    describe('Provider – virtualBTCContribution', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
+
+        it('get/set virtualBTCContribution', () => {
+            const provider: Provider = new Provider(u256.fromU64(42));
+
+            provider.setVirtualBTCContribution(100);
+            expect(provider.getVirtualBTCContribution()).toStrictEqual(100);
+            provider.setVirtualBTCContribution(0);
+            expect(provider.getVirtualBTCContribution()).toStrictEqual(0);
         });
     });
 });

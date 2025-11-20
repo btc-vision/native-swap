@@ -68,6 +68,6 @@ describe('WithdrawListingOperation tests', () => {
         expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
         queue.liquidityQueue.save();
 
-        expect(TransferHelper.safeTransferCalled).toBeTruthy();
+        expect(TransferHelper.transferCalled).toBeTruthy();
     });
 });

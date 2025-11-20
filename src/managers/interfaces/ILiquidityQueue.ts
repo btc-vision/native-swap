@@ -91,11 +91,15 @@ export interface ILiquidityQueue {
 
     quote(): u256;
 
+    //reCalcQuote(): void;
+
     removeFromNormalQueue(provider: Provider): void;
 
     removeFromPriorityQueue(provider: Provider): void;
 
     removeFromPurgeQueue(provider: Provider): void;
+
+    resetFulfilledProviders(count: u32): u32;
 
     resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void; //false,true
 
