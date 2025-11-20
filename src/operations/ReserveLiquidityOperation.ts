@@ -442,7 +442,9 @@ export class ReserveLiquidityOperation extends BaseOperation {
         const totalFee: u64 = getTotalFeeCollected();
 
         if (totalFee < FeeManager.reservationBaseFee) {
-            throw new Revert('NATIVE_SWAP: Insufficient fees collected.');
+            throw new Revert(
+                `NATIVE_SWAP: Insufficient fees collected. (Received: ${totalFee} - Wanted: ${FeeManager.reservationBaseFee})`,
+            );
         }
     }
 
