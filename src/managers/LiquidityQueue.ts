@@ -301,7 +301,7 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         // Log for debugging
         /*if (totalBuysAfterThisTrade > SafeMath.div(projectedT, u256.fromU64(2))) {
-            // Warning: Getting close to exhaustion
+        // Warning: Getting close to exhaustion
             Blockchain.log(
                 `WARNING: High accumulator usage. ` +
                     `Buys: ${totalBuysAfterThisTrade}, Projected T: ${projectedT}, ` +
@@ -583,6 +583,9 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     protected computeVolatility(
+        currentBlock: u64,
+        windowSize: u32 = VOLATILITY_WINDOW_IN_BLOCKS,
+    ): u256 {
         let volatility: u256 = u256.Zero;
 
         const currentQuote: u256 = this.quoteManager.getBlockQuote(currentBlock);
