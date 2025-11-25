@@ -301,7 +301,7 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         // Log for debugging
         /*if (totalBuysAfterThisTrade > SafeMath.div(projectedT, u256.fromU64(2))) {
-        // Warning: Getting close to exhaustion
+            // Warning: Getting close to exhaustion
             Blockchain.log(
                 `WARNING: High accumulator usage. ` +
                     `Buys: ${totalBuysAfterThisTrade}, Projected T: ${projectedT}, ` +
@@ -582,46 +582,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.lastVirtualUpdateBlock = currentBlock;
     }
 
-    protected computeVolatility(
-        currentBlock: u64,
-        windowSize: u32 = VOLATILITY_WINDOW_IN_BLOCKS,
-    ): u256 {
-        let volatility: u256 = u256.Zero;
-
-        const currentQuote: u256 = this.quoteManager.getBlockQuote(currentBlock);
-        const oldBlock: u64 = currentBlock - windowSize;
-        const oldQuote: u256 = this.quoteManager.getBlockQuote(oldBlock);
-
-        if (!oldQuote.isZero() && !currentQuote.isZero()) {
-            let diff = u256.sub(currentQuote, oldQuote);
-
-            if (diff.toI64() < 0) {
-                diff = u256.mul(diff, u256.fromI64(-1));
-            }
-
-            volatility = SafeMath.div(SafeMath.mul(diff, TEN_THOUSAND_U256), oldQuote);
-        }
-
-        return volatility;
-    }
-
-    /*private calculateQueueImpact(): u256 {
-        const queuedTokens = this.liquidity;
-
-        if (queuedTokens.isZero()) {
-            return u256.Zero;
-        }
-
-        // Calculate ratio = 1 + Q/T
-        const ratio = SafeMath.add(u256.One, SafeMath.div(queuedTokens, this.virtualTokenReserve));
-
-        // Use precise logarithm calculation
-        const lnValue = preciseLog(ratio);
-
-        // Impact = T * ln(1 + Q/T) / 1e6 (since log is scaled)
-        return SafeMath.div(SafeMath.mul(this.virtualTokenReserve, lnValue), u256.fromU64(1000000));
-    }*/
-
     private calculateQuote(): u256 {
         const TOKEN: u256 = this.virtualTokenReserve;
         const BTC: u64 = this.virtualSatoshisReserve;
@@ -643,6 +603,23 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         return SafeMath.div(scaled, u256.fromU64(BTC));
     }
+
+    /*private calculateQueueImpact(): u256 {
+        const queuedTokens = this.liquidity;
+
+        if (queuedTokens.isZero()) {
+            return u256.Zero;
+        }
+
+        // Calculate ratio = 1 + Q/T
+        const ratio = SafeMath.add(u256.One, SafeMath.div(queuedTokens, this.virtualTokenReserve));
+
+        // Use precise logarithm calculation
+        const lnValue = preciseLog(ratio);
+
+        // Impact = T * ln(1 + Q/T) / 1e6 (since log is scaled)
+        return SafeMath.div(SafeMath.mul(this.virtualTokenReserve, lnValue), u256.fromU64(1000000));
+    }*/
 
     private calculateQueueImpact(): u256 {
         const queuedTokens = this.liquidity;
@@ -687,6 +664,29 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
 
         return reserve.toU64();
+    }
+
+    private computeVolatility(
+        currentBlock: u64,
+        windowSize: u32 = VOLATILITY_WINDOW_IN_BLOCKS,
+    ): u256 {
+        let volatility: u256 = u256.Zero;
+
+        const currentQuote: u256 = this.quoteManager.getBlockQuote(currentBlock);
+        const oldBlock: u64 = currentBlock - windowSize;
+        const oldQuote: u256 = this.quoteManager.getBlockQuote(oldBlock);
+
+        if (!oldQuote.isZero() && !currentQuote.isZero()) {
+            let diff = u256.sub(currentQuote, oldQuote);
+
+            if (diff.toI64() < 0) {
+                diff = u256.mul(diff, u256.fromI64(-1));
+            }
+
+            volatility = SafeMath.div(SafeMath.mul(diff, TEN_THOUSAND_U256), oldQuote);
+        }
+
+        return volatility;
     }
 
     private ensurePenaltyNotLessThanHalf(penalty: u128, half: u128): void {
