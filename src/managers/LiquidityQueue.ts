@@ -9,10 +9,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
-import {
-    ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
-    RESERVATION_SETTINGS_POINTER,
-} from '../constants/StoredPointers';
+import { ANTI_BOT_MAX_TOKENS_PER_RESERVATION, RESERVATION_SETTINGS_POINTER, } from '../constants/StoredPointers';
 
 import { addAmountToStakingContract, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
@@ -471,7 +468,25 @@ export class LiquidityQueue implements ILiquidityQueue {
         this._calculatedQuote = this.calculateQuote();
         return this._calculatedQuote as u256;
         */
-        return this.calculateQuote();
+        const TOKEN: u256 = this.virtualTokenReserve;
+        const BTC: u64 = this.virtualSatoshisReserve;
+
+        if (TOKEN.isZero()) {
+            return u256.Zero;
+        }
+
+        if (BTC === 0) {
+            throw new Revert(`Impossible state: Not enough liquidity.`);
+        }
+
+        // Calculate queue impact
+        const queueImpact = this.calculateQueueImpact();
+
+        // Add impact to token reserves ONLY for price calculation
+        const effectiveT = SafeMath.add(TOKEN, queueImpact);
+        const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
+
+        return SafeMath.div(scaled, u256.fromU64(BTC));
     }
 
     /*public reCalcQuote(): void {
@@ -580,28 +595,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         );
 
         this.lastVirtualUpdateBlock = currentBlock;
-    }
-
-    private calculateQuote(): u256 {
-        const TOKEN: u256 = this.virtualTokenReserve;
-        const BTC: u64 = this.virtualSatoshisReserve;
-
-        if (TOKEN.isZero()) {
-            return u256.Zero;
-        }
-
-        if (BTC === 0) {
-            throw new Revert(`Impossible state: Not enough liquidity.`);
-        }
-
-        // Calculate queue impact
-        const queueImpact = this.calculateQueueImpact();
-
-        // Add impact to token reserves ONLY for price calculation
-        const effectiveT = SafeMath.add(TOKEN, queueImpact);
-        const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
-
-        return SafeMath.div(scaled, u256.fromU64(BTC));
     }
 
     /*private calculateQueueImpact(): u256 {
