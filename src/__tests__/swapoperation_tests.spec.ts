@@ -1,5 +1,10 @@
 import { clearCachedProviders, getProvider } from '../models/Provider';
-import { Blockchain, SafeMath, TransactionOutput, TransferHelper } from '@btc-vision/btc-runtime/runtime';
+import {
+    Blockchain,
+    SafeMath,
+    TransactionOutput,
+    TransferHelper,
+} from '@btc-vision/btc-runtime/runtime';
 import {
     createLiquidityQueue,
     createProviderId,
@@ -303,7 +308,7 @@ describe('SwapOperation tests', () => {
             expect(reservationActiveList.get(0)).toBeFalsy();
         });
 
-        it('should executeTrade => provider updated, liquidity queue update, safeTransfer called ', () => {
+        it('should executeTrade => provider updated, liquidity queue update, transfer called ', () => {
             setBlockchainEnvironment(100, msgSender1, msgSender1);
             Blockchain.mockValidateBitcoinAddressResult(true);
 

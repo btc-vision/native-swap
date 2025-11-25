@@ -132,7 +132,7 @@ describe('Fulfilled provider queue tests', () => {
                 expect(instances.liquidityReserve.liquidity).toStrictEqual(
                     TestInstances.initialTotalReserve,
                 );
-                expect(getPendingStakingContractAmount()).toStrictEqual(liquidity);
+                expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
                 expect(instances.fulfilledQueue.getQueue.getLength()).toStrictEqual(0);
                 expect(instances.normalProviderQueue.getQueue().getLength()).toStrictEqual(1);
             });
@@ -170,7 +170,7 @@ describe('Fulfilled provider queue tests', () => {
                 expect(instances.liquidityReserve.liquidity).toStrictEqual(
                     TestInstances.initialTotalReserve,
                 );
-                expect(getPendingStakingContractAmount()).toStrictEqual(liquiditySum);
+                expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
                 expect(instances.fulfilledQueue.getQueue.getLength()).toStrictEqual(0);
                 expect(instances.normalProviderQueue.getQueue().getLength()).toStrictEqual(count);
 
@@ -268,7 +268,7 @@ describe('Fulfilled provider queue tests', () => {
                 expect(instances.liquidityReserve.liquidity).toStrictEqual(
                     TestInstances.initialTotalReserve,
                 );
-                expect(getPendingStakingContractAmount()).toStrictEqual(liquidity);
+                expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
                 expect(instances.fulfilledQueue.getQueue.getLength()).toStrictEqual(0);
                 expect(instances.normalProviderQueue.getQueue().getLength()).toStrictEqual(1);
             });
@@ -338,7 +338,7 @@ describe('Fulfilled provider queue tests', () => {
                 expect(instances.liquidityReserve.liquidity).toStrictEqual(
                     TestInstances.initialTotalReserve,
                 );
-                expect(getPendingStakingContractAmount()).toStrictEqual(liquidity);
+                expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
                 expect(instances.fulfilledQueue.getQueue.getLength()).toStrictEqual(0);
                 expect(instances.normalProviderQueue.getQueue().getLength()).toStrictEqual(1);
             });

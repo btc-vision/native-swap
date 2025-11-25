@@ -85,7 +85,6 @@ export class ProviderQueue {
             const provider: Provider = getProvider(providerId);
             if (provider.toReset()) {
                 this.queue.setStartingIndex(index);
-                Blockchain.log(`provider reset`);
                 index++;
                 continue;
             }
@@ -96,7 +95,6 @@ export class ProviderQueue {
             );
 
             if (!meetMinLiquidity) {
-                Blockchain.log(`${provider.getAvailableLiquidityAmount()}`);
                 if (provider.hasReservedAmount() || provider.isPurged()) {
                     // TODO: IMPORTANT! IF THE USER COMPLETE HIS SWAP WITH THE RESERVED TOKENS AND THE PROVIDER
                     //  HAS DUST LEFT, HE SHOULD BE RESET AND THE DURST BURNED!
@@ -114,7 +112,7 @@ export class ProviderQueue {
                     );*/
 
                     // This provider must be purged safely.
-                    if (currentProviderResetCount > this.maximumResetsBeforeQueuing) {
+                    if (currentProviderResetCount >= this.maximumResetsBeforeQueuing) {
                         this.addProviderToFulfilledQueue(provider, fulfilledQueue);
                     } else {
                         this.resetProvider(provider);

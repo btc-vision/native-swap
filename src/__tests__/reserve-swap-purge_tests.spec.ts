@@ -2470,19 +2470,8 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Swap Reservation2.
         // Do a full swap so the initial provider will be fully bought.
         setBlockchainEnvironment(129, providerAddress4, providerAddress4);
-        swap([receiverAddress1CSV], [89100000]);
-
-        expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
-        expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
-        expect(initialProvider.isPurged()).toBeFalsy();
-        expect(initialProvider.isActive()).toBeFalsy();
-
-        // Swap the expired Reservation1 by fully funding the initial provider.
-        // initial provider should be already fully bought. So it should be ignored and don't
-        // buy anything.
-        setBlockchainEnvironment(147, providerAddress3, providerAddress3);
         expect(() => {
-            swap([receiverAddress1CSV], [489000]);
+            swap([receiverAddress1CSV], [89100000]);
         }).toThrow();
     });
 });

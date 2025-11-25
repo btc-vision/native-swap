@@ -18,6 +18,10 @@ export class FulfilledProviderQueue {
         this.liquidityQueueReserve = liquidityQueueReserve;
     }
 
+    public getLength(): u32 {
+        return this.queue.getLength();
+    }
+
     public add(providerIndex: u32): void {
         this.queue.push(providerIndex, true);
     }

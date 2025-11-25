@@ -21,12 +21,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
-import {
-    getProvider,
-    Provider,
-    saveAllProviders,
-    transferPendingAmountToStakingContract,
-} from '../models/Provider';
+import { getProvider, Provider, saveAllProviders, transferPendingAmountToStakingContract, } from '../models/Provider';
 import { FeeManager } from '../managers/FeeManager';
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
@@ -34,11 +29,7 @@ import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperati
 import { CancelListingOperation } from '../operations/CancelListingOperation';
 import { SwapOperation } from '../operations/SwapOperation';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-import {
-    CONTRACT_PAUSED_POINTER,
-    STAKING_CA_POINTER,
-    WITHDRAW_MODE_POINTER,
-} from '../constants/StoredPointers';
+import { CONTRACT_PAUSED_POINTER, STAKING_CA_POINTER, WITHDRAW_MODE_POINTER, } from '../constants/StoredPointers';
 import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion';
 import {
     AT_LEAST_PROVIDERS_TO_PURGE,
@@ -115,7 +106,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('reserve(address,uint64,uint256,bool,uint8)'):
+            case encodeSelector('reserve(address,uint64,uint256,uint8)'):
                 return this.reserve(calldata);
             case encodeSelector('swap(address)'):
                 return this.swap(calldata);
@@ -355,6 +346,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private createPool(calldata: Calldata, token: Address): BytesWriter {
         this.ensureNotPaused();
+        this.ensureNotContract();
         this.ensureWithdrawModeNotActive();
         this._tokenAddress = token.clone();
 
@@ -402,6 +394,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private listLiquidity(calldata: Calldata): BytesWriter {
         this.ensureNotPaused();
+        this.ensureNotContract();
         this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
@@ -457,6 +450,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private reserve(calldata: Calldata): BytesWriter {
         this.ensureNotPaused();
+        this.ensureNotContract();
         this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
@@ -505,6 +499,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private cancelListing(calldata: Calldata): BytesWriter {
         this.ensureNotPaused();
+        this.ensureNotContract();
         this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
@@ -572,6 +567,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     private swap(calldata: Calldata): BytesWriter {
         this.ensureNotPaused();
+        this.ensureNotContract();
         this.ensureWithdrawModeNotActive();
 
         const token: Address = calldata.readAddress();
@@ -871,8 +867,6 @@ export class NativeSwap extends ReentrancyGuard {
         if (this._isPaused.value) {
             throw new Revert(`NATIVE_SWAP: Contract is currently paused. Try again later.`);
         }
-
-        this.ensureNotContract();
     }
 
     private ensureWithdrawModeActive(): void {

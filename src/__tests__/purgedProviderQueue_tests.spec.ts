@@ -20,6 +20,7 @@ import {
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { PurgedProviderQueue } from '../managers/PurgedProviderQueue';
 import {
+    currentProviderResetCount,
     ENABLE_INDEX_VERIFICATION,
     INDEX_NOT_SET_VALUE,
     MAXIMUM_NUMBER_OF_PROVIDERS,
@@ -35,6 +36,7 @@ const QUOTE = u256.fromU64(100000000);
 function createNormalPurgedQueue(
     liquidityQueueReserve: ILiquidityQueueReserve,
     enableIndexVerification: boolean = ENABLE_INDEX_VERIFICATION,
+    nbPurgedToReset: u8 = MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
 ): PurgedProviderQueue {
     return new PurgedProviderQueue(
         tokenAddress1,
@@ -42,11 +44,14 @@ function createNormalPurgedQueue(
         tokenIdUint8Array1,
         enableIndexVerification,
         liquidityQueueReserve,
-        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+        nbPurgedToReset,
     );
 }
 
-function createNormalQueue(liquidityQueueReserve: ILiquidityQueueReserve): ProviderQueue {
+function createNormalQueue(
+    liquidityQueueReserve: ILiquidityQueueReserve,
+    nbPurgedToReset: u8 = MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+): ProviderQueue {
     return new ProviderQueue(
         tokenAddress1,
         NORMAL_QUEUE_POINTER,
@@ -54,7 +59,7 @@ function createNormalQueue(liquidityQueueReserve: ILiquidityQueueReserve): Provi
         ENABLE_INDEX_VERIFICATION,
         MAXIMUM_NUMBER_OF_PROVIDERS,
         liquidityQueueReserve,
-        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+        nbPurgedToReset,
     );
 }
 
@@ -174,6 +179,7 @@ describe('PurgedProviderQueue tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             clearPendingStakingContractAmount();
+            currentProviderResetCount = 0;
         });
 
         it('should revert if provider queue index is not set', () => {
@@ -264,6 +270,29 @@ describe('PurgedProviderQueue tests', () => {
             if (provider1 !== null) {
                 expect(provider1.getPurgedIndex()).toStrictEqual(0);
             }
+        });
+
+        it('should revert if the provider is fulfilled', () => {
+            expect(() => {
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve);
+                const purgedQueue: PurgedProviderQueue =
+                    createNormalPurgedQueue(liquidityQueueReserve);
+                const queueFulfilled = createNormalFulfilledQueue(liquidityQueueReserve);
+
+                const providers = createProviders(1);
+                for (let i = 0; i < providers.length; i++) {
+                    providers[i].markToReset();
+                    queue.add(providers[i]);
+                    purgedQueue.add(providers[i]);
+                }
+
+                purgedQueue.get(queue, queueFulfilled, u256.fromU32(10000));
+            }).toThrow();
         });
 
         it('should revert when purge index and previous offset does not match', () => {
@@ -419,6 +448,65 @@ describe('PurgedProviderQueue tests', () => {
             expect(providers[0].isPurged()).toBeFalsy();
             expect(providers[0].isActive()).toBeFalsy();
             expect(liquidityQueueReserve.liquidity).toStrictEqual(u256.Zero);
+        });
+
+        it('should add the provider to the fulfilled queue', () => {
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
+            const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve, 1);
+            const queueFulfilled = createNormalFulfilledQueue(liquidityQueueReserve);
+            const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(
+                liquidityQueueReserve,
+                true,
+                1,
+            );
+
+            liquidityQueueReserve.addToTotalReserve(u256.fromU32(1100));
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(11000));
+
+            const providers = createProviders(4);
+            for (let i = 0; i < providers.length; i++) {
+                providers[i].setLiquidityAmount(u128.fromU32(1));
+                queue.add(providers[i]);
+                purgedQueue.add(providers[i]);
+            }
+
+            purgedQueue.get(queue, queueFulfilled, u256.fromU32(1000000000));
+
+            expect(queueFulfilled.getLength()).toStrictEqual(3);
+        });
+
+        it('revert if the provider is already fulfilled and trying to add to the fulfilled queue', () => {
+            expect(() => {
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = createNormalQueue(liquidityQueueReserve, 1);
+                const queueFulfilled = createNormalFulfilledQueue(liquidityQueueReserve);
+                const purgedQueue: PurgedProviderQueue = createNormalPurgedQueue(
+                    liquidityQueueReserve,
+                    true,
+                    1,
+                );
+
+                liquidityQueueReserve.addToTotalReserve(u256.fromU32(1100));
+                liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(11000));
+
+                const providers = createProviders(4);
+                for (let i = 0; i < providers.length; i++) {
+                    providers[i].setLiquidityAmount(u128.fromU32(1));
+                    providers[i].markToReset();
+                    queue.add(providers[i]);
+                    purgedQueue.add(providers[i]);
+                }
+
+                purgedQueue.get(queue, queueFulfilled, u256.fromU32(1000000000));
+            }).toThrow();
         });
 
         it('should return null, reset the provider, transfer remaining liquidity when available liquidity < minimum required and no reserved amount', () => {

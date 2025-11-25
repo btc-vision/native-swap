@@ -23,6 +23,7 @@ import {
     CSV_BLOCKS_REQUIRED,
     ENABLE_INDEX_VERIFICATION,
     MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+    VOLATILITY_WINDOW_IN_BLOCKS,
 } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
 
@@ -40,6 +41,7 @@ import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
 import { FulfilledProviderQueue } from '../managers/FulfilledProviderQueue';
+import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
 
 // IF YOU CHANGE NETWORK MAKE SURE TO CHANGE THIS AS WELL.
 Blockchain.network = Networks.Regtest;
@@ -500,6 +502,12 @@ export interface ITestReservationManager extends IReservationManager {
 export interface ITestLiquidityQueue extends ILiquidityQueue {
     readonly volatility: u256;
 
+    updateCalled(): boolean;
+
+    purgeCalled(): boolean;
+
+    mockComputeVolatility(volatility: u256): void;
+
     mockgetNextProviderWithLiquidity(mockedNextProvider: Provider | null): void;
 
     setLiquidity(value: u256): void;
@@ -638,6 +646,10 @@ export function getDynamicFee(tokenId: Uint8Array): IDynamicFee {
 
 export class TestLiquidityQueue extends LiquidityQueue implements ITestLiquidityQueue {
     private _mockedNextProvider: Provider | null = null;
+    private _mockedComputeVolatility: u256 = u256.Zero;
+    private _mockedComputeVolatilitySet: boolean = false;
+    private _updateCalled: boolean = false;
+    private _purgeCalled: boolean = false;
 
     public get volatility(): u256 {
         return this.dynamicFee.volatility;
@@ -645,6 +657,15 @@ export class TestLiquidityQueue extends LiquidityQueue implements ITestLiquidity
 
     public clearMockedResults(): void {
         this._mockedNextProvider = null;
+        this._mockedComputeVolatility = u256.Zero;
+        this._mockedComputeVolatilitySet = false;
+        this._updateCalled = false;
+        this._purgeCalled = false;
+    }
+
+    public mockComputeVolatility(volatility: u256): void {
+        this._mockedComputeVolatility = volatility;
+        this._mockedComputeVolatilitySet = true;
     }
 
     public mockgetNextProviderWithLiquidity(mockedNextProvider: Provider | null): void {
@@ -659,8 +680,37 @@ export class TestLiquidityQueue extends LiquidityQueue implements ITestLiquidity
         }
     }
 
+    public purgeReservationsAndRestoreProviders(currentQuote: u256): void {
+        this._purgeCalled = true;
+        super.purgeReservationsAndRestoreProviders(currentQuote);
+    }
+
+    public updateVirtualPoolIfNeeded(): void {
+        this._updateCalled = true;
+        super.updateVirtualPoolIfNeeded();
+    }
+
     public setLiquidity(value: u256): void {
         this.liquidityQueueReserve.liquidity = value;
+    }
+
+    public updateCalled(): boolean {
+        return this._updateCalled;
+    }
+
+    public purgeCalled(): boolean {
+        return this._purgeCalled;
+    }
+
+    protected computeVolatility(
+        currentBlock: u64,
+        windowSize: u32 = VOLATILITY_WINDOW_IN_BLOCKS,
+    ): u256 {
+        if (this._mockedComputeVolatilitySet) {
+            return this._mockedComputeVolatility;
+        }
+
+        return super.computeVolatility(currentBlock, windowSize);
     }
 }
 
@@ -862,5 +912,11 @@ export class TestTradeManager extends TradeManager implements ITestTradeManager 
 export class TestFulfilledProviderQueue extends FulfilledProviderQueue {
     public get getQueue(): StoredU32Array {
         return this.queue;
+    }
+}
+
+export class TestListTokenForSaleOperation extends ListTokensForSaleOperation {
+    public callActivateSlashing(): void {
+        super.activateSlashing();
     }
 }

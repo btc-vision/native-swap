@@ -3,15 +3,19 @@ import {
     clearPendingStakingContractAmount,
     getPendingStakingContractAmount,
     getProvider,
+    Provider,
 } from '../models/Provider';
 import { Blockchain, TransactionOutput, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import {
     createLiquidityQueue,
     createProvider,
+    ITestLiquidityQueue,
     providerAddress1,
     receiverAddress1,
     receiverAddress1CSV,
+    receiverAddress2CSV,
     setBlockchainEnvironment,
+    TestListTokenForSaleOperation,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
@@ -22,6 +26,42 @@ import {
     INITIAL_FEE_COLLECT_ADDRESS,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
 } from '../constants/Contract';
+
+function getLiquidityQueue(): ITestLiquidityQueue {
+    const createQueueResult = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+    const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+    // Set initial state
+    queue.virtualSatoshisReserve = 1000000;
+    queue.virtualTokenReserve = u256.fromU64(1000000);
+    queue.lastVirtualUpdateBlock = 0;
+
+    // Reset accumulators
+    queue.totalTokensSellActivated = u256.Zero;
+    queue.totalTokensExchangedForSatoshis = u256.Zero;
+    queue.totalSatoshisExchangedForTokens = 0;
+
+    setBlockchainEnvironment(100);
+
+    return queue;
+}
+
+function getTestProvider(): Provider {
+    const provider: Provider = createProvider(
+        providerAddress1,
+        tokenAddress1,
+        false,
+        false,
+        false,
+        receiverAddress2CSV,
+        u128.Zero,
+        u128.fromU64(1000000),
+    );
+    provider.save();
+
+    return provider;
+}
 
 describe('ListTokenForSaleOperation tests', () => {
     beforeEach(() => {
@@ -1216,6 +1256,601 @@ describe('ListTokenForSaleOperation tests', () => {
             expect(queue.liquidityQueue.liquidity).toStrictEqual(
                 u256.fromString(`1000000000000000000`),
             );
+        });
+    });
+
+    describe('ListTokensForSaleOperation activateSlashing', () => {
+        describe('Delta calculation and zero handling', () => {
+            test('should not activate when deltaHalf is zero', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                const provider: Provider = getTestProvider();
+
+                // Set oldLiquidity and amountIn such that deltaHalf becomes zero
+                provider.setLiquidityAmount(u128.fromU64(1000000));
+                const operation: TestListTokenForSaleOperation = new TestListTokenForSaleOperation(
+                    queue,
+                    provider.getId(),
+                    u128.Zero, // amountIn = 0, so deltaHalf will be 0
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    false,
+                    false,
+                );
+
+                const initialTokens = queue.totalTokensSellActivated;
+
+                operation.callActivateSlashing();
+
+                expect(queue.totalTokensSellActivated).toBe(initialTokens);
+                expect(queue.updateCalled()).toBeFalsy();
+                expect(queue.purgeCalled()).toBeFalsy();
+            });
+
+            test('should calculate deltaHalf correctly', () => {
+                const initialVirtualTokenReserve: u256 = u256.fromU64(100000000);
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                queue.virtualSatoshisReserve = 100000000;
+                queue.virtualTokenReserve = initialVirtualTokenReserve;
+
+                const provider: Provider = getTestProvider();
+                provider.setLiquidityAmount(u128.fromU64(1000000));
+                provider.save();
+
+                const operation = new TestListTokenForSaleOperation(
+                    queue,
+                    provider.getId(),
+                    u128.fromU64(1000000), // amountIn - will double the liquidity
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    false,
+                    false,
+                );
+
+                operation.callActivateSlashing();
+
+                // oldLiquidity = 1M, newTotal = 2M
+                // half(1M) = 500000, half(2M) = 1M
+                // deltaHalf = 500000
+                // initialVirtualTokenReserve + deltahalf = 100500000
+                const expectedDelta = u256.fromU64(500000);
+                expect(queue.virtualTokenReserve).toStrictEqual(
+                    u256.add(initialVirtualTokenReserve, expectedDelta),
+                );
+            });
+
+            test('should handle odd numbers in half calculation', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                const provider: Provider = getTestProvider();
+                const initialVirtualTokenReserve: u256 = queue.virtualTokenReserve;
+
+                provider.setLiquidityAmount(u128.fromU64(999));
+                const operation: TestListTokenForSaleOperation = new TestListTokenForSaleOperation(
+                    queue,
+                    provider.getId(),
+                    u128.fromU64(1000),
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    false,
+                    false,
+                );
+
+                operation.callActivateSlashing();
+
+                // half(999) = 500 (499 + 1), half(1999) = 1000 (999 + 1)
+                // deltaHalf = 500
+                const expectedDelta = u256.fromU64(500);
+                expect(queue.virtualTokenReserve).toStrictEqual(
+                    u256.add(initialVirtualTokenReserve, expectedDelta),
+                );
+            });
+        });
+    });
+
+    describe('Price impact validation', () => {
+        test('should throw when immediate price impact exceeds MAX_PRICE_IMPACT_BPS', () => {
+            expect(() => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                const provider: Provider = getTestProvider();
+
+                queue.virtualSatoshisReserve = 100000; // Small pool
+                queue.virtualTokenReserve = u256.fromU64(100000);
+                provider.setLiquidityAmount(u128.Zero);
+
+                const operation = new TestListTokenForSaleOperation(
+                    queue,
+                    provider.getId(),
+                    u128.fromU64(100000), // Large addition relative to pool
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    false,
+                    false,
+                );
+
+                operation.activateSlashing();
+            }).toThrow('NATIVE_SWAP: Listing this amount of token would devalue tokens');
+        });
+
+        test('should pass when price impact is within limits', () => {
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            const initialVirtualTokenReserve: u256 = u256.fromU64(10000000);
+            queue.virtualSatoshisReserve = 10000000; // Large pool
+            queue.virtualTokenReserve = initialVirtualTokenReserve;
+            provider.setLiquidityAmount(u128.fromU64(1000000));
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(10000), // Small addition
+                receiverAddress1,
+                receiverAddress1CSV,
+                false,
+                false,
+            );
+
+            operation.callActivateSlashing();
+
+            expect(queue.virtualTokenReserve).toBeGreaterThan(initialVirtualTokenReserve);
+            expect(queue.updateCalled()).toBeTruthy();
+        });
+    });
+
+    describe('Minimum satoshi reserve validation', () => {
+        test('should throw when new satoshi reserve would fall below minimum', () => {
+            expect(() => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                const provider: Provider = getTestProvider();
+                const initialVirtualTokenReserve: u256 = u256.fromU64(100100000);
+                queue.virtualSatoshisReserve = 100100;
+                queue.virtualTokenReserve = initialVirtualTokenReserve;
+                provider.setLiquidityAmount(u128.Zero);
+
+                const operation = new TestListTokenForSaleOperation(
+                    queue,
+                    provider.getId(),
+                    u128.fromU64(200202),
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    false,
+                    false,
+                );
+
+                operation.callActivateSlashing();
+            }).toThrow(
+                'NATIVE_SWAP: Listing this amount of token would push satoshi reserves too low',
+            );
+        });
+
+        test('should pass when satoshi reserve stays above minimum', () => {
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            const initialVirtualTokenReserve: u256 = u256.fromU64(10000000);
+            queue.virtualSatoshisReserve = 10000000; // Well above minimum
+            queue.virtualTokenReserve = initialVirtualTokenReserve;
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(500000), // amountIn
+                receiverAddress1,
+                receiverAddress1CSV,
+                false, // usePriorityQueue
+                false, // isForInitialLiquidity
+            );
+
+            operation.callActivateSlashing();
+
+            expect(queue.virtualTokenReserve).toBeGreaterThan(initialVirtualTokenReserve);
+        });
+    });
+
+    describe('Cumulative impact with pending operations', () => {
+        test('should throw when cumulative impact exceeds MAX_CUMULATIVE_IMPACT_BPS', () => {
+            expect(() => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                const provider: Provider = getTestProvider();
+                const initialVirtualTokenReserve: u256 = u256.fromU64(1000000);
+                queue.totalTokensSellActivated = u256.fromU64(5000000); // Existing pending
+                queue.virtualSatoshisReserve = 1000000;
+                queue.virtualTokenReserve = initialVirtualTokenReserve;
+                provider.setLiquidityAmount(u128.Zero);
+
+                const operation = new TestListTokenForSaleOperation(
+                    queue,
+                    provider.getId(),
+                    u128.fromU64(400000),
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    false,
+                    false,
+                );
+
+                operation.callActivateSlashing();
+            }).toThrow('NATIVE_SWAP: Cumulative token devaluation too high');
+        });
+
+        test('should consider both new and pending sells in cumulative check', () => {
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            const initialVirtualTokenReserve: u256 = u256.fromU64(10000000);
+            queue.totalTokensSellActivated = u256.fromU64(100000);
+            queue.virtualSatoshisReserve = 10000000;
+            queue.virtualTokenReserve = initialVirtualTokenReserve;
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(500000), // amountIn
+                receiverAddress1,
+                receiverAddress1CSV,
+                false, // usePriorityQueue
+                false, // isForInitialLiquidity
+            );
+
+            operation.callActivateSlashing();
+
+            // Should add to existing pending
+            expect(queue.virtualTokenReserve.toU64()).toBeGreaterThan(100000);
+        });
+    });
+
+    describe('Pool drainage and overflow checks', () => {
+        test('should throw when pending buys would drain the pool', () => {
+            expect(() => {
+                // Set up scenario where pending buys >= future token reserves after sells
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                const provider: Provider = getTestProvider();
+                const initialVirtualTokenReserve: u256 = u256.fromU64(1000000);
+                queue.virtualSatoshisReserve = 1000000; // 0.01 BTC
+                queue.virtualTokenReserve = initialVirtualTokenReserve;
+                queue.setLiquidity(u256.Zero);
+
+                // Set pending buys that would drain the pool after we add tokens
+                queue.totalTokensExchangedForSatoshis = u256.fromU64(1100000); // More than current reserves
+
+                provider.setLiquidityAmount(u128.Zero);
+
+                const operation = new TestListTokenForSaleOperation(
+                    queue,
+                    provider.getId(),
+                    u128.fromU64(200000), // deltaHalf = 100,000
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    false,
+                    false,
+                );
+
+                // After adding deltaHalf: futureT = 1M + 100k = 1.1M
+                // Pending buys = 1.1M, which equals futureT (would drain completely)
+
+                operation.callActivateSlashing();
+            }).toThrow('NATIVE_SWAP: Pool would be drained by pending operations');
+        });
+
+        test('should throw when operation would cause overflow after pending buys', () => {
+            expect(() => {
+                // Set up scenario where applying pending buys after sells would cause B > MAX_TOTAL_SATOSHIS
+                const maxSatoshis = u256.fromU64(21000000_00000000); // 21M BTC in satoshis
+
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                const provider: Provider = getTestProvider();
+                const initialVirtualTokenReserve: u256 = u256.fromU64(100);
+
+                // Start with high B and low T
+                queue.virtualSatoshisReserve = maxSatoshis.toU64() - 100000;
+                queue.virtualTokenReserve = initialVirtualTokenReserve;
+                queue.setLiquidity(u256.Zero);
+
+                // Set pending buys that would push B over max
+                queue.totalTokensExchangedForSatoshis = u256.fromU64(98);
+
+                provider.setLiquidityAmount(u128.Zero);
+
+                const operation = new TestListTokenForSaleOperation(
+                    queue,
+                    provider.getId(),
+                    u128.fromU64(10),
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    false,
+                    false,
+                );
+
+                operation.callActivateSlashing();
+            }).toThrow('NATIVE_SWAP: Listing this amount of token would cause pool overflow');
+        });
+
+        test('should handle pending buys within safe limits', () => {
+            // Set up scenario where pending buys are present but safe
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            const initialVirtualTokenReserve: u256 = u256.fromU64(10000000);
+            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
+            queue.virtualTokenReserve = initialVirtualTokenReserve;
+            queue.setLiquidity(u256.Zero);
+
+            // Moderate pending buys that won't cause issues
+            queue.totalTokensExchangedForSatoshis = u256.fromU64(100000); // 1% of pool
+
+            provider.setLiquidityAmount(u128.fromU64(1000000));
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(1000000), // Safe amount
+                receiverAddress1,
+                receiverAddress1CSV,
+                false,
+                false,
+            );
+
+            // Should complete without throwing
+            operation.callActivateSlashing();
+
+            expect(queue.virtualTokenReserve).toBeGreaterThan(u256.Zero);
+            expect(queue.updateCalled()).toBeTruthy();
+        });
+    });
+
+    describe('BTC contribution tracking', () => {
+        test('should track BTC contribution when quote is non-zero', () => {
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            const initialContribution = provider.getVirtualBTCContribution();
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(500000), // amountIn
+                receiverAddress1,
+                receiverAddress1CSV,
+                false, // usePriorityQueue
+                false, // isForInitialLiquidity
+            );
+
+            operation.callActivateSlashing();
+
+            const newContribution = provider.getVirtualBTCContribution();
+            expect(newContribution).toBeGreaterThan(initialContribution);
+        });
+
+        test('should calculate BTC value correctly based on amountIn', () => {
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            provider.setVirtualBTCContribution(1000);
+            provider.setLiquidityAmount(u128.fromU64(500000));
+            queue.virtualSatoshisReserve = 10000000;
+            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.Zero);
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(1000000),
+                receiverAddress1,
+                receiverAddress1CSV,
+                false,
+                false,
+            );
+
+            operation.callActivateSlashing();
+
+            const contribution = provider.getVirtualBTCContribution();
+            expect(contribution).toStrictEqual(1001001);
+        });
+    });
+
+    describe('Queue impact calculations', () => {
+        test('should calculate queue impact using harmonic mean formula', () => {
+            // Set up larger pool to avoid price impact issues with new constants
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
+            queue.virtualTokenReserve = u256.fromU64(10000000); // 1:1 ratio
+            queue.setLiquidity(u256.fromU64(500000)); // Queue liquidity for impact calculation
+
+            provider.setLiquidityAmount(u128.fromU64(100000));
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(200000), // Small enough to avoid price impact issues
+                receiverAddress1,
+                receiverAddress1CSV,
+                false,
+                false,
+            );
+
+            operation.callActivateSlashing();
+
+            // Verify operation completed with queue impact considered
+            expect(queue.virtualTokenReserve).toBeGreaterThan(u256.fromU64(10000000));
+            expect(queue.updateCalled()).toBeTruthy();
+        });
+
+        test('should return zero impact when queued tokens is zero', () => {
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
+            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.Zero);
+
+            provider.setLiquidityAmount(u128.fromU64(100000));
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(200000),
+                receiverAddress1,
+                receiverAddress1CSV,
+                false,
+                false,
+            );
+
+            operation.callActivateSlashing();
+
+            // Should complete successfully with no queue impact
+            expect(queue.virtualTokenReserve).toBeGreaterThan(u256.fromU64(10000000));
+            expect(queue.updateCalled()).toBeTruthy();
+        });
+
+        test('should handle large queue liquidity values', () => {
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            queue.virtualSatoshisReserve = 100000000; // 1 BTC (larger pool)
+            queue.virtualTokenReserve = u256.fromU64(100000000);
+            queue.setLiquidity(u256.fromU64(10000000));
+
+            provider.setLiquidityAmount(u128.fromU64(1000000));
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(2000000), // Moderate amount relative to large pool
+                receiverAddress1,
+                receiverAddress1CSV,
+                false,
+                false,
+            );
+
+            operation.callActivateSlashing();
+
+            // Should handle large values without overflow or errors
+            expect(queue.virtualTokenReserve).toBeGreaterThan(u256.fromU64(100000000));
+            expect(queue.updateCalled()).toBeTruthy();
+        });
+    });
+
+    describe('Integration with queue methods', () => {
+        test('should call updateVirtualPoolIfNeeded after adding to sells', () => {
+            // Use larger pool to avoid price impact issues
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
+            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.Zero);
+
+            provider.setLiquidityAmount(u128.fromU64(100000));
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(200000),
+                receiverAddress1,
+                receiverAddress1CSV,
+                false,
+                false,
+            );
+
+            operation.callActivateSlashing();
+
+            expect(queue.updateCalled()).toBeTruthy();
+        });
+
+        test('should call purgeReservationsAndRestoreProviders with updated quote', () => {
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+
+            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
+            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.Zero);
+
+            provider.setLiquidityAmount(u128.fromU64(100000));
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(200000),
+                receiverAddress1,
+                receiverAddress1CSV,
+                false,
+                false,
+            );
+
+            operation.callActivateSlashing();
+
+            expect(queue.purgeCalled()).toBeTruthy();
+        });
+
+        test('should increase totalTokensSellActivated by correct amount', () => {
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
+            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.Zero);
+
+            provider.setLiquidityAmount(u128.fromU64(1000000));
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(1000000), // amountIn = 1M
+                receiverAddress1,
+                receiverAddress1CSV,
+                false,
+                false,
+            );
+
+            const initialActivated = queue.virtualTokenReserve;
+            operation.callActivateSlashing();
+
+            const expected = u256.add(initialActivated, u256.fromU64(500000));
+            expect(queue.virtualTokenReserve).toStrictEqual(expected);
+        });
+    });
+
+    describe('Half function behavior', () => {
+        test('should correctly calculate half for even numbers', () => {
+            // Use larger pool to avoid price impact issues
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
+            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.Zero);
+
+            provider.setLiquidityAmount(u128.fromU64(1000));
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(1000), // Total will be 2000 (even)
+                receiverAddress1,
+                receiverAddress1CSV,
+                false,
+                false,
+            );
+
+            operation.callActivateSlashing();
+
+            // oldLiquidity = 1000, newTotal = 2000
+            // half(1000) = 500, half(2000) = 1000
+            // deltaHalf = 1000 - 500 = 500
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000500));
+        });
+
+        test('should correctly calculate half for odd numbers with rounding', () => {
+            // Use larger pool to avoid price impact issues
+            const queue: ITestLiquidityQueue = getLiquidityQueue();
+            const provider: Provider = getTestProvider();
+            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
+            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.Zero);
+
+            provider.setLiquidityAmount(u128.fromU64(999));
+
+            const operation = new TestListTokenForSaleOperation(
+                queue,
+                provider.getId(),
+                u128.fromU64(1002), // Total will be 2001 (odd)
+                receiverAddress1,
+                receiverAddress1CSV,
+                false,
+                false,
+            );
+
+            operation.callActivateSlashing();
+
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000501));
         });
     });
 });

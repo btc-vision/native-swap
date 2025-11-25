@@ -199,7 +199,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
     }*/
 
-    private activateSlashing(): void {
+    protected activateSlashing(): void {
         const newTotal: u128 = SafeMath.add128(this.oldLiquidity, this.amountIn);
         const oldHalfCred: u128 = this.half(this.oldLiquidity);
         const newHalfCred: u128 = this.half(newTotal);
@@ -312,7 +312,6 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
             // Clean up reservations and restore providers
             this.liquidityQueue.updateVirtualPoolIfNeeded();
-
             //this.liquidityQueue.reCalcQuote();
             currentQuote = this.liquidityQueue.quote();
             this.liquidityQueue.purgeReservationsAndRestoreProviders(currentQuote);
