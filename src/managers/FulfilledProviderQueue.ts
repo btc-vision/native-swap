@@ -65,6 +65,6 @@ export class FulfilledProviderQueue {
 
         provider.resetListingProviderValues();
 
-        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), false, false, stakedAmount));
+        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), false, stakedAmount));
     }
 }

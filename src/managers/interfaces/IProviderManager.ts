@@ -46,7 +46,7 @@ export interface IProviderManager {
 
     resetFulfilledProviders(count: u32): u32;
 
-    resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void;
+    resetProvider(provider: Provider, burnRemainingFunds: boolean): void;
 
     resetStartingIndex(): void;
 

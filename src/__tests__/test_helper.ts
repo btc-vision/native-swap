@@ -478,8 +478,6 @@ export interface ITestProviderManager extends IProviderManager {
         provider: Provider,
         // @ts-expect-error valid in assembly script but not in typescript
         burnRemainingFunds: boolean = true,
-        // @ts-expect-error valid in assembly script but not in typescript
-        canceled: boolean = false,
     ): void;
 }
 
@@ -765,13 +763,9 @@ export class TestProviderManager extends ProviderManager implements ITestProvide
         return super.getNextProviderWithLiquidity(currentQuote);
     }
 
-    public resetProvider(
-        provider: Provider,
-        burnRemainingFunds: boolean = true,
-        canceled: boolean = false,
-    ): void {
+    public resetProvider(provider: Provider, burnRemainingFunds: boolean = true): void {
         this._resetProviderCalled = true;
-        super.resetProvider(provider, burnRemainingFunds, canceled);
+        super.resetProvider(provider, burnRemainingFunds);
     }
 }
 

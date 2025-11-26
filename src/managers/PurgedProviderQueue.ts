@@ -182,7 +182,7 @@ export class PurgedProviderQueue {
 
         provider.resetListingProviderValues();
 
-        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), false, false, stakedAmount));
+        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), false, stakedAmount));
     }
 
     private addProviderToFulfilledQueue(

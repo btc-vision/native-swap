@@ -31,7 +31,6 @@ import { FeeManager } from '../managers/FeeManager';
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
-import { CancelListingOperation } from '../operations/CancelListingOperation';
 import { SwapOperation } from '../operations/SwapOperation';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import {
@@ -121,8 +120,6 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.swap(calldata);
             case encodeSelector('listLiquidity(address,bytes,string,uint128,bool)'):
                 return this.listLiquidity(calldata);
-            case encodeSelector('cancelListing(address)'):
-                return this.cancelListing(calldata);
             case encodeSelector('withdrawListing(address)'):
                 return this.withdrawListing(calldata);
             case encodeSelector(
@@ -500,41 +497,6 @@ export class NativeSwap extends ReentrancyGuard {
             activationDelay,
             MAXIMUM_PROVIDER_PER_RESERVATIONS,
             MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS,
-        );
-
-        operation.execute();
-        liquidityQueueResult.liquidityQueue.save();
-    }
-
-    private cancelListing(calldata: Calldata): BytesWriter {
-        this.ensureNotPaused();
-        this.ensureNotContract();
-        this.ensureWithdrawModeNotActive();
-
-        const token: Address = calldata.readAddress();
-        this._tokenAddress = token.clone();
-
-        this._cancelListing(token);
-
-        return new BytesWriter(0);
-    }
-
-    private _cancelListing(token: Address): void {
-        this.ensureValidTokenAddress(token);
-
-        const providerId: u256 = this.addressToPointerU256(Blockchain.tx.sender, token);
-        const tokenId: Uint8Array = this.addressToPointer(token);
-        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
-            token,
-            tokenId,
-            true,
-        );
-
-        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
-
-        const operation: CancelListingOperation = new CancelListingOperation(
-            liquidityQueueResult.liquidityQueue,
-            providerId,
         );
 
         operation.execute();

@@ -3,11 +3,7 @@ import { CompletedTrade } from '../models/CompletedTrade';
 import { Blockchain, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Provider } from '../models/Provider';
-import {
-    CappedTokensResult,
-    satoshisToTokens128,
-    tokensToSatoshis,
-} from '../utils/SatoshisConversion';
+import { CappedTokensResult, satoshisToTokens128, tokensToSatoshis, } from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
 import {
@@ -60,8 +56,7 @@ export class TradeManager implements ITradeManager {
         for (let index: u32 = 0; index < providerCount; index++) {
             const providerData: ReservationProviderData = reservation.getProviderAt(index);
 
-            // Skip if provider has been removed from provider queue due
-            // to either a fulfill or a cancel liquidity.
+            // Skip if provider has been removed from provider queue
             if (!this.canGetProvider(providerData)) {
                 continue;
             }
@@ -384,7 +379,7 @@ export class TradeManager implements ITradeManager {
             !provider.hasReservedAmount() &&
             !Provider.meetsMinimumReservationAmount(provider.getLiquidityAmount(), this.quoteToUse)
         ) {
-            this.providerManager.resetProvider(provider, true, false);
+            this.providerManager.resetProvider(provider, true);
         }
     }
 

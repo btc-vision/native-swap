@@ -407,7 +407,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
         if (switched && !this.oldLiquidity.isZero()) {
             throw new Revert(
-                `NATIVE_SWAP: You must cancel your listings before switching queue type.`,
+                `NATIVE_SWAP: Your current listing must be fully purchased before you can switch the queue type.`,
             );
         }
     }

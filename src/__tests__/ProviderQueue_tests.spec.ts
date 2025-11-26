@@ -365,7 +365,7 @@ describe('ProviderQueue tests', () => {
             const index: u32 = queue.add(provider);
             liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
-            queue.resetProvider(provider, true, false);
+            queue.resetProvider(provider, true);
 
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
             expect(queue.getAt(index)).toStrictEqual(u256.Zero);
@@ -381,33 +381,6 @@ describe('ProviderQueue tests', () => {
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(provider.getListedTokenAtBlock()).toStrictEqual(BLOCK_NOT_SET_VALUE);
             expect(liquidityQueueReserve.liquidity).toStrictEqual(u256.Zero);
-        });
-
-        it('adjusts virtual satoshis reserve on cancel', () => {
-            const liquidityQueueReserve = new LiquidityQueueReserve(
-                tokenAddress1,
-                tokenIdUint8Array1,
-            );
-            liquidityQueueReserve.addToVirtualSatoshisReserve(100000);
-
-            const queue: ProviderQueue = new ProviderQueue(
-                tokenAddress1,
-                NORMAL_QUEUE_POINTER,
-                tokenIdUint8Array1,
-                ENABLE_INDEX_VERIFICATION,
-                MAXIMUM_NUMBER_OF_PROVIDERS,
-                liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
-            );
-
-            const provider: Provider = createProvider(providerAddress1, tokenAddress1);
-            provider.setVirtualBTCContribution(1000);
-
-            const index: u32 = queue.add(provider);
-            queue.resetProvider(provider, false, true);
-
-            expect(provider.getVirtualBTCContribution()).toStrictEqual(0);
-            expect(liquidityQueueReserve.virtualSatoshisReserve).toStrictEqual(99000);
         });
 
         it('calls resetProvider, burn funds if any, do not remove from queue if initial provider and reset the flags', () => {
@@ -430,7 +403,7 @@ describe('ProviderQueue tests', () => {
             provider.markInitialLiquidityProvider();
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
             liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
-            queue.resetProvider(provider, true, false);
+            queue.resetProvider(provider, true);
 
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
             expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
@@ -467,7 +440,7 @@ describe('ProviderQueue tests', () => {
 
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
             const oldLiquidity = liquidityQueueReserve.liquidity;
-            queue.resetProvider(provider, false, false);
+            queue.resetProvider(provider, false);
 
             expect(TransferHelper.transferCalled).toBeFalsy();
             expect(liquidityQueueReserve.liquidity).toStrictEqual(oldLiquidity);
@@ -494,7 +467,7 @@ describe('ProviderQueue tests', () => {
             queue.add(provider);
 
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
-            queue.resetProvider(provider, true, false);
+            queue.resetProvider(provider, true);
 
             expect(TransferHelper.transferCalled).toBeFalsy();
             expect(liquidityQueueReserve.liquidity).toStrictEqual(u256.Zero);

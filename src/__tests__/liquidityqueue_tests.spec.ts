@@ -1898,7 +1898,7 @@ describe('Liquidity queue tests', () => {
             queue.addToNormalQueue(provider);
             queue.setLiquidity(provider.getLiquidityAmount().toU256());
             queue.increaseVirtualTokenReserve(u256.fromU32(100000));
-            queue.resetProvider(provider, true, false);
+            queue.resetProvider(provider, true);
 
             expect(createQueueResult.providerManager.resetProviderCalled).toBeTruthy();
         });

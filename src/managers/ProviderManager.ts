@@ -345,15 +345,11 @@ export class ProviderManager implements IProviderManager {
         return totalResets;
     }
 
-    public resetProvider(
-        provider: Provider,
-        burnRemainingFunds: boolean = true,
-        canceled: boolean = false,
-    ): void {
+    public resetProvider(provider: Provider, burnRemainingFunds: boolean = true): void {
         if (provider.isPriority()) {
-            this.priorityQueue.resetProvider(provider, burnRemainingFunds, canceled);
+            this.priorityQueue.resetProvider(provider, burnRemainingFunds);
         } else {
-            this.normalQueue.resetProvider(provider, burnRemainingFunds, canceled);
+            this.normalQueue.resetProvider(provider, burnRemainingFunds);
         }
     }
 

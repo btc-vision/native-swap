@@ -9,7 +9,10 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
-import { ANTI_BOT_MAX_TOKENS_PER_RESERVATION, RESERVATION_SETTINGS_POINTER, } from '../constants/StoredPointers';
+import {
+    ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
+    RESERVATION_SETTINGS_POINTER,
+} from '../constants/StoredPointers';
 
 import { addAmountToStakingContract, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
@@ -505,8 +508,8 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.providerManager.removeFromPurgeQueue(provider);
     }
 
-    public resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void {
-        this.providerManager.resetProvider(provider, burnRemainingFunds, canceled);
+    public resetProvider(provider: Provider, burnRemainingFunds: boolean): void {
+        this.providerManager.resetProvider(provider, burnRemainingFunds);
     }
 
     public save(): void {

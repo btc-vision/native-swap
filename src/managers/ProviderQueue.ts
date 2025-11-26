@@ -173,17 +173,7 @@ export class ProviderQueue {
         provider.setQueueIndex(INDEX_NOT_SET_VALUE);
     }
 
-    public resetProvider(
-        provider: Provider,
-        burnRemainingFunds: boolean = true,
-        canceled: boolean = false,
-    ): void {
-        if (burnRemainingFunds && canceled) {
-            throw new Revert(
-                'Invalid parameters: Cannot burn remaining funds when canceling a listing.',
-            );
-        }
-
+    public resetProvider(provider: Provider, burnRemainingFunds: boolean = true): void {
         let liquidityToBurn: u256 = u256.Zero;
         this.ensureProviderNotAlreadyPurged(provider);
 
@@ -206,16 +196,7 @@ export class ProviderQueue {
         // ENTRY-PRICE TRACKING: Remove the entry-price BTC contribution
         // This represents the baseline liquidity depth this provider contributed
         if (hasContribution) {
-            // CRITICAL FIX: Only remove BTC contribution if it's a cancellation
-            // For normal trades, the BTC contribution should NOT be removed from reserves
-            if (canceled) {
-                // We're canceling a listing, so reverse the virtual BTC adjustment
-                if (this.liquidityQueueReserve.virtualSatoshisReserve >= btcContribution) {
-                    this.liquidityQueueReserve.subFromVirtualSatoshisReserve(btcContribution);
-                }
-            }
-
-            // Always clear the tracking value regardless of canceled status
+            // Always clear the tracking value
             provider.setVirtualBTCContribution(0);
         }
 
@@ -225,9 +206,7 @@ export class ProviderQueue {
 
         provider.resetListingProviderValues();
 
-        Blockchain.emit(
-            new ProviderFulfilledEvent(provider.getId(), canceled, false, liquidityToBurn),
-        );
+        Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), false, liquidityToBurn));
     }
 
     public restoreCurrentIndex(index: u32): void {

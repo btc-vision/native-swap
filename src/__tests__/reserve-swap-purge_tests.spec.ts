@@ -49,7 +49,6 @@ import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOpera
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
 import { SwapOperation } from '../operations/SwapOperation';
 import { Reservation } from '../models/Reservation';
-import { CancelListingOperation } from '../operations/CancelListingOperation';
 
 const tokenDec = 18;
 
@@ -106,15 +105,6 @@ function listTokenForSale(
     lq1.liquidityQueue.save();
 
     return getProvider(liquidityProvider);
-}
-
-function cancelListing(provider: Provider): void {
-    const lq1 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-    const cancelListingOp = new CancelListingOperation(lq1.liquidityQueue, provider.getId());
-
-    cancelListingOp.execute();
-    lq1.liquidityQueue.save();
 }
 
 function reserve(amount: u64): u256 {

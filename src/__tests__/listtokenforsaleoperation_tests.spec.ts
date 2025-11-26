@@ -1366,7 +1366,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     false,
                 );
 
-                operation.activateSlashing();
+                operation.callActivateSlashing();
             }).toThrow('NATIVE_SWAP: Listing this amount of token would devalue tokens');
         });
 
