@@ -13,8 +13,11 @@ export function tokensToSatoshis(tokenAmount: u256, scaledPrice: u256): u64 {
         return 0;
     }
 
+    const numerator = SafeMath.mul(tokenAmount, QUOTE_SCALE);
+
+    // Ceiling division: (numerator + scaledPrice - 1) / scaledPrice
     const satoshis = SafeMath.div(
-        SafeMath.mul(SafeMath.add(tokenAmount, u256.One), QUOTE_SCALE), // We have to do plus one here due to the round down
+        SafeMath.sub(SafeMath.add(numerator, scaledPrice), u256.One),
         scaledPrice,
     );
 

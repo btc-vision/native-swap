@@ -188,13 +188,19 @@ export class TradeManager implements ITradeManager {
         const halfCred: u128 = u128.add(halfFloor, u128.and(totalLiquidity, u128.One));
 
         // EDGE CASE: Handle providers who bypassed normal listing
-        if (!currentQuote.isZero() && provider.getVirtualBTCContribution() === 0) {
+        if (
+            !currentQuote.isZero() &&
+            provider.getVirtualBTCContribution() === 0 &&
+            !provider.isInitialLiquidityProvider()
+        ) {
+            throw new Revert("Impossible state: provider's virtual BTC contribution is zero.");
+
             // They bypassed listing, so record their FULL value now
-            const btcContribution = tokensToSatoshis(totalLiquidity.toU256(), currentQuote);
+            /*const btcContribution = tokensToSatoshis(totalLiquidity.toU256(), currentQuote);
             provider.setVirtualBTCContribution(btcContribution);
 
             // Since they bypassed listing, we need to apply BOTH halves now
-            this.liquidityQueueReserve.addToTotalTokensSellActivated(totalLiquidity.toU256());
+            this.liquidityQueueReserve.addToTotalTokensSellActivated(totalLiquidity.toU256());*/
         } else {
             // Normal case: Apply the SECOND 50% of tokens to the virtual reserves
             // (First 50% was already applied during listing)
