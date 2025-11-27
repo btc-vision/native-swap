@@ -14,18 +14,17 @@ export function tokensToSatoshis(tokenAmount: u256, scaledPrice: u256): u64 {
     }
 
     const numerator = SafeMath.mul(tokenAmount, QUOTE_SCALE);
+    const satoshis = SafeMath.div(numerator, scaledPrice);
 
-    // Ceiling division: (numerator + scaledPrice - 1) / scaledPrice
-    const satoshis = SafeMath.div(
-        SafeMath.sub(SafeMath.add(numerator, scaledPrice), u256.One),
-        scaledPrice,
-    );
+    // Check if there's a remainder - if so, round up
+    const remainder = SafeMath.mod(numerator, scaledPrice);
+    const finalSatoshis = remainder.isZero() ? satoshis : SafeMath.add(satoshis, u256.One);
 
-    if (satoshis > MAX_TOTAL_SATOSHIS) {
+    if (finalSatoshis > MAX_TOTAL_SATOSHIS) {
         throw new Revert(`Impossible state: The total number of satoshis is out of range.`);
     }
 
-    return satoshis.toU64();
+    return finalSatoshis.toU64();
 }
 
 export function tokensToSatoshis128(tokenAmount: u128, scaledPrice: u256): u64 {

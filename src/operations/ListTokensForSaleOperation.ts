@@ -380,15 +380,13 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.pullInTokens();
         this.assertQueueSwitchAllowed();
         this.addProviderToQueue();
-        this.updateProviderLiquidity();
+        this.updateProviderLiquidity(); // Sets to oldLiquidity + amountIn (GROSS)
         this.assignBlockNumber();
         this.assignReceiver();
 
-        // Calculate tax (if any) and get net amount
-        const taxAmount = this.deductTaxIfPriority();
+        const taxAmount = this.deductTaxIfPriority(); // Subtracts tax from provider
         const netAmount = SafeMath.sub(this.amountIn256, taxAmount);
 
-        // Only add net amount to reserves
         this.liquidityQueue.increaseTotalReserve(netAmount);
         if (!this.isForInitialLiquidity) {
             this.activateSlashing(netAmount);

@@ -337,17 +337,6 @@ export class TradeManager implements ITradeManager {
         }
     }
 
-    private getMaximumPossibleTargetTokens(
-        satoshis: u64,
-        providerAvailableLiquidity: u128,
-        originalTokenAmount: u128,
-    ): u128 {
-        const cappedTokenAmount: u128 = min128(originalTokenAmount, providerAvailableLiquidity);
-        const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.quoteToUse);
-
-        return min128(tokenResult.tokens, cappedTokenAmount);
-    }
-
     private getProvider(providerData: ReservationProviderData): Provider {
         return this.providerManager.getProviderFromQueue(
             providerData.providerIndex,
@@ -356,12 +345,34 @@ export class TradeManager implements ITradeManager {
     }
 
     private getTargetTokens(satoshis: u64, requestedTokens: u128, providerLiquidity: u128): u128 {
+        const requiredSatoshis: u64 = tokensToSatoshis(requestedTokens.toU256(), this.quoteToUse);
+
+        let targetTokens: u128;
+
+        if (satoshis >= requiredSatoshis) {
+            targetTokens = requestedTokens;
+        } else {
+            const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.quoteToUse);
+            targetTokens = tokenResult.tokens;
+        }
+
+        return min128(targetTokens, providerLiquidity);
+    }
+
+    private getMaximumPossibleTargetTokens(
+        satoshis: u64,
+        providerAvailableLiquidity: u128,
+        originalTokenAmount: u128,
+    ): u128 {
+        const cappedTokenAmount: u128 = min128(originalTokenAmount, providerAvailableLiquidity);
+        const requiredSatoshis: u64 = tokensToSatoshis(cappedTokenAmount.toU256(), this.quoteToUse);
+
+        if (satoshis >= requiredSatoshis) {
+            return cappedTokenAmount;
+        }
+
         const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.quoteToUse);
-
-        let targetTokens: u128 = min128(tokenResult.tokens, requestedTokens);
-        targetTokens = min128(targetTokens, providerLiquidity);
-
-        return targetTokens;
+        return min128(tokenResult.tokens, cappedTokenAmount);
     }
 
     private getValidBlockQuote(blockNumber: u64): void {
