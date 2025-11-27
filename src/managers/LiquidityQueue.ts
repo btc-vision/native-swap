@@ -1,24 +1,23 @@
-import {
-    Address,
-    Blockchain,
-    Potential,
-    Revert,
-    SafeMath,
-    StoredU256,
-    StoredU64,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, Revert, SafeMath, StoredU256, StoredU64, } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 import {
     ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
+    POOL_TYPES_POINTER,
     RESERVATION_SETTINGS_POINTER,
 } from '../constants/StoredPointers';
 
 import { addAmountToStakingContract, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
 import {
+    DEFAULT_STABLE_AMPLIFICATION,
     ENABLE_FEES,
+    MAX_PEG_RATE,
     MAX_TOTAL_SATOSHIS,
+    MIN_PEG_RATE,
+    PEG_RATE_SCALE,
+    POOL_TYPE_STABLE,
+    POOL_TYPE_STANDARD,
     QUOTE_SCALE,
     TEN_THOUSAND_U256,
     VOLATILITY_WINDOW_IN_BLOCKS,
@@ -30,6 +29,14 @@ import { IReservationManager } from './interfaces/IReservationManager';
 import { ILiquidityQueue } from './interfaces/ILiquidityQueue';
 import { IDynamicFee } from './interfaces/IDynamicFee';
 import { preciseLog } from '../utils/MathUtils';
+import { OP20StableQuery } from '../extern/OP20StableQuery';
+
+class StableSwapResult {
+    constructor(
+        public newT: u256,
+        public newB: u256,
+    ) {}
+}
 
 export class LiquidityQueue implements ILiquidityQueue {
     public readonly token: Address;
@@ -42,8 +49,8 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     private readonly settings: StoredU64;
     private readonly _maxTokensPerReservation: StoredU256;
+    private readonly _poolTypes: StoredU64;
     private readonly timeoutEnabled: boolean;
-    private _calculatedQuote: Potential<u256> = null;
 
     constructor(
         token: Address,
@@ -69,6 +76,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         );
 
         this.settings = new StoredU64(RESERVATION_SETTINGS_POINTER, tokenIdUint8Array);
+        this._poolTypes = new StoredU64(POOL_TYPES_POINTER, tokenIdUint8Array);
         this.timeoutEnabled = timeoutEnabled;
 
         this.updateVirtualPoolIfNeeded();
@@ -76,6 +84,35 @@ export class LiquidityQueue implements ILiquidityQueue {
         if (purgeOldReservations && this.virtualSatoshisReserve > 0) {
             this.purgeReservationsAndRestoreProviders(this.quote());
         }
+    }
+
+    public get poolType(): u8 {
+        return <u8>this._poolTypes.get(0);
+    }
+
+    public set poolType(value: u8) {
+        this._poolTypes.set(0, <u64>value);
+    }
+
+    public get amplification(): u64 {
+        const stored = this._poolTypes.get(1);
+        return stored === 0 ? DEFAULT_STABLE_AMPLIFICATION : stored;
+    }
+
+    public set amplification(value: u64) {
+        this._poolTypes.set(1, value);
+    }
+
+    public get pegStalenessThreshold(): u64 {
+        return this._poolTypes.get(2);
+    }
+
+    public set pegStalenessThreshold(value: u64) {
+        this._poolTypes.set(2, value);
+    }
+
+    public get isStablePool(): bool {
+        return this.poolType === POOL_TYPE_STABLE;
     }
 
     public get antiBotExpirationBlock(): u64 {
@@ -186,43 +223,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.liquidityQueueReserve.virtualTokenReserve = value;
     }
 
-    /*public accruePenalty(penalty: u128, half: u128): void {
-        if (!penalty.isZero()) {
-            this.ensurePenaltyNotLessThanHalf(penalty, half);
-
-            const penaltyU256: u256 = penalty.toU256();
-            const penaltyLeft = SafeMath.sub128(penalty, half);
-            const penaltyLeftU256: u256 = penaltyLeft.toU256();
-
-            this.decreaseTotalReserve(penaltyU256);
-            if (!penaltyLeftU256.isZero()) {
-                // Get current state BEFORE modifications
-                const currentBTC = u256.fromU64(this.virtualSatoshisReserve);
-                const currentTokens = this.virtualTokenReserve;
-
-                if (!currentBTC.isZero() && !currentTokens.isZero()) {
-                    // Calculate BTC to remove BEFORE modifying tokens
-                    const btcToRemove = SafeMath.div(
-                        SafeMath.mul(penaltyLeftU256, currentBTC),
-                        currentTokens,
-                    );
-
-                    // Now remove BOTH
-                    this.decreaseVirtualTokenReserve(penaltyLeftU256);
-
-                    if (
-                        !btcToRemove.isZero() &&
-                        btcToRemove.toU64() <= this.virtualSatoshisReserve
-                    ) {
-                        this.decreaseVirtualSatoshisReserve(btcToRemove.toU64());
-                    }
-                }
-            }
-
-            addAmountToStakingContract(penaltyU256);
-        }
-    }*/
-
     public addReservation(reservation: Reservation): void {
         this.reservationManager.addReservation(reservation.getCreationBlock(), reservation);
     }
@@ -239,37 +239,36 @@ export class LiquidityQueue implements ILiquidityQueue {
         return this.reservationManager.blockWithReservationsLength();
     }
 
-    /*public recordTradeVolumes(tokensOut: u256, satoshisIn: u64): void {
-        this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
-        this.increaseTotalTokensExchangedForSatoshis(tokensOut);
-    }*/
-
     public recordTradeVolumes(tokensOut: u256, satoshisIn: u64): void {
-        // Get current state
         const currentVirtualT = this.virtualTokenReserve;
         const currentVirtualB = u256.fromU64(this.virtualSatoshisReserve);
 
-        // Get current accumulators
         const currentPendingSells = this.totalTokensSellActivated;
         const currentPendingBuys = this.totalTokensExchangedForSatoshis;
         const currentPendingBTC = u256.fromU64(this.totalSatoshisExchangedForTokens);
 
-        // Calculate what would happen in next update
-        // Apply pending sells (maintains constant product)
         let projectedT = currentVirtualT;
         let projectedB = currentVirtualB;
 
         if (!currentPendingSells.isZero()) {
-            const k = SafeMath.mul(currentVirtualB, currentVirtualT);
-            projectedT = SafeMath.add(currentVirtualT, currentPendingSells);
-            projectedB = SafeMath.div(k, projectedT);
+            if (this.isStablePool) {
+                const result = this.applyStableSwapSell(
+                    currentVirtualT,
+                    currentVirtualB,
+                    currentPendingSells,
+                );
+                projectedT = result.newT;
+                projectedB = result.newB;
+            } else {
+                const k = SafeMath.mul(currentVirtualB, currentVirtualT);
+                projectedT = SafeMath.add(currentVirtualT, currentPendingSells);
+                projectedB = SafeMath.div(k, projectedT);
+            }
         }
 
-        // Check if buys (including this new trade) would exceed projected reserves
         const totalBuysAfterThisTrade = SafeMath.add(currentPendingBuys, tokensOut);
         const totalBTCAfterThisTrade = SafeMath.add(currentPendingBTC, u256.fromU64(satoshisIn));
 
-        // Critical check: Would the buys exceed available tokens?
         if (totalBuysAfterThisTrade >= projectedT) {
             throw new Revert(
                 `IMPOSSIBLE STATE: Trade would cause virtual pool exhaustion. ` +
@@ -283,7 +282,6 @@ export class LiquidityQueue implements ILiquidityQueue {
             );
         }
 
-        // Additional sanity check: Would BTC reserves overflow?
         const projectedBAfterBuys = SafeMath.add(projectedB, totalBTCAfterThisTrade);
         if (projectedBAfterBuys > MAX_TOTAL_SATOSHIS) {
             throw new Revert(
@@ -292,14 +290,12 @@ export class LiquidityQueue implements ILiquidityQueue {
             );
         }
 
-        // Additional sanity check: Is the trade size itself reasonable?
         if (tokensOut > this.liquidity) {
             throw new Revert(
                 `IMPOSSIBLE STATE: Trade trying to buy ${tokensOut} tokens but total liquidity is only ${this.liquidity}`,
             );
         }
 
-        // All checks passed - safe to record
         this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
         this.increaseTotalTokensExchangedForSatoshis(tokensOut);
     }
@@ -425,6 +421,9 @@ export class LiquidityQueue implements ILiquidityQueue {
         providerId: u256,
         initialLiquidity: u128,
         maxReserves5BlockPercent: u64,
+        poolType: u8 = POOL_TYPE_STANDARD,
+        amplification: u64 = DEFAULT_STABLE_AMPLIFICATION,
+        pegStalenessThreshold: u64 = 0,
     ): void {
         this.initialLiquidityProviderId = providerId;
         this.virtualTokenReserve = initialLiquidity.toU256();
@@ -433,6 +432,12 @@ export class LiquidityQueue implements ILiquidityQueue {
             floorPrice,
         );
         this.maxReserves5BlockPercent = maxReserves5BlockPercent;
+        this.poolType = poolType;
+
+        if (poolType === POOL_TYPE_STABLE) {
+            this.amplification = amplification;
+            this.pegStalenessThreshold = pegStalenessThreshold;
+        }
     }
 
     public isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean {
@@ -450,16 +455,13 @@ export class LiquidityQueue implements ILiquidityQueue {
         );
     }
 
-    // Return number of tokens per satoshi
+    /**
+     * Get the current quote (tokens per satoshi, scaled by QUOTE_SCALE).
+     *
+     * For stable pools, this fetches the peg rate from the token contract
+     * and uses StableSwap math centered around that peg.
+     */
     public quote(): u256 {
-        /*
-        if (this._calculatedQuote) {
-            return this._calculatedQuote as u256;
-        }
-
-        this._calculatedQuote = this.calculateQuote();
-        return this._calculatedQuote as u256;
-        */
         const TOKEN: u256 = this.virtualTokenReserve;
         const BTC: u64 = this.virtualSatoshisReserve;
 
@@ -471,19 +473,18 @@ export class LiquidityQueue implements ILiquidityQueue {
             throw new Revert(`Impossible state: Not enough liquidity.`);
         }
 
-        // Calculate queue impact
+        // Calculate queue impact - only for standard pools
+        // Stable pools use peg rate, queue shouldn't affect price
+        if (this.isStablePool) {
+            return this.stableQuoteWithPeg(TOKEN, u256.fromU64(BTC));
+        }
+
         const queueImpact = this.calculateQueueImpact();
-
-        // Add impact to token reserves ONLY for price calculation
         const effectiveT = SafeMath.add(TOKEN, queueImpact);
-        const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
 
+        const scaled = SafeMath.mul(effectiveT, QUOTE_SCALE);
         return SafeMath.div(scaled, u256.fromU64(BTC));
     }
-
-    /*public reCalcQuote(): void {
-        this._calculatedQuote = this.calculateQuote();
-    }*/
 
     public removeFromNormalQueue(provider: Provider): void {
         this.providerManager.removeFromNormalQueue(provider);
@@ -505,75 +506,25 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.settings.save();
         this.providerManager.save();
         this.quoteManager.save();
+        this._poolTypes.save();
     }
 
     public setBlockQuote(): void {
-        //this.reCalcQuote();
         this.quoteManager.setBlockQuote(Blockchain.block.number, this.quote());
     }
 
     public updateVirtualPoolIfNeeded(): void {
         const currentBlock: u64 = Blockchain.block.number;
 
-        let B: u256 = u256.fromU64(this.virtualSatoshisReserve);
-        let T: u256 = this.virtualTokenReserve;
+        const B: u256 = u256.fromU64(this.virtualSatoshisReserve);
+        const T: u256 = this.virtualTokenReserve;
 
-        const initialK = SafeMath.mul(B, T);
-
-        // Add tokens from deltaTokensAdd (SELL SIDE)
-        const dT_add: u256 = this.totalTokensSellActivated;
-        if (!dT_add.isZero()) {
-            T = SafeMath.add(T, dT_add);
-
-            // Ceiling division to preserve k: ceil(k / T) = (k + T - 1) / T
-            B = SafeMath.div(SafeMath.sub(SafeMath.add(initialK, T), u256.One), T);
-
-            // Verify K is maintained
-            const newK = SafeMath.mul(B, T);
-            const diff =
-                newK > initialK ? SafeMath.sub(newK, initialK) : SafeMath.sub(initialK, newK);
-
-            const relativeTolerance = SafeMath.div(initialK, u256.fromU64(100000));
-            if (diff > relativeTolerance) {
-                throw new Revert(
-                    `Constant product broken after adding liquidity. Initial k: ${initialK}, New k: ${newK}`,
-                );
-            }
+        if (this.isStablePool) {
+            this.updateVirtualPoolStable(T, B);
+        } else {
+            this.updateVirtualPoolStandard(T, B);
         }
 
-        // Apply net "buys" (BUY SIDE)
-        const dT_buy: u256 = this.totalTokensExchangedForSatoshis;
-        const dB_buy: u256 = u256.fromU64(this.totalSatoshisExchangedForTokens);
-
-        if (!dT_buy.isZero() || !dB_buy.isZero()) {
-            if (dT_buy >= T) {
-                throw new Revert(
-                    `Impossible state: Cannot buy ${dT_buy} tokens, only ${T} available`,
-                );
-            }
-
-            // Get k after sells were applied
-            const k = SafeMath.mul(B, T);
-
-            // Remove tokens bought
-            T = SafeMath.sub(T, dT_buy);
-
-            // Ceiling division to preserve k: ceil(k / T) = (k + T - 1) / T
-            B = SafeMath.div(SafeMath.sub(SafeMath.add(k, T), u256.One), T);
-        }
-
-        if (T.isZero()) {
-            T = u256.One;
-        }
-
-        if (B > MAX_TOTAL_SATOSHIS) {
-            throw new Revert(
-                `Impossible state: New virtual satoshis reserve out of range. Value: ${B}`,
-            );
-        }
-
-        this.virtualSatoshisReserve = B.toU64();
-        this.virtualTokenReserve = T;
         this.resetAccumulators();
 
         this.dynamicFee.volatility = this.computeVolatility(
@@ -607,6 +558,315 @@ export class LiquidityQueue implements ILiquidityQueue {
         return volatility;
     }
 
+    /**
+     * StableSwap quote with peg rate from token contract.
+     *
+     * The peg rate tells us the target price (satoshis per token).
+     * We adjust our virtual reserves to center the StableSwap curve around this peg.
+     */
+    private stableQuoteWithPeg(T: u256, B: u256): u256 {
+        OP20StableQuery.validatePegFreshness(
+            this.token,
+            this.pegStalenessThreshold,
+            Blockchain.block.number,
+        );
+
+        const pegRate = OP20StableQuery.getPegRate(this.token);
+
+        // Defensive bounds check - prevent overflow from malicious tokens
+        if (pegRate < MIN_PEG_RATE || pegRate > MAX_PEG_RATE) {
+            throw new Revert(
+                `StableSwap: pegRate out of bounds. Value: ${pegRate}, ` +
+                    `expected range: [${MIN_PEG_RATE}, ${MAX_PEG_RATE}]`,
+            );
+        }
+
+        const A = u256.fromU64(this.amplification);
+        const D = this.computeStableD(T, B, A);
+
+        // pegPrice = (PEG_RATE_SCALE * QUOTE_SCALE) / pegRate
+        // This gives us the "target" tokens per satoshi at the peg
+        const pegPriceScaled = SafeMath.div(SafeMath.mul(PEG_RATE_SCALE, QUOTE_SCALE), pegRate);
+
+        const stablePrice = this.stableQuoteRaw(T, B, A, D);
+
+        // The equilibrium ratio based on peg
+        // At equilibrium: T / B = PEG_RATE_SCALE / pegRate (tokens per satoshi)
+        // So: targetB = sum * pegRate / (pegRate + PEG_RATE_SCALE)
+        //     targetT = sum - targetB
+        const sum = SafeMath.add(T, B);
+        const targetB = SafeMath.div(
+            SafeMath.mul(sum, pegRate),
+            SafeMath.add(pegRate, PEG_RATE_SCALE),
+        );
+        const targetT = SafeMath.sub(sum, targetB);
+
+        if (T.isZero() || B.isZero()) {
+            return pegPriceScaled;
+        }
+
+        const equilibriumPrice = this.stableQuoteRaw(targetT, targetB, A, D);
+
+        if (equilibriumPrice.isZero()) {
+            return pegPriceScaled;
+        }
+
+        // Adjust: actual_quote = pegPrice * (stablePrice / equilibriumPrice)
+        // This centers the curve around the peg
+        return SafeMath.div(SafeMath.mul(pegPriceScaled, stablePrice), equilibriumPrice);
+    }
+
+    /**
+     * Raw StableSwap quote calculation without peg adjustment.
+     * Uses the derivative of the StableSwap invariant to get marginal price.
+     *
+     * dy/dx = -(4A + D³/(4x²y)) / (4A + D³/(4xy²))
+     */
+    private stableQuoteRaw(T: u256, B: u256, A: u256, D: u256): u256 {
+        const FOUR = u256.fromU32(4);
+        const fourA = SafeMath.mul(FOUR, A);
+
+        const D3 = SafeMath.mul(SafeMath.mul(D, D), D);
+
+        // Numerator: 4A + D³ / (4 * T² * B)
+        const T2 = SafeMath.mul(T, T);
+        const fourT2B = SafeMath.mul(SafeMath.mul(FOUR, T2), B);
+
+        if (fourT2B.isZero()) {
+            return u256.Zero;
+        }
+
+        const numTerm2 = SafeMath.div(D3, fourT2B);
+        const numerator = SafeMath.add(fourA, numTerm2);
+
+        // Denominator: 4A + D³ / (4 * T * B²)
+        const B2 = SafeMath.mul(B, B);
+        const fourTB2 = SafeMath.mul(SafeMath.mul(FOUR, T), B2);
+
+        if (fourTB2.isZero()) {
+            return u256.Zero;
+        }
+
+        const denTerm2 = SafeMath.div(D3, fourTB2);
+        const denominator = SafeMath.add(fourA, denTerm2);
+
+        if (denominator.isZero()) {
+            return u256.Zero;
+        }
+
+        return SafeMath.div(SafeMath.mul(numerator, QUOTE_SCALE), denominator);
+    }
+
+    /**
+     * Compute StableSwap invariant D.
+     * D satisfies: A * n^n * sum(x_i) + D = A * D * n^n + D^(n+1) / (n^n * prod(x_i))
+     * For n=2: A * 4 * (x + y) + D = A * D * 4 + D^3 / (4 * x * y)
+     */
+    private computeStableD(x: u256, y: u256, A: u256): u256 {
+        const sum = SafeMath.add(x, y);
+
+        if (sum.isZero()) {
+            return u256.Zero;
+        }
+
+        const FOUR = u256.fromU32(4);
+        const TWO = u256.fromU32(2);
+        const Ann = SafeMath.mul(A, FOUR);
+
+        let D = sum;
+        let prevD: u256;
+
+        for (let i = 0; i < 255; i++) {
+            const D2 = SafeMath.mul(D, D);
+            const D3 = SafeMath.mul(D2, D);
+            const xy4 = SafeMath.mul(SafeMath.mul(x, y), FOUR);
+
+            if (xy4.isZero()) {
+                throw new Revert(
+                    'StableSwap: Invalid pool state - reserve product is zero. ' +
+                        'One or both reserves may be depleted.',
+                );
+            }
+
+            const D_P = SafeMath.div(D3, xy4);
+
+            prevD = D;
+
+            const numerator = SafeMath.mul(
+                SafeMath.add(SafeMath.mul(Ann, sum), SafeMath.mul(D_P, TWO)),
+                D,
+            );
+
+            const denominator = SafeMath.add(
+                SafeMath.mul(SafeMath.sub(Ann, u256.One), D),
+                SafeMath.mul(u256.fromU32(3), D_P),
+            );
+
+            if (denominator.isZero()) {
+                throw new Revert('StableSwap: D computation failed - denominator is zero');
+            }
+
+            D = SafeMath.div(numerator, denominator);
+
+            const diff = D > prevD ? SafeMath.sub(D, prevD) : SafeMath.sub(prevD, D);
+            if (diff <= u256.One) {
+                return D;
+            }
+        }
+
+        throw new Revert('StableSwap: D did not converge after 255 iterations');
+    }
+
+    /**
+     * Compute new y given x and D for StableSwap.
+     * Newton's method: y = (y² + c) / (2y + b - D)
+     */
+    private computeStableY(x: u256, D: u256, A: u256): u256 {
+        if (x.isZero()) {
+            throw new Revert('StableSwap: Cannot compute Y with zero reserve');
+        }
+
+        const FOUR = u256.fromU32(4);
+        const TWO = u256.fromU32(2);
+        const Ann = SafeMath.mul(A, FOUR);
+
+        // c = D³ / (4 * Ann * x)
+        const D2 = SafeMath.mul(D, D);
+        const D3 = SafeMath.mul(D2, D);
+        const c = SafeMath.div(D3, SafeMath.mul(SafeMath.mul(Ann, x), FOUR));
+
+        // b = x + D / Ann
+        const b = SafeMath.add(x, SafeMath.div(D, Ann));
+
+        let y = D;
+        let prevY: u256;
+
+        for (let i = 0; i < 255; i++) {
+            prevY = y;
+
+            const y2 = SafeMath.mul(y, y);
+            const numerator = SafeMath.add(y2, c);
+
+            // Defensive check: ensure 2y + b > D to prevent underflow
+            const twoYPlusB = SafeMath.add(SafeMath.mul(TWO, y), b);
+            if (twoYPlusB <= D) {
+                throw new Revert(
+                    'StableSwap: Y computation failed - denominator would underflow. ' +
+                        `2y + b = ${twoYPlusB}, D = ${D}`,
+                );
+            }
+
+            const denominator = SafeMath.sub(twoYPlusB, D);
+
+            if (denominator.isZero()) {
+                throw new Revert('StableSwap: Y computation failed - denominator is zero');
+            }
+
+            y = SafeMath.div(numerator, denominator);
+
+            const diff = y > prevY ? SafeMath.sub(y, prevY) : SafeMath.sub(prevY, y);
+            if (diff <= u256.One) {
+                return y;
+            }
+        }
+
+        throw new Revert('StableSwap: Y did not converge after 255 iterations');
+    }
+
+    private updateVirtualPoolStandard(T: u256, B: u256): void {
+        const initialK = SafeMath.mul(B, T);
+
+        const dT_add: u256 = this.totalTokensSellActivated;
+        if (!dT_add.isZero()) {
+            T = SafeMath.add(T, dT_add);
+            B = SafeMath.div(SafeMath.sub(SafeMath.add(initialK, T), u256.One), T);
+
+            const newK = SafeMath.mul(B, T);
+            const diff =
+                newK > initialK ? SafeMath.sub(newK, initialK) : SafeMath.sub(initialK, newK);
+
+            const relativeTolerance = SafeMath.div(initialK, u256.fromU64(100000));
+
+            if (diff > relativeTolerance) {
+                throw new Revert(
+                    `Constant product broken after adding liquidity. Initial k: ${initialK}, New k: ${newK}`,
+                );
+            }
+        }
+
+        const dT_buy: u256 = this.totalTokensExchangedForSatoshis;
+        const dB_buy: u256 = u256.fromU64(this.totalSatoshisExchangedForTokens);
+
+        if (!dT_buy.isZero() || !dB_buy.isZero()) {
+            if (dT_buy >= T) {
+                throw new Revert(
+                    `Impossible state: Cannot buy ${dT_buy} tokens, only ${T} available`,
+                );
+            }
+
+            const k = SafeMath.mul(B, T);
+            T = SafeMath.sub(T, dT_buy);
+            B = SafeMath.div(SafeMath.sub(SafeMath.add(k, T), u256.One), T);
+        }
+
+        if (T.isZero()) {
+            T = u256.One;
+        }
+
+        if (B > MAX_TOTAL_SATOSHIS) {
+            throw new Revert(
+                `Impossible state: New virtual satoshis reserve out of range. Value: ${B}`,
+            );
+        }
+
+        this.virtualSatoshisReserve = B.toU64();
+        this.virtualTokenReserve = T;
+    }
+
+    private updateVirtualPoolStable(T: u256, B: u256): void {
+        const A = u256.fromU64(this.amplification);
+        const D = this.computeStableD(T, B, A);
+
+        const dT_add: u256 = this.totalTokensSellActivated;
+        if (!dT_add.isZero()) {
+            T = SafeMath.add(T, dT_add);
+            B = this.computeStableY(T, D, A);
+        }
+
+        const dT_buy: u256 = this.totalTokensExchangedForSatoshis;
+        if (!dT_buy.isZero()) {
+            if (dT_buy >= T) {
+                throw new Revert(
+                    `Impossible state: Cannot buy ${dT_buy} tokens, only ${T} available`,
+                );
+            }
+            T = SafeMath.sub(T, dT_buy);
+            B = this.computeStableY(T, D, A);
+        }
+
+        if (T.isZero()) {
+            T = u256.One;
+        }
+
+        if (B > MAX_TOTAL_SATOSHIS) {
+            throw new Revert(
+                `Impossible state: New virtual satoshis reserve out of range. Value: ${B}`,
+            );
+        }
+
+        this.virtualSatoshisReserve = B.toU64();
+        this.virtualTokenReserve = T;
+    }
+
+    private applyStableSwapSell(T: u256, B: u256, dT: u256): StableSwapResult {
+        const A = u256.fromU64(this.amplification);
+        const D = this.computeStableD(T, B, A);
+        const newT = SafeMath.add(T, dT);
+        const newB = this.computeStableY(newT, D, A);
+
+        return new StableSwapResult(newT, newB);
+    }
+
     private calculateQueueImpact(): u256 {
         const queuedTokens = this.liquidity;
 
@@ -614,12 +874,10 @@ export class LiquidityQueue implements ILiquidityQueue {
             return u256.Zero;
         }
 
-        // Calculate ratio = 1 + Q/T
         const ratio = SafeMath.add(u256.One, SafeMath.div(queuedTokens, this.virtualTokenReserve));
         const lnValue = preciseLog(ratio);
         const lnSquared = SafeMath.div(SafeMath.mul(lnValue, lnValue), u256.fromU64(1000000));
 
-        // Impact = T * ln(1 + Q/T)^2 / 1e6
         return SafeMath.div(
             SafeMath.mul(this.virtualTokenReserve, lnSquared),
             u256.fromU64(1000000),
@@ -636,14 +894,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
 
         return reserve.toU64();
-    }
-
-    private ensurePenaltyNotLessThanHalf(penalty: u128, half: u128): void {
-        if (u128.lt(penalty, half)) {
-            throw new Revert(
-                `Penalty is less than half: ${penalty.toString()} < ${half.toString()}`,
-            );
-        }
     }
 
     private resetAccumulators(): void {
