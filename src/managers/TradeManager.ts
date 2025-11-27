@@ -180,7 +180,12 @@ export class TradeManager implements ITradeManager {
     }
 
     private activateProvider(provider: Provider, currentQuote: u256): void {
+        if (provider.isLiquidityProvisionAllowed() || provider.isInitialLiquidityProvider()) {
+            throw new Revert('Impossible state: Provider is already activated.');
+        }
+
         provider.allowLiquidityProvision();
+
         const totalLiquidity: u128 = provider.getLiquidityAmount();
 
         // Calculate the second half (matching the rounding from listing)
@@ -188,19 +193,15 @@ export class TradeManager implements ITradeManager {
         const halfCred: u128 = u128.add(halfFloor, u128.and(totalLiquidity, u128.One));
 
         // EDGE CASE: Handle providers who bypassed normal listing
-        if (
-            !currentQuote.isZero() &&
-            provider.getVirtualBTCContribution() === 0 &&
-            !provider.isInitialLiquidityProvider()
-        ) {
+        if (!currentQuote.isZero() && provider.getVirtualBTCContribution() === 0) {
             throw new Revert("Impossible state: provider's virtual BTC contribution is zero.");
 
             // They bypassed listing, so record their FULL value now
             /*const btcContribution = tokensToSatoshis(totalLiquidity.toU256(), currentQuote);
-            provider.setVirtualBTCContribution(btcContribution);
+                provider.setVirtualBTCContribution(btcContribution);
 
-            // Since they bypassed listing, we need to apply BOTH halves now
-            this.liquidityQueueReserve.addToTotalTokensSellActivated(totalLiquidity.toU256());*/
+                // Since they bypassed listing, we need to apply BOTH halves now
+                this.liquidityQueueReserve.addToTotalTokensSellActivated(totalLiquidity.toU256());*/
         } else {
             // Normal case: Apply the SECOND 50% of tokens to the virtual reserves
             // (First 50% was already applied during listing)
@@ -302,18 +303,19 @@ export class TradeManager implements ITradeManager {
             this.ensureReservedAmountIsValid(provider, requestedTokens);
             this.ensureProviderHasEnoughLiquidity(provider, actualTokens);
 
-            const actualTokens256: u256 = actualTokens.toU256();
-            const actualTokensSatoshis: u64 = tokensToSatoshis(actualTokens256, this.quoteToUse);
-
-            provider.subtractFromReservedAmount(requestedTokens);
-            provider.subtractFromLiquidityAmount(actualTokens);
-
+            // Activate BEFORE subtracting liquidity so second half calculation is correct
             if (
                 !provider.isLiquidityProvisionAllowed() &&
                 provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX
             ) {
                 this.activateProvider(provider, currentQuote);
             }
+
+            const actualTokens256: u256 = actualTokens.toU256();
+            const actualTokensSatoshis: u64 = tokensToSatoshis(actualTokens256, this.quoteToUse);
+
+            provider.subtractFromReservedAmount(requestedTokens);
+            provider.subtractFromLiquidityAmount(actualTokens);
 
             this.emitProviderConsumedEvent(provider, actualTokens);
 

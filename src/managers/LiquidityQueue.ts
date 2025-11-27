@@ -299,16 +299,6 @@ export class LiquidityQueue implements ILiquidityQueue {
             );
         }
 
-        // Log for debugging
-        /*if (totalBuysAfterThisTrade > SafeMath.div(projectedT, u256.fromU64(2))) {
-            // Warning: Getting close to exhaustion
-            Blockchain.log(
-                `WARNING: High accumulator usage. ` +
-                    `Buys: ${totalBuysAfterThisTrade}, Projected T: ${projectedT}, ` +
-                    `Usage: ${SafeMath.div(SafeMath.mul(totalBuysAfterThisTrade, u256.fromU64(100)), projectedT)}%`,
-            );
-        }*/
-
         // All checks passed - safe to record
         this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
         this.increaseTotalTokensExchangedForSatoshis(tokensOut);
