@@ -21,7 +21,7 @@ export const MAX_TOTAL_SATOSHIS: u256 = u256.fromU64(21_000_000 * 100_000_000);
 export const MAX_ACTIVATION_DELAY: u8 = 3;
 
 export const MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING: u8 = 100;
-export const MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS: u32 = 40;
+export const MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS: u8 = 40;
 
 export const MIN_SATOSHI_RESERVE: u256 = u256.fromU64(100_000); // 0.001 BTC
 export const MAX_PRICE_IMPACT_BPS = u256.fromU64(10_000); // 40% 3_000 15_000
@@ -36,8 +36,8 @@ export const INITIAL_LIQUIDITY_PROVIDER_INDEX: u32 = u32.MAX_VALUE - 1;
 export const MAXIMUM_VALID_INDEX: u32 = u32.MAX_VALUE - 2;
 export const BLOCK_NOT_SET_VALUE: u64 = U64.MAX_VALUE;
 
-export const EMIT_PURGE_EVENTS: boolean = false;
-export const EMIT_PROVIDERCONSUMED_EVENTS: boolean = false;
+export const EMIT_PURGE_EVENTS: boolean = true;
+export const EMIT_PROVIDERCONSUMED_EVENTS: boolean = true;
 export const CSV_BLOCKS_REQUIRED: i32 = 1;
 
 /**

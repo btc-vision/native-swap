@@ -26,15 +26,15 @@ export class FulfilledProviderQueue {
         this.queue.push(providerIndex, true);
     }
 
-    public reset(count: u32, associatedQueue: ProviderQueue): u32 {
-        const countToReset: u32 = min(count, this.queue.getLength());
+    public reset(count: u8, associatedQueue: ProviderQueue): u8 {
+        const countToReset: u32 = min(<u32>count, this.queue.getLength());
 
         for (let index: u32 = 0; index < countToReset; index++) {
             const providerIndex: u32 = this.queue.next();
             this.resetProvider(providerIndex, associatedQueue);
         }
 
-        return countToReset;
+        return <u8>countToReset;
     }
 
     public save(): void {

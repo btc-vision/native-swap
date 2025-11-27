@@ -16,11 +16,12 @@ import { FeeManager } from '../managers/FeeManager';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import {
     CSV_BLOCKS_REQUIRED,
+    currentProviderResetCount,
     INDEX_NOT_SET_VALUE,
     MAX_CUMULATIVE_IMPACT_BPS,
     MAX_PRICE_IMPACT_BPS,
     MAX_TOTAL_SATOSHIS,
-    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     MIN_SATOSHI_RESERVE,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
     PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
@@ -39,6 +40,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
     private readonly isForInitialLiquidity: boolean;
     private readonly provider: Provider;
     private readonly oldLiquidity: u128;
+    private readonly numberOfFulfilledProviderToResets: u8;
 
     constructor(
         liquidityQueue: ILiquidityQueue,
@@ -48,6 +50,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         receiverStr: string, // Ensure we recompute the right string
         usePriorityQueue: boolean,
         isForInitialLiquidity: boolean = false,
+        numberOfFulfilledProviderToResets: u8 = MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     ) {
         super(liquidityQueue);
 
@@ -58,6 +61,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.receiverStr = receiverStr;
         this.usePriorityQueue = usePriorityQueue;
         this.isForInitialLiquidity = isForInitialLiquidity;
+        this.numberOfFulfilledProviderToResets = numberOfFulfilledProviderToResets;
 
         const provider: Provider = getProvider(providerId);
         this.provider = provider;
@@ -69,7 +73,10 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.transferToken();
         this.emitLiquidityListedEvent();
 
-        this.liquidityQueue.resetFulfilledProviders(MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS);
+        if (currentProviderResetCount < this.numberOfFulfilledProviderToResets) {
+            const count: u8 = this.numberOfFulfilledProviderToResets - currentProviderResetCount;
+            this.liquidityQueue.resetFulfilledProviders(count);
+        }
     }
 
     /*private activateSlashing(): void {

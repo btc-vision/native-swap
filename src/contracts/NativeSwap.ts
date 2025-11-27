@@ -42,8 +42,8 @@ import { satoshisToTokens, tokensToSatoshis } from '../utils/SatoshisConversion'
 import {
     AT_LEAST_PROVIDERS_TO_PURGE,
     ENABLE_INDEX_VERIFICATION,
-    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
     MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
     QUOTE_SCALE,
 } from '../constants/Contract';
@@ -448,6 +448,7 @@ export class NativeSwap extends ReentrancyGuard {
             receiverStr,
             priority,
             false,
+            MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
         );
 
         operation.execute();
@@ -496,7 +497,7 @@ export class NativeSwap extends ReentrancyGuard {
             minimumAmountOut,
             activationDelay,
             MAXIMUM_PROVIDER_PER_RESERVATIONS,
-            MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+            MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
         );
 
         operation.execute();
@@ -709,6 +710,7 @@ export class NativeSwap extends ReentrancyGuard {
             providerManager,
             liquidityQueueReserve,
             reservationManager,
+            MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
         );
 
         return new GetLiquidityQueueResult(liquidityQueue, tradeManager);

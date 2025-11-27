@@ -15,6 +15,7 @@ import {
 } from '../utils/SatoshisConversion';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import {
+    currentProviderResetCount,
     INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAX_ACTIVATION_DELAY,
@@ -39,7 +40,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
     private reservedTokens: u256 = u256.Zero;
     private satoshisSpent: u64 = 0;
     private readonly maximumProvidersPerReservation: u8;
-    private readonly numberOfFulfilledProviderToResets: u32;
+    private readonly numberOfFulfilledProviderToResets: u8;
 
     constructor(
         liquidityQueue: ILiquidityQueue,
@@ -49,7 +50,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         minimumAmountOutTokens: u256,
         activationDelay: u8,
         maximumProvidersPerReservation: u8,
-        numberOfFulfilledProviderToResets: u32,
+        numberOfFulfilledProviderToResets: u8,
     ) {
         super(liquidityQueue);
 
@@ -75,7 +76,11 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.liquidityQueue.addReservation(reservation);
         this.liquidityQueue.setBlockQuote();
         this.liquidityQueue.cleanUpQueues(this.currentQuote);
-        this.liquidityQueue.resetFulfilledProviders(this.numberOfFulfilledProviderToResets);
+
+        if (currentProviderResetCount < this.numberOfFulfilledProviderToResets) {
+            const count: u8 = this.numberOfFulfilledProviderToResets - currentProviderResetCount;
+            this.liquidityQueue.resetFulfilledProviders(count);
+        }
         this.emitReservationCreatedEvent();
     }
 

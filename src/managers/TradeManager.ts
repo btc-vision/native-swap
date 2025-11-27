@@ -2,15 +2,12 @@ import { Reservation } from '../models/Reservation';
 import { CompletedTrade } from '../models/CompletedTrade';
 import { Blockchain, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Provider } from '../models/Provider';
-import {
-    CappedTokensResult,
-    satoshisToTokens128,
-    tokensToSatoshis,
-} from '../utils/SatoshisConversion';
+import { addAmountToStakingContract, Provider } from '../models/Provider';
+import { CappedTokensResult, satoshisToTokens128, tokensToSatoshis, } from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
 import {
+    currentProviderResetCount,
     EMIT_PROVIDERCONSUMED_EVENTS,
     INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
@@ -36,17 +33,20 @@ export class TradeManager implements ITradeManager {
     private totalSatoshisRefunded: u64 = 0;
     private tokensReserved: u256 = u256.Zero;
     private quoteToUse: u256 = u256.Zero;
+    private readonly maximumResetsBeforeQueuing: u8;
 
     constructor(
         quoteManager: IQuoteManager,
         providerManager: IProviderManager,
         liquidityQueueReserve: ILiquidityQueueReserve,
         reservationManager: IReservationManager,
+        maximumResetsBeforeQueuing: u8,
     ) {
         this.quoteManager = quoteManager;
         this.providerManager = providerManager;
         this.liquidityQueueReserve = liquidityQueueReserve;
         this.reservationManager = reservationManager;
+        this.maximumResetsBeforeQueuing = maximumResetsBeforeQueuing;
     }
 
     public executeTradeExpired(reservation: Reservation, currentQuote: u256): CompletedTrade {
@@ -383,7 +383,31 @@ export class TradeManager implements ITradeManager {
             !provider.hasReservedAmount() &&
             !Provider.meetsMinimumReservationAmount(provider.getLiquidityAmount(), this.quoteToUse)
         ) {
-            this.providerManager.resetProvider(provider, true);
+            if (currentProviderResetCount >= this.maximumResetsBeforeQueuing) {
+                this.addProviderToFulfilledQueue(provider);
+            } else {
+                this.providerManager.resetProvider(provider, true);
+                // @ts-expect-error valid assembly script
+                currentProviderResetCount++;
+            }
+        }
+    }
+
+    private addProviderToFulfilledQueue(provider: Provider): void {
+        // Remove from total reserve (accounting only)
+        if (provider.hasLiquidityAmount()) {
+            const liquidity = provider.getLiquidityAmount().toU256();
+            this.liquidityQueueReserve.subFromTotalReserve(liquidity);
+            this.liquidityQueueReserve.subFromVirtualTokenReserve(liquidity);
+            addAmountToStakingContract(liquidity);
+        }
+
+        // Add to fulfilled queue
+        provider.markToReset();
+        if (provider.isPriority()) {
+            this.providerManager.addToPriorityFulfilledQueue(provider);
+        } else {
+            this.providerManager.addToNormalFulfilledQueue(provider);
         }
     }
 

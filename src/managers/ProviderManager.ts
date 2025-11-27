@@ -181,6 +181,14 @@ export class ProviderManager implements IProviderManager {
         return this.priorityPurgedQueue.add(provider);
     }
 
+    public addToNormalFulfilledQueue(provider: Provider): void {
+        this.normalFulfilledQueue.add(provider.getQueueIndex());
+    }
+
+    public addToPriorityFulfilledQueue(provider: Provider): void {
+        this.priorityFulfilledQueue.add(provider.getQueueIndex());
+    }
+
     public cleanUpQueues(currentQuote: u256): void {
         this.previousPriorityStartingIndex = this.priorityQueue.cleanUp(
             this.priorityFulfilledQueue,
@@ -332,11 +340,12 @@ export class ProviderManager implements IProviderManager {
         }
     }
 
-    public resetFulfilledProviders(count: u32): u32 {
-        let totalResets: u32 = this.priorityFulfilledQueue.reset(count, this.priorityQueue);
+    public resetFulfilledProviders(count: u8): u8 {
+        let totalResets: u8 = this.priorityFulfilledQueue.reset(count, this.priorityQueue);
 
         if (totalResets < count) {
-            const remaining: u32 = count - totalResets;
+            const remaining: u8 = count - totalResets;
+
             if (remaining > 0) {
                 totalResets += this.normalFulfilledQueue.reset(remaining, this.normalQueue);
             }
