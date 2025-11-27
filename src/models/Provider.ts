@@ -310,7 +310,7 @@ export class Provider {
      * @returns {boolean} - true if reserved amount is valid; false if not.
      */
     public canCoverReservedAmount(): boolean {
-        return u128.lt(this.getLiquidityAmount(), this.getReservedAmount()) ? false : true;
+        return !u128.lt(this.getLiquidityAmount(), this.getReservedAmount());
     }
 
     /**
