@@ -1,11 +1,4 @@
-import {
-    Address,
-    Blockchain,
-    Revert,
-    SafeMath,
-    StoredU256,
-    StoredU64,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, Revert, SafeMath, StoredU256, StoredU64, } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 import {
@@ -899,10 +892,9 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     private applyStableSwapSell(T: u256, B: u256, dT: u256): StableSwapResult {
         const A = u256.fromU64(this.amplification);
+        const D = this.computeStableD(T, B, A); // original invariant
         const newT = SafeMath.add(T, dT);
-        const D = this.computeStableD(T, B, A);
-        const newD = this.computeStableD(newT, B, A);
-        const newB = this.computeStableY(newT, newD, A);
+        const newB = this.computeStableY(newT, D, A); // solve for B that maintains D
 
         return new StableSwapResult(newT, newB);
     }
