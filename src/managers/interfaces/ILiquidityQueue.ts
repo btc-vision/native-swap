@@ -24,6 +24,10 @@ export interface ILiquidityQueue {
 
     cleanUpQueues(currentQuote: u256): void;
 
+    poolType: u8;
+
+    amplification: u64;
+
     //accruePenalty(penalty: u128, half: u128): void;
 
     addReservation(reservation: Reservation): void;
@@ -85,6 +89,8 @@ export interface ILiquidityQueue {
         providerId: u256,
         initialLiquidity: u128,
         maxReserves5BlockPercent: u64,
+        poolType: u8,
+        amplification: u64,
     ): void;
 
     purgeReservationsAndRestoreProviders(currentQuote: u256): void;

@@ -17,6 +17,7 @@ import {
     U256_BYTE_LENGTH,
     U32_BYTE_LENGTH,
     U64_BYTE_LENGTH,
+    U8_BYTE_LENGTH,
     ZERO_ADDRESS,
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
@@ -123,7 +124,7 @@ export class NativeSwap extends ReentrancyGuard {
             case encodeSelector('withdrawListing(address)'):
                 return this.withdrawListing(calldata);
             case encodeSelector(
-                'createPool(address,uint256,uint128,bytes,string,uint16,uint256,uint16)',
+                'createPool(address,uint256,uint128,bytes,string,uint16,uint256,uint16,uint8,uint64)',
             ): {
                 const token: Address = calldata.readAddress();
                 return this.createPool(calldata, token);
@@ -138,6 +139,8 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.pause(calldata);
             case encodeSelector('unpause()'):
                 return this.unpause(calldata);
+            case encodeSelector('getPoolInfo(address)'):
+                return this.getPoolInfo(calldata);
             case encodeSelector('activateWithdrawMode()'):
                 return this.activateWithdrawMode(calldata);
             /** Readable methods */
@@ -285,6 +288,23 @@ export class NativeSwap extends ReentrancyGuard {
         return result;
     }
 
+    private getPoolInfo(calldata: Calldata): BytesWriter {
+        const token: Address = calldata.readAddress();
+        const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
+            token,
+            this.addressToPointer(token),
+            false,
+        );
+
+        this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
+
+        const writer: BytesWriter = new BytesWriter(U8_BYTE_LENGTH + U64_BYTE_LENGTH);
+        writer.writeU8(liquidityQueueResult.liquidityQueue.poolType);
+        writer.writeU64(liquidityQueueResult.liquidityQueue.amplification);
+
+        return writer;
+    }
+
     private activateWithdrawMode(_calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
         this.ensureWithdrawModeNotActive();
@@ -357,7 +377,6 @@ export class NativeSwap extends ReentrancyGuard {
         this._tokenAddress = token.clone();
 
         const tokenOwner: Address = this.getDeployer(token);
-
         this.ensureContractDeployer(tokenOwner);
 
         const floorPrice: u256 = calldata.readU256();
@@ -369,10 +388,12 @@ export class NativeSwap extends ReentrancyGuard {
         }
 
         const receiverStr: string = calldata.readStringWithLength();
-
         const antiBotEnabledFor: u16 = calldata.readU16();
         const antiBotMaximumTokensPerReservation: u256 = calldata.readU256();
         const maxReservesIn5BlocksPercent: u16 = calldata.readU16();
+        const poolType: u8 = calldata.readU8();
+        const amplification: u64 = calldata.readU64();
+
         const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
             token,
             this.addressToPointer(token),
@@ -390,6 +411,8 @@ export class NativeSwap extends ReentrancyGuard {
             antiBotEnabledFor,
             antiBotMaximumTokensPerReservation,
             maxReservesIn5BlocksPercent,
+            poolType,
+            amplification,
         );
 
         operation.execute();

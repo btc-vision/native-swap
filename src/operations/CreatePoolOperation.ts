@@ -4,7 +4,12 @@ import { Blockchain, Revert } from '@btc-vision/btc-runtime/runtime';
 import { ListTokensForSaleOperation } from './ListTokensForSaleOperation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { getProvider, Provider } from '../models/Provider';
-import { INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    DEFAULT_STABLE_AMPLIFICATION,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    POOL_TYPE_STABLE,
+    POOL_TYPE_STANDARD,
+} from '../constants/Contract';
 
 export class CreatePoolOperation extends BaseOperation {
     private readonly floorPrice: u256;
@@ -15,6 +20,8 @@ export class CreatePoolOperation extends BaseOperation {
     private readonly antiBotEnabledFor: u16;
     private readonly antiBotMaximumTokensPerReservation: u256;
     private readonly maxReservesIn5BlocksPercent: u16;
+    private readonly poolType: u8;
+    private readonly amplification: u64;
 
     constructor(
         liquidityQueue: ILiquidityQueue,
@@ -26,6 +33,8 @@ export class CreatePoolOperation extends BaseOperation {
         antiBotEnabledFor: u16,
         antiBotMaximumTokensPerReservation: u256,
         maxReservesIn5BlocksPercent: u16,
+        poolType: u8 = POOL_TYPE_STANDARD,
+        amplification: u64 = DEFAULT_STABLE_AMPLIFICATION,
     ) {
         super(liquidityQueue);
 
@@ -37,6 +46,8 @@ export class CreatePoolOperation extends BaseOperation {
         this.antiBotEnabledFor = antiBotEnabledFor;
         this.antiBotMaximumTokensPerReservation = antiBotMaximumTokensPerReservation;
         this.maxReservesIn5BlocksPercent = maxReservesIn5BlocksPercent;
+        this.poolType = poolType;
+        this.amplification = amplification;
     }
 
     public override execute(): void {
@@ -61,6 +72,22 @@ export class CreatePoolOperation extends BaseOperation {
         this.ensureAntibotSettingsValid();
         this.ensureInitialLiquidityProviderNotAlreadySet();
         this.ensureMaxReservesIn5BlocksPercentValid();
+        this.ensurePoolTypeValid();
+        this.ensureAmplificationValid();
+    }
+
+    private ensurePoolTypeValid(): void {
+        if (this.poolType !== POOL_TYPE_STANDARD && this.poolType !== POOL_TYPE_STABLE) {
+            throw new Revert('NATIVE_SWAP: Invalid pool type. Must be 0 (standard) or 1 (stable).');
+        }
+    }
+
+    private ensureAmplificationValid(): void {
+        if (this.poolType === POOL_TYPE_STABLE) {
+            if (this.amplification < 1 || this.amplification > 10000) {
+                throw new Revert('NATIVE_SWAP: Amplification must be between 1 and 10000.');
+            }
+        }
     }
 
     private ensureAntibotSettingsValid(): void {
@@ -113,6 +140,8 @@ export class CreatePoolOperation extends BaseOperation {
             this.providerId,
             this.initialLiquidity,
             this.maxReservesIn5BlocksPercent,
+            this.poolType,
+            this.amplification,
         );
     }
 

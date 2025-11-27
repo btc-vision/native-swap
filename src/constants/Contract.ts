@@ -8,7 +8,7 @@ export const INITIAL_FEE_COLLECT_ADDRESS: string =
 
 export const ENABLE_FEES: bool = true;
 export const QUOTE_SCALE: u256 = u256.fromU64(100_000_000);
-export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 5;
+export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 8;
 export const VOLATILITY_WINDOW_IN_BLOCKS: u32 = 8;
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT: u64 = 600;
 export const MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT: u64 = 1000;
@@ -38,6 +38,14 @@ export const BLOCK_NOT_SET_VALUE: u64 = U64.MAX_VALUE;
 export const EMIT_PURGE_EVENTS: boolean = false;
 export const EMIT_PROVIDERCONSUMED_EVENTS: boolean = false;
 export const CSV_BLOCKS_REQUIRED: i32 = 1;
+
+// Default amplification coefficient for stable pools
+// Higher A = tighter liquidity around peg, lower slippage for small trades
+// Typical values: 100-1000 for stablecoin pairs
+export const DEFAULT_STABLE_AMPLIFICATION: u64 = 100;
+
+export const POOL_TYPE_STANDARD: u8 = 0;
+export const POOL_TYPE_STABLE: u8 = 1;
 
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
