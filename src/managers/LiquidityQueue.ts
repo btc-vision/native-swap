@@ -1,4 +1,11 @@
-import { Address, Blockchain, Revert, SafeMath, StoredU256, StoredU64, } from '@btc-vision/btc-runtime/runtime';
+import {
+    Address,
+    Blockchain,
+    Revert,
+    SafeMath,
+    StoredU256,
+    StoredU64,
+} from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 import {
@@ -653,31 +660,31 @@ export class LiquidityQueue implements ILiquidityQueue {
      */
     private stableQuoteRaw(T: u256, B: u256, A: u256, D: u256): u256 {
         const FOUR = u256.fromU32(4);
-
-        const D3 = SafeMath.mul(SafeMath.mul(D, D), D);
         const fourA = SafeMath.mul(FOUR, A);
 
-        // Numerator: A * B + D^3 / (4 * A * B * T^2)
+        const D3 = SafeMath.mul(SafeMath.mul(D, D), D);
+
+        // Numerator: 4A + D³ / (4 * T² * B)
         const T2 = SafeMath.mul(T, T);
-        const denomPart1 = SafeMath.mul(SafeMath.mul(fourA, B), T2);
+        const fourT2B = SafeMath.mul(SafeMath.mul(FOUR, T2), B);
 
-        if (denomPart1.isZero()) {
+        if (fourT2B.isZero()) {
             return u256.Zero;
         }
 
-        const numTerm2 = SafeMath.div(D3, denomPart1);
-        const numerator = SafeMath.add(SafeMath.mul(A, B), numTerm2);
+        const numTerm2 = SafeMath.div(D3, fourT2B);
+        const numerator = SafeMath.add(fourA, numTerm2);
 
-        // Denominator: A * T + D^3 / (4 * A * B^2 * T)
+        // Denominator: 4A + D³ / (4 * T * B²)
         const B2 = SafeMath.mul(B, B);
-        const denomPart2 = SafeMath.mul(SafeMath.mul(fourA, B2), T);
+        const fourTB2 = SafeMath.mul(SafeMath.mul(FOUR, T), B2);
 
-        if (denomPart2.isZero()) {
+        if (fourTB2.isZero()) {
             return u256.Zero;
         }
 
-        const denTerm2 = SafeMath.div(D3, denomPart2);
-        const denominator = SafeMath.add(SafeMath.mul(A, T), denTerm2);
+        const denTerm2 = SafeMath.div(D3, fourTB2);
+        const denominator = SafeMath.add(fourA, denTerm2);
 
         if (denominator.isZero()) {
             return u256.Zero;
@@ -847,32 +854,25 @@ export class LiquidityQueue implements ILiquidityQueue {
     private updateVirtualPoolStable(T: u256, B: u256): void {
         const A = u256.fromU64(this.amplification);
 
-        // Compute initial D
-        let D = this.computeStableD(T, B, A);
+        // Compute initial D - this stays constant through swaps
+        const D = this.computeStableD(T, B, A);
 
-        // Apply sells: add tokens, recompute B to maintain D
+        // Apply sells: add tokens, solve for new B maintaining D
         const dT_add: u256 = this.totalTokensSellActivated;
         if (!dT_add.isZero()) {
             T = SafeMath.add(T, dT_add);
-            // Recompute D with new T, keeping the invariant property
-            // For StableSwap, D should increase when adding liquidity
-            D = this.computeStableD(T, B, A);
             B = this.computeStableY(T, D, A);
         }
 
-        // Apply buys: remove tokens, add BTC
+        // Apply buys: remove tokens, solve for new B maintaining D
         const dT_buy: u256 = this.totalTokensExchangedForSatoshis;
-        const dB_buy: u256 = u256.fromU64(this.totalSatoshisExchangedForTokens);
-
-        if (!dT_buy.isZero() || !dB_buy.isZero()) {
+        if (!dT_buy.isZero()) {
             if (dT_buy >= T) {
                 throw new Revert(
                     `Impossible state: Cannot buy ${dT_buy} tokens, only ${T} available`,
                 );
             }
-
             T = SafeMath.sub(T, dT_buy);
-            // Recompute B to maintain D
             B = this.computeStableY(T, D, A);
         }
 
