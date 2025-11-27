@@ -22,11 +22,11 @@ export interface ILiquidityQueue {
     virtualSatoshisReserve: u64;
     virtualTokenReserve: u256;
 
-    cleanUpQueues(currentQuote: u256): void;
-
     poolType: u8;
-
     amplification: u64;
+    pegStalenessThreshold: u64;
+
+    cleanUpQueues(currentQuote: u256): void;
 
     //accruePenalty(penalty: u128, half: u128): void;
 
@@ -91,6 +91,7 @@ export interface ILiquidityQueue {
         maxReserves5BlockPercent: u64,
         poolType: u8,
         amplification: u64,
+        pegStalenessThreshold: u64,
     ): void;
 
     purgeReservationsAndRestoreProviders(currentQuote: u256): void;

@@ -1,6 +1,6 @@
 import { BaseOperation } from './BaseOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Blockchain, Revert } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, BytesWriter, encodeSelector, Revert } from '@btc-vision/btc-runtime/runtime';
 import { ListTokensForSaleOperation } from './ListTokensForSaleOperation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { getProvider, Provider } from '../models/Provider';
@@ -10,6 +10,8 @@ import {
     POOL_TYPE_STABLE,
     POOL_TYPE_STANDARD,
 } from '../constants/Contract';
+
+const PEG_UPDATED_AT_SELECTOR = encodeSelector('pegUpdatedAt()');
 
 export class CreatePoolOperation extends BaseOperation {
     private readonly floorPrice: u256;
@@ -22,6 +24,7 @@ export class CreatePoolOperation extends BaseOperation {
     private readonly maxReservesIn5BlocksPercent: u16;
     private readonly poolType: u8;
     private readonly amplification: u64;
+    private readonly pegStalenessThreshold: u64;
 
     constructor(
         liquidityQueue: ILiquidityQueue,
@@ -35,6 +38,7 @@ export class CreatePoolOperation extends BaseOperation {
         maxReservesIn5BlocksPercent: u16,
         poolType: u8 = POOL_TYPE_STANDARD,
         amplification: u64 = DEFAULT_STABLE_AMPLIFICATION,
+        pegStalenessThreshold: u64 = 0,
     ) {
         super(liquidityQueue);
 
@@ -48,6 +52,7 @@ export class CreatePoolOperation extends BaseOperation {
         this.maxReservesIn5BlocksPercent = maxReservesIn5BlocksPercent;
         this.poolType = poolType;
         this.amplification = amplification;
+        this.pegStalenessThreshold = pegStalenessThreshold;
     }
 
     public override execute(): void {
@@ -74,6 +79,7 @@ export class CreatePoolOperation extends BaseOperation {
         this.ensureMaxReservesIn5BlocksPercentValid();
         this.ensurePoolTypeValid();
         this.ensureAmplificationValid();
+        this.ensureStableTokenImplementsInterface();
     }
 
     private ensurePoolTypeValid(): void {
@@ -87,6 +93,27 @@ export class CreatePoolOperation extends BaseOperation {
             if (this.amplification < 1 || this.amplification > 10000) {
                 throw new Revert('NATIVE_SWAP: Amplification must be between 1 and 10000.');
             }
+        }
+    }
+
+    /**
+     * For stable pools, verify the token implements IOP20Stable by calling pegUpdatedAt().
+     * If the call reverts, createPool reverts. Simple interface detection.
+     */
+    private ensureStableTokenImplementsInterface(): void {
+        if (this.poolType !== POOL_TYPE_STABLE) {
+            return;
+        }
+
+        const calldata = new BytesWriter(4);
+        calldata.writeSelector(PEG_UPDATED_AT_SELECTOR);
+
+        // This will revert if token doesn't implement pegUpdatedAt()
+        const result = Blockchain.call(this.liquidityQueue.token, calldata);
+        const lastUpdated = result.data.readU64();
+
+        if (lastUpdated === 0) {
+            throw new Revert('NATIVE_SWAP: pegUpdatedAt() returned zero, invalid stable token.');
         }
     }
 
@@ -142,6 +169,7 @@ export class CreatePoolOperation extends BaseOperation {
             this.maxReservesIn5BlocksPercent,
             this.poolType,
             this.amplification,
+            this.pegStalenessThreshold,
         );
     }
 

@@ -47,6 +47,9 @@ export const DEFAULT_STABLE_AMPLIFICATION: u64 = 100;
 export const POOL_TYPE_STANDARD: u8 = 0;
 export const POOL_TYPE_STABLE: u8 = 1;
 
+// Peg rate scale: pegRate is satoshis per token * 1e8
+export const PEG_RATE_SCALE: u256 = u256.fromU64(100_000_000); // 1e8
+
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
  */

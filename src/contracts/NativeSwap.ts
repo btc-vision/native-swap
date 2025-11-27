@@ -123,8 +123,9 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.listLiquidity(calldata);
             case encodeSelector('withdrawListing(address)'):
                 return this.withdrawListing(calldata);
+            // Updated selector with pegStalenessThreshold (u64)
             case encodeSelector(
-                'createPool(address,uint256,uint128,bytes,string,uint16,uint256,uint16,uint8,uint64)',
+                'createPool(address,uint256,uint128,bytes,string,uint16,uint256,uint16,uint8,uint64,uint64)',
             ): {
                 const token: Address = calldata.readAddress();
                 return this.createPool(calldata, token);
@@ -168,13 +169,6 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getStakingContractAddress(calldata);
             case encodeSelector('getFeesAddress()'):
                 return this.getFeesAddress(calldata);
-            /*case encodeSelector('getLastPurgedBlock(address)'):
-                return this.getLastPurgedBlock(calldata);
-            case encodeSelector('getBlocksWithReservationsLength(address)'):
-                return this.getBlocksWithReservationsLength(calldata);
-            case encodeSelector('purgeReservationsAndRestoreProviders(address)'):
-                return this.purgeReservationsAndRestoreProviders(calldata);
-            */
             case encodeSelector('onOP20Received(address,address,uint256,bytes)'):
                 return this.onOP20Received(calldata);
             default:
@@ -288,6 +282,10 @@ export class NativeSwap extends ReentrancyGuard {
         return result;
     }
 
+    /**
+     * Get pool information including stable pool settings.
+     * Returns: poolType (u8), amplification (u64), pegStalenessThreshold (u64)
+     */
     private getPoolInfo(calldata: Calldata): BytesWriter {
         const token: Address = calldata.readAddress();
         const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
@@ -298,9 +296,10 @@ export class NativeSwap extends ReentrancyGuard {
 
         this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
 
-        const writer: BytesWriter = new BytesWriter(U8_BYTE_LENGTH + U64_BYTE_LENGTH);
+        const writer: BytesWriter = new BytesWriter(U8_BYTE_LENGTH + 2 * U64_BYTE_LENGTH);
         writer.writeU8(liquidityQueueResult.liquidityQueue.poolType);
         writer.writeU64(liquidityQueueResult.liquidityQueue.amplification);
+        writer.writeU64(liquidityQueueResult.liquidityQueue.pegStalenessThreshold);
 
         return writer;
     }
@@ -370,6 +369,14 @@ export class NativeSwap extends ReentrancyGuard {
         return writer;
     }
 
+    /**
+     * Create a new liquidity pool for a token.
+     *
+     * For stable pools (poolType = 1):
+     * - Token MUST implement IOP20Stable interface (pegRate, pegAuthority, pegUpdatedAt)
+     * - amplification: StableSwap A parameter (1-10000, higher = tighter around peg)
+     * - pegStalenessThreshold: Max blocks since peg update (0 = no check)
+     */
     private createPool(calldata: Calldata, token: Address): BytesWriter {
         this.ensureNotPaused();
         this.ensureNotContract();
@@ -393,6 +400,7 @@ export class NativeSwap extends ReentrancyGuard {
         const maxReservesIn5BlocksPercent: u16 = calldata.readU16();
         const poolType: u8 = calldata.readU8();
         const amplification: u64 = calldata.readU64();
+        const pegStalenessThreshold: u64 = calldata.readU64();
 
         const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
             token,
@@ -413,6 +421,7 @@ export class NativeSwap extends ReentrancyGuard {
             maxReservesIn5BlocksPercent,
             poolType,
             amplification,
+            pegStalenessThreshold,
         );
 
         operation.execute();
@@ -636,16 +645,6 @@ export class NativeSwap extends ReentrancyGuard {
         return this._getQuote(token, satoshisIn);
     }
 
-    /**
-     * @function _getQuote
-     * Fetches the estimated number of tokens for a given BTC amount
-     * using the new "virtual AMM" approach:
-     *
-     *   1) price = queue.quote() = scaled price = (B * SHIFT) / T
-     *   2) tokensOut = (satoshisIn * price) / SHIFT   // [SCALE FIX]
-     *   3) If tokensOut > availableLiquidity, cap it
-     *   4) requiredSatoshis = min( satoshisIn, (tokensOut * SHIFT) / price )
-     */
     private _getQuote(token: Address, satoshisIn: u64): BytesWriter {
         this.ensureValidTokenAddress(token);
         this.ensureMaximumAmountInNotZero(satoshisIn);
@@ -662,7 +661,6 @@ export class NativeSwap extends ReentrancyGuard {
 
         let tokensOut: u256 = satoshisToTokens(satoshisIn, price);
 
-        // If tokensOut > availableLiquidity, cap it
         const availableLiquidity: u256 = SafeMath.sub(
             liquidityQueueResult.liquidityQueue.liquidity,
             liquidityQueueResult.liquidityQueue.reservedLiquidity,
@@ -673,17 +671,15 @@ export class NativeSwap extends ReentrancyGuard {
             tokensOut = availableLiquidity;
             requiredSatoshis = tokensToSatoshis(tokensOut, price);
 
-            // If that is bigger than satoshisIn, clamp
             if (requiredSatoshis > satoshisIn) {
                 requiredSatoshis = satoshisIn;
             }
         }
 
-        // Prepare output
         const result: BytesWriter = new BytesWriter(2 * U256_BYTE_LENGTH + 2 * U64_BYTE_LENGTH);
-        result.writeU256(tokensOut); // how many tokens
-        result.writeU64(requiredSatoshis); // how many sat needed
-        result.writeU256(price); // final *scaled* price
+        result.writeU256(tokensOut);
+        result.writeU64(requiredSatoshis);
+        result.writeU256(price);
         result.writeU64(QUOTE_SCALE.toU64());
         return result;
     }
@@ -898,63 +894,4 @@ export class NativeSwap extends ReentrancyGuard {
             throw new Revert('NATIVE_SWAP: Staking contract address cannot be empty.');
         }
     }
-
-    /*DEBUG FUNCTIONS
-        private getLastPurgedBlock(calldata: Calldata): BytesWriter {
-            this.onlyDeployer(Blockchain.tx.sender);
-            const token: Address = calldata.readAddress();
-            this.ensureValidTokenAddress(token);
-
-            const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
-                token,
-                this.addressToPointer(token),
-                false,
-            );
-
-            this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
-
-            const writer = new BytesWriter(U64_BYTE_LENGTH);
-            writer.writeU64(liquidityQueueResult.liquidityQueue.lastPurgedBlock);
-
-            return writer;
-        }
-
-        private getBlocksWithReservationsLength(calldata: Calldata): BytesWriter {
-            this.onlyDeployer(Blockchain.tx.sender);
-            const token: Address = calldata.readAddress();
-            this.ensureValidTokenAddress(token);
-
-            const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
-                token,
-                this.addressToPointer(token),
-                false,
-            );
-
-            this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
-
-            const writer = new BytesWriter(U32_BYTE_LENGTH);
-            writer.writeU32(<u32>liquidityQueueResult.liquidityQueue.blockWithReservationsLength());
-
-            return writer;
-        }
-
-        private purgeReservationsAndRestoreProviders(calldata: Calldata): BytesWriter {
-        this.onlyDeployer(Blockchain.tx.sender);
-            const token: Address = calldata.readAddress();
-            this.ensureValidTokenAddress(token);
-
-            const liquidityQueueResult: GetLiquidityQueueResult = this.getLiquidityQueue(
-                token,
-                this.addressToPointer(token),
-                true,
-                true,
-            );
-            this.ensurePoolExistsForToken(liquidityQueueResult.liquidityQueue);
-
-            // Save the updated queue
-            liquidityQueueResult.liquidityQueue.save();
-
-            return new BytesWriter(0);
-        }
-    */
 }
