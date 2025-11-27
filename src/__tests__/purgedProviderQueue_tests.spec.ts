@@ -23,8 +23,8 @@ import {
     currentProviderResetCount,
     ENABLE_INDEX_VERIFICATION,
     INDEX_NOT_SET_VALUE,
+    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     MAXIMUM_NUMBER_OF_PROVIDERS,
-    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
 } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
 import { ILiquidityQueueReserve } from '../managers/interfaces/ILiquidityQueueReserve';
@@ -36,7 +36,7 @@ const QUOTE = u256.fromU64(100000000);
 function createNormalPurgedQueue(
     liquidityQueueReserve: ILiquidityQueueReserve,
     enableIndexVerification: boolean = ENABLE_INDEX_VERIFICATION,
-    nbPurgedToReset: u8 = MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+    nbPurgedToReset: u8 = MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
 ): PurgedProviderQueue {
     return new PurgedProviderQueue(
         tokenAddress1,
@@ -50,7 +50,7 @@ function createNormalPurgedQueue(
 
 function createNormalQueue(
     liquidityQueueReserve: ILiquidityQueueReserve,
-    nbPurgedToReset: u8 = MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+    nbPurgedToReset: u8 = MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
 ): ProviderQueue {
     return new ProviderQueue(
         tokenAddress1,
@@ -63,7 +63,7 @@ function createNormalQueue(
     );
 }
 
-//MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING
+//MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING
 function createNormalFulfilledQueue(
     liquidityQueueReserve: ILiquidityQueueReserve,
 ): FulfilledProviderQueue {

@@ -17,8 +17,8 @@ import {
 } from './test_helper';
 import { ProviderQueue } from '../managers/ProviderQueue';
 import {
+    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     MAXIMUM_NUMBER_OF_PROVIDERS,
-    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
 } from '../constants/Contract';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
@@ -52,7 +52,7 @@ function createTestInstances(): TestInstances {
         true,
         MAXIMUM_NUMBER_OF_PROVIDERS,
         liquidityReserve,
-        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     );
 
     const fulfilledQueue = new TestFulfilledProviderQueue(

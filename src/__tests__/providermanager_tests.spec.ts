@@ -26,7 +26,7 @@ import {
     ENABLE_INDEX_VERIFICATION,
     INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
 } from '../constants/Contract';
 import { QuoteManager } from '../managers/QuoteManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
@@ -61,7 +61,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             expect(manager.currentIndexNormal).toStrictEqual(0);
@@ -88,7 +88,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             manager.addToNormalQueue(createProvider(providerAddress1, tokenAddress1));
@@ -102,7 +102,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             expect(manager2.currentIndexNormal).toStrictEqual(0);
             expect(manager2.currentIndexPriority).toStrictEqual(0);
@@ -128,7 +128,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const normalProvider = createProvider(
@@ -204,7 +204,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             expect(manager2.currentIndexNormal).toStrictEqual(0);
             expect(manager2.currentIndexPriority).toStrictEqual(0);
@@ -239,7 +239,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const initialLiquidityProvider = u256.fromU64(99999);
@@ -262,7 +262,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             manager.previousPriorityStartingIndex = 100;
@@ -283,7 +283,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             manager.previousNormalStartingIndex = 200;
@@ -304,7 +304,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -328,7 +328,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -352,7 +352,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             manager.previousNormalStartingIndex = 100;
@@ -377,7 +377,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             manager.previousNormalStartingIndex = 0;
@@ -405,7 +405,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             manager.previousNormalStartingIndex = 100;
@@ -430,7 +430,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider1: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -484,7 +484,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             expect(manager.priorityQueueLength).toStrictEqual(0);
@@ -518,7 +518,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             expect(manager.normalQueueLength).toStrictEqual(0);
@@ -552,7 +552,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider2: Provider = createProvider(providerAddress2, tokenAddress1);
@@ -587,7 +587,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 manager.getProviderFromQueue(
@@ -610,7 +610,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const initialProvider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -642,7 +642,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 manager.getProviderFromQueue(23, ProviderTypes.Normal);
@@ -662,7 +662,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -691,7 +691,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 manager.getProviderFromQueue(23, ProviderTypes.Priority);
@@ -711,7 +711,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -739,7 +739,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const providerIdOut: u256 = manager.getFromPriorityQueue(22222);
@@ -760,7 +760,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const providerIdOut: u256 = manager.getFromNormalQueue(22222);
@@ -781,7 +781,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -808,7 +808,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -844,7 +844,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider1: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -888,7 +888,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -932,7 +932,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createPriorityProvider(providerAddress1, tokenAddress1);
@@ -960,7 +960,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -997,7 +997,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1033,7 +1033,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1070,7 +1070,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             liquidityQueueReserve.addToTotalReserve(u256.fromU32(100000));
@@ -1109,7 +1109,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1147,7 +1147,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1191,7 +1191,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1218,7 +1218,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1242,7 +1242,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1266,7 +1266,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1301,7 +1301,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1335,7 +1335,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -1370,7 +1370,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             manager.initialLiquidityProviderId = u256.fromU32(1);
@@ -1390,7 +1390,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             expect(manager.initialLiquidityProviderId).toStrictEqual(u256.fromU32(1));
@@ -1425,7 +1425,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const providers = createProviders(4, 0);
@@ -1460,7 +1460,7 @@ describe('ProviderManager tests', () => {
                 quoteManager,
                 ENABLE_INDEX_VERIFICATION,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const providers = createProviders(4, 0);
@@ -1509,7 +1509,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const providers = createProviders(3, 0);
@@ -1550,7 +1550,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1577,7 +1577,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1603,7 +1603,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     const provider = createProvider(providerAddress1, tokenAddress1);
@@ -1638,7 +1638,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 // Add 3 providers that will be deleted. This will move the priorityQueue starting index to 3.
@@ -1705,7 +1705,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 // Add 3 providers that will be deleted. This will move the priorityQueue starting index to 3.
@@ -1778,7 +1778,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const providersPriority = createProviders(
@@ -1821,7 +1821,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const providersPriority = createProviders(
@@ -1864,7 +1864,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     const providersPriority = createProviders(
@@ -1906,7 +1906,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     const provider = createProvider(
@@ -1943,7 +1943,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider = createProvider(
@@ -1981,7 +1981,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     const provider: Provider = createProvider(
@@ -2020,7 +2020,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 // Add 3 providers that will be deleted. This will move the queue starting index to 3.
@@ -2088,7 +2088,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 // Add 3 providers that will be deleted. This will move the standard queue starting index to 3.
@@ -2163,7 +2163,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const providers = createProviders(
@@ -2206,7 +2206,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const providers = createProviders(
@@ -2249,7 +2249,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     const providers = createProviders(
@@ -2291,7 +2291,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     const provider = createProvider(
@@ -2328,7 +2328,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider = createProvider(
@@ -2366,7 +2366,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     const provider: Provider = createProvider(
@@ -2408,7 +2408,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const currentQuote = u256.fromU32(1000);
@@ -2430,7 +2430,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
@@ -2459,7 +2459,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider = createProvider(
@@ -2497,7 +2497,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 createProvider(
@@ -2535,7 +2535,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     const provider = createProvider(
@@ -2572,7 +2572,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider = createProvider(
@@ -2614,7 +2614,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider = createProvider(
@@ -2651,7 +2651,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
@@ -2681,7 +2681,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
@@ -2722,7 +2722,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -2760,7 +2760,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -2794,7 +2794,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 expect(manager.previousPriorityStartingIndex).toStrictEqual(0);
@@ -2837,7 +2837,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -2898,7 +2898,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider1.activate();
@@ -2950,7 +2950,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -2987,7 +2987,7 @@ describe('ProviderManager tests', () => {
                         quoteManager,
                         ENABLE_INDEX_VERIFICATION,
                         liquidityQueueReserve,
-                        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                     );
 
                     expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -3020,7 +3020,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 expect(manager.previousNormalStartingIndex).toStrictEqual(0);
@@ -3061,7 +3061,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -3117,7 +3117,7 @@ describe('ProviderManager tests', () => {
                     quoteManager,
                     ENABLE_INDEX_VERIFICATION,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider1.activate();

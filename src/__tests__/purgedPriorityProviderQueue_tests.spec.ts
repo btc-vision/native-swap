@@ -22,8 +22,8 @@ import { PriorityPurgedProviderQueue } from '../managers/PriorityPurgedProviderQ
 import {
     ENABLE_INDEX_VERIFICATION,
     INDEX_NOT_SET_VALUE,
+    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     MAXIMUM_NUMBER_OF_PROVIDERS,
-    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
 } from '../constants/Contract';
 import { PriorityProviderQueue } from '../managers/PriorityProviderQueue';
 import { ILiquidityQueueReserve } from '../managers/interfaces/ILiquidityQueueReserve';
@@ -39,7 +39,7 @@ function createPriorityPurgedQueue(
         tokenIdUint8Array1,
         ENABLE_INDEX_VERIFICATION,
         liquidityQueueReserve,
-        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     );
 }
 
@@ -51,7 +51,7 @@ function createPriorityQueue(liquidityQueueReserve: ILiquidityQueueReserve): Pri
         ENABLE_INDEX_VERIFICATION,
         MAXIMUM_NUMBER_OF_PROVIDERS,
         liquidityQueueReserve,
-        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     );
 }
 

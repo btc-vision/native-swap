@@ -12,8 +12,8 @@ import { PriorityProviderQueue } from '../managers/PriorityProviderQueue';
 import { NORMAL_QUEUE_FULFILLED, PRIORITY_QUEUE_POINTER } from '../constants/StoredPointers';
 import {
     ENABLE_INDEX_VERIFICATION,
+    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     MAXIMUM_NUMBER_OF_PROVIDERS,
-    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
 } from '../constants/Contract';
 import { LiquidityQueueReserve } from '../models/LiquidityQueueReserve';
 import { ILiquidityQueueReserve } from '../managers/interfaces/ILiquidityQueueReserve';
@@ -21,7 +21,7 @@ import { FulfilledProviderQueue } from '../managers/FulfilledProviderQueue';
 
 const QUOTE = u256.fromU64(100000000);
 
-//MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING
+//MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING
 function createNormalFulfilledQueue(
     liquidityQueueReserve: ILiquidityQueueReserve,
 ): FulfilledProviderQueue {
@@ -60,7 +60,7 @@ describe('PriorityProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
-                MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -83,7 +83,7 @@ describe('PriorityProviderQueue tests', () => {
                     ENABLE_INDEX_VERIFICATION,
                     5,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const providers: Provider[] = createProviders(6, 0);
@@ -117,7 +117,7 @@ describe('PriorityProviderQueue tests', () => {
                     ENABLE_INDEX_VERIFICATION,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
                     liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const fulfilledQueue: FulfilledProviderQueue =

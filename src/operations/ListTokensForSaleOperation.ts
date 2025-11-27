@@ -20,7 +20,7 @@ import {
     MAX_CUMULATIVE_IMPACT_BPS,
     MAX_PRICE_IMPACT_BPS,
     MAX_TOTAL_SATOSHIS,
-    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS,
+    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
     MIN_SATOSHI_RESERVE,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
     PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
@@ -69,7 +69,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.transferToken();
         this.emitLiquidityListedEvent();
 
-        this.liquidityQueue.resetFulfilledProviders(MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS);
+        this.liquidityQueue.resetFulfilledProviders(MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS);
     }
 
     /*private activateSlashing(): void {
@@ -212,9 +212,10 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
             // Get current price before adding
             const priceBefore = this.liquidityQueue.quote();
-
             // Simulate adding deltaHalf to token reserves via constant product
             const newT = SafeMath.add(currentT, deltaHalf.toU256());
+
+            //!!!! div by 0 when newT > k or newT =0
             const newB = SafeMath.div(k, newT);
 
             // Calculate new price after adding
@@ -222,6 +223,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
             const queuedTokens = this.liquidityQueue.liquidity;
             const queueImpact = this.calculateNewQueueImpact(queuedTokens, newT);
             const effectiveNewT = SafeMath.add(newT, queueImpact);
+
+            //!!!! div by 0 when newB > effectiveNewT or newB =0
             const priceAfter = SafeMath.div(SafeMath.mul(effectiveNewT, QUOTE_SCALE), newB);
 
             // Price increases when adding tokens (tokens become cheaper)
@@ -256,11 +259,15 @@ export class ListTokensForSaleOperation extends BaseOperation {
             // Apply ALL pending sells (current deltaHalf + existing pending)
             const totalPendingSells = SafeMath.add(deltaHalf.toU256(), pendingSells);
             const futureT = SafeMath.add(currentT, totalPendingSells);
+
+            //!!!! div by 0 when futureT > k or futureT =0
             const futureB = SafeMath.div(k, futureT);
 
             // Calculate future price with queue impact
             const futureQueueImpact = this.calculateNewQueueImpact(queuedTokens, futureT);
             const effectiveFutureT = SafeMath.add(futureT, futureQueueImpact);
+
+            //!!!! div by 0
             const totalPriceAfter = SafeMath.div(
                 SafeMath.mul(effectiveFutureT, QUOTE_SCALE),
                 futureB,
@@ -289,6 +296,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
                 const futureK = SafeMath.mul(futureB, futureT);
                 const newFutureT = SafeMath.sub(futureT, pendingBuys);
+                //!!!! div by 0
                 const newFutureB = SafeMath.div(futureK, newFutureT);
 
                 if (newFutureB > MAX_TOTAL_SATOSHIS) {
@@ -590,11 +598,9 @@ export class ListTokensForSaleOperation extends BaseOperation {
 
         // Only add net amount to reserves
         this.liquidityQueue.increaseTotalReserve(netAmount);
-
         if (!this.isForInitialLiquidity) {
             this.activateSlashing();
         }
-
         this.snapshotBlockQuote();
     }
 

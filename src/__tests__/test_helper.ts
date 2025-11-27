@@ -22,7 +22,7 @@ import {
     AT_LEAST_PROVIDERS_TO_PURGE,
     CSV_BLOCKS_REQUIRED,
     ENABLE_INDEX_VERIFICATION,
-    MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     VOLATILITY_WINDOW_IN_BLOCKS,
 } from '../constants/Contract';
 import { ProviderQueue } from '../managers/ProviderQueue';
@@ -556,7 +556,7 @@ export function createLiquidityQueue(
         tokenId,
         quoteManager,
         liquidityQueueReserve,
-        MAXIMUM_NUMBER_OF_PURGED_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     );
 
     const reservationManager: ITestReservationManager = getReservationManager(
