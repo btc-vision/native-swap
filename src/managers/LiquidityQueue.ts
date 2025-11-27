@@ -722,6 +722,10 @@ export class LiquidityQueue implements ILiquidityQueue {
      * Newton's method: y = (y² + c) / (2y + b - D)
      */
     private computeStableY(x: u256, D: u256, A: u256): u256 {
+        if (x.isZero()) {
+            throw new Revert('StableSwap: Cannot compute Y with zero reserve');
+        }
+
         const FOUR = u256.fromU32(4);
         const TWO = u256.fromU32(2);
         const Ann = SafeMath.mul(A, FOUR);

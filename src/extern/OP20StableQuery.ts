@@ -38,7 +38,8 @@ export class OP20StableQuery {
         const calldata = new BytesWriter(4);
         calldata.writeSelector(PEG_RATE_SELECTOR);
 
-        const pegRate = Blockchain.call(token, calldata).data.readU256();
+        const response = Blockchain.call(token, calldata);
+        const pegRate = response.data.readU256();
 
         if (pegRate.isZero()) {
             throw new Revert('OP20S: Token returned zero peg rate');
@@ -91,6 +92,13 @@ export class OP20StableQuery {
 
         if (updatedAt === 0) {
             throw new Revert('OP20S: Peg has never been updated');
+        }
+
+        // Defensive: malicious token could return future block number
+        if (currentBlock < updatedAt) {
+            throw new Revert(
+                `OP20S: Invalid peg timestamp - updatedAt (${updatedAt}) is in the future (current: ${currentBlock})`,
+            );
         }
 
         const staleness = currentBlock - updatedAt;
