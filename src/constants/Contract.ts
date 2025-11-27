@@ -50,6 +50,21 @@ export const POOL_TYPE_STABLE: u8 = 1;
 // Peg rate scale: pegRate is satoshis per token * 1e8
 export const PEG_RATE_SCALE: u256 = u256.fromU64(100_000_000); // 1e8
 
+// Peg rate bounds for defensive validation
+// Min: 1 sat per token (1e8 scaled) - tokens worth less than 1 sat are unrealistic
+export const MIN_PEG_RATE: u256 = u256.fromU64(100_000_000);
+
+// Max: 1M BTC per token (1e14 sats * 1e8 scale) - catches overflow from malicious tokens
+export const MAX_PEG_RATE: u256 = u256.fromUint8ArrayBE(
+    Uint8Array.wrap(
+        changetype<ArrayBuffer>([
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x1e, 0x19,
+            0xe0, 0xc9, 0xba, 0xb2,
+        ] as StaticArray<u8>),
+    ),
+);
+
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
  */
