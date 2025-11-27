@@ -48,7 +48,8 @@ export class SwapOperation extends BaseOperation {
 
             this.updateLiquidityQueue(
                 trade.totalTokensReserved,
-                totalTokensPurchased,
+                initialTotalTokensPurchased, // Pre-fee amount for virtual pool
+                totalTokensPurchased, // Post-fee amount for actual reserve
                 totalSatoshisSpent,
             );
 
@@ -156,11 +157,12 @@ export class SwapOperation extends BaseOperation {
 
     private updateLiquidityQueue(
         totalTokensReserved: u256,
-        totalTokensPurchased: u256,
+        totalTokensForPool: u256, // Pre-fee, for virtual pool tracking
+        totalTokensForReserve: u256, // Post-fee, for actual reserve
         totalSatoshisSpent: u64,
     ): void {
         this.liquidityQueue.decreaseTotalReserved(totalTokensReserved);
-        this.liquidityQueue.decreaseTotalReserve(totalTokensPurchased);
-        this.liquidityQueue.recordTradeVolumes(totalTokensPurchased, totalSatoshisSpent);
+        this.liquidityQueue.decreaseTotalReserve(totalTokensForReserve);
+        this.liquidityQueue.recordTradeVolumes(totalTokensForPool, totalSatoshisSpent);
     }
 }

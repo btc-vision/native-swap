@@ -23,7 +23,6 @@ export const MAX_ACTIVATION_DELAY: u8 = 3;
 export const MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING: u8 = 100;
 export const MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS: u8 = 40;
 
-export const MIN_SATOSHI_RESERVE: u256 = u256.fromU64(100_000); // 0.001 BTC
 export const MAX_PRICE_IMPACT_BPS = u256.fromU64(10_000); // 40% 3_000 15_000
 export const MAX_CUMULATIVE_IMPACT_BPS = u256.fromU32(20_000);
 
@@ -46,12 +45,6 @@ export const CSV_BLOCKS_REQUIRED: i32 = 1;
 export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 140;
 
 export const AT_LEAST_PROVIDERS_TO_PURGE: u32 = 100;
-
-// 4 block grace period
-export const SLASH_GRACE_WINDOW: u64 = 4;
-
-// number of blocks in 14 days
-export const SLASH_RAMP_UP_BLOCKS: u64 = 2_016;
 
 export const ENABLE_INDEX_VERIFICATION: boolean = false;
 

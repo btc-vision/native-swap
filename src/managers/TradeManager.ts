@@ -180,7 +180,12 @@ export class TradeManager implements ITradeManager {
     }
 
     private activateProvider(provider: Provider, currentQuote: u256): void {
+        if (provider.isLiquidityProvisionAllowed() || provider.isInitialLiquidityProvider()) {
+            throw new Revert('Impossible state: Provider is already activated.');
+        }
+
         provider.allowLiquidityProvision();
+
         const totalLiquidity: u128 = provider.getLiquidityAmount();
 
         // Calculate the second half (matching the rounding from listing)
@@ -189,12 +194,14 @@ export class TradeManager implements ITradeManager {
 
         // EDGE CASE: Handle providers who bypassed normal listing
         if (!currentQuote.isZero() && provider.getVirtualBTCContribution() === 0) {
-            // They bypassed listing, so record their FULL value now
-            const btcContribution = tokensToSatoshis(totalLiquidity.toU256(), currentQuote);
-            provider.setVirtualBTCContribution(btcContribution);
+            throw new Revert("Impossible state: provider's virtual BTC contribution is zero.");
 
-            // Since they bypassed listing, we need to apply BOTH halves now
-            this.liquidityQueueReserve.addToTotalTokensSellActivated(totalLiquidity.toU256());
+            // They bypassed listing, so record their FULL value now
+            /*const btcContribution = tokensToSatoshis(totalLiquidity.toU256(), currentQuote);
+                provider.setVirtualBTCContribution(btcContribution);
+
+                // Since they bypassed listing, we need to apply BOTH halves now
+                this.liquidityQueueReserve.addToTotalTokensSellActivated(totalLiquidity.toU256());*/
         } else {
             // Normal case: Apply the SECOND 50% of tokens to the virtual reserves
             // (First 50% was already applied during listing)
@@ -296,18 +303,19 @@ export class TradeManager implements ITradeManager {
             this.ensureReservedAmountIsValid(provider, requestedTokens);
             this.ensureProviderHasEnoughLiquidity(provider, actualTokens);
 
-            const actualTokens256: u256 = actualTokens.toU256();
-            const actualTokensSatoshis: u64 = tokensToSatoshis(actualTokens256, this.quoteToUse);
-
-            provider.subtractFromReservedAmount(requestedTokens);
-            provider.subtractFromLiquidityAmount(actualTokens);
-
+            // Activate BEFORE subtracting liquidity so second half calculation is correct
             if (
                 !provider.isLiquidityProvisionAllowed() &&
                 provider.getQueueIndex() !== INITIAL_LIQUIDITY_PROVIDER_INDEX
             ) {
                 this.activateProvider(provider, currentQuote);
             }
+
+            const actualTokens256: u256 = actualTokens.toU256();
+            const actualTokensSatoshis: u64 = tokensToSatoshis(actualTokens256, this.quoteToUse);
+
+            provider.subtractFromReservedAmount(requestedTokens);
+            provider.subtractFromLiquidityAmount(actualTokens);
 
             this.emitProviderConsumedEvent(provider, actualTokens);
 
@@ -331,17 +339,6 @@ export class TradeManager implements ITradeManager {
         }
     }
 
-    private getMaximumPossibleTargetTokens(
-        satoshis: u64,
-        providerAvailableLiquidity: u128,
-        originalTokenAmount: u128,
-    ): u128 {
-        const cappedTokenAmount: u128 = min128(originalTokenAmount, providerAvailableLiquidity);
-        const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.quoteToUse);
-
-        return min128(tokenResult.tokens, cappedTokenAmount);
-    }
-
     private getProvider(providerData: ReservationProviderData): Provider {
         return this.providerManager.getProviderFromQueue(
             providerData.providerIndex,
@@ -350,12 +347,34 @@ export class TradeManager implements ITradeManager {
     }
 
     private getTargetTokens(satoshis: u64, requestedTokens: u128, providerLiquidity: u128): u128 {
+        const requiredSatoshis: u64 = tokensToSatoshis(requestedTokens.toU256(), this.quoteToUse);
+
+        let targetTokens: u128;
+
+        if (satoshis >= requiredSatoshis) {
+            targetTokens = requestedTokens;
+        } else {
+            const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.quoteToUse);
+            targetTokens = tokenResult.tokens;
+        }
+
+        return min128(targetTokens, providerLiquidity);
+    }
+
+    private getMaximumPossibleTargetTokens(
+        satoshis: u64,
+        providerAvailableLiquidity: u128,
+        originalTokenAmount: u128,
+    ): u128 {
+        const cappedTokenAmount: u128 = min128(originalTokenAmount, providerAvailableLiquidity);
+        const requiredSatoshis: u64 = tokensToSatoshis(cappedTokenAmount.toU256(), this.quoteToUse);
+
+        if (satoshis >= requiredSatoshis) {
+            return cappedTokenAmount;
+        }
+
         const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.quoteToUse);
-
-        let targetTokens: u128 = min128(tokenResult.tokens, requestedTokens);
-        targetTokens = min128(targetTokens, providerLiquidity);
-
-        return targetTokens;
+        return min128(tokenResult.tokens, cappedTokenAmount);
     }
 
     private getValidBlockQuote(blockNumber: u64): void {

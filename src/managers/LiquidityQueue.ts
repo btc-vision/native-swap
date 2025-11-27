@@ -186,7 +186,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.liquidityQueueReserve.virtualTokenReserve = value;
     }
 
-    public accruePenalty(penalty: u128, half: u128): void {
+    /*public accruePenalty(penalty: u128, half: u128): void {
         if (!penalty.isZero()) {
             this.ensurePenaltyNotLessThanHalf(penalty, half);
 
@@ -221,7 +221,7 @@ export class LiquidityQueue implements ILiquidityQueue {
 
             addAmountToStakingContract(penaltyU256);
         }
-    }
+    }*/
 
     public addReservation(reservation: Reservation): void {
         this.reservationManager.addReservation(reservation.getCreationBlock(), reservation);
@@ -299,16 +299,6 @@ export class LiquidityQueue implements ILiquidityQueue {
             );
         }
 
-        // Log for debugging
-        /*if (totalBuysAfterThisTrade > SafeMath.div(projectedT, u256.fromU64(2))) {
-            // Warning: Getting close to exhaustion
-            Blockchain.log(
-                `WARNING: High accumulator usage. ` +
-                    `Buys: ${totalBuysAfterThisTrade}, Projected T: ${projectedT}, ` +
-                    `Usage: ${SafeMath.div(SafeMath.mul(totalBuysAfterThisTrade, u256.fromU64(100)), projectedT)}%`,
-            );
-        }*/
-
         // All checks passed - safe to record
         this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
         this.increaseTotalTokensExchangedForSatoshis(tokensOut);
@@ -342,7 +332,6 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public distributeFee(totalFee: u256): void {
-        this.decreaseVirtualTokenReserve(totalFee);
         this.decreaseTotalReserve(totalFee);
         addAmountToStakingContract(totalFee);
     }
@@ -525,10 +514,6 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     public updateVirtualPoolIfNeeded(): void {
         const currentBlock: u64 = Blockchain.block.number;
-        // disabled for live recalc of virtual reserves
-        /*if (currentBlock <= this.lastVirtualUpdateBlock) {
-            return;
-        }*/
 
         let B: u256 = u256.fromU64(this.virtualSatoshisReserve);
         let T: u256 = this.virtualTokenReserve;
@@ -539,7 +524,9 @@ export class LiquidityQueue implements ILiquidityQueue {
         const dT_add: u256 = this.totalTokensSellActivated;
         if (!dT_add.isZero()) {
             T = SafeMath.add(T, dT_add);
-            B = SafeMath.div(initialK, T);
+
+            // Ceiling division to preserve k: ceil(k / T) = (k + T - 1) / T
+            B = SafeMath.div(SafeMath.sub(SafeMath.add(initialK, T), u256.One), T);
 
             // Verify K is maintained
             const newK = SafeMath.mul(B, T);
@@ -559,9 +546,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         const dB_buy: u256 = u256.fromU64(this.totalSatoshisExchangedForTokens);
 
         if (!dT_buy.isZero() || !dB_buy.isZero()) {
-            //T = T > dT_buy ? SafeMath.sub(T, dT_buy) : u256.One;
-            //B = SafeMath.add(B, dB_buy);
-
             if (dT_buy >= T) {
                 throw new Revert(
                     `Impossible state: Cannot buy ${dT_buy} tokens, only ${T} available`,
@@ -574,8 +558,8 @@ export class LiquidityQueue implements ILiquidityQueue {
             // Remove tokens bought
             T = SafeMath.sub(T, dT_buy);
 
-            // Calculate B to maintain constant product
-            B = SafeMath.div(k, T);
+            // Ceiling division to preserve k: ceil(k / T) = (k + T - 1) / T
+            B = SafeMath.div(SafeMath.sub(SafeMath.add(k, T), u256.One), T);
         }
 
         if (T.isZero()) {
@@ -599,23 +583,6 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         this.lastVirtualUpdateBlock = currentBlock;
     }
-
-    /*private calculateQueueImpact(): u256 {
-        const queuedTokens = this.liquidity;
-
-        if (queuedTokens.isZero()) {
-            return u256.Zero;
-        }
-
-        // Calculate ratio = 1 + Q/T
-        const ratio = SafeMath.add(u256.One, SafeMath.div(queuedTokens, this.virtualTokenReserve));
-
-        // Use precise logarithm calculation
-        const lnValue = preciseLog(ratio);
-
-        // Impact = T * ln(1 + Q/T) / 1e6 (since log is scaled)
-        return SafeMath.div(SafeMath.mul(this.virtualTokenReserve, lnValue), u256.fromU64(1000000));
-    }*/
 
     protected computeVolatility(
         currentBlock: u64,
@@ -657,20 +624,6 @@ export class LiquidityQueue implements ILiquidityQueue {
             SafeMath.mul(this.virtualTokenReserve, lnSquared),
             u256.fromU64(1000000),
         );
-
-        /*const queuedTokens = this.liquidity;
-        if (queuedTokens.isZero()) {
-            return u256.Zero;
-        }
-
-        // Impact = Q * T / (Q + T)
-        // This is the harmonic mean of Q and T
-        const numerator = SafeMath.mul(queuedTokens, this.virtualTokenReserve);
-        const denominator = SafeMath.add(queuedTokens, this.virtualTokenReserve);
-
-        return SafeMath.div(numerator, denominator);*/
-
-        //return SafeMath.sqrt(SafeMath.mul(queuedTokens, this.virtualTokenReserve));
     }
 
     private computeInitialSatoshisReserve(initialLiquidity: u256, floorPrice: u256): u64 {

@@ -26,6 +26,7 @@ import {
 } from '../constants/Contract';
 import { Provider } from '../models/Provider';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
+import { min128 } from '../utils/MathUtils';
 
 export class ReserveLiquidityOperation extends BaseOperation {
     protected currentQuote: u256 = u256.Zero;
@@ -93,19 +94,13 @@ export class ReserveLiquidityOperation extends BaseOperation {
             availableLiquidity,
         );
 
-        // It is possible to lose 1 token due to round down.
-        const finalTokensToReserve: CappedTokensResult = satoshisToTokens128(
-            satoshis,
-            this.currentQuote,
-        );
+        const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.currentQuote);
 
-        if (!finalTokensToReserve.tokens.isZero()) {
-            this.applyReservation(
-                reservation,
-                provider,
-                finalTokensToReserve.tokens,
-                finalTokensToReserve.satoshis,
-            );
+        // Cap by tokensToAttempt to prevent rounding from inflating the reservation
+        const finalTokensToReserve: u128 = min128(tokenResult.tokens, tokensToAttempt);
+
+        if (!finalTokensToReserve.isZero()) {
+            this.applyReservation(reservation, provider, finalTokensToReserve, satoshis);
 
             this.handleProviderPurgeQueues(provider);
 
@@ -186,57 +181,6 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
         this.remainingTokens = limitedByCap;
     }
-
-    /*private limitByFuturePoolState(requestedTokens: u256): u256 {
-        // Get current state
-        let B = u256.fromU64(this.liquidityQueue.virtualSatoshisReserve);
-        let T = this.liquidityQueue.virtualTokenReserve;
-
-        // Apply pending sells first
-        const pendingSells = this.liquidityQueue.totalTokensSellActivated;
-        if (!pendingSells.isZero()) {
-            const k = SafeMath.mul(B, T);
-            T = SafeMath.add(T, pendingSells);
-            B = SafeMath.div(k, T);
-        }
-
-        // Apply pending buys
-        const pendingBuys = this.liquidityQueue.totalTokensExchangedForSatoshis;
-        if (!pendingBuys.isZero()) {
-            const k = SafeMath.mul(B, T);
-            if (pendingBuys >= T) {
-                // Already broken, no new reservations
-                return u256.Zero;
-            }
-            T = SafeMath.sub(T, pendingBuys);
-            B = SafeMath.div(k, T);
-        }
-
-        // Now check if THIS reservation would break things
-        const totalNewBuys = SafeMath.add(requestedTokens, pendingBuys);
-        if (totalNewBuys >= T) {
-            return u256.Zero; // Would consume entire pool
-        }
-
-        const k = SafeMath.mul(B, T);
-        const finalT = SafeMath.sub(T, totalNewBuys);
-        const finalB = SafeMath.div(k, finalT);
-
-        if (finalB > MAX_TOTAL_SATOSHIS) {
-            // Calculate max that can be bought
-            const minT = SafeMath.div(k, MAX_TOTAL_SATOSHIS);
-            if (minT >= T) {
-                return u256.Zero; // Already at limit
-            }
-            const maxTotal = SafeMath.sub(T, minT);
-            if (pendingBuys >= maxTotal) {
-                return u256.Zero; // Pending buys already max out capacity
-            }
-            return SafeMath.sub(maxTotal, pendingBuys);
-        }
-
-        return requestedTokens;
-    }*/
 
     private computeTokensToReserve(availableLiquidity: u128): u128 {
         let targetTokensToReserve: u128;
