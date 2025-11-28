@@ -20,13 +20,10 @@ import {
     INDEX_NOT_SET_VALUE,
     MAX_CUMULATIVE_IMPACT_BPS,
     MAX_PRICE_IMPACT_BPS,
-    MAX_TOTAL_SATOSHIS,
     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
-    MIN_SATOSHI_RESERVE,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
     PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
     PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX,
-    QUOTE_SCALE,
     TEN_THOUSAND_U256,
 } from '../constants/Contract';
 
@@ -72,11 +69,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.checkPreConditions();
         this.transferToken();
         this.emitLiquidityListedEvent();
-
-        if (currentProviderResetCount < this.numberOfFulfilledProviderToResets) {
-            const count: u8 = this.numberOfFulfilledProviderToResets - currentProviderResetCount;
-            this.liquidityQueue.resetFulfilledProviders(count);
-        }
+        this.tryResetFulfilledProviders();
     }
 
     protected activateSlashing(netAmountIn: u256): void {
@@ -138,6 +131,13 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.liquidityQueue.increaseTotalTokensSellActivated(deltaHalf256);
         this.liquidityQueue.updateVirtualPoolIfNeeded();
         this.liquidityQueue.purgeReservationsAndRestoreProviders(this.liquidityQueue.quote());
+    }
+
+    private tryResetFulfilledProviders() {
+        if (currentProviderResetCount < this.numberOfFulfilledProviderToResets) {
+            const count: u8 = this.numberOfFulfilledProviderToResets - currentProviderResetCount;
+            this.liquidityQueue.resetFulfilledProviders(count);
+        }
     }
 
     private ensureValidReceiverAddress(receiver: string): void {
