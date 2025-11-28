@@ -7,6 +7,7 @@ import { getProvider, Provider } from '../models/Provider';
 import {
     DEFAULT_STABLE_AMPLIFICATION,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     POOL_TYPE_STABLE,
     POOL_TYPE_STANDARD,
 } from '../constants/Contract';
@@ -182,6 +183,7 @@ export class CreatePoolOperation extends BaseOperation {
             this.receiverStr,
             false,
             true,
+            MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS
         );
 
         listTokenForSaleOp.execute();

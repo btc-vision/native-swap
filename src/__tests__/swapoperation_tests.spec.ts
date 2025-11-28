@@ -28,7 +28,7 @@ import { SwapOperation } from '../operations/SwapOperation';
 import {
     INITIAL_FEE_COLLECT_ADDRESS,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
 } from '../constants/Contract';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
@@ -135,7 +135,7 @@ describe('SwapOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -212,7 +212,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -274,7 +274,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -352,7 +352,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -435,6 +435,7 @@ describe('SwapOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -453,7 +454,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -542,6 +543,7 @@ describe('SwapOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -558,7 +560,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -655,6 +657,7 @@ describe('SwapOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -672,6 +675,7 @@ describe('SwapOperation tests', () => {
                 receiverAddress2CSV,
                 true,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp2.execute();
@@ -688,7 +692,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -827,7 +831,7 @@ describe('SwapOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -889,7 +893,7 @@ describe('SwapOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -950,7 +954,7 @@ describe('SwapOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -1026,7 +1030,7 @@ describe('SwapOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -1113,6 +1117,7 @@ describe('SwapOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -1131,7 +1136,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();

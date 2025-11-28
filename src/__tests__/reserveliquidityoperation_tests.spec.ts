@@ -22,7 +22,7 @@ import { Reservation } from '../models/Reservation';
 import {
     INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
 } from '../constants/Contract';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
@@ -67,7 +67,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -91,7 +91,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     8,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -115,7 +115,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -139,7 +139,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -163,7 +163,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -218,7 +218,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -279,7 +279,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -295,7 +295,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp2.execute();
@@ -346,7 +346,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -362,7 +362,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp2.execute();
@@ -413,7 +413,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -450,7 +450,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp2.execute();
@@ -505,7 +505,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -543,7 +543,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp2.execute();
@@ -595,7 +595,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -651,7 +651,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -721,7 +721,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -776,7 +776,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -838,7 +838,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -906,7 +906,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -962,7 +962,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -1015,7 +1015,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -1068,7 +1068,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.mockLimitByAvailableLiquidity(u256.Zero);
@@ -1131,6 +1131,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -1148,7 +1149,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -1203,6 +1204,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -1224,7 +1226,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -1283,6 +1285,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 listOp.execute();
@@ -1302,7 +1305,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -1367,7 +1370,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -1425,7 +1428,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -1482,7 +1485,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.Zero,
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -1534,6 +1537,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 listOp.execute();
@@ -1551,7 +1555,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.fromString(`9000000000000000000000000`),
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -1606,6 +1610,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 listOp.execute();
@@ -1628,7 +1633,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u256.fromString(`9000000000000000000000000`),
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -1683,6 +1688,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -1707,7 +1713,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 0,
                 1,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -1773,6 +1779,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -1790,7 +1797,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -1840,7 +1847,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
@@ -1877,7 +1884,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
@@ -1914,7 +1921,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
@@ -1951,7 +1958,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u256.Zero,
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
-                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);

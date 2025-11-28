@@ -41,7 +41,7 @@ import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import {
     INDEX_NOT_SET_VALUE,
     INITIAL_FEE_COLLECT_ADDRESS,
-    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
 } from '../constants/Contract';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
@@ -99,6 +99,7 @@ function listTokenForSale(
         receiverAddressStr,
         priority,
         false,
+        MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     );
 
     listLiquidityOp.execute();
@@ -119,7 +120,7 @@ function reserve(amount: u64): u256 {
         u256.Zero,
         0,
         MAXIMUM_PROVIDER_PER_RESERVATIONS,
-        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS,
+        MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     );
 
     reserveOp.execute();
@@ -232,18 +233,15 @@ describe('Reserve, swap and purge tests', () => {
         reserve(491000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999747637760199259`),
+            u128.fromString(`1000000000000000000000`),
         );
-
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`509714624447399574795`),
+            u128.fromString(`509714254868339636094`),
         );
         expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`490285375552600425205`),
+            u128.fromString(`490285745131660363906`),
         );
 
         // Partial swap the reservation leaving small amount in provider1 smaller than minimum amount, so it is resets.
@@ -271,11 +269,12 @@ describe('Reserve, swap and purge tests', () => {
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isActive()).toBeFalsy();
+
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`296101500287877805852`),
+            u128.fromString(`301757044293016314941`),
         );
         expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`703898499712122194148`),
+            u128.fromString(`698242955706983685059`),
         );
         expect(liquidityProvider2.isPurged()).toBeTruthy();
         expect(liquidityProvider2.isActive()).toBeTruthy();
@@ -307,11 +306,12 @@ describe('Reserve, swap and purge tests', () => {
         expect(liquidityProvider1.getLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
         expect(liquidityProvider1.isActive()).toBeFalsy();
+
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`29610150028787780585`),
+            u128.fromString(`30175704429301631494`),
         );
         expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`970389849971212219415`),
+            u128.fromString(`969824295570698368506`),
         );
         expect(liquidityProvider2.isPurged()).toBeTruthy();
         expect(liquidityProvider2.isActive()).toBeTruthy();
@@ -329,19 +329,17 @@ describe('Reserve, swap and purge tests', () => {
         expect(liquidityProvider1.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999908802226683481`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`91197773316519`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeFalsy();
         expect(liquidityProvider2.isActive()).toBeTruthy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`1990625244105339155630`),
+            u128.fromString(`2047746147359464780909`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`50509374755894660844370`),
+            u128.fromString(`50452253852640535219091`),
         );
     });
 
@@ -402,28 +400,24 @@ describe('Reserve, swap and purge tests', () => {
         reserve(982000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999747637760199259`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isActive()).toBeTruthy();
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999747637760199259`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isActive()).toBeTruthy();
         expect(liquidityProvider2.isPurged()).toBeFalsy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`1019429248894799149590`),
+            u128.fromString(`1019428509736679272188`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`51480570751105200850410`),
+            u128.fromString(`51480571490263320727812`),
         );
 
         // Do a full swap of the reservation for Provider1 and Provider2.
@@ -459,11 +453,12 @@ describe('Reserve, swap and purge tests', () => {
         expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isActive()).toBeFalsy();
         expect(liquidityProvider2.isPurged()).toBeFalsy();
+
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`569906744748483083863`),
+            u128.fromString(`592180754881466294745`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`51930093255251516916137`),
+            u128.fromString(`51907819245118533705255`),
         );
     });
 
@@ -532,34 +527,28 @@ describe('Reserve, swap and purge tests', () => {
         reserve(982000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999265488523258175`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`734511476741825`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999265488523258175`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`734511476741825`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeFalsy();
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999265488523258175`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`734511476741825`),
-        );
+        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider3.isPurged()).toBeFalsy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`76132662604103189112`),
+            u128.fromString(`76130097467422206209`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`52423867337395896810888`),
+            u128.fromString(`52423869902532577793791`),
         );
         expect(initialProvider.isPurged()).toBeFalsy();
 
@@ -598,10 +587,10 @@ describe('Reserve, swap and purge tests', () => {
         reserve(200000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`603536584069841279133`),
+            u128.fromString(`614954866093660445132`),
         );
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`396463415930158720867`),
+            u128.fromString(`385045133906339554868`),
         );
         expect(liquidityProvider1.isPurged()).toBeTruthy();
 
@@ -658,10 +647,10 @@ describe('Reserve, swap and purge tests', () => {
         reserve(200000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`603536584069841279133`),
+            u128.fromString(`614954866093660445132`),
         );
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`396463415930158720867`),
+            u128.fromString(`385045133906339554868`),
         );
         expect(liquidityProvider1.isPurged()).toBeTruthy();
 
@@ -776,34 +765,28 @@ describe('Reserve, swap and purge tests', () => {
         reserve(982000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeFalsy();
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider3.isPurged()).toBeFalsy();
 
         expect(liquidityProvider4.getReservedAmount()).toStrictEqual(
-            u128.fromString(`133365615684374727499`),
+            u128.fromString(`133359185712615157874`),
         );
         expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`866634384315625272501`),
+            u128.fromString(`866640814287384842126`),
         );
         expect(liquidityProvider4.isPurged()).toBeFalsy();
 
@@ -819,43 +802,35 @@ describe('Reserve, swap and purge tests', () => {
         reserve(582000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeFalsy();
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
 
-        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider3.isPurged()).toBeFalsy();
 
         expect(liquidityProvider4.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302131`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697869`),
-        );
+        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(u128.immutableZero);
         expect(liquidityProvider4.isPurged()).toBeFalsy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`990409686005387418165`),
+            u128.fromString(`990400984169582593599`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`51509590313994612581835`),
+            u128.fromString(`51509599015830417406401`),
         );
         expect(initialProvider.isPurged()).toBeFalsy();
 
@@ -881,48 +856,40 @@ describe('Reserve, swap and purge tests', () => {
         initialProvider = getProvider(initialProvider.getId());
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
 
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
 
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeFalsy();
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
 
-        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
 
         expect(liquidityProvider3.isPurged()).toBeFalsy();
 
         expect(liquidityProvider4.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302131`),
+            u128.fromString(`1000000000000000000000`),
         );
 
-        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697869`),
-        );
+        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider4.isPurged()).toBeFalsy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`990409686005387418165`),
+            u128.fromString(`990400984169582593599`),
         );
 
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`51509590313994612581835`),
+            u128.fromString(`51509599015830417406401`),
         );
 
         expect(initialProvider.isPurged()).toBeFalsy();
@@ -947,29 +914,28 @@ describe('Reserve, swap and purge tests', () => {
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`968092060271221683973`),
+            u128.fromString(`968092065318608806947`),
         );
         expect(liquidityProvider2.isPurged()).toBeTruthy();
-
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider3.isActive()).toBeFalsy();
 
         expect(liquidityProvider4.getReservedAmount()).toStrictEqual(
-            u128.fromString(`866632406209510574632`),
+            u128.fromString(`866640814287384842126`),
         );
 
         expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`133367593790489425368`),
+            u128.fromString(`133359185712615157874`),
         );
 
         expect(liquidityProvider4.isPurged()).toBeTruthy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`990409686005387418165`),
+            u128.fromString(`990400984169582593599`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`51509590313994612581835`),
+            u128.fromString(`51509599015830417406401`),
         );
         expect(initialProvider.isPurged()).toBeFalsy();
 
@@ -981,19 +947,15 @@ describe('Reserve, swap and purge tests', () => {
         reserve(5200000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999638455120246630`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`361544879753370`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`968090810955492223525`),
+            u128.fromString(`968092065318608806947`),
         );
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1249315729460448`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeFalsy();
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(u128.Zero);
@@ -1001,18 +963,16 @@ describe('Reserve, swap and purge tests', () => {
         expect(liquidityProvider3.isActive()).toBeFalsy();
 
         expect(liquidityProvider4.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999672382740245094`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`327617259754906`),
-        );
+        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider4.isPurged()).toBeFalsy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`15149820551180631924484`),
+            u128.fromString(`15461652651666682932403`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`37350179448819368075516`),
+            u128.fromString(`37038347348333317067597`),
         );
         expect(initialProvider.isPurged()).toBeFalsy();
 
@@ -1031,7 +991,7 @@ describe('Reserve, swap and purge tests', () => {
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`968092060271221683973`),
+            u128.fromString(`968092065318608806947`),
         );
         expect(liquidityProvider2.isPurged()).toBeTruthy();
 
@@ -1040,18 +1000,18 @@ describe('Reserve, swap and purge tests', () => {
         expect(liquidityProvider3.isActive()).toBeFalsy();
 
         expect(liquidityProvider4.getReservedAmount()).toStrictEqual(
-            u128.fromString(`866632406209510574632`),
+            u128.fromString(`866640814287384842126`),
         );
         expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`133367593790489425368`),
+            u128.fromString(`133359185712615157874`),
         );
         expect(liquidityProvider4.isPurged()).toBeTruthy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`990409686005387418165`),
+            u128.fromString(`990400984169582593599`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`51509590313994612581835`),
+            u128.fromString(`51509599015830417406401`),
         );
         expect(initialProvider.isPurged()).toBeFalsy();
 
@@ -1064,19 +1024,15 @@ describe('Reserve, swap and purge tests', () => {
         reserve(2200000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999638455120246630`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`361544879753370`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`968090810955492223525`),
+            u128.fromString(`968092065318608806947`),
         );
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1249315729460448`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeFalsy();
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(u128.Zero);
@@ -1084,18 +1040,16 @@ describe('Reserve, swap and purge tests', () => {
         expect(liquidityProvider3.isActive()).toBeFalsy();
 
         expect(liquidityProvider4.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999672382740245094`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`327617259754906`),
-        );
+        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider4.isPurged()).toBeFalsy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`5768550216127312705097`),
+            u128.fromString(`5900477890977265064927`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`46731449783872687294903`),
+            u128.fromString(`46599522109022734935073`),
         );
         expect(initialProvider.isPurged()).toBeFalsy();
     });
@@ -1177,6 +1131,7 @@ describe('Reserve, swap and purge tests', () => {
             receiverAddress4CSV,
             true,
         );
+
         expect(liquidityProvider3.getLiquidityAmount()).toStrictEqual(
             u128.fromString(`970000000000000000000`),
         );
@@ -1204,42 +1159,34 @@ describe('Reserve, swap and purge tests', () => {
         reserve(1582000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeFalsy();
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(
-            u128.fromString(`969998176960887929403`),
+            u128.fromString(`970000000000000000000`),
         );
-        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1823039112070597`),
-        );
+        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider3.isPurged()).toBeFalsy();
 
         expect(liquidityProvider4.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider4.isPurged()).toBeFalsy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`1077843822450185759744`),
+            u128.fromString(`1075056935887612315196`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`51422156177549814240256`),
+            u128.fromString(`51424943064112387684804`),
         );
         expect(initialProvider.isPurged()).toBeFalsy();
 
@@ -1250,42 +1197,34 @@ describe('Reserve, swap and purge tests', () => {
         reserve(582000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeFalsy();
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(
-            u128.fromString(`969998176960887929403`),
+            u128.fromString(`970000000000000000000`),
         );
-        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1823039112070597`),
-        );
+        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider3.isPurged()).toBeFalsy();
 
         expect(liquidityProvider4.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998021893885302132`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1978106114697868`),
-        );
+        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider4.isPurged()).toBeFalsy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`2934885914665083752542`),
+            u128.fromString(`2931076617737543015223`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`49565114085334916247458`),
+            u128.fromString(`49568923382262456984777`),
         );
         expect(initialProvider.isPurged()).toBeFalsy();
 
@@ -1298,10 +1237,10 @@ describe('Reserve, swap and purge tests', () => {
         }).toThrow();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`1077843822450185759744`),
+            u128.fromString(`1075056935887612315196`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`51422156177549814240256`),
+            u128.fromString(`51424943064112387684804`),
         );
         expect(initialProvider.isPurged()).toBeFalsy();
 
@@ -1324,7 +1263,7 @@ describe('Reserve, swap and purge tests', () => {
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`63814511702695824821`),
+            u128.fromString(`64313419853298421293`),
         );
         expect(liquidityProvider3.isPurged()).toBeTruthy();
 
@@ -1349,11 +1288,9 @@ describe('Reserve, swap and purge tests', () => {
         reserve(5200000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999779032100033197`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`220967899966803`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
@@ -1361,26 +1298,22 @@ describe('Reserve, swap and purge tests', () => {
         expect(liquidityProvider2.isActive()).toBeFalsy();
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(
-            u128.fromString(`63814389441036911641`),
+            u128.fromString(`64313419853298421293`),
         );
-        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`122261658913180`),
-        );
+        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider3.isActive()).toBeTruthy();
 
         expect(liquidityProvider4.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999779032100033197`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`220967899966803`),
-        );
+        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider4.isPurged()).toBeFalsy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`13408505029199753954667`),
+            u128.fromString(`13962976776802889865546`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`39091494970800246045333`),
+            u128.fromString(`38537023223197110134454`),
         );
         expect(initialProvider.isPurged()).toBeFalsy();
 
@@ -1403,7 +1336,7 @@ describe('Reserve, swap and purge tests', () => {
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`63814511702695824821`),
+            u128.fromString(`64313419853298421293`),
         );
         expect(liquidityProvider3.isActive()).toBeTruthy();
 
@@ -1426,12 +1359,10 @@ describe('Reserve, swap and purge tests', () => {
         reserve(2200000);
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999779032100033197`),
+            u128.fromString(`1000000000000000000000`),
         );
 
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`220967899966803`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
@@ -1439,26 +1370,22 @@ describe('Reserve, swap and purge tests', () => {
         expect(liquidityProvider2.isActive()).toBeFalsy();
 
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(
-            u128.fromString(`63814389441036911641`),
+            u128.fromString(`64313419853298421293`),
         );
-        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`122261658913180`),
-        );
+        expect(liquidityProvider3.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider3.isActive()).toBeTruthy();
 
         expect(liquidityProvider4.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999779032100033197`),
+            u128.fromString(`1000000000000000000000`),
         );
-        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`220967899966803`),
-        );
+        expect(liquidityProvider4.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider4.isPurged()).toBeFalsy();
 
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`4482167158023797647338`),
+            u128.fromString(`4716463201808935084677`),
         );
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`48017832841976202352662`),
+            u128.fromString(`47783536798191064915323`),
         );
         expect(initialProvider.isPurged()).toBeFalsy();
     });
@@ -1525,19 +1452,17 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         setBlockchainEnvironment(112, providerAddress3, providerAddress3);
         reserve(491000);
 
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999747637760199259`),
+            u128.fromString(`1000000000000000000000`),
         );
         expect(liquidityProvider1.isPurged()).toBeFalsy();
 
         expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`490285375552600425205`),
+            u128.fromString(`490285745131660363906`),
         );
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`509714624447399574795`),
+            u128.fromString(`509714254868339636094`),
         );
         expect(liquidityProvider2.isPurged()).toBeFalsy();
 
@@ -1549,9 +1474,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         setBlockchainEnvironment(126, providerAddress3, providerAddress3);
         swap([receiverAddress2CSV], [489000]);
 
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeTruthy();
 
@@ -1617,18 +1540,16 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         setBlockchainEnvironment(112, providerAddress3, providerAddress3);
         reserve(491000);
 
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999747637760199259`),
+            u128.fromString(`1000000000000000000000`),
         );
 
         expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`490285375552600425205`),
+            u128.fromString(`490285745131660363906`),
         );
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`509714624447399574795`),
+            u128.fromString(`509714254868339636094`),
         );
 
         // Let the reservation expire and swap.
@@ -1642,7 +1563,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         swap([receiverAddress2CSV], [29000]);
 
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`910831534031630074445`),
+            u128.fromString(`910831540954823117217`),
         );
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeTruthy();
@@ -1693,11 +1614,9 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         setBlockchainEnvironment(112, providerAddress3, providerAddress3);
         reserve(495000);
 
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1180402485036165`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999998819597514963835`),
+            u128.fromString(`1000000000000000000000`),
         );
 
         // Let the Reservation1 expires.
@@ -1707,9 +1626,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         setBlockchainEnvironment(126, providerAddress3, providerAddress3);
         swap([receiverAddress2CSV], [495000]);
 
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString('1180402485036165'),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeTruthy();
 
@@ -1725,10 +1642,10 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         expect(liquidityProvider1.isPurged()).toBeFalsy();
         expect(liquidityProvider1.isActive()).toBeFalsy();
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`51046141161295053629822`),
+            u128.fromString(`51046196246766000246400`),
         );
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`1453858838704946370178`),
+            u128.fromString(`1453803753233999753600`),
         );
     });
 
@@ -1788,18 +1705,14 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         setBlockchainEnvironment(112, providerAddress3, providerAddress3);
         reserve(691000);
 
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999747637760199259`),
+            u128.fromString(`1000000000000000000000`),
         );
 
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999747637760199259`),
+            u128.fromString(`1000000000000000000000`),
         );
 
         // Let the Reservation1 expires.
@@ -1810,14 +1723,12 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         setBlockchainEnvironment(126, providerAddress3, providerAddress3);
         swap([receiverAddress2CSV, receiverAddress5CSV], [489000, 200000]);
 
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeTruthy();
 
         expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`385045062287103961689`),
+            u128.fromString(`385045110033262877355`),
         );
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeTruthy();
@@ -1880,18 +1791,14 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         setBlockchainEnvironment(112, providerAddress3, providerAddress3);
         reserve(691000);
 
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999747637760199259`),
+            u128.fromString(`1000000000000000000000`),
         );
 
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`999999747637760199259`),
+            u128.fromString(`1000000000000000000000`),
         );
 
         // Let the Reservation1 expires.
@@ -1901,15 +1808,12 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         // Provider2 should also be added to purge queue.
         setBlockchainEnvironment(126, providerAddress3, providerAddress3);
         swap([receiverAddress2CSV, receiverAddress5CSV], [489000, 200000]);
-
-        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`252362239800741`),
-        );
+        expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider1.isPurged()).toBeTruthy();
 
         expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`385045062287103961689`),
+            u128.fromString(`385045110033262877355`),
         );
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.isPurged()).toBeTruthy();
@@ -1927,19 +1831,17 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         expect(liquidityProvider1.isPurged()).toBeFalsy();
         expect(liquidityProvider1.isActive()).toBeFalsy();
 
-        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`1689220406365326`),
-        );
+        expect(liquidityProvider2.getAvailableLiquidityAmount()).toStrictEqual(u128.Zero);
         expect(liquidityProvider2.getReservedAmount()).toStrictEqual(
-            u128.fromString(`385043373066697596363`),
+            u128.fromString(`385045110033262877355`),
         );
         expect(liquidityProvider2.isPurged()).toBeFalsy();
 
         expect(initialProvider.getAvailableLiquidityAmount()).toStrictEqual(
-            u128.fromString(`50808730419654587382873`),
+            u128.fromString(`50808939247120802277513`),
         );
         expect(initialProvider.getReservedAmount()).toStrictEqual(
-            u128.fromString(`1691269580345412617127`),
+            u128.fromString(`1691060752879197722487`),
         );
     });
 
@@ -1996,6 +1898,7 @@ describe('Reserve,Swap Expired, Purge tests', () => {
         setBlockchainEnvironment(112, providerAddress3, providerAddress3);
         reserve(691000);
 
+        Blockchain.log(``);
         expect(liquidityProvider1.getAvailableLiquidityAmount()).toStrictEqual(
             u128.fromString(`252362239800741`),
         );

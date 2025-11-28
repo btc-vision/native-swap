@@ -10,13 +10,7 @@ import {
     NORMAL_QUEUE_POINTER,
     NORMAL_QUEUE_PURGED_RESERVATION,
 } from '../constants/StoredPointers';
-import {
-    createProvider,
-    createProviders,
-    providerAddress1,
-    tokenAddress1,
-    tokenIdUint8Array1,
-} from './test_helper';
+import { createProvider, createProviders, providerAddress1, tokenAddress1, tokenIdUint8Array1, } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { PurgedProviderQueue } from '../managers/PurgedProviderQueue';
 import {
@@ -179,6 +173,7 @@ describe('PurgedProviderQueue tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             clearPendingStakingContractAmount();
+            // @ts-expect-error Valid code.
             currentProviderResetCount = 0;
         });
 

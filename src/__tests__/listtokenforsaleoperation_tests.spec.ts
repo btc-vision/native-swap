@@ -23,8 +23,11 @@ import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOpera
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../managers/FeeManager';
 import {
+    DEFAULT_STABLE_AMPLIFICATION,
     INITIAL_FEE_COLLECT_ADDRESS,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+    POOL_TYPE_STANDARD,
 } from '../constants/Contract';
 
 function getLiquidityQueue(): ITestLiquidityQueue {
@@ -98,6 +101,8 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1,
                     receiverAddress1CSV,
                     false,
+                    false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -125,6 +130,8 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1,
                     receiverAddress1CSV,
                     true,
+                    false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -170,6 +177,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     true,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -190,6 +198,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -214,6 +223,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -238,6 +248,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -262,6 +273,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -287,6 +299,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -314,6 +327,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -340,6 +354,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -364,6 +379,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -388,6 +404,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -412,6 +429,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -467,6 +485,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 true,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -509,6 +528,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     true,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -549,6 +569,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     true,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -594,6 +615,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 true,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -642,6 +664,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 true,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -666,6 +689,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 true,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation2.execute();
@@ -718,6 +742,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 true,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -752,6 +777,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 true,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation2.execute();
@@ -790,6 +816,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -814,6 +841,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation2.execute();
@@ -852,6 +880,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -885,6 +914,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation2.execute();
@@ -922,6 +952,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -956,6 +987,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 true,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -986,6 +1018,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 true,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -1012,6 +1045,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 true,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -1038,6 +1072,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 true,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -1067,6 +1102,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -1094,6 +1130,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     'invalidfakeaddress',
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 operation.execute();
@@ -1122,6 +1159,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 true,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -1156,6 +1194,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 true,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -1163,7 +1202,7 @@ describe('ListTokenForSaleOperation tests', () => {
             // Tax should be:300
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(300));
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(19700));
-            expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(100005000));
+            expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(100004850));
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(1000000000009700));
         });
 
@@ -1194,6 +1233,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -1232,6 +1272,9 @@ describe('ListTokenForSaleOperation tests', () => {
                 initialProvider.getId(),
                 u128.fromString(`1000000000000000000`),
                 70,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
 
             const operation = new ListTokensForSaleOperation(
@@ -1242,6 +1285,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 true,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             operation.execute();
@@ -1275,11 +1319,12 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 const initialTokens = queue.totalTokensSellActivated;
 
-                operation.callActivateSlashing();
+                operation.callActivateSlashing(u256.Zero);
 
                 expect(queue.totalTokensSellActivated).toBe(initialTokens);
                 expect(queue.updateCalled()).toBeFalsy();
@@ -1304,9 +1349,10 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
-                operation.callActivateSlashing();
+                operation.callActivateSlashing(u256.fromU64(1000000));
 
                 // oldLiquidity = 1M, newTotal = 2M
                 // half(1M) = 500000, half(2M) = 1M
@@ -1332,9 +1378,10 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
-                operation.callActivateSlashing();
+                operation.callActivateSlashing(u256.fromU64(1000));
 
                 // half(999) = 500 (499 + 1), half(1999) = 1000 (999 + 1)
                 // deltaHalf = 500
@@ -1352,21 +1399,22 @@ describe('ListTokenForSaleOperation tests', () => {
                 const queue: ITestLiquidityQueue = getLiquidityQueue();
                 const provider: Provider = getTestProvider();
 
-                queue.virtualSatoshisReserve = 100000; // Small pool
-                queue.virtualTokenReserve = u256.fromU64(100000);
+                queue.virtualSatoshisReserve = 10000; // Small pool
+                queue.virtualTokenReserve = u256.fromU64(10000);
                 provider.setLiquidityAmount(u128.Zero);
 
                 const operation = new TestListTokenForSaleOperation(
                     queue,
                     provider.getId(),
-                    u128.fromU64(100000), // Large addition relative to pool
+                    u128.fromU64(1000000000), // Large addition relative to pool
                     receiverAddress1,
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
-                operation.callActivateSlashing();
+                operation.callActivateSlashing(u256.fromU64(100000));
             }).toThrow('NATIVE_SWAP: Listing this amount of token would devalue tokens');
         });
 
@@ -1386,61 +1434,13 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(10000));
 
             expect(queue.virtualTokenReserve).toBeGreaterThan(initialVirtualTokenReserve);
             expect(queue.updateCalled()).toBeTruthy();
-        });
-    });
-
-    describe('Minimum satoshi reserve validation', () => {
-        test('should throw when new satoshi reserve would fall below minimum', () => {
-            expect(() => {
-                const queue: ITestLiquidityQueue = getLiquidityQueue();
-                const provider: Provider = getTestProvider();
-                const initialVirtualTokenReserve: u256 = u256.fromU64(100100000);
-                queue.virtualSatoshisReserve = 100100;
-                queue.virtualTokenReserve = initialVirtualTokenReserve;
-                provider.setLiquidityAmount(u128.Zero);
-
-                const operation = new TestListTokenForSaleOperation(
-                    queue,
-                    provider.getId(),
-                    u128.fromU64(200202),
-                    receiverAddress1,
-                    receiverAddress1CSV,
-                    false,
-                    false,
-                );
-
-                operation.callActivateSlashing();
-            }).toThrow(
-                'NATIVE_SWAP: Listing this amount of token would push satoshi reserves too low',
-            );
-        });
-
-        test('should pass when satoshi reserve stays above minimum', () => {
-            const queue: ITestLiquidityQueue = getLiquidityQueue();
-            const provider: Provider = getTestProvider();
-            const initialVirtualTokenReserve: u256 = u256.fromU64(10000000);
-            queue.virtualSatoshisReserve = 10000000; // Well above minimum
-            queue.virtualTokenReserve = initialVirtualTokenReserve;
-
-            const operation = new TestListTokenForSaleOperation(
-                queue,
-                provider.getId(),
-                u128.fromU64(500000), // amountIn
-                receiverAddress1,
-                receiverAddress1CSV,
-                false, // usePriorityQueue
-                false, // isForInitialLiquidity
-            );
-
-            operation.callActivateSlashing();
-
-            expect(queue.virtualTokenReserve).toBeGreaterThan(initialVirtualTokenReserve);
         });
     });
 
@@ -1463,9 +1463,10 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
-                operation.callActivateSlashing();
+                operation.callActivateSlashing(u256.fromU64(400000));
             }).toThrow('NATIVE_SWAP: Cumulative token devaluation too high');
         });
 
@@ -1485,9 +1486,10 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false, // usePriorityQueue
                 false, // isForInitialLiquidity
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(500000));
 
             // Should add to existing pending
             expect(queue.virtualTokenReserve.toU64()).toBeGreaterThan(100000);
@@ -1518,12 +1520,13 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 // After adding deltaHalf: futureT = 1M + 100k = 1.1M
                 // Pending buys = 1.1M, which equals futureT (would drain completely)
 
-                operation.callActivateSlashing();
+                operation.callActivateSlashing(u256.fromU64(200000));
             }).toThrow('NATIVE_SWAP: Pool would be drained by pending operations');
         });
 
@@ -1554,9 +1557,10 @@ describe('ListTokenForSaleOperation tests', () => {
                     receiverAddress1CSV,
                     false,
                     false,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
-                operation.callActivateSlashing();
+                operation.callActivateSlashing(u256.fromU64(10));
             }).toThrow('NATIVE_SWAP: Listing this amount of token would cause pool overflow');
         });
 
@@ -1582,10 +1586,11 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             // Should complete without throwing
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(1000000));
 
             expect(queue.virtualTokenReserve).toBeGreaterThan(u256.Zero);
             expect(queue.updateCalled()).toBeTruthy();
@@ -1606,9 +1611,10 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false, // usePriorityQueue
                 false, // isForInitialLiquidity
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(500000));
 
             const newContribution = provider.getVirtualBTCContribution();
             expect(newContribution).toBeGreaterThan(initialContribution);
@@ -1631,12 +1637,13 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(1000000));
 
             const contribution = provider.getVirtualBTCContribution();
-            expect(contribution).toStrictEqual(1001001);
+            expect(contribution).toStrictEqual(1001000);
         });
     });
 
@@ -1659,9 +1666,10 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(200000));
 
             // Verify operation completed with queue impact considered
             expect(queue.virtualTokenReserve).toBeGreaterThan(u256.fromU64(10000000));
@@ -1685,9 +1693,10 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(200000));
 
             // Should complete successfully with no queue impact
             expect(queue.virtualTokenReserve).toBeGreaterThan(u256.fromU64(10000000));
@@ -1711,9 +1720,10 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(2000000));
 
             // Should handle large values without overflow or errors
             expect(queue.virtualTokenReserve).toBeGreaterThan(u256.fromU64(100000000));
@@ -1740,9 +1750,10 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(200000));
 
             expect(queue.updateCalled()).toBeTruthy();
         });
@@ -1765,9 +1776,10 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(200000));
 
             expect(queue.purgeCalled()).toBeTruthy();
         });
@@ -1789,10 +1801,11 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             const initialActivated = queue.virtualTokenReserve;
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(1000000));
 
             const expected = u256.add(initialActivated, u256.fromU64(500000));
             expect(queue.virtualTokenReserve).toStrictEqual(expected);
@@ -1818,9 +1831,10 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(1000));
 
             // oldLiquidity = 1000, newTotal = 2000
             // half(1000) = 500, half(2000) = 1000
@@ -1846,9 +1860,10 @@ describe('ListTokenForSaleOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
-            operation.callActivateSlashing();
+            operation.callActivateSlashing(u256.fromU64(1002));
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000501));
         });

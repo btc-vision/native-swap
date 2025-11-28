@@ -62,6 +62,8 @@ export const providerAddress1: ExtendedAddress = new ExtendedAddress(
     ],
 );
 
+export const provider1BTCReceiveAddress: string = 'provider1BTCReceiveAddress';
+
 export const providerAddress2: ExtendedAddress = new ExtendedAddress(
     [
         196, 73, 104, 227, 216, 12, 216, 134, 87, 166, 168, 44, 5, 101, 71, 69, 204, 213, 154, 86,
@@ -72,6 +74,7 @@ export const providerAddress2: ExtendedAddress = new ExtendedAddress(
         124, 186, 77, 90, 216, 39, 6, 239, 122, 2, 1,
     ],
 );
+export const provider2BTCReceiveAddress: string = 'provider2BTCReceiveAddress';
 
 export const providerAddress3: ExtendedAddress = new ExtendedAddress(
     [
@@ -83,6 +86,7 @@ export const providerAddress3: ExtendedAddress = new ExtendedAddress(
         53, 209, 126, 10, 49, 77, 37, 107, 101, 113, 23,
     ],
 );
+export const provider3BTCReceiveAddress: string = 'provider3BTCReceiveAddress';
 
 export const providerAddress4: ExtendedAddress = new ExtendedAddress(
     [
@@ -94,6 +98,7 @@ export const providerAddress4: ExtendedAddress = new ExtendedAddress(
         53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 8,
     ],
 );
+export const provider4BTCReceiveAddress: string = 'provider4BTCReceiveAddress';
 
 export const providerAddress5: ExtendedAddress = new ExtendedAddress(
     [
@@ -105,6 +110,7 @@ export const providerAddress5: ExtendedAddress = new ExtendedAddress(
         53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 5,
     ],
 );
+export const provider5BTCReceiveAddress: string = 'provider5BTCReceiveAddress';
 
 export const providerAddress6: ExtendedAddress = new ExtendedAddress(
     [
@@ -116,6 +122,7 @@ export const providerAddress6: ExtendedAddress = new ExtendedAddress(
         209, 126, 10, 49, 77, 37, 107, 89, 67, 88,
     ],
 );
+export const provider6BTCReceiveAddress: string = 'provider6BTCReceiveAddress';
 
 export const providerAddress7: ExtendedAddress = new ExtendedAddress(
     [
@@ -127,6 +134,7 @@ export const providerAddress7: ExtendedAddress = new ExtendedAddress(
         53, 209, 126, 10, 49, 77, 37, 107, 101, 67, 5,
     ],
 );
+export const provider7BTCReceiveAddress: string = 'provider7BTCReceiveAddress';
 
 export const msgSender1: ExtendedAddress = new ExtendedAddress(
     [
@@ -584,6 +592,7 @@ export function createLiquidityQueue(
         providerManager,
         liquidityQueueReserve,
         reservationManager,
+        MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     );
 
     return new CreateLiquidityQueueResult(
@@ -910,7 +919,7 @@ export class TestFulfilledProviderQueue extends FulfilledProviderQueue {
 }
 
 export class TestListTokenForSaleOperation extends ListTokensForSaleOperation {
-    public callActivateSlashing(): void {
-        super.activateSlashing();
+    public callActivateSlashing(netAmountIn: u256): void {
+        super.activateSlashing(netAmountIn);
     }
 }

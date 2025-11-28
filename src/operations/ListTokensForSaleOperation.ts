@@ -20,7 +20,6 @@ import {
     INDEX_NOT_SET_VALUE,
     MAX_CUMULATIVE_IMPACT_BPS,
     MAX_PRICE_IMPACT_BPS,
-    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
     PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
     PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX,
@@ -46,8 +45,8 @@ export class ListTokensForSaleOperation extends BaseOperation {
         receiver: Uint8Array,
         receiverStr: string, // Ensure we recompute the right string
         usePriorityQueue: boolean,
-        isForInitialLiquidity: boolean = false,
-        numberOfFulfilledProviderToResets: u8 = MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+        isForInitialLiquidity: boolean,
+        numberOfFulfilledProviderToResets: u8,
     ) {
         super(liquidityQueue);
 

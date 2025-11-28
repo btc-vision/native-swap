@@ -3,7 +3,11 @@ import { CompletedTrade } from '../models/CompletedTrade';
 import { Blockchain, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { addAmountToStakingContract, Provider } from '../models/Provider';
-import { CappedTokensResult, satoshisToTokens128, tokensToSatoshis, } from '../utils/SatoshisConversion';
+import {
+    CappedTokensResult,
+    satoshisToTokens128,
+    tokensToSatoshis,
+} from '../utils/SatoshisConversion';
 import { IQuoteManager } from './interfaces/IQuoteManager';
 import { IProviderManager } from './interfaces/IProviderManager';
 import {
@@ -195,13 +199,6 @@ export class TradeManager implements ITradeManager {
         // EDGE CASE: Handle providers who bypassed normal listing
         if (!currentQuote.isZero() && provider.getVirtualBTCContribution() === 0) {
             throw new Revert("Impossible state: provider's virtual BTC contribution is zero.");
-
-            // They bypassed listing, so record their FULL value now
-            /*const btcContribution = tokensToSatoshis(totalLiquidity.toU256(), currentQuote);
-                provider.setVirtualBTCContribution(btcContribution);
-
-                // Since they bypassed listing, we need to apply BOTH halves now
-                this.liquidityQueueReserve.addToTotalTokensSellActivated(totalLiquidity.toU256());*/
         } else {
             // Normal case: Apply the SECOND 50% of tokens to the virtual reserves
             // (First 50% was already applied during listing)

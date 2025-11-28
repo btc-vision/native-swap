@@ -21,7 +21,14 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Reservation } from '../models/Reservation';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { ProviderTypes } from '../types/ProviderTypes';
-import { INDEX_NOT_SET_VALUE, INITIAL_LIQUIDITY_PROVIDER_INDEX } from '../constants/Contract';
+import {
+    currentProviderResetCount,
+    DEFAULT_STABLE_AMPLIFICATION,
+    INDEX_NOT_SET_VALUE,
+    INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+    POOL_TYPE_STANDARD,
+} from '../constants/Contract';
 
 const dummyBTCReceiver: string = 'dj2d89j22j23jdwejhd2903du02';
 
@@ -103,6 +110,9 @@ describe('TradeManager tests', () => {
                 provider1.getId(),
                 u128.fromU64(2000000000),
                 5,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
 
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(2000000000));
@@ -157,6 +167,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 5,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -175,6 +188,95 @@ describe('TradeManager tests', () => {
                 u128.Zero,
                 u128.fromU64(100000),
                 u128.fromU64(12000),
+            );
+
+            provider.save();
+
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue2.liquidityQueue.addToNormalQueue(provider);
+            queue2.liquidityQueue.setBlockQuote();
+            queue2.liquidityQueue.save();
+
+            setBlockchainEnvironment(1003, ownerAddress1, ownerAddress1);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(
+                    provider.getQueueIndex(),
+                    u128.fromU32(5000),
+                    ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
+                ),
+            );
+
+            queue3.liquidityQueue.addReservation(reservation);
+            queue3.liquidityQueue.increaseTotalReserved(u256.fromU64(5000));
+
+            queue3.liquidityQueue.setBlockQuote();
+            queue3.liquidityQueue.save();
+
+            setBlockchainEnvironment(1004, ownerAddress1, ownerAddress1);
+
+            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+            const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
+
+            const txOut: TransactionOutput[] = [];
+
+            Blockchain.mockTransactionOutput(txOut);
+            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+
+            queue4.tradeManager.executeTradeNotExpired(reservation2, queue4.liquidityQueue.quote());
+
+            expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(provider.getReservedAmount()).toStrictEqual(u128.fromU64(7000));
+            expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
+        });
+
+        it('should restore reserved liquidity when no UTXO sent for priority provider', () => {
+            setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
+
+            const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = getProvider(initialProviderId);
+
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
+            initialProvider.activate();
+            initialProvider.clearPriority();
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
+            initialProvider.save();
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.liquidityQueue.initializeInitialLiquidity(
+                u256.fromU32(1000),
+                initialProvider.getId(),
+                u128.fromU64(3000000000),
+                5,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
+            queue.liquidityQueue.setBlockQuote();
+
+            queue.liquidityQueue.save();
+
+            setBlockchainEnvironment(1001, providerAddress2, providerAddress2);
+
+            const provider: Provider = createProvider(
+                providerAddress2,
+                tokenAddress1,
+                false,
+                false,
+                false,
+                'wedwedwdwdw',
+                u128.Zero,
+                u128.fromU64(100000),
+                u128.fromU64(12000),
+                true,
+                true,
             );
 
             provider.save();
@@ -242,6 +344,9 @@ describe('TradeManager tests', () => {
                     initialProvider.getId(),
                     u128.fromU64(3000000000),
                     5,
+                    POOL_TYPE_STANDARD,
+                    DEFAULT_STABLE_AMPLIFICATION,
+                    0,
                 );
                 queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
                 queue.liquidityQueue.setBlockQuote();
@@ -306,6 +411,93 @@ describe('TradeManager tests', () => {
             }).toThrow();
         });
 
+        it('should revert when provider is initial liquidity provider', () => {
+            expect(() => {
+                setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
+
+                const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
+                const initialProvider: Provider = getProvider(initialProviderId);
+
+                initialProvider.markInitialLiquidityProvider();
+                initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+                initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
+                initialProvider.activate();
+                initialProvider.clearPriority();
+                initialProvider.setBtcReceiver(dummyBTCReceiver);
+                initialProvider.save();
+
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+                queue.liquidityQueue.initializeInitialLiquidity(
+                    u256.fromU32(1000),
+                    initialProvider.getId(),
+                    u128.fromU64(3000000000),
+                    5,
+                    POOL_TYPE_STANDARD,
+                    DEFAULT_STABLE_AMPLIFICATION,
+                    0,
+                );
+                queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
+                queue.liquidityQueue.setBlockQuote();
+                queue.liquidityQueue.save();
+
+                setBlockchainEnvironment(1001, providerAddress2, providerAddress2);
+
+                const provider: Provider = createProvider(
+                    providerAddress2,
+                    tokenAddress1,
+                    false,
+                    false,
+                    false,
+                    'wedwedwdwdw',
+                    u128.Zero,
+                    u128.fromU64(1000000),
+                    u128.fromU64(12000),
+                );
+                provider.markInitialLiquidityProvider();
+                provider.save();
+
+                const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+                queue2.liquidityQueue.addToNormalQueue(provider);
+                queue2.liquidityQueue.setBlockQuote();
+                queue2.liquidityQueue.save();
+
+                setBlockchainEnvironment(1003, ownerAddress1, ownerAddress1);
+                const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+                const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+                reservation.addProvider(
+                    new ReservationProviderData(
+                        provider.getQueueIndex(),
+                        u128.fromU32(5000),
+                        ProviderTypes.Normal,
+                        reservation.getCreationBlock(),
+                    ),
+                );
+
+                queue3.liquidityQueue.addReservation(reservation);
+                queue3.liquidityQueue.increaseTotalReserved(u256.fromU64(5000));
+                queue3.liquidityQueue.setBlockQuote();
+                queue3.liquidityQueue.save();
+
+                setBlockchainEnvironment(1004, ownerAddress1, ownerAddress1);
+
+                const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+                const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
+
+                const txOut: TransactionOutput[] = [];
+
+                txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 100));
+
+                Blockchain.mockTransactionOutput(txOut);
+
+                queue4.tradeManager.executeTradeNotExpired(
+                    reservation2,
+                    queue4.liquidityQueue.quote(),
+                );
+            }).toThrow();
+        });
+
         it('should handle actualTokens is zero', () => {
             setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
 
@@ -326,6 +518,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 5,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -393,87 +588,91 @@ describe('TradeManager tests', () => {
             expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
         });
 
-        it('should handle provider activation when VirtualBTCContribution is 0', () => {
-            setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
+        it('should revert when VirtualBTCContribution is 0', () => {
+            expect(() => {
+                setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
 
-            const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
-            const initialProvider: Provider = getProvider(initialProviderId);
+                const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
+                const initialProvider: Provider = getProvider(initialProviderId);
 
-            initialProvider.markInitialLiquidityProvider();
-            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
-            initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
-            initialProvider.activate();
-            initialProvider.clearPriority();
-            initialProvider.setBtcReceiver(dummyBTCReceiver);
-            initialProvider.save();
+                initialProvider.markInitialLiquidityProvider();
+                initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+                initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
+                initialProvider.activate();
+                initialProvider.clearPriority();
+                initialProvider.setBtcReceiver(dummyBTCReceiver);
+                initialProvider.save();
 
-            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            queue.liquidityQueue.initializeInitialLiquidity(
-                u256.fromU32(1000),
-                initialProvider.getId(),
-                u128.fromU64(3000000000),
-                5,
-            );
-            queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
-            queue.liquidityQueue.setBlockQuote();
-            queue.liquidityQueue.save();
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+                queue.liquidityQueue.initializeInitialLiquidity(
+                    u256.fromU32(1000),
+                    initialProvider.getId(),
+                    u128.fromU64(3000000000),
+                    5,
+                    POOL_TYPE_STANDARD,
+                    DEFAULT_STABLE_AMPLIFICATION,
+                    0,
+                );
+                queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
+                queue.liquidityQueue.setBlockQuote();
+                queue.liquidityQueue.save();
 
-            setBlockchainEnvironment(1001, providerAddress2, providerAddress2);
+                setBlockchainEnvironment(1001, providerAddress2, providerAddress2);
 
-            const provider: Provider = createProvider(
-                providerAddress2,
-                tokenAddress1,
-                false,
-                false,
-                false,
-                'wedwedwdwdw',
-                u128.Zero,
-                u128.fromU64(1000000),
-                u128.fromU64(12000),
-            );
+                const provider: Provider = createProvider(
+                    providerAddress2,
+                    tokenAddress1,
+                    false,
+                    false,
+                    false,
+                    'wedwedwdwdw',
+                    u128.Zero,
+                    u128.fromU64(1000000),
+                    u128.fromU64(12000),
+                );
 
-            provider.save();
+                provider.save();
 
-            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            queue2.liquidityQueue.addToNormalQueue(provider);
-            queue2.liquidityQueue.setBlockQuote();
-            queue2.liquidityQueue.save();
+                const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+                queue2.liquidityQueue.addToNormalQueue(provider);
+                queue2.liquidityQueue.setBlockQuote();
+                queue2.liquidityQueue.save();
 
-            setBlockchainEnvironment(1003, ownerAddress1, ownerAddress1);
-            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+                setBlockchainEnvironment(1003, ownerAddress1, ownerAddress1);
+                const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
-            reservation.addProvider(
-                new ReservationProviderData(
-                    provider.getQueueIndex(),
-                    u128.fromU32(5000),
-                    ProviderTypes.Normal,
-                    reservation.getCreationBlock(),
-                ),
-            );
+                const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+                reservation.addProvider(
+                    new ReservationProviderData(
+                        provider.getQueueIndex(),
+                        u128.fromU32(5000),
+                        ProviderTypes.Normal,
+                        reservation.getCreationBlock(),
+                    ),
+                );
 
-            queue3.liquidityQueue.addReservation(reservation);
-            queue3.liquidityQueue.increaseTotalReserved(u256.fromU64(5000));
-            queue3.liquidityQueue.setBlockQuote();
-            queue3.liquidityQueue.save();
+                queue3.liquidityQueue.addReservation(reservation);
+                queue3.liquidityQueue.increaseTotalReserved(u256.fromU64(5000));
+                queue3.liquidityQueue.setBlockQuote();
+                queue3.liquidityQueue.save();
 
-            setBlockchainEnvironment(1004, ownerAddress1, ownerAddress1);
+                setBlockchainEnvironment(1004, ownerAddress1, ownerAddress1);
 
-            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+                const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-            const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
+                const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
 
-            const txOut: TransactionOutput[] = [];
+                const txOut: TransactionOutput[] = [];
 
-            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 100));
+                txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 100));
 
-            Blockchain.mockTransactionOutput(txOut);
+                Blockchain.mockTransactionOutput(txOut);
 
-            queue4.tradeManager.executeTradeNotExpired(reservation2, queue4.liquidityQueue.quote());
-            expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(995000));
-            expect(queue4.liquidityQueue.totalTokensSellActivated).toStrictEqual(
-                u256.fromU64(995000),
-            );
+                queue4.tradeManager.executeTradeNotExpired(
+                    reservation2,
+                    queue4.liquidityQueue.quote(),
+                );
+            }).toThrow();
         });
 
         it('should handle provider activation when VirtualBTCContribution is not 0', () => {
@@ -496,6 +695,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 5,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -556,7 +758,7 @@ describe('TradeManager tests', () => {
             queue4.tradeManager.executeTradeNotExpired(reservation2, queue4.liquidityQueue.quote());
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(995000));
             expect(queue4.liquidityQueue.totalTokensSellActivated).toStrictEqual(
-                u256.fromU64(497500),
+                u256.fromU64(500000),
             );
         });
 
@@ -580,6 +782,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 5,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -599,6 +804,7 @@ describe('TradeManager tests', () => {
                 u128.fromU64(999999),
             );
 
+            provider.setVirtualBTCContribution(10000);
             provider.save();
 
             const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -640,6 +846,179 @@ describe('TradeManager tests', () => {
             expect(provider.isActive()).toBeFalsy();
         });
 
+        it('should reset provider when only dust remaining and add to the fulfilled queue', () => {
+            setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
+
+            const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = getProvider(initialProviderId);
+
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
+            initialProvider.activate();
+            initialProvider.clearPriority();
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
+            initialProvider.save();
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.liquidityQueue.initializeInitialLiquidity(
+                u256.fromU32(1000),
+                initialProvider.getId(),
+                u128.fromU64(3000000000),
+                5,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
+            queue.liquidityQueue.setBlockQuote();
+            queue.liquidityQueue.save();
+
+            setBlockchainEnvironment(1001, providerAddress2, providerAddress2);
+
+            const provider: Provider = createProvider(
+                providerAddress2,
+                tokenAddress1,
+                false,
+                false,
+                false,
+                'wedwedwdwdw',
+                u128.Zero,
+                u128.fromU64(1000000),
+                u128.fromU64(999999),
+            );
+
+            provider.setVirtualBTCContribution(10000);
+            provider.save();
+
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue2.liquidityQueue.addToNormalQueue(provider);
+            queue2.liquidityQueue.setBlockQuote();
+            queue2.liquidityQueue.save();
+
+            setBlockchainEnvironment(1003, ownerAddress1, ownerAddress1);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(
+                    provider.getQueueIndex(),
+                    u128.fromU32(999999),
+                    ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
+                ),
+            );
+
+            queue3.liquidityQueue.addReservation(reservation);
+            queue3.liquidityQueue.increaseTotalReserved(u256.fromU64(999999));
+            queue3.liquidityQueue.setBlockQuote();
+            queue3.liquidityQueue.save();
+
+            setBlockchainEnvironment(1004, ownerAddress1, ownerAddress1);
+
+            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+            const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
+
+            const txOut: TransactionOutput[] = [];
+
+            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 10000));
+
+            Blockchain.mockTransactionOutput(txOut);
+
+            // @ts-expect-error valid code.
+            currentProviderResetCount = MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING + 1;
+            queue4.tradeManager.executeTradeNotExpired(reservation2, queue4.liquidityQueue.quote());
+            expect(provider.toReset()).toBeTruthy();
+        });
+        it('should reset priority provider when only dust remaining and add to the fulfilled queue', () => {
+            setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
+
+            const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = getProvider(initialProviderId);
+
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
+            initialProvider.activate();
+            initialProvider.clearPriority();
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
+            initialProvider.save();
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.liquidityQueue.initializeInitialLiquidity(
+                u256.fromU32(1000),
+                initialProvider.getId(),
+                u128.fromU64(3000000000),
+                5,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
+            queue.liquidityQueue.setBlockQuote();
+            queue.liquidityQueue.save();
+
+            setBlockchainEnvironment(1001, providerAddress2, providerAddress2);
+
+            const provider: Provider = createProvider(
+                providerAddress2,
+                tokenAddress1,
+                false,
+                false,
+                false,
+                'wedwedwdwdw',
+                u128.Zero,
+                u128.fromU64(1000000),
+                u128.fromU64(999999),
+                true,
+                true,
+            );
+
+            provider.setVirtualBTCContribution(10000);
+            provider.save();
+
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue2.liquidityQueue.addToNormalQueue(provider);
+            queue2.liquidityQueue.setBlockQuote();
+            queue2.liquidityQueue.save();
+
+            setBlockchainEnvironment(1003, ownerAddress1, ownerAddress1);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(
+                    provider.getQueueIndex(),
+                    u128.fromU32(999999),
+                    ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
+                ),
+            );
+
+            queue3.liquidityQueue.addReservation(reservation);
+            queue3.liquidityQueue.increaseTotalReserved(u256.fromU64(999999));
+            queue3.liquidityQueue.setBlockQuote();
+            queue3.liquidityQueue.save();
+
+            setBlockchainEnvironment(1004, ownerAddress1, ownerAddress1);
+
+            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+            const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
+
+            const txOut: TransactionOutput[] = [];
+
+            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 10000));
+
+            Blockchain.mockTransactionOutput(txOut);
+
+            // @ts-expect-error valid code.
+            currentProviderResetCount = MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING + 1;
+            queue4.tradeManager.executeTradeNotExpired(reservation2, queue4.liquidityQueue.quote());
+            expect(provider.toReset()).toBeTruthy();
+        });
+
         it('should handle partial swap', () => {
             setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
 
@@ -660,6 +1039,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 5,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -679,7 +1061,7 @@ describe('TradeManager tests', () => {
                 u128.fromU64(100000),
                 u128.fromU64(12000),
             );
-
+            provider.setVirtualBTCContribution(10000);
             provider.save();
 
             const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -779,6 +1161,9 @@ describe('TradeManager tests', () => {
                     initialProvider.getId(),
                     u128.fromU64(3000000000),
                     5,
+                    POOL_TYPE_STANDARD,
+                    DEFAULT_STABLE_AMPLIFICATION,
+                    0,
                 );
                 queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
                 queue.liquidityQueue.setBlockQuote();
@@ -854,6 +1239,9 @@ describe('TradeManager tests', () => {
                     initialProvider.getId(),
                     u128.fromU64(3000000000),
                     5,
+                    POOL_TYPE_STANDARD,
+                    DEFAULT_STABLE_AMPLIFICATION,
+                    0,
                 );
                 queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
                 queue.liquidityQueue.setBlockQuote();
@@ -1004,6 +1392,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 5,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -1094,6 +1485,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 5,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -1163,100 +1557,92 @@ describe('TradeManager tests', () => {
             expect(result.totalTokensReserved).toStrictEqual(u256.Zero);
         });
 
-        it('should handle provider activation and trade when VirtualBTCContribution is 0', () => {
-            setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
+        it('should revert when VirtualBTCContribution is 0', () => {
+            expect(() => {
+                setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
 
-            const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
-            const initialProvider: Provider = getProvider(initialProviderId);
+                const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
+                const initialProvider: Provider = getProvider(initialProviderId);
 
-            initialProvider.markInitialLiquidityProvider();
-            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
-            initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
-            initialProvider.activate();
-            initialProvider.clearPriority();
-            initialProvider.setBtcReceiver(dummyBTCReceiver);
-            initialProvider.save();
+                initialProvider.markInitialLiquidityProvider();
+                initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+                initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
+                initialProvider.activate();
+                initialProvider.clearPriority();
+                initialProvider.setBtcReceiver(dummyBTCReceiver);
+                initialProvider.save();
 
-            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            queue.liquidityQueue.initializeInitialLiquidity(
-                u256.fromU32(1000),
-                initialProvider.getId(),
-                u128.fromU64(3000000000),
-                100,
-            );
-            queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
-            queue.liquidityQueue.setBlockQuote();
-            queue.liquidityQueue.save();
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+                queue.liquidityQueue.initializeInitialLiquidity(
+                    u256.fromU32(1000),
+                    initialProvider.getId(),
+                    u128.fromU64(3000000000),
+                    100,
+                    POOL_TYPE_STANDARD,
+                    DEFAULT_STABLE_AMPLIFICATION,
+                    0,
+                );
+                queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
+                queue.liquidityQueue.setBlockQuote();
+                queue.liquidityQueue.save();
 
-            setBlockchainEnvironment(1001, providerAddress2, providerAddress2);
+                setBlockchainEnvironment(1001, providerAddress2, providerAddress2);
 
-            const providerLiquidity = u128.fromString('1000000000000000000000');
+                const providerLiquidity = u128.fromString('1000000000000000000000');
 
-            const provider: Provider = createProvider(
-                providerAddress2,
-                tokenAddress1,
-                false,
-                false,
-                false,
-                'wedwedwdwdw',
-                u128.Zero,
-                providerLiquidity,
-                u128.fromString(`5000000000`),
-            );
-
-            provider.save();
-
-            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            queue2.liquidityQueue.increaseTotalReserve(providerLiquidity.toU256());
-            queue2.liquidityQueue.addToNormalQueue(provider);
-            queue2.liquidityQueue.setBlockQuote();
-            queue2.liquidityQueue.save();
-
-            setBlockchainEnvironment(1003, ownerAddress1, ownerAddress1);
-            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-
-            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
-            reservation.addProvider(
-                new ReservationProviderData(
-                    provider.getQueueIndex(),
+                const provider: Provider = createProvider(
+                    providerAddress2,
+                    tokenAddress1,
+                    false,
+                    false,
+                    false,
+                    'wedwedwdwdw',
+                    u128.Zero,
+                    providerLiquidity,
                     u128.fromString(`5000000000`),
-                    ProviderTypes.Normal,
-                    reservation.getCreationBlock(),
-                ),
-            );
+                );
 
-            queue3.liquidityQueue.increaseTotalReserved(u256.fromString(`5000000000`));
-            queue3.liquidityQueue.addReservation(reservation);
-            queue3.liquidityQueue.setBlockQuote();
-            queue3.liquidityQueue.save();
+                provider.save();
 
-            setBlockchainEnvironment(1024, ownerAddress1, ownerAddress1);
-            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-            const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
-            const txOut: TransactionOutput[] = [];
+                const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+                queue2.liquidityQueue.increaseTotalReserve(providerLiquidity.toU256());
+                queue2.liquidityQueue.addToNormalQueue(provider);
+                queue2.liquidityQueue.setBlockQuote();
+                queue2.liquidityQueue.save();
 
-            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 1000));
+                setBlockchainEnvironment(1003, ownerAddress1, ownerAddress1);
+                const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-            Blockchain.mockTransactionOutput(txOut);
-            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+                const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+                reservation.addProvider(
+                    new ReservationProviderData(
+                        provider.getQueueIndex(),
+                        u128.fromString(`5000000000`),
+                        ProviderTypes.Normal,
+                        reservation.getCreationBlock(),
+                    ),
+                );
 
-            const result = queue4.tradeManager.executeTradeExpired(
-                reservation2,
-                u256.fromString('100000000000000'),
-            );
+                queue3.liquidityQueue.increaseTotalReserved(u256.fromString(`5000000000`));
+                queue3.liquidityQueue.addReservation(reservation);
+                queue3.liquidityQueue.setBlockQuote();
+                queue3.liquidityQueue.save();
 
-            expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
-            expect(result.totalTokensReserved).toStrictEqual(u256.Zero);
-            expect(result.totalTokensPurchased).toStrictEqual(u256.fromU64(1000000000));
-            expect(result.totalSatoshisSpent).toStrictEqual(1000);
+                setBlockchainEnvironment(1024, ownerAddress1, ownerAddress1);
+                const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+                const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
+                const txOut: TransactionOutput[] = [];
 
-            expect(queue4.liquidityQueue.totalTokensSellActivated).toStrictEqual(
-                providerLiquidity.toU256(),
-            );
+                txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 1000));
 
-            expect(provider.getLiquidityAmount()).toStrictEqual(
-                u128.fromString(`999999999999000000000`),
-            );
+                Blockchain.mockTransactionOutput(txOut);
+                expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+
+                const result = queue4.tradeManager.executeTradeExpired(
+                    reservation2,
+                    u256.fromString('100000000000000'),
+                );
+            }).toThrow();
         });
 
         it('should handle provider activation and trade when VirtualBTCContribution is not 0', () => {
@@ -1279,6 +1665,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 100,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -1355,6 +1744,105 @@ describe('TradeManager tests', () => {
             );
         });
 
+        it('should cap when sending more satoshis than required', () => {
+            setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
+
+            const initialProviderId: u256 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = getProvider(initialProviderId);
+
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            initialProvider.setLiquidityAmount(u128.fromU64(3000000000));
+            initialProvider.activate();
+            initialProvider.clearPriority();
+            initialProvider.setBtcReceiver(dummyBTCReceiver);
+            initialProvider.save();
+
+            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue.liquidityQueue.initializeInitialLiquidity(
+                u256.fromU32(1000),
+                initialProvider.getId(),
+                u128.fromU64(3000000000),
+                100,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
+            queue.liquidityQueue.setBlockQuote();
+            queue.liquidityQueue.save();
+
+            setBlockchainEnvironment(1001, providerAddress2, providerAddress2);
+
+            const providerLiquidity = u128.fromString('1000000000000000000000');
+
+            const provider: Provider = createProvider(
+                providerAddress2,
+                tokenAddress1,
+                false,
+                false,
+                false,
+                'wedwedwdwdw',
+                u128.Zero,
+                providerLiquidity,
+                u128.fromString(`5000000000`),
+            );
+            provider.setVirtualBTCContribution(100);
+            provider.save();
+
+            const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            queue2.liquidityQueue.increaseTotalReserve(providerLiquidity.toU256());
+            queue2.liquidityQueue.addToNormalQueue(provider);
+            queue2.liquidityQueue.setBlockQuote();
+            queue2.liquidityQueue.save();
+
+            setBlockchainEnvironment(1003, ownerAddress1, ownerAddress1);
+            const queue3 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+            const reservation: Reservation = createReservation(tokenAddress1, ownerAddress1);
+            reservation.addProvider(
+                new ReservationProviderData(
+                    provider.getQueueIndex(),
+                    u128.fromString(`5000000000`),
+                    ProviderTypes.Normal,
+                    reservation.getCreationBlock(),
+                ),
+            );
+
+            queue3.liquidityQueue.increaseTotalReserved(u256.fromString(`5000000000`));
+            queue3.liquidityQueue.addReservation(reservation);
+            queue3.liquidityQueue.setBlockQuote();
+            queue3.liquidityQueue.save();
+
+            setBlockchainEnvironment(1024, ownerAddress1, ownerAddress1);
+            const queue4 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+            const reservation2: Reservation = new Reservation(tokenAddress1, ownerAddress1);
+            const txOut: TransactionOutput[] = [];
+
+            txOut.push(new TransactionOutput(0, 0, null, provider.getBtcReceiver(), 100000));
+
+            Blockchain.mockTransactionOutput(txOut);
+            expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
+
+            const result = queue4.tradeManager.executeTradeExpired(
+                reservation2,
+                u256.fromString('100000000000000'),
+            );
+
+            expect(provider.getPurgedIndex()).not.toStrictEqual(INDEX_NOT_SET_VALUE);
+            expect(result.totalTokensReserved).toStrictEqual(u256.Zero);
+            expect(result.totalTokensPurchased).toStrictEqual(u256.fromU64(5000000000));
+            expect(result.totalSatoshisSpent).toStrictEqual(5000);
+
+            expect(queue4.liquidityQueue.totalTokensSellActivated).toStrictEqual(
+                SafeMath.div128(providerLiquidity, u128.fromU32(2)).toU256(),
+            );
+
+            expect(provider.getLiquidityAmount()).toStrictEqual(
+                u128.fromString(`999999999995000000000`),
+            );
+        });
+
         it('should restore provider liquidity when reservation is not purged and mark it as not purged', () => {
             setBlockchainEnvironment(1000, providerAddress1, providerAddress1);
 
@@ -1375,6 +1863,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 100,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -1395,7 +1886,7 @@ describe('TradeManager tests', () => {
                 providerLiquidity,
                 providerLiquidity,
             );
-
+            provider.setVirtualBTCContribution(10000);
             provider.save();
 
             const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -1444,13 +1935,15 @@ describe('TradeManager tests', () => {
             expect(provider.getLiquidityAmount()).toStrictEqual(
                 SafeMath.sub128(providerLiquidity, u128.fromU64(1000000000)),
             );
+
             expect(result.totalTokensReserved).toStrictEqual(u256.Zero);
             expect(result.totalTokensPurchased).toStrictEqual(u256.fromU64(1000000000));
             expect(result.totalSatoshisSpent).toStrictEqual(1000);
 
             expect(queue4.liquidityQueue.totalTokensSellActivated).toStrictEqual(
-                providerLiquidity.toU256(),
+                SafeMath.div(providerLiquidity.toU256(), u256.fromU64(2)),
             );
+
             expect(reservation2.getPurged()).toBeFalsy();
         });
 
@@ -1474,6 +1967,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 100,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -1494,7 +1990,7 @@ describe('TradeManager tests', () => {
                 providerLiquidity,
                 providerLiquidity,
             );
-
+            provider.setVirtualBTCContribution(1000);
             provider.save();
 
             const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -1548,7 +2044,7 @@ describe('TradeManager tests', () => {
             expect(result.totalSatoshisSpent).toStrictEqual(1000);
 
             expect(queue5.liquidityQueue.totalTokensSellActivated).toStrictEqual(
-                providerLiquidity.toU256(),
+                SafeMath.div(providerLiquidity.toU256(), u256.fromU64(2)),
             );
 
             expect(provider.getLiquidityAmount()).toStrictEqual(
@@ -1577,6 +2073,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 100,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -1663,6 +2162,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 100,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -1749,6 +2251,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(3000000000),
                 100,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(3000000000));
             queue.liquidityQueue.setBlockQuote();
@@ -1835,6 +2340,9 @@ describe('TradeManager tests', () => {
                 initialProvider.getId(),
                 u128.fromU64(7000000000),
                 100,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
             queue.liquidityQueue.increaseTotalReserve(u256.fromU64(7000000000));
             queue.liquidityQueue.setBlockQuote();
