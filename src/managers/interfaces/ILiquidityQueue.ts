@@ -28,8 +28,6 @@ export interface ILiquidityQueue {
 
     cleanUpQueues(currentQuote: u256): void;
 
-    //accruePenalty(penalty: u128, half: u128): void;
-
     addReservation(reservation: Reservation): void;
 
     addToNormalQueue(provider: Provider): void;
