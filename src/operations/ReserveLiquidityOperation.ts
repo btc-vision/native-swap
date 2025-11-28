@@ -108,7 +108,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         return SafeMath.min(this.liquidityQueue.availableLiquidity, tokens);
     }
 
-    private tryFesetFulfilledProviders() {
+    private tryFesetFulfilledProviders(): void {
         if (currentProviderResetCount < this.numberOfFulfilledProviderToResets) {
             const count: u8 = this.numberOfFulfilledProviderToResets - currentProviderResetCount;
             this.liquidityQueue.resetFulfilledProviders(count);

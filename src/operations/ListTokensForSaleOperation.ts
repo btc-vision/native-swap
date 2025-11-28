@@ -133,7 +133,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.liquidityQueue.purgeReservationsAndRestoreProviders(this.liquidityQueue.quote());
     }
 
-    private tryResetFulfilledProviders() {
+    private tryResetFulfilledProviders(): void {
         if (currentProviderResetCount < this.numberOfFulfilledProviderToResets) {
             const count: u8 = this.numberOfFulfilledProviderToResets - currentProviderResetCount;
             this.liquidityQueue.resetFulfilledProviders(count);
