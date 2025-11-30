@@ -1,6 +1,6 @@
 import { clearCachedProviders, getProvider } from '../models/Provider';
-import { Blockchain } from '@btc-vision/btc-runtime/runtime';
-import { CreatePoolOperation } from '../operations/CreatePoolOperation';
+import { Blockchain, BytesWriter } from '@btc-vision/btc-runtime/runtime';
+import { CreatePoolOperation, PEG_UPDATED_AT_SELECTOR } from '../operations/CreatePoolOperation';
 import {
     createLiquidityQueue,
     createProviderId,
@@ -12,6 +12,7 @@ import {
     tokenIdUint8Array1,
 } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { POOL_TYPE_STABLE } from '../constants/Contract';
 
 describe('CreatePoolOperation tests', () => {
     beforeEach(() => {
@@ -176,6 +177,108 @@ describe('CreatePoolOperation tests', () => {
                     0,
                     u256.Zero,
                     115,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
+
+        it('should revert if pool type is invalid', () => {
+            setBlockchainEnvironment(100);
+            Blockchain.mockValidateBitcoinAddressResult(true);
+
+            expect(() => {
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const operation = new CreatePoolOperation(
+                    queue.liquidityQueue,
+                    u256.fromU64(100),
+                    u256.fromU64(100),
+                    u128.fromU64(100000),
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    0,
+                    u256.Zero,
+                    10,
+                    3,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
+
+        it('should revert if amplification is < 1', () => {
+            setBlockchainEnvironment(100);
+            Blockchain.mockValidateBitcoinAddressResult(true);
+
+            expect(() => {
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const operation = new CreatePoolOperation(
+                    queue.liquidityQueue,
+                    u256.fromU64(100),
+                    u256.fromU64(100),
+                    u128.fromU64(100000),
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    0,
+                    u256.Zero,
+                    10,
+                    POOL_TYPE_STABLE,
+                    0,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
+
+        it('should revert if amplification is > 10000', () => {
+            setBlockchainEnvironment(100);
+            Blockchain.mockValidateBitcoinAddressResult(true);
+
+            expect(() => {
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const operation = new CreatePoolOperation(
+                    queue.liquidityQueue,
+                    u256.fromU64(100),
+                    u256.fromU64(100),
+                    u128.fromU64(100000),
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    0,
+                    u256.Zero,
+                    10,
+                    POOL_TYPE_STABLE,
+                    10001,
+                );
+
+                operation.execute();
+            }).toThrow();
+        });
+
+        it('should revert if pool is stable but token does not implements IOP20Stable', () => {
+            setBlockchainEnvironment(100);
+            Blockchain.mockValidateBitcoinAddressResult(true);
+
+            expect(() => {
+                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+
+                const calldata = new BytesWriter(4);
+                calldata.writeSelector(PEG_UPDATED_AT_SELECTOR);
+                Blockchain.mockCallResult(tokenAddress1, calldata, false, new Uint8Array(0));
+
+                const operation = new CreatePoolOperation(
+                    queue.liquidityQueue,
+                    u256.fromU64(100),
+                    u256.fromU64(100),
+                    u128.fromU64(100000),
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                    0,
+                    u256.Zero,
+                    10,
+                    POOL_TYPE_STABLE,
                 );
 
                 operation.execute();

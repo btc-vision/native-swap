@@ -12,7 +12,7 @@ import {
     POOL_TYPE_STANDARD,
 } from '../constants/Contract';
 
-const PEG_UPDATED_AT_SELECTOR = encodeSelector('pegUpdatedAt()');
+export const PEG_UPDATED_AT_SELECTOR = encodeSelector('pegUpdatedAt()');
 
 export class CreatePoolOperation extends BaseOperation {
     private readonly floorPrice: u256;
@@ -111,6 +111,7 @@ export class CreatePoolOperation extends BaseOperation {
 
         // This will revert if token doesn't implement pegUpdatedAt()
         const result = Blockchain.call(this.liquidityQueue.token, calldata);
+
         const lastUpdated = result.data.readU64();
 
         if (lastUpdated === 0) {
@@ -183,7 +184,7 @@ export class CreatePoolOperation extends BaseOperation {
             this.receiverStr,
             false,
             true,
-            MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS
+            MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
         );
 
         listTokenForSaleOp.execute();

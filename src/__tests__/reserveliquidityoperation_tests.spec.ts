@@ -428,9 +428,9 @@ describe('ReserveLiquidityOperation tests', () => {
             const value1 = reservation.getProviderAt(0);
             expect(value1.providerIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
 
-            expect(value1.providedAmount).toStrictEqual(u128.fromString(`49999999234504000000000`));
+            expect(value1.providedAmount).toStrictEqual(u128.fromString(`50000000000000000000000`));
             expect(queue2.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`49999999234504000000000`),
+                u256.fromString(`50000000000000000000000`),
             );
 
             for (let i: u64 = 105; i < 110; i++) {
@@ -853,7 +853,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             if (result !== null) {
                 expect(result.providedAmount).toStrictEqual(
-                    u128.fromString(`9999999254720000000000`),
+                    u128.fromString(`10000000000000000000000`),
                 );
             }
         });
@@ -1156,7 +1156,7 @@ describe('ReserveLiquidityOperation tests', () => {
             queue3.liquidityQueue.save();
 
             expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`58313957043608874058`),
+                u256.fromString(`58313957004731606786`),
             );
         });
 
@@ -1237,7 +1237,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const values = reservation.getProviderAt(0);
 
-            expect(values.providedAmount).toStrictEqual(u128.fromString(`19999332566651506515`));
+            expect(values.providedAmount).toStrictEqual(u128.fromString(`19739754777987943360`));
         });
 
         it('should revert when provider queue index is not set', () => {
@@ -1816,10 +1816,10 @@ describe('ReserveLiquidityOperation tests', () => {
 
             expect(value1.providerIndex).toStrictEqual(0);
             expect(value2.providerIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
-            expect(value1.providedAmount).toStrictEqual(u128.fromString(`999999377306919384500`));
-            expect(value2.providedAmount).toStrictEqual(u128.fromString(`49050000528095916286227`));
+            expect(value1.providedAmount).toStrictEqual(u128.fromString(`1000000000000000000000`));
+            expect(value2.providedAmount).toStrictEqual(u128.fromString(`49050000000000000000000`));
             expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`50049999905402835670727`),
+                u256.fromString(`50050000000000000000000`),
             );
 
             const reservationList = queue3.reservationManager.callgetReservationListForBlock(103);
@@ -1866,7 +1866,7 @@ describe('ReserveLiquidityOperation tests', () => {
             expect(data).not.toBeNull();
 
             if (data !== null) {
-                expect(data.providedAmount).toStrictEqual(u128.fromString(`9999999999999999999`));
+                expect(data.providedAmount).toStrictEqual(u128.fromString(`10000000000000000000`));
             }
         });
 
@@ -1903,7 +1903,7 @@ describe('ReserveLiquidityOperation tests', () => {
             expect(data).not.toBeNull();
 
             if (data !== null) {
-                expect(data.providedAmount).toStrictEqual(u128.fromString(`12221999999999999999`));
+                expect(data.providedAmount).toStrictEqual(u128.fromString(`12222222222222222222`));
             }
         });
 
@@ -1940,7 +1940,7 @@ describe('ReserveLiquidityOperation tests', () => {
             expect(data).not.toBeNull();
 
             if (data !== null) {
-                expect(data.providedAmount).toStrictEqual(u128.fromString(`13333333333333333333`));
+                expect(data.providedAmount).toStrictEqual(u128.fromString(`13333333333333333332`));
             }
         });
 
