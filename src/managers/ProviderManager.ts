@@ -43,7 +43,6 @@ export class ProviderManager implements IProviderManager {
     protected readonly priorityPurgedQueue: PriorityPurgedProviderQueue;
     protected readonly normalFulfilledQueue: FulfilledProviderQueue;
     protected readonly priorityFulfilledQueue: FulfilledProviderQueue;
-
     protected readonly quoteManager: IQuoteManager;
     private readonly _startingIndex: StoredU32;
     private readonly _initialLiquidityProviderId: StoredU256;
@@ -303,7 +302,7 @@ export class ProviderManager implements IProviderManager {
     }
 
     public getQueueData(): Uint8Array {
-        const writer = new BytesWriter(U32_BYTE_LENGTH * 6);
+        const writer = new BytesWriter(U32_BYTE_LENGTH * 8);
 
         writer.writeU32(this.priorityQueue.length);
         writer.writeU32(this.priorityQueue.startingIndex);
@@ -313,6 +312,9 @@ export class ProviderManager implements IProviderManager {
 
         writer.writeU32(this.priorityPurgedQueue.length);
         writer.writeU32(this.normalPurgedQueue.length);
+
+        writer.writeU32(this.priorityFulfilledQueue.getLength());
+        writer.writeU32(this.normalFulfilledQueue.getLength());
 
         return writer.getBuffer();
     }

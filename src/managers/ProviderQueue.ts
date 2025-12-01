@@ -278,14 +278,14 @@ export class ProviderQueue {
     }
 
     protected isEligible(provider: Provider): boolean {
-        const isActive: boolean = provider.isActive();
+        const isEligible: boolean = provider.isActive();
 
-        if (isActive) {
+        if (isEligible) {
             this.ensureProviderIsNotPriority(provider);
             this.ensureProviderLiquidityIsValid(provider);
         }
 
-        return isActive;
+        return isEligible;
     }
 
     protected tryNextCandidate(
@@ -298,7 +298,7 @@ export class ProviderQueue {
         if (!providerId.isZero()) {
             const provider: Provider = getProvider(providerId);
 
-            if (this.isEligible(provider)) {
+            if (this.isEligible(provider) && !provider.toReset()) {
                 result = this.returnProvider(
                     fulfilledQueue,
                     provider,

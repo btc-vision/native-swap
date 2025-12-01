@@ -77,7 +77,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.liquidityQueue.addReservation(reservation);
         this.liquidityQueue.setBlockQuote();
         this.liquidityQueue.cleanUpQueues(this.currentQuote);
-        this.tryFesetFulfilledProviders();
+        this.tryResetFulfilledProviders();
         this.emitReservationCreatedEvent();
     }
 
@@ -108,7 +108,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         return SafeMath.min(this.liquidityQueue.availableLiquidity, tokens);
     }
 
-    private tryFesetFulfilledProviders(): void {
+    private tryResetFulfilledProviders(): void {
         if (currentProviderResetCount < this.numberOfFulfilledProviderToResets) {
             const count: u8 = this.numberOfFulfilledProviderToResets - currentProviderResetCount;
             this.liquidityQueue.resetFulfilledProviders(count);
