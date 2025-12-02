@@ -896,32 +896,32 @@ describe('ProviderQueue tests', () => {
             expect(queue.getNextWithLiquidity(fulfilledQueue, QUOTE)).toBeNull();
         });
 
-        it('reverts if provider is fulfilled', () => {
-            expect(() => {
-                const liquidityQueueReserve = new LiquidityQueueReserve(
-                    tokenAddress1,
-                    tokenIdUint8Array1,
-                );
+        it('skips provider if provider is fulfilled', () => {
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
 
-                const queue: ProviderQueue = new ProviderQueue(
-                    tokenAddress1,
-                    NORMAL_QUEUE_POINTER,
-                    tokenIdUint8Array1,
-                    ENABLE_INDEX_VERIFICATION,
-                    MAXIMUM_NUMBER_OF_PROVIDERS,
-                    liquidityQueueReserve,
-                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
-                );
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
+                MAXIMUM_NUMBER_OF_PROVIDERS,
+                liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+            );
 
-                const fulfilledQueue: FulfilledProviderQueue =
-                    createNormalFulfilledQueue(liquidityQueueReserve);
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
 
-                const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
-                provider1.markToReset();
-                queue.add(provider1);
+            const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
+            provider1.markToReset();
+            queue.add(provider1);
 
-                queue.getNextWithLiquidity(fulfilledQueue, QUOTE);
-            }).toThrow();
+            const result = queue.getNextWithLiquidity(fulfilledQueue, QUOTE);
+
+            expect(result).toBeNull();
         });
 
         it('reverts if provider is purged and trying to add to fulfilled queue', () => {
