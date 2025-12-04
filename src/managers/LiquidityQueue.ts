@@ -875,13 +875,22 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     private calculateQueueImpact(): u256 {
-        const queuedTokens = this.liquidity;
+        // Queue impact = sell pressure not yet priced into virtualTokenReserve.
+        // - Initial LP: their tokens define virtualTokenReserve directly (no activateSlashing call)
+        // - Subsequent providers: first half priced in via totalTokensSellActivated,
+        //   second half pending until provider activation
+        // Difference naturally captures only un-activated supply.
 
-        if (queuedTokens.isZero()) {
+        if (u256.le(this.liquidity, this.virtualTokenReserve)) {
             return u256.Zero;
         }
 
-        const ratio = SafeMath.add(u256.One, SafeMath.div(queuedTokens, this.virtualTokenReserve));
+        const excessLiquidity = SafeMath.sub(this.liquidity, this.virtualTokenReserve);
+        const ratio = SafeMath.add(
+            u256.One,
+            SafeMath.div(excessLiquidity, this.virtualTokenReserve),
+        );
+
         const lnValue = preciseLog(ratio);
         const lnSquared = SafeMath.div(SafeMath.mul(lnValue, lnValue), u256.fromU64(1000000));
 
