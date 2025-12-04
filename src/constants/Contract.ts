@@ -1,14 +1,14 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 export const INITIAL_FEE_COLLECT_ADDRESS: string =
-    'bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh';
+    'bcrt1qup339pnfsgz7rwu5qvw7e3pgdjmpda9zlwlg8ua70v3p8xl3tnqsjm472h';
 
 // tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c
 // bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh
 
 export const ENABLE_FEES: bool = true;
 export const QUOTE_SCALE: u256 = u256.fromU64(100_000_000);
-export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 5;
+export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 8;
 export const VOLATILITY_WINDOW_IN_BLOCKS: u32 = 8;
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT: u64 = 600;
 export const MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT: u64 = 1000;
@@ -20,8 +20,8 @@ export const TIMEOUT_AFTER_EXPIRATION_BLOCKS: u8 = 2;
 export const MAX_TOTAL_SATOSHIS: u256 = u256.fromU64(21_000_000 * 100_000_000);
 export const MAX_ACTIVATION_DELAY: u8 = 3;
 
-export const MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING: u8 = 100;
-export const MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS: u8 = 40;
+export const MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING: u8 = 120;
+export const MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS: u8 = 50;
 
 export const MAX_PRICE_IMPACT_BPS = u256.fromU64(10_000); // 40% 3_000 15_000
 export const MAX_CUMULATIVE_IMPACT_BPS = u256.fromU32(20_000);
@@ -68,7 +68,7 @@ export const MAX_PEG_RATE: u256 = u256.fromUint8ArrayBE(
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
  */
-export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 140;
+export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 150;
 
 export const AT_LEAST_PROVIDERS_TO_PURGE: u32 = 100;
 
