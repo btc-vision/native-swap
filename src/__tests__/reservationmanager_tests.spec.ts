@@ -785,7 +785,7 @@ describe('Reservation manager tests', () => {
 
                 createLiquidityQueueResult.liquidityQueue.save();
 
-                setBlockchainEnvironment(106);
+                setBlockchainEnvironment(109);
                 const createLiquidityQueueResult2 = createLiquidityQueue(
                     tokenAddress1,
                     tokenIdUint8Array1,
@@ -844,7 +844,7 @@ describe('Reservation manager tests', () => {
 
                 createLiquidityQueueResult.liquidityQueue.save();
 
-                setBlockchainEnvironment(106);
+                setBlockchainEnvironment(109);
                 const createLiquidityQueueResult2 = createLiquidityQueue(
                     tokenAddress1,
                     tokenIdUint8Array1,
@@ -926,7 +926,7 @@ describe('Reservation manager tests', () => {
             reservation2.save();
             createLiquidityQueueResult2.liquidityQueue.save();
 
-            setBlockchainEnvironment(106);
+            setBlockchainEnvironment(109);
             const createLiquidityQueueResult3 = createLiquidityQueue(
                 tokenAddress1,
                 tokenIdUint8Array1,
