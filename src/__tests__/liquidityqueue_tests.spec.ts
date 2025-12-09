@@ -1657,7 +1657,9 @@ describe('Liquidity queue tests', () => {
                 queue.addReservation(reservation);
                 queue.save();
 
-                setBlockchainEnvironment(1006, providerAddress1, providerAddress1);
+                // With RESERVATION_EXPIRE_AFTER_IN_BLOCKS = 8, reservation expires at 1008
+                // At block 1009, it's expired (1009 > 1008) -> throws
+                setBlockchainEnvironment(1009, providerAddress1, providerAddress1);
                 const reservation2: Reservation = queue.getReservationWithExpirationChecks();
 
                 expect(reservation2).not.toBeNull();
