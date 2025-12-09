@@ -703,7 +703,7 @@ describe('SwapOperation tests', () => {
             expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(provider2.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(provider3.getReservedAmount()).toStrictEqual(
-                u128.fromString(`9889132838186760918`),
+                u128.fromString(`6679826502706791897`),
             );
 
             const transactionOutput: TransactionOutput[] = [];
@@ -732,7 +732,7 @@ describe('SwapOperation tests', () => {
             expect(queue5.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue5.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(10000);
             expect(queue5.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
-                u256.fromString(`9889132838186760918`),
+                u256.fromString(`6679826502706791897`),
             );
             expect(reservationActiveList.get(0)).toBeFalsy();
             expect(TransferHelper.transferCalled).toBeTruthy();

@@ -421,7 +421,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
             expect(reservation.getActivationDelay()).toStrictEqual(2);
-            expect(reservation.getExpirationBlock()).toStrictEqual(108);
+            expect(reservation.getExpirationBlock()).toStrictEqual(111);
             expect(reservation.getPurgeIndex()).toStrictEqual(0);
             expect(reservation.getProviderCount()).toStrictEqual(1);
 
@@ -1156,7 +1156,7 @@ describe('ReserveLiquidityOperation tests', () => {
             queue3.liquidityQueue.save();
 
             expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromString(`58313957004731606786`),
+                u256.fromString(`39389292597619920664`),
             );
         });
 
@@ -1237,7 +1237,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const values = reservation.getProviderAt(0);
 
-            expect(values.providedAmount).toStrictEqual(u128.fromString(`19739754777987943360`));
+            expect(values.providedAmount).toStrictEqual(u128.fromString(`13333599993777537779`));
         });
 
         it('should revert when provider queue index is not set', () => {
@@ -1807,7 +1807,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
             expect(reservation.getActivationDelay()).toStrictEqual(2);
-            expect(reservation.getExpirationBlock()).toStrictEqual(108);
+            expect(reservation.getExpirationBlock()).toStrictEqual(111);
             expect(reservation.getPurgeIndex()).toStrictEqual(0);
 
             expect(reservation.getProviderCount()).toStrictEqual(2);

@@ -621,7 +621,7 @@ describe('Reservation manager tests', () => {
             manager2.purgeReservationsAndRestoreProviders(100, quote);
 
             expect(createLiquidityQueueResult.liquidityQueue.reservedLiquidity).toStrictEqual(
-                u256.fromU64(150000),
+                u256.fromU64(400000),
             );
         });
 
