@@ -99,19 +99,13 @@ describe('MathUtils tests', () => {
             expect(SafeMath.preciseLogRatio(x, x)).toStrictEqual(u256.Zero);
         });
 
-        it('preciseLogRatio(2x, x) ≈ ln(2) * SCALE', () => {
+        it('preciseLogRatio(2x, x) = ln(2) * SCALE exactly', () => {
             const x = u256.fromU64(1000000);
             const twoX = SafeMath.mul(x, u256.fromU32(2));
             const result = SafeMath.preciseLogRatio(twoX, x);
             // ln(2) ≈ 0.693147, scaled by 1e6 = 693147
-            // Allow 1% tolerance
-            const expected = LN2_SCALED;
-            const delta = SafeMath.sub(
-                result > expected ? result : expected,
-                result > expected ? expected : result,
-            );
-            const tolerance = SafeMath.div(expected, u256.fromU32(100)); // 1%
-            expect(delta <= tolerance).toBeTruthy();
+            // For ratio = 2, uses k*ln(2) decomposition which gives exact ln(2)
+            expect(result).toStrictEqual(LN2_SCALED);
         });
 
         it('monotonicity – larger ratio gives larger result', () => {
@@ -146,13 +140,8 @@ describe('MathUtils tests', () => {
             const x = u256.fromString('1000000000000000000000000'); // 1e24
             const twoX = SafeMath.mul(x, u256.fromU32(2));
             const result = SafeMath.preciseLogRatio(twoX, x);
-            // Should still be approximately ln(2) * SCALE
-            const delta = SafeMath.sub(
-                result > LN2_SCALED ? result : LN2_SCALED,
-                result > LN2_SCALED ? LN2_SCALED : result,
-            );
-            const tolerance = SafeMath.div(LN2_SCALED, u256.fromU32(100)); // 1%
-            expect(delta <= tolerance).toBeTruthy();
+            // For ratio = 2, uses k*ln(2) decomposition which gives exact ln(2)
+            expect(result).toStrictEqual(LN2_SCALED);
         });
 
         it('handles small fractions (a only slightly larger than b)', () => {
