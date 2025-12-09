@@ -519,7 +519,7 @@ describe('Reservation manager tests', () => {
             const manager = createLiquidityQueueResult.reservationManager;
             const result = manager.purgeReservationsAndRestoreProviders(0, quote);
 
-            expect(result).toStrictEqual(95);
+            expect(result).toStrictEqual(92);
         });
 
         it('restores current index if no new blocks', () => {
@@ -692,7 +692,7 @@ describe('Reservation manager tests', () => {
 
             createLiquidityQueueResult.liquidityQueue.save();
 
-            setBlockchainEnvironment(106);
+            setBlockchainEnvironment(109);
             const createLiquidityQueueResult2 = createLiquidityQueue(
                 tokenAddress1,
                 tokenIdUint8Array1,
