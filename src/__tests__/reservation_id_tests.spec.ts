@@ -284,4 +284,297 @@ describe('Reservation ID Generation Tests', () => {
         }
         expect(same).toStrictEqual(false);
     });
+
+    it('should hash buffers created in sequence independently', () => {
+        // Create account0 first, hash it immediately
+        const account0 = generateAccount(0);
+        const writer0 = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
+        writer0.writeAddress(tokenAddress1);
+        writer0.writeAddress(account0);
+        const buffer0 = writer0.getBuffer();
+
+        // Hash buffer0 BEFORE creating buffer73
+        const hash0 = ripemd160(buffer0);
+
+        // Now create account73 and buffer73
+        const account73 = generateAccount(73);
+        const writer73 = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
+        writer73.writeAddress(tokenAddress1);
+        writer73.writeAddress(account73);
+        const buffer73 = writer73.getBuffer();
+
+        // Hash buffer73
+        const hash73 = ripemd160(buffer73);
+
+        // Log hashes
+        let h0Hex = '';
+        let h73Hex = '';
+        for (let i: i32 = 0; i < 20; i++) {
+            h0Hex += hash0[i].toString() + '-';
+            h73Hex += hash73[i].toString() + '-';
+        }
+        Blockchain.log(`Sequential Hash 0: ${h0Hex}`);
+        Blockchain.log(`Sequential Hash 73: ${h73Hex}`);
+
+        // Check if hashes are different
+        let same = true;
+        for (let i: i32 = 0; i < 20; i++) {
+            if (hash0[i] != hash73[i]) {
+                same = false;
+                break;
+            }
+        }
+        Blockchain.log(`Sequential hashes are same: ${same ? 'YES' : 'NO'}`);
+        expect(same).toStrictEqual(false);
+    });
+
+    it('should verify buffer memory is independent', () => {
+        const account0 = generateAccount(0);
+        const account73 = generateAccount(73);
+
+        const writer0 = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
+        writer0.writeAddress(tokenAddress1);
+        writer0.writeAddress(account0);
+
+        const writer73 = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
+        writer73.writeAddress(tokenAddress1);
+        writer73.writeAddress(account73);
+
+        // Get buffer references
+        const buf0 = writer0.getBuffer();
+        const buf73 = writer73.getBuffer();
+
+        // Log dataStart pointers (memory addresses)
+        Blockchain.log(`buf0.dataStart: ${buf0.dataStart.toString()}`);
+        Blockchain.log(`buf73.dataStart: ${buf73.dataStart.toString()}`);
+
+        // They should be different memory locations
+        expect(buf0.dataStart).not.toStrictEqual(buf73.dataStart);
+
+        // Now hash using the NATIVE Uint8Array methods
+        const freshCopy0 = new Uint8Array(64);
+        const freshCopy73 = new Uint8Array(64);
+
+        // Use memory.copy to properly copy data
+        memory.copy(freshCopy0.dataStart, buf0.dataStart, 64);
+        memory.copy(freshCopy73.dataStart, buf73.dataStart, 64);
+
+        // Log copied data
+        let fc0Hex = '';
+        let fc73Hex = '';
+        for (let i: i32 = 0; i < 64; i++) {
+            fc0Hex += freshCopy0[i].toString() + '-';
+            fc73Hex += freshCopy73[i].toString() + '-';
+        }
+        Blockchain.log(`FreshCopy 0: ${fc0Hex}`);
+        Blockchain.log(`FreshCopy 73: ${fc73Hex}`);
+
+        const fh0 = ripemd160(freshCopy0);
+        const fh73 = ripemd160(freshCopy73);
+
+        let fh0Hex = '';
+        let fh73Hex = '';
+        for (let i: i32 = 0; i < 20; i++) {
+            fh0Hex += fh0[i].toString() + '-';
+            fh73Hex += fh73[i].toString() + '-';
+        }
+        Blockchain.log(`FreshCopy Hash 0: ${fh0Hex}`);
+        Blockchain.log(`FreshCopy Hash 73: ${fh73Hex}`);
+
+        let same = true;
+        for (let i: i32 = 0; i < 20; i++) {
+            if (fh0[i] != fh73[i]) {
+                same = false;
+                break;
+            }
+        }
+        Blockchain.log(`FreshCopy hashes are same: ${same ? 'YES' : 'NO'}`);
+        expect(same).toStrictEqual(false);
+    });
+
+    it('should test msg.set behavior with address-derived data', () => {
+        const account0 = generateAccount(0);
+        const account73 = generateAccount(73);
+
+        const writer0 = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
+        writer0.writeAddress(tokenAddress1);
+        writer0.writeAddress(account0);
+
+        const writer73 = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
+        writer73.writeAddress(tokenAddress1);
+        writer73.writeAddress(account73);
+
+        const buf0 = writer0.getBuffer();
+        const buf73 = writer73.getBuffer();
+
+        // Simulate what ripemd160f does
+        const len0 = buf0.length;
+        const padLength0 = <i32>((56 - (len0 + 1) % 64 + 64) % 64);
+        const totalLength0 = len0 + 1 + padLength0 + 8;
+
+        const msg0 = new Uint8Array(totalLength0);
+        msg0.set(buf0, 0);
+
+        const len73 = buf73.length;
+        const padLength73 = <i32>((56 - (len73 + 1) % 64 + 64) % 64);
+        const totalLength73 = len73 + 1 + padLength73 + 8;
+
+        const msg73 = new Uint8Array(totalLength73);
+        msg73.set(buf73, 0);
+
+        // Check what got set in msg0 and msg73
+        let msg0Hex = '';
+        let msg73Hex = '';
+        for (let i: i32 = 0; i < 64; i++) {
+            msg0Hex += msg0[i].toString() + '-';
+            msg73Hex += msg73[i].toString() + '-';
+        }
+        Blockchain.log(`msg0 first 64: ${msg0Hex}`);
+        Blockchain.log(`msg73 first 64: ${msg73Hex}`);
+
+        // The data should be different
+        let same = true;
+        for (let i: i32 = 32; i < 64; i++) {
+            if (msg0[i] != msg73[i]) {
+                same = false;
+                break;
+            }
+        }
+        Blockchain.log(`msg buffers second 32 bytes same: ${same ? 'YES' : 'NO'}`);
+        expect(same).toStrictEqual(false);
+    });
+
+    it('should identify if Address indexing is the problem', () => {
+        const account0 = generateAccount(0);
+        const account73 = generateAccount(73);
+
+        // Directly access account bytes via index
+        let acc0Bytes = '';
+        let acc73Bytes = '';
+        for (let i: i32 = 0; i < 32; i++) {
+            acc0Bytes += account0[i].toString() + '-';
+            acc73Bytes += account73[i].toString() + '-';
+        }
+        Blockchain.log(`Account0 via index: ${acc0Bytes}`);
+        Blockchain.log(`Account73 via index: ${acc73Bytes}`);
+
+        // Now try using dataStart to read memory directly
+        let acc0MemBytes = '';
+        let acc73MemBytes = '';
+        for (let i: i32 = 0; i < 32; i++) {
+            acc0MemBytes += load<u8>(account0.dataStart + <usize>i).toString() + '-';
+            acc73MemBytes += load<u8>(account73.dataStart + <usize>i).toString() + '-';
+        }
+        Blockchain.log(`Account0 via memory: ${acc0MemBytes}`);
+        Blockchain.log(`Account73 via memory: ${acc73MemBytes}`);
+
+        // They should match each other but be different between accounts
+        let same = true;
+        for (let i: i32 = 0; i < 32; i++) {
+            if (load<u8>(account0.dataStart + <usize>i) != load<u8>(account73.dataStart + <usize>i)) {
+                same = false;
+                break;
+            }
+        }
+        Blockchain.log(`Accounts same via memory load: ${same ? 'YES' : 'NO'}`);
+        expect(same).toStrictEqual(false);
+    });
+
+    it('should trace compress function data reading', () => {
+        const account0 = generateAccount(0);
+        const account73 = generateAccount(73);
+
+        const writer0 = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
+        writer0.writeAddress(tokenAddress1);
+        writer0.writeAddress(account0);
+
+        const writer73 = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
+        writer73.writeAddress(tokenAddress1);
+        writer73.writeAddress(account73);
+
+        const buf0 = writer0.getBuffer();
+        const buf73 = writer73.getBuffer();
+
+        // Simulate what ripemd160f does
+        const len0 = buf0.length;
+        const padLength0 = <i32>((56 - (len0 + 1) % 64 + 64) % 64);
+        const totalLength0 = len0 + 1 + padLength0 + 8;
+
+        const msg0 = new Uint8Array(totalLength0);
+        msg0.set(buf0, 0);
+        msg0[len0] = 0x80;  // PADDING_BYTE
+
+        const len73 = buf73.length;
+        const padLength73 = <i32>((56 - (len73 + 1) % 64 + 64) % 64);
+        const totalLength73 = len73 + 1 + padLength73 + 8;
+
+        const msg73 = new Uint8Array(totalLength73);
+        msg73.set(buf73, 0);
+        msg73[len73] = 0x80;
+
+        // Add length bytes (simulating what ripemd160f does)
+        const bitLen = <u64>64 << 3;
+        const bitLenLow = <u32>(bitLen & 0xffffffff);
+        msg0[totalLength0 - 8] = <u8>(bitLenLow & 0xff);
+        msg0[totalLength0 - 7] = <u8>((bitLenLow >>> 8) & 0xff);
+        msg73[totalLength73 - 8] = <u8>(bitLenLow & 0xff);
+        msg73[totalLength73 - 7] = <u8>((bitLenLow >>> 8) & 0xff);
+
+        // Now simulate what compress does - read x[] array
+        // offset = 0 for first block
+        const offset = 0;
+        let x0Vals = '';
+        let x73Vals = '';
+
+        // First log raw bytes for word 8 (bytes 32-35 which should differ)
+        const word8offset = 32;
+        let raw0 = '';
+        let raw73 = '';
+        for (let b = 0; b < 4; b++) {
+            raw0 += msg0[word8offset + b].toString() + '-';
+            raw73 += msg73[word8offset + b].toString() + '-';
+        }
+        Blockchain.log(`msg0 bytes 32-35: ${raw0}`);
+        Blockchain.log(`msg73 bytes 32-35: ${raw73}`);
+
+        for (let i = 0; i < 16; i++) {
+            const j = offset + (i << 2);
+            const val0 =
+                <u32>msg0[j] |
+                (<u32>msg0[j + 1] << 8) |
+                (<u32>msg0[j + 2] << 16) |
+                (<u32>msg0[j + 3] << 24);
+            const val73 =
+                <u32>msg73[j] |
+                (<u32>msg73[j + 1] << 8) |
+                (<u32>msg73[j + 2] << 16) |
+                (<u32>msg73[j + 3] << 24);
+            x0Vals += val0.toString() + '-';
+            x73Vals += val73.toString() + '-';
+        }
+        Blockchain.log(`x[] for msg0: ${x0Vals}`);
+        Blockchain.log(`x[] for msg73: ${x73Vals}`);
+
+        // They should be different in the latter half
+        let same = true;
+        for (let i = 8; i < 16; i++) {
+            const j = offset + (i << 2);
+            const val0 =
+                <u32>msg0[j] |
+                (<u32>msg0[j + 1] << 8) |
+                (<u32>msg0[j + 2] << 16) |
+                (<u32>msg0[j + 3] << 24);
+            const val73 =
+                <u32>msg73[j] |
+                (<u32>msg73[j + 1] << 8) |
+                (<u32>msg73[j + 2] << 16) |
+                (<u32>msg73[j + 3] << 24);
+            if (val0 != val73) {
+                same = false;
+                break;
+            }
+        }
+        Blockchain.log(`x[] second half same: ${same ? 'YES' : 'NO'}`);
+        expect(same).toStrictEqual(false);
+    });
 });
