@@ -2229,4 +2229,873 @@ describe('Liquidity queue tests', () => {
             }).toThrow();
         });
     });
+
+    describe('Queue Impact', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
+
+        it('should return zero impact when liquidity is zero', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            // Set up virtual reserves but no liquidity
+            queue.virtualTokenReserve = u256.fromU64(1000000);
+            queue.virtualSatoshisReserve = 1000000;
+            queue.setLiquidity(u256.Zero);
+
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toStrictEqual(u256.Zero);
+        });
+
+        it('should return zero impact when only initial provider has liquidity', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            // Create and set up initial provider
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(500000), // Initial provider has 500000 tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            // Initialize the queue with the initial provider
+            queue.initializeInitialLiquidity(
+                u256.fromU64(100), // floor price
+                initialProviderId,
+                u128.fromU64(500000), // initial liquidity matching provider's amount
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Set liquidity to match only the initial provider's amount
+            queue.setLiquidity(u256.fromU64(500000));
+
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toStrictEqual(u256.Zero);
+        });
+
+        it('should return zero impact when queued tokens are less than initial provider liquidity', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            // Create and set up initial provider with more liquidity than total queue
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000), // Initial provider has 1,000,000 tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Set liquidity less than initial provider's amount
+            queue.setLiquidity(u256.fromU64(500000));
+
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toStrictEqual(u256.Zero);
+        });
+
+        it('should calculate non-zero impact when other providers add liquidity beyond initial', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            // Create initial provider
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000), // Initial provider has 1,000,000 tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Set total liquidity higher than initial provider's amount
+            // This simulates additional providers adding liquidity
+            queue.setLiquidity(u256.fromU64(1500000)); // 500,000 more than initial
+
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toBeGreaterThan(u256.Zero);
+        });
+
+        it('should increase impact as more providers add liquidity', () => {
+            setBlockchainEnvironment(100);
+
+            // Test with smaller additional liquidity
+            const createQueueResult1 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue1: ITestLiquidityQueue = createQueueResult1.liquidityQueue;
+
+            const initialProviderId1 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider1: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000),
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider1.markInitialLiquidityProvider();
+            initialProvider1.save();
+
+            queue1.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId1,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue1.setLiquidity(u256.fromU64(1200000)); // 200,000 additional
+
+            const smallImpact = queue1.testCalculateQueueImpact();
+
+            // Clear and test with larger additional liquidity
+            clearCachedProviders();
+            Blockchain.clearStorage();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+
+            const initialProviderId2 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider2: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000),
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider2.markInitialLiquidityProvider();
+            initialProvider2.save();
+
+            queue2.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId2,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue2.setLiquidity(u256.fromU64(2000000)); // 1,000,000 additional
+
+            const largeImpact = queue2.testCalculateQueueImpact();
+
+            // Larger additional liquidity should create larger impact
+            expect(largeImpact).toBeGreaterThan(smallImpact);
+        });
+
+        it('should exclude initial provider liquidity from quote calculation', () => {
+            setBlockchainEnvironment(100);
+
+            // Setup queue with only initial provider
+            const createQueueResult1 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue1: ITestLiquidityQueue = createQueueResult1.liquidityQueue;
+
+            const initialProviderId1 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider1: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000),
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider1.markInitialLiquidityProvider();
+            initialProvider1.save();
+
+            queue1.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId1,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue1.setLiquidity(u256.fromU64(1000000)); // Only initial provider
+
+            const quoteWithOnlyInitial = queue1.quote();
+
+            // Clear and setup queue with initial + additional providers
+            clearCachedProviders();
+            Blockchain.clearStorage();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+
+            const initialProviderId2 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider2: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000),
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider2.markInitialLiquidityProvider();
+            initialProvider2.save();
+
+            queue2.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId2,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue2.setLiquidity(u256.fromU64(2000000)); // Initial + 1M additional
+
+            const quoteWithAdditional = queue2.quote();
+
+            // Quote with only initial provider should be lower (better price)
+            // because there's no additional sell pressure from queue
+            expect(quoteWithOnlyInitial).toBeLessThan(quoteWithAdditional);
+        });
+
+        it('should handle large liquidity differences correctly', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000000), // 1 billion tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId,
+                u128.fromU64(1000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Set massive additional liquidity
+            queue.setLiquidity(u256.fromU64(5000000000)); // 5 billion total
+
+            // Should calculate impact without overflow
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toBeGreaterThan(u256.Zero);
+        });
+
+        it('should properly calculate impact when initial provider liquidity changes', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000), // Initial: 1M tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Total liquidity is 1.5M
+            queue.setLiquidity(u256.fromU64(1500000));
+
+            const impactBefore = queue.testCalculateQueueImpact();
+
+            // Now reduce initial provider's liquidity (simulating partial withdrawal)
+            initialProvider.setLiquidityAmount(u128.fromU64(500000)); // Now only 500K
+            initialProvider.save();
+
+            // Same total liquidity, but more of it is from non-initial providers now
+            const impactAfter = queue.testCalculateQueueImpact();
+
+            // Impact should increase because less is attributed to initial provider
+            expect(impactAfter).toBeGreaterThan(impactBefore);
+        });
+
+        it('should revert when virtualTokenReserve is less than initial provider liquidity (impossible state)', () => {
+            setBlockchainEnvironment(100);
+
+            // Should throw because this is an impossible state
+            expect(() => {
+                const createQueueResult = createLiquidityQueue(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    false,
+                );
+                const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+                const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+                const initialProvider: Provider = createProvider(
+                    providerAddress1,
+                    tokenAddress1,
+                    false,
+                    false,
+                    true,
+                    'btcReceiver1',
+                    u128.Zero,
+                    u128.fromU64(1000000), // Initial provider has 1M tokens
+                    u128.Zero,
+                    true,
+                    false,
+                );
+                initialProvider.markInitialLiquidityProvider();
+                initialProvider.save();
+
+                queue.initializeInitialLiquidity(
+                    u256.fromU64(100),
+                    initialProviderId,
+                    u128.fromU64(1000000),
+                    10,
+                    POOL_TYPE_STANDARD,
+                    DEFAULT_STABLE_AMPLIFICATION,
+                    0,
+                );
+
+                // Set liquidity so the impact calculation is triggered
+                queue.setLiquidity(u256.fromU64(1500000));
+
+                // Artificially create an impossible state:
+                // virtualTokenReserve (500K) < initialProviderLiquidity (1M)
+                queue.virtualTokenReserve = u256.fromU64(500000);
+
+                queue.testCalculateQueueImpact();
+            }).toThrow();
+        });
+
+        // ============================================================
+        // ECONOMIC BEHAVIOR TESTS - Verify queue impact works as designed
+        // ============================================================
+
+        it('should make quote higher (worse price for buyers) when more sell pressure in queue', () => {
+            // This tests that queue impact increases the effective token amount in the quote formula,
+            // which results in a higher quote (more satoshis per token = worse deal for buyers)
+            // This reflects pending sell pressure that hasn't been priced in yet.
+
+            setBlockchainEnvironment(100);
+
+            // Setup pool with initial provider
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000), // 10B tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(1000), // floor price
+                initialProviderId,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Scenario 1: Only initial provider (no additional sell pressure)
+            queue.setLiquidity(u256.fromU64(10000000000)); // matches initial provider
+            const quoteNoSellPressure = queue.quote();
+
+            // Scenario 2: Add 50% more liquidity from other providers (sell pressure)
+            queue.setLiquidity(u256.fromU64(15000000000)); // 50% more
+            const quoteWithSellPressure = queue.quote();
+
+            // Quote should be HIGHER with sell pressure (worse price for buyers)
+            // Higher quote = more tokens per satoshi = tokens are worth less
+            expect(quoteWithSellPressure).toBeGreaterThan(quoteNoSellPressure);
+        });
+
+        it('should increase impact monotonically with more queue liquidity', () => {
+            // More sell pressure in the queue should always result in higher impact.
+            // This ensures the price reflects pending supply correctly.
+
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000), // 10B tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Test with increasing liquidity levels
+            queue.setLiquidity(u256.fromU64(11000000000)); // +10%
+            const impact10Percent = queue.testCalculateQueueImpact();
+
+            queue.setLiquidity(u256.fromU64(12000000000)); // +20%
+            const impact20Percent = queue.testCalculateQueueImpact();
+
+            queue.setLiquidity(u256.fromU64(15000000000)); // +50%
+            const impact50Percent = queue.testCalculateQueueImpact();
+
+            // Impact should strictly increase with more liquidity
+            expect(impact20Percent).toBeGreaterThan(impact10Percent);
+            expect(impact50Percent).toBeGreaterThan(impact20Percent);
+        });
+
+        it('should follow logarithmic diminishing returns pattern', () => {
+            // Queue impact uses ln²(1 + x) which has sub-linear growth.
+            // Doubling the additional queue liquidity should less than quadruple the impact.
+            // (Since ln² is used, impact grows roughly with the square of ln)
+
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000), // 10B tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Test with 10% additional liquidity (1B more)
+            queue.setLiquidity(u256.fromU64(11000000000)); // +10%
+            const impact10Percent = queue.testCalculateQueueImpact();
+
+            // Test with 20% additional liquidity (2B more)
+            queue.setLiquidity(u256.fromU64(12000000000)); // +20%
+            const impact20Percent = queue.testCalculateQueueImpact();
+
+            // Mathematical verification:
+            // For ln²(1+x), doubling x from 0.1 to 0.2:
+            // ln(1.1)² ≈ 0.00908, ln(1.2)² ≈ 0.0331
+            // Ratio should be about 3.65x (not 4x, showing sub-quadratic growth)
+
+            // impact20Percent should be greater than impact10Percent
+            expect(impact20Percent).toBeGreaterThan(impact10Percent);
+
+            // But less than 4x (since ln² grows slower than x²)
+            const quadrupledImpact = SafeMath.mul(impact10Percent, u256.fromU32(4));
+            expect(quadrupledImpact).toBeGreaterThan(impact20Percent);
+        });
+
+        it('should produce bounded impact values for reasonable queue sizes', () => {
+            // The queue impact should be reasonable and not cause extreme price distortions.
+            // For a queue with 2x the initial liquidity, impact should be significant but bounded.
+
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000), // 10B tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Double the liquidity (100% additional from other providers)
+            queue.setLiquidity(u256.fromU64(20000000000));
+            const impact = queue.testCalculateQueueImpact();
+
+            // Impact should be non-zero
+            expect(impact).toBeGreaterThan(u256.Zero);
+
+            // Impact should be less than the virtual reserve itself (not extreme)
+            expect(queue.virtualTokenReserve).toBeGreaterThan(impact);
+        });
+
+        it('should not affect price when only initial provider has liquidity (baseline price)', () => {
+            // The initial provider defines the baseline price via virtualTokenReserve.
+            // Their liquidity should NOT create any queue impact - only additional providers do.
+
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000),
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Set liquidity equal to initial provider only
+            queue.setLiquidity(u256.fromU64(10000000000));
+
+            // Queue impact should be ZERO - initial provider doesn't create sell pressure
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toStrictEqual(u256.Zero);
+
+            // Quote should be the pure AMM quote without any adjustment
+            const quote = queue.quote();
+
+            // Calculate expected quote: (virtualTokenReserve * QUOTE_SCALE) / virtualSatoshisReserve
+            // This is the baseline AMM price
+            const expectedQuote = SafeMath.div(
+                SafeMath.mul(queue.virtualTokenReserve, u256.fromU64(100000000)),
+                u256.fromU64(queue.virtualSatoshisReserve),
+            );
+
+            expect(quote).toStrictEqual(expectedQuote);
+        });
+
+        it('should scale impact proportionally to virtualTokenReserve', () => {
+            // Queue impact formula: virtualTokenReserve * ln²(...)
+            // So larger pools should have proportionally larger absolute impacts
+            // but the RELATIVE impact (impact/reserve) should be similar for same queue ratios
+
+            setBlockchainEnvironment(100);
+
+            // Small pool: 1B tokens, 10% additional
+            const createQueueResult1 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue1: ITestLiquidityQueue = createQueueResult1.liquidityQueue;
+
+            const initialProviderId1 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider1: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000000), // 1B
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider1.markInitialLiquidityProvider();
+            initialProvider1.save();
+
+            queue1.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId1,
+                u128.fromU64(1000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            queue1.setLiquidity(u256.fromU64(1100000000)); // +10%
+            const impactSmallPool = queue1.testCalculateQueueImpact();
+
+            // Large pool: 10B tokens, 10% additional
+            clearCachedProviders();
+            Blockchain.clearStorage();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+
+            const initialProviderId2 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider2: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000), // 10B
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider2.markInitialLiquidityProvider();
+            initialProvider2.save();
+
+            queue2.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId2,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            queue2.setLiquidity(u256.fromU64(11000000000)); // +10%
+            const impactLargePool = queue2.testCalculateQueueImpact();
+
+            // Large pool should have ~10x the absolute impact (since it's 10x bigger)
+            // Check that impactLargePool is roughly 10x impactSmallPool (within 20% tolerance)
+            const tenTimesSmall = SafeMath.mul(impactSmallPool, u256.fromU32(10));
+            const lowerBound = SafeMath.div(SafeMath.mul(tenTimesSmall, u256.fromU32(80)), u256.fromU32(100));
+            const upperBound = SafeMath.div(SafeMath.mul(tenTimesSmall, u256.fromU32(120)), u256.fromU32(100));
+
+            expect(impactLargePool).toBeGreaterThan(lowerBound);
+            expect(upperBound).toBeGreaterThan(impactLargePool);
+        });
+    });
 });

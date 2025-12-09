@@ -14,7 +14,7 @@ import {
     RESERVATION_SETTINGS_POINTER,
 } from '../constants/StoredPointers';
 
-import { addAmountToStakingContract, Provider } from '../models/Provider';
+import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
 import {
     DEFAULT_STABLE_AMPLIFICATION,
@@ -35,7 +35,6 @@ import { IProviderManager } from './interfaces/IProviderManager';
 import { IReservationManager } from './interfaces/IReservationManager';
 import { ILiquidityQueue } from './interfaces/ILiquidityQueue';
 import { IDynamicFee } from './interfaces/IDynamicFee';
-import { preciseLog } from '../utils/MathUtils';
 import { OP20StableQuery } from '../extern/OP20StableQuery';
 
 class StableSwapResult {
@@ -875,6 +874,62 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     private calculateQueueImpact(): u256 {
+        const queuedTokens = this.liquidity;
+
+        if (queuedTokens.isZero()) {
+            return u256.Zero;
+        }
+
+        // Guard: Pool must be initialized (virtualTokenReserve > 0)
+        // If not initialized, return zero impact
+        if (this.virtualTokenReserve.isZero()) {
+            return u256.Zero;
+        }
+
+        // Guard: initialLiquidityProviderId must be set
+        // If not set, return zero impact (pool not fully initialized)
+        if (this.initialLiquidityProviderId.isZero()) {
+            return u256.Zero;
+        }
+
+        // Get the initial provider and exclude their liquidity from the queue impact
+        const initialProvider: Provider = getProvider(this.initialLiquidityProviderId);
+        const initialProviderLiquidity: u256 = u256.fromU128(initialProvider.getLiquidityAmount());
+
+        // Sanity check: virtualTokenReserve should never be less than initial provider's current liquidity
+        // because the virtual pool was initialized from their liquidity and can only grow from there
+        // (other providers add to it). If it's smaller, it means tokens were bought, but those buys
+        // should have reduced the initial provider's liquidity proportionally.
+        if (u256.lt(this.virtualTokenReserve, initialProviderLiquidity)) {
+            throw new Revert(
+                `Impossible state: virtualTokenReserve (${this.virtualTokenReserve}) < initialProviderLiquidity (${initialProviderLiquidity})`,
+            );
+        }
+
+        // Exclude initial provider's liquidity from queue impact calculation
+        if (u256.le(queuedTokens, initialProviderLiquidity)) {
+            return u256.Zero;
+        }
+
+        const effectiveQueuedTokens = SafeMath.sub(queuedTokens, initialProviderLiquidity);
+
+        // Calculate ln(1 + effectiveQueuedTokens/virtualTokenReserve)
+        // = ln((virtualTokenReserve + effectiveQueuedTokens) / virtualTokenReserve)
+        // Using preciseLogRatio for correct handling of different bit lengths
+        const SCALE = u256.fromU64(1000000);
+
+        const numerator = SafeMath.add(this.virtualTokenReserve, effectiveQueuedTokens);
+        const lnValue: u256 = SafeMath.preciseLogRatio(numerator, this.virtualTokenReserve);
+
+        const lnSquared = SafeMath.div(SafeMath.mul(lnValue, lnValue), SCALE);
+
+        return SafeMath.div(
+            SafeMath.mul(this.virtualTokenReserve, lnSquared),
+            SCALE,
+        );
+    }
+
+    /*private calculateQueueImpact(): u256 {
         // Queue impact = sell pressure not yet priced into virtualTokenReserve.
         // - Initial LP: their tokens define virtualTokenReserve directly (no activateSlashing call)
         // - Subsequent providers: first half priced in via totalTokensSellActivated,
@@ -898,7 +953,7 @@ export class LiquidityQueue implements ILiquidityQueue {
             SafeMath.mul(this.virtualTokenReserve, lnSquared),
             u256.fromU64(1000000),
         );
-    }
+    }*/
 
     private computeInitialSatoshisReserve(initialLiquidity: u256, floorPrice: u256): u64 {
         const reserve: u256 = SafeMath.div(initialLiquidity, floorPrice);

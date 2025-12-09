@@ -1,6 +1,6 @@
 import { clearCachedProviders } from '../models/Provider';
 import { Blockchain, SafeMath, TransferHelper } from '@btc-vision/btc-runtime/runtime';
-import { calculateTaylorSeries, min128, min64, preciseLog } from '../utils/MathUtils';
+import { min128, min64 } from '../utils/MathUtils';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 const SCALE = u256.fromU64(1_000_000);
@@ -93,100 +93,82 @@ describe('MathUtils tests', () => {
         });
     });
 
-    describe('MathUtils tests - preciseLog ', () => {
-        it('ln(0) == 0 by convention', () => {
-            expect(preciseLog(u256.Zero)).toStrictEqual(u256.Zero);
+    describe('SafeMath.preciseLogRatio tests', () => {
+        it('preciseLogRatio(x, x) == 0 (ln(1) = 0)', () => {
+            const x = u256.fromU64(1000000);
+            expect(SafeMath.preciseLogRatio(x, x)).toStrictEqual(u256.Zero);
         });
 
-        it('ln(1) == 0', () => {
-            expect(preciseLog(u256.One)).toStrictEqual(u256.Zero);
-        });
-
-        it('exact output for powers of two up to 2^16', () => {
-            for (let k: u32 = 1; k <= 16; k++) {
-                const x = pow2(k); // 2^k
-                const expected = SafeMath.mul(u256.fromU32(k), LN2_SCALED);
-                expect(preciseLog(x)).toStrictEqual(expected, `failed for 2**${k.toString()}`);
-            }
-        });
-
-        it('exact output for a very large power of two (2^128', () => {
-            const k: u32 = 128;
-            const x = pow2(k);
-            const expected = SafeMath.mul(u256.fromU32(k), LN2_SCALED);
-            expect(preciseLog(x)).toStrictEqual(expected);
-        });
-
-        it('monotonicity – random ascending triplet', () => {
-            const a = u256.fromU32(7); // 7
-            const b = u256.fromU32(31); // 31
-            const c = u256.fromU32(128); // 128
-
-            const lnA = preciseLog(a);
-            const lnB = preciseLog(b);
-            const lnC = preciseLog(c);
-
-            expect(lnA < lnB && lnB < lnC).toBeTruthy();
-        });
-
-        it('product property ln(x·y) ≈ ln(x)+ln(y) (moderate range)', () => {
-            const x = u256.fromU32(37);
-            const y = u256.fromU32(59);
-            const xy = SafeMath.mul(x, y);
-
-            const lnX = preciseLog(x);
-            const lnY = preciseLog(y);
-            const lnXY = preciseLog(xy);
-
-            // Absolute error
+        it('preciseLogRatio(2x, x) ≈ ln(2) * SCALE', () => {
+            const x = u256.fromU64(1000000);
+            const twoX = SafeMath.mul(x, u256.fromU32(2));
+            const result = SafeMath.preciseLogRatio(twoX, x);
+            // ln(2) ≈ 0.693147, scaled by 1e6 = 693147
+            // Allow 1% tolerance
+            const expected = LN2_SCALED;
             const delta = SafeMath.sub(
-                lnXY > SafeMath.add(lnX, lnY) ? lnXY : SafeMath.add(lnX, lnY),
-                lnXY > SafeMath.add(lnX, lnY) ? SafeMath.add(lnX, lnY) : lnXY,
+                result > expected ? result : expected,
+                result > expected ? expected : result,
             );
-
-            // Allow up to 1% relative error (theoretical upper bound with 5 terms)
-            const relTol = SafeMath.div(lnXY, u256.fromU32(100)); // 1% of ln(xy)
-
-            expect<bool>(delta <= relTol).toBeTruthy();
-        });
-    });
-
-    describe('calculateTaylorSeries – local correctness', () => {
-        it('returns 0 when rScaled == 0', () => {
-            expect<u256>(calculateTaylorSeries(u256.Zero, SCALE)).toStrictEqual(u256.Zero);
+            const tolerance = SafeMath.div(expected, u256.fromU32(100)); // 1%
+            expect(delta <= tolerance).toBeTruthy();
         });
 
-        it('matches ln(1+r) for very small r (1e‑4)', () => {
-            const rScaled = u256.fromU32(100); // r = 1×10^-4
+        it('monotonicity – larger ratio gives larger result', () => {
+            const x = u256.fromU64(1000000);
+            const twoX = SafeMath.mul(x, u256.fromU32(2));
+            const threeX = SafeMath.mul(x, u256.fromU32(3));
+            const fourX = SafeMath.mul(x, u256.fromU32(4));
 
-            const rFloat = <f64>rScaled.toU32() / 1_000_000.0; // 0.0001
-            const expF64 = Math.log(1.0 + rFloat); // ln(1+r)
-            const expected = u256.fromU64(<u64>Math.round(expF64 * 1_000_000.0));
+            const ln2 = SafeMath.preciseLogRatio(twoX, x);
+            const ln3 = SafeMath.preciseLogRatio(threeX, x);
+            const ln4 = SafeMath.preciseLogRatio(fourX, x);
 
-            const actual = calculateTaylorSeries(rScaled, SCALE);
+            expect(u256.lt(ln2, ln3)).toBeTruthy();
+            expect(u256.lt(ln3, ln4)).toBeTruthy();
+        });
+
+        it('preciseLogRatio(4x, x) ≈ 2 * ln(2) * SCALE', () => {
+            const x = u256.fromU64(1000000);
+            const fourX = SafeMath.mul(x, u256.fromU32(4));
+            const result = SafeMath.preciseLogRatio(fourX, x);
+            // ln(4) = 2*ln(2) ≈ 1.386294, scaled by 1e6 = 1386294
+            const expected = SafeMath.mul(LN2_SCALED, u256.fromU32(2));
             const delta = SafeMath.sub(
-                expected > actual ? expected : actual,
-                expected > actual ? actual : expected,
+                result > expected ? result : expected,
+                result > expected ? expected : result,
             );
-
-            expect(delta <= TOL_SMALL).toBeTruthy();
+            const tolerance = SafeMath.div(expected, u256.fromU32(100)); // 1%
+            expect(delta <= tolerance).toBeTruthy();
         });
 
-        it('≈ ln(2) when rScaled == SCALE (r = 1)', () => {
-            const rScaled = SCALE; // r = 1
-            const expected = u256.fromU32(693_147); // ln(2) × 10^6 exact reference
-            const actual = calculateTaylorSeries(rScaled, SCALE);
-
-            // allow 15% relative error
+        it('handles large values correctly', () => {
+            const x = u256.fromString('1000000000000000000000000'); // 1e24
+            const twoX = SafeMath.mul(x, u256.fromU32(2));
+            const result = SafeMath.preciseLogRatio(twoX, x);
+            // Should still be approximately ln(2) * SCALE
             const delta = SafeMath.sub(
-                expected > actual ? expected : actual,
-                expected > actual ? actual : expected,
+                result > LN2_SCALED ? result : LN2_SCALED,
+                result > LN2_SCALED ? LN2_SCALED : result,
             );
-            const relTol = SafeMath.div(
-                SafeMath.mul(expected, u256.fromU32(15)),
-                u256.fromU32(100),
-            ); // 15%
-            expect(delta <= relTol).toBeTruthy();
+            const tolerance = SafeMath.div(LN2_SCALED, u256.fromU32(100)); // 1%
+            expect(delta <= tolerance).toBeTruthy();
+        });
+
+        it('handles small fractions (a only slightly larger than b)', () => {
+            const x = u256.fromU64(1000000);
+            // 1.1x - ln(1.1) ≈ 0.09531
+            const onePointOneX = SafeMath.div(SafeMath.mul(x, u256.fromU32(11)), u256.fromU32(10));
+            const result = SafeMath.preciseLogRatio(onePointOneX, x);
+            // ln(1.1) * 1e6 ≈ 95310
+            const expected = u256.fromU64(95310);
+            const delta = SafeMath.sub(
+                result > expected ? result : expected,
+                result > expected ? expected : result,
+            );
+            // Allow 5% tolerance for small values
+            const tolerance = SafeMath.div(expected, u256.fromU32(20)); // 5%
+            expect(delta <= tolerance).toBeTruthy();
         });
     });
 });
