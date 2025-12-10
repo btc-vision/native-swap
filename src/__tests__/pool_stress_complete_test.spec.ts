@@ -130,9 +130,11 @@ function createPool(block: u64): Provider {
 }
 
 // Create a reservation for an account
+// IMPORTANT: purgeOldReservations=true triggers updateVirtualPoolIfNeeded which applies accumulated trades
 function reserveForAccount(account: ExtendedAddress, amount: u64, block: u64): Reservation {
     setBlockchainEnvironment(block, account, account);
-    const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+    // Use purgeOldReservations=true to trigger virtual pool update from accumulated trades
+    const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
     const id = createProviderId(account, tokenAddress1);
 
     const reserveOp = new ReserveLiquidityOperation(
@@ -148,11 +150,14 @@ function reserveForAccount(account: ExtendedAddress, amount: u64, block: u64): R
 
     reserveOp.execute();
     lq.liquidityQueue.save();
+    lq.liquidityQueue.setBlockQuote();
+    lq.liquidityQueue.save();
 
     return new Reservation(tokenAddress1, account);
 }
 
 // Execute swap for an account
+// IMPORTANT: purgeOldReservations=true triggers updateVirtualPoolIfNeeded which applies accumulated trades
 function swapForAccount(
     account: ExtendedAddress,
     block: u64,
@@ -161,7 +166,8 @@ function swapForAccount(
     logDetails: bool = false,
 ): void {
     setBlockchainEnvironment(block, account, account);
-    const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+    // Use purgeOldReservations=true to ensure virtual pool is updated from previous trades
+    const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
     // First, check the reservation state
     const reservation = new Reservation(tokenAddress1, account);
@@ -256,9 +262,10 @@ function listTokensForAccount(
 }
 
 // Get current quote from pool
+// purgeOldReservations=true ensures virtual pool reflects all accumulated trades
 function getPoolQuote(block: u64): u256 {
     setBlockchainEnvironment(block, msgSender1, msgSender1);
-    const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+    const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
     return lq.liquidityQueue.quote();
 }
 
@@ -315,9 +322,10 @@ class QueueState {
 }
 
 // Get full queue state for tracing
+// purgeOldReservations=true ensures virtual pool reflects all accumulated trades
 function getQueueState(block: u64): QueueState {
     setBlockchainEnvironment(block, msgSender1, msgSender1);
-    const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+    const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
     return new QueueState(
         block,
         lq.providerManager.normalQueueLength,
@@ -342,9 +350,10 @@ function logQueueState(label: string, state: QueueState): void {
 }
 
 // Get pool liquidity info
+// purgeOldReservations=true ensures virtual pool reflects all accumulated trades
 function getPoolLiquidity(block: u64): PoolLiquidityInfo {
     setBlockchainEnvironment(block, msgSender1, msgSender1);
-    const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+    const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
     return new PoolLiquidityInfo(lq.liquidityQueue.liquidity, lq.liquidityQueue.reservedLiquidity);
 }
 
