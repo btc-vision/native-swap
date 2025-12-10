@@ -282,6 +282,65 @@ class PoolLiquidityInfo {
     }
 }
 
+// Class for queue state tracking
+class QueueState {
+    block: u64;
+    normalQueueLength: u32;
+    priorityQueueLength: u32;
+    liquidity: u256;
+    reservedLiquidity: u256;
+    quote: u256;
+    virtualSatoshis: u64;
+    virtualTokens: u256;
+
+    constructor(
+        block: u64,
+        normalQueueLength: u32,
+        priorityQueueLength: u32,
+        liquidity: u256,
+        reservedLiquidity: u256,
+        quote: u256,
+        virtualSatoshis: u64,
+        virtualTokens: u256,
+    ) {
+        this.block = block;
+        this.normalQueueLength = normalQueueLength;
+        this.priorityQueueLength = priorityQueueLength;
+        this.liquidity = liquidity;
+        this.reservedLiquidity = reservedLiquidity;
+        this.quote = quote;
+        this.virtualSatoshis = virtualSatoshis;
+        this.virtualTokens = virtualTokens;
+    }
+}
+
+// Get full queue state for tracing
+function getQueueState(block: u64): QueueState {
+    setBlockchainEnvironment(block, msgSender1, msgSender1);
+    const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+    return new QueueState(
+        block,
+        lq.providerManager.normalQueueLength,
+        lq.providerManager.priorityQueueLength,
+        lq.liquidityQueue.liquidity,
+        lq.liquidityQueue.reservedLiquidity,
+        lq.liquidityQueue.quote(),
+        lq.liquidityQueue.virtualSatoshisReserve,
+        lq.liquidityQueue.virtualTokenReserve,
+    );
+}
+
+// Log queue state
+function logQueueState(label: string, state: QueueState): void {
+    Blockchain.log(`--- ${label} (Block ${state.block}) ---`);
+    Blockchain.log(`  Normal Queue: ${state.normalQueueLength}, Priority Queue: ${state.priorityQueueLength}`);
+    Blockchain.log(`  Liquidity: ${state.liquidity.toString()}`);
+    Blockchain.log(`  Reserved: ${state.reservedLiquidity.toString()}`);
+    Blockchain.log(`  Quote: ${state.quote.toString()}`);
+    Blockchain.log(`  Virtual Sats: ${state.virtualSatoshis}`);
+    Blockchain.log(`  Virtual Tokens: ${state.virtualTokens.toString()}`);
+}
+
 // Get pool liquidity info
 function getPoolLiquidity(block: u64): PoolLiquidityInfo {
     setBlockchainEnvironment(block, msgSender1, msgSender1);
@@ -351,6 +410,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         quoteHistory.push(initialQuote);
         Blockchain.log(`Initial quote: ${initialQuote.toString()}`);
 
+        // Trace queue state after Phase 1
+        logQueueState('After Phase 1 (Pool Created)', getQueueState(100));
+
         // ============== PHASE 2: First Wave Reservations ==============
         Blockchain.log('=== PHASE 2: 1000 accounts reserving minimum amount ===');
 
@@ -377,6 +439,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         quoteHistory.push(quoteAfterPhase2);
         Blockchain.log(`Quote after Phase 2: ${quoteAfterPhase2.toString()}`);
 
+        // Trace queue state after Phase 2
+        logQueueState('After Phase 2 (1000 Reservations)', getQueueState(101));
+
         // ============== PHASE 3: First Wave Swaps ==============
         Blockchain.log('=== PHASE 3: Swapping all 1000 reservations ===');
 
@@ -391,6 +456,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         const quoteAfterPhase3 = getPoolQuote(102);
         quoteHistory.push(quoteAfterPhase3);
         Blockchain.log(`Quote after Phase 3: ${quoteAfterPhase3.toString()}`);
+
+        // Trace queue state after Phase 3
+        logQueueState('After Phase 3 (1000 Swaps)', getQueueState(102));
 
         // ============== PHASE 4: Second Wave Reservations ==============
         Blockchain.log('=== PHASE 4: Same 1000 accounts reserving again ===');
@@ -415,6 +483,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         const quoteAfterPhase4 = getPoolQuote(103);
         quoteHistory.push(quoteAfterPhase4);
         Blockchain.log(`Quote after Phase 4: ${quoteAfterPhase4.toString()}`);
+
+        // Trace queue state after Phase 4
+        logQueueState('After Phase 4 (1000 Reservations Round 2)', getQueueState(103));
 
         // ============== PHASE 5: Staggered Swaps ==============
         Blockchain.log('=== PHASE 5: Staggered swaps over 3 blocks ===');
@@ -452,6 +523,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         quoteHistory.push(quoteAfterPhase5);
         Blockchain.log(`Quote after Phase 5: ${quoteAfterPhase5.toString()}`);
 
+        // Trace queue state after Phase 5
+        logQueueState('After Phase 5 (Staggered Swaps)', getQueueState(106));
+
         // ============== PHASE 6: Large Purchase Reservation ==============
         Blockchain.log('=== PHASE 6: Large purchase reservation (10 BTC) ===');
 
@@ -473,6 +547,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         quoteHistory.push(quoteAfterPhase6);
         Blockchain.log(`Quote after Phase 6: ${quoteAfterPhase6.toString()}`);
 
+        // Trace queue state after Phase 6
+        logQueueState('After Phase 6 (10 BTC Reservation)', getQueueState(108));
+
         // ============== PHASE 7: Execute Large Swap ==============
         Blockchain.log('=== PHASE 7: Executing large swap (10 BTC) ===');
 
@@ -486,6 +563,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         Blockchain.log(
             `Price check: Before big buy: ${quoteAfterPhase6.toString()}, After: ${quoteAfterPhase7.toString()}`,
         );
+
+        // Trace queue state after Phase 7
+        logQueueState('After Phase 7 (10 BTC Swap)', getQueueState(109));
 
         // ============== PHASE 8: List Tokens from 1000 Accounts ==============
         Blockchain.log('=== PHASE 8: 1000 accounts listing tokens ===');
@@ -538,6 +618,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
             `Price check after listing: Before: ${quoteAfterPhase7.toString()}, After: ${quoteAfterPhase8.toString()}`,
         );
 
+        // Trace queue state after Phase 8
+        logQueueState('After Phase 8 (1000 Listings)', getQueueState(112));
+
         // ============== PHASE 9: 500 New Accounts Reserve ==============
         Blockchain.log('=== PHASE 9: 500 new accounts reserving (20,000 sats each) ===');
 
@@ -583,6 +666,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         quoteHistory.push(quoteAfterPhase9);
         Blockchain.log(`Quote after Phase 9: ${quoteAfterPhase9.toString()}`);
 
+        // Trace queue state after Phase 9
+        logQueueState('After Phase 9 (500 Reservations)', getQueueState(115));
+
         // ============== PHASE 10: First Dump + Partial Swaps ==============
         Blockchain.log('=== PHASE 10: First dump (1 BTC worth) + partial swaps ===');
 
@@ -613,6 +699,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         const quoteAfterPhase10 = getPoolQuote(116);
         quoteHistory.push(quoteAfterPhase10);
         Blockchain.log(`Quote after Phase 10: ${quoteAfterPhase10.toString()}`);
+
+        // Trace queue state after Phase 10
+        logQueueState('After Phase 10 (1 BTC Dump + 200 Swaps)', getQueueState(116));
 
         // ============== PHASE 11: Second Dump + Complete Swaps + New Reservations ==============
         Blockchain.log('=== PHASE 11: Second dump + complete swaps + new reservations ===');
@@ -647,6 +736,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         const quoteAfterPhase11 = getPoolQuote(117);
         quoteHistory.push(quoteAfterPhase11);
         Blockchain.log(`Quote after Phase 11: ${quoteAfterPhase11.toString()}`);
+
+        // Trace queue state after Phase 11
+        logQueueState('After Phase 11 (Dump + 300 Swaps + 1000 Reservations)', getQueueState(117));
 
         // ============== PHASE 12: Concurrent List and Swap ==============
         Blockchain.log('=== PHASE 12: Concurrent list and swap ===');
@@ -715,6 +807,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         quoteHistory.push(quoteAfterPhase12);
         Blockchain.log(`Quote after Phase 12: ${quoteAfterPhase12.toString()}`);
 
+        // Trace queue state after Phase 12
+        logQueueState('After Phase 12 (Final State)', getQueueState(120));
+
         // ============== FINAL ASSERTIONS ==============
         Blockchain.log('=== FINAL ASSERTIONS ===');
 
@@ -741,5 +836,216 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         Blockchain.log('All swaps executed without reverts');
         Blockchain.log('No zero-token reservations');
         Blockchain.log('Pool state remains consistent');
+    });
+
+    it('should handle stress test with small 12 BTC pool', () => {
+        // This test uses a much smaller pool (12 BTC) to stress test queue impact
+        // Each 10,000 sat reservation = ~0.83% of pool vs ~0.01% in 100 BTC pool
+
+        const SMALL_POOL_TOKEN_AMOUNT: u128 = u128.fromString('1200000000000000000000000'); // 1.2M tokens * 10^18
+        // With 12 BTC = 1,200,000,000 sats and 1.2M tokens, floor price = 10^18 / 100,000 = 10^13
+
+        let zeroTokenReservations: u32 = 0;
+
+        // Generate 100 accounts (smaller test due to limited pool)
+        const accounts100: ExtendedAddress[] = [];
+        for (let i: u32 = 0; i < 100; i++) {
+            accounts100.push(generateAccount(i + 5000)); // Different index range to avoid collision
+        }
+
+        // ============== PHASE 1: Create Small Pool ==============
+        Blockchain.log('=== 12 BTC TEST - PHASE 1: Creating pool with 12 BTC / 1.2M tokens ===');
+
+        setBlockchainEnvironment(200, msgSender1, msgSender1);
+        const initialProviderId: u256 = createProviderId(Blockchain.tx.sender, tokenAddress1);
+        const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+        // Floor price: 10^18 / 100,000 = 10^13 (100,000 tokens per BTC)
+        const floorPrice: u256 = SafeMath.div(
+            SafeMath.pow(u256.fromU32(10), u256.fromU32(TOKEN_DECIMALS)),
+            u256.fromU32(100000),
+        );
+
+        const createPoolOp = new CreatePoolOperation(
+            lq.liquidityQueue,
+            floorPrice,
+            initialProviderId,
+            SMALL_POOL_TOKEN_AMOUNT,
+            receiverAddress1,
+            receiverAddress1CSV,
+            0,
+            u256.Zero,
+            100,
+        );
+
+        createPoolOp.execute();
+        lq.liquidityQueue.save();
+        lq.liquidityQueue.setBlockQuote();
+        lq.liquidityQueue.save();
+
+        const initialProvider = getProvider(initialProviderId);
+
+        expect(initialProvider.getLiquidityAmount()).toStrictEqual(SMALL_POOL_TOKEN_AMOUNT);
+
+        logQueueState('12BTC: After Pool Created', getQueueState(200));
+
+        // ============== PHASE 2: 100 accounts reserve minimum ==============
+        Blockchain.log('=== 12 BTC TEST - PHASE 2: 100 accounts reserving ===');
+
+        const tokensPhase2: Map<u32, u128> = new Map();
+
+        for (let i: i32 = 0; i < 100; i++) {
+            const account = accounts100[i];
+            const reservation = reserveForAccount(account, MINIMUM_RESERVE_AMOUNT, 201);
+
+            const reservedTokens = getReservationTotalTokens(reservation);
+            tokensPhase2.set(u32(i), reservedTokens);
+
+            if (reservation.getProviderCount() === 0) {
+                zeroTokenReservations++;
+                Blockchain.log(`WARNING: Account ${i} got zero providers!`);
+            }
+        }
+
+        expect(zeroTokenReservations).toStrictEqual(0);
+        logQueueState('12BTC: After 100 Reservations', getQueueState(201));
+
+        // ============== PHASE 3: Execute all swaps ==============
+        Blockchain.log('=== 12 BTC TEST - PHASE 3: Swapping all 100 reservations ===');
+
+        for (let i: i32 = 0; i < 100; i++) {
+            const account = accounts100[i];
+            swapForAccount(account, 202, initialProvider, MINIMUM_RESERVE_AMOUNT);
+        }
+
+        logQueueState('12BTC: After 100 Swaps', getQueueState(202));
+
+        // ============== PHASE 4: Large purchase (1 BTC = 8.3% of pool) ==============
+        Blockchain.log('=== 12 BTC TEST - PHASE 4: Large 1 BTC reservation ===');
+
+        const bigPurchaser = generateAccount(9998);
+        const reservationBig = reserveForAccount(bigPurchaser, ONE_BTC_IN_SATS, 203);
+
+        const bigPurchaseTokens = getReservationTotalTokens(reservationBig);
+        Blockchain.log(`Big purchase reserved: ${bigPurchaseTokens.toString()}`);
+
+        if (reservationBig.getProviderCount() === 0) {
+            zeroTokenReservations++;
+            Blockchain.log('WARNING: Big purchaser got zero providers!');
+        }
+
+        expect(zeroTokenReservations).toStrictEqual(0);
+        logQueueState('12BTC: After 1 BTC Reservation', getQueueState(203));
+
+        // ============== PHASE 5: Execute large swap ==============
+        Blockchain.log('=== 12 BTC TEST - PHASE 5: Executing 1 BTC swap ===');
+
+        swapForAccount(bigPurchaser, 204, initialProvider, ONE_BTC_IN_SATS);
+
+        logQueueState('12BTC: After 1 BTC Swap', getQueueState(204));
+
+        // ============== PHASE 6: 100 accounts list their tokens ==============
+        Blockchain.log('=== 12 BTC TEST - PHASE 6: 100 accounts listing tokens ===');
+
+        for (let i: i32 = 0; i < 100; i++) {
+            const account = accounts100[i];
+            const tokensToList = tokensPhase2.has(u32(i)) ? tokensPhase2.get(u32(i)) : u128.Zero;
+            if (tokensToList > u128.Zero) {
+                listTokensForAccount(account, tokensToList, 205, u32(i + 5000));
+            }
+        }
+
+        logQueueState('12BTC: After 100 Listings', getQueueState(205));
+
+        // ============== PHASE 7: 50 new accounts reserve ==============
+        Blockchain.log('=== 12 BTC TEST - PHASE 7: 50 new accounts reserving ===');
+
+        const accounts50: ExtendedAddress[] = [];
+        for (let i: u32 = 0; i < 50; i++) {
+            accounts50.push(generateAccount(i + 6000));
+        }
+
+        const tokensPhase7: Map<u32, u128> = new Map();
+
+        for (let i: i32 = 0; i < 50; i++) {
+            const account = accounts50[i];
+            const reservation = reserveForAccount(account, ACCOUNTS500_RESERVE_AMOUNT, 206);
+
+            const reservedTokens = getReservationTotalTokens(reservation);
+            tokensPhase7.set(u32(i), reservedTokens);
+
+            if (reservation.getProviderCount() === 0) {
+                zeroTokenReservations++;
+                Blockchain.log(`WARNING: New account ${i} got zero providers!`);
+            }
+        }
+
+        expect(zeroTokenReservations).toStrictEqual(0);
+        logQueueState('12BTC: After 50 New Reservations', getQueueState(206));
+
+        // ============== PHASE 8: Big purchaser dumps + 50 swaps ==============
+        Blockchain.log('=== 12 BTC TEST - PHASE 8: Dump + swaps ===');
+
+        // List all tokens from big purchase
+        Blockchain.log(`Dumping big purchase tokens: ${bigPurchaseTokens.toString()}`);
+        listTokensForAccount(bigPurchaser, bigPurchaseTokens, 207, 9998);
+
+        // Swap all 50 reservations
+        for (let i: i32 = 0; i < 50; i++) {
+            const account = accounts50[i];
+            swapForAccount(account, 207, initialProvider, ACCOUNTS500_RESERVE_AMOUNT);
+        }
+
+        logQueueState('12BTC: After Dump + 50 Swaps', getQueueState(207));
+
+        // ============== PHASE 9: 50 accounts list + 100 new reservations ==============
+        Blockchain.log('=== 12 BTC TEST - PHASE 9: List + new reservations ===');
+
+        // List from accounts50
+        for (let i: i32 = 0; i < 50; i++) {
+            const account = accounts50[i];
+            const tokensToList = tokensPhase7.has(u32(i)) ? tokensPhase7.get(u32(i)) : u128.Zero;
+            if (tokensToList > u128.Zero) {
+                listTokensForAccount(account, tokensToList, 208, u32(i + 6000));
+            }
+        }
+
+        // 100 new reservations from original accounts
+        for (let i: i32 = 0; i < 100; i++) {
+            const account = accounts100[i];
+            const reservation = reserveForAccount(account, MINIMUM_RESERVE_AMOUNT, 208);
+
+            if (reservation.getProviderCount() === 0) {
+                zeroTokenReservations++;
+                Blockchain.log(`WARNING: Account ${i} got zero providers in phase 9!`);
+            }
+        }
+
+        expect(zeroTokenReservations).toStrictEqual(0);
+        logQueueState('12BTC: After List + 100 Reservations', getQueueState(208));
+
+        // ============== PHASE 10: Final swaps ==============
+        Blockchain.log('=== 12 BTC TEST - PHASE 10: Final 100 swaps ===');
+
+        for (let i: i32 = 0; i < 100; i++) {
+            const account = accounts100[i];
+            swapForAccount(account, 209, initialProvider, MINIMUM_RESERVE_AMOUNT);
+        }
+
+        logQueueState('12BTC: Final State', getQueueState(209));
+
+        // ============== FINAL ASSERTIONS ==============
+        Blockchain.log('=== 12 BTC TEST - FINAL ASSERTIONS ===');
+
+        expect(zeroTokenReservations).toStrictEqual(0);
+        Blockchain.log(`Zero token reservations: ${zeroTokenReservations} (expected: 0)`);
+
+        const finalPoolState = getPoolLiquidity(209);
+        Blockchain.log(`Final liquidity: ${finalPoolState.liquidity.toString()}`);
+        Blockchain.log(`Final reserved: ${finalPoolState.reserved.toString()}`);
+
+        expect(finalPoolState.liquidity >= finalPoolState.reserved).toBeTruthy();
+
+        Blockchain.log('=== 12 BTC TEST COMPLETED SUCCESSFULLY ===');
     });
 });
