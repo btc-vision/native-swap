@@ -517,6 +517,8 @@ export interface ITestLiquidityQueue extends ILiquidityQueue {
     mockgetNextProviderWithLiquidity(mockedNextProvider: Provider | null): void;
 
     setLiquidity(value: u256): void;
+
+    testCalculateQueueImpact(): u256;
 }
 
 export interface ITestTradeManager extends ITradeManager {
@@ -707,6 +709,11 @@ export class TestLiquidityQueue extends LiquidityQueue implements ITestLiquidity
 
     public purgeCalled(): boolean {
         return this._purgeCalled;
+    }
+
+    public testCalculateQueueImpact(): u256 {
+        // @ts-ignore - accessing private method for testing
+        return this.calculateQueueImpact();
     }
 
     protected computeVolatility(

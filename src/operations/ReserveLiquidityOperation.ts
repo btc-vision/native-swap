@@ -26,7 +26,6 @@ import {
 } from '../constants/Contract';
 import { Provider } from '../models/Provider';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
-import { min128 } from '../utils/MathUtils';
 
 export class ReserveLiquidityOperation extends BaseOperation {
     protected currentQuote: u256 = u256.Zero;
@@ -93,7 +92,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.currentQuote);
 
         // Cap by tokensToAttempt to prevent rounding from inflating the reservation
-        const finalTokensToReserve: u128 = min128(tokenResult.tokens, tokensToAttempt);
+        const finalTokensToReserve: u128 = SafeMath.min128(tokenResult.tokens, tokensToAttempt);
 
         if (!finalTokensToReserve.isZero()) {
             this.applyReservation(reservation, provider, finalTokensToReserve, satoshis);

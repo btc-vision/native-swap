@@ -20,7 +20,6 @@ import { ProviderActivatedEvent } from '../events/ProviderActivatedEvent';
 import { ITradeManager } from './interfaces/ITradeManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
-import { min128 } from '../utils/MathUtils';
 import { IReservationManager } from './interfaces/IReservationManager';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { ProviderConsumedEvent } from '../events/ProviderConsumedEvent';
@@ -355,7 +354,7 @@ export class TradeManager implements ITradeManager {
             targetTokens = tokenResult.tokens;
         }
 
-        return min128(targetTokens, providerLiquidity);
+        return SafeMath.min128(targetTokens, providerLiquidity);
     }
 
     private getMaximumPossibleTargetTokens(
@@ -363,7 +362,11 @@ export class TradeManager implements ITradeManager {
         providerAvailableLiquidity: u128,
         originalTokenAmount: u128,
     ): u128 {
-        const cappedTokenAmount: u128 = min128(originalTokenAmount, providerAvailableLiquidity);
+        const cappedTokenAmount: u128 = SafeMath.min128(
+            originalTokenAmount,
+            providerAvailableLiquidity,
+        );
+
         const requiredSatoshis: u64 = tokensToSatoshis(cappedTokenAmount.toU256(), this.quoteToUse);
 
         if (satoshis >= requiredSatoshis) {
@@ -371,7 +374,7 @@ export class TradeManager implements ITradeManager {
         }
 
         const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.quoteToUse);
-        return min128(tokenResult.tokens, cappedTokenAmount);
+        return SafeMath.min128(tokenResult.tokens, cappedTokenAmount);
     }
 
     private getValidBlockQuote(blockNumber: u64): void {
