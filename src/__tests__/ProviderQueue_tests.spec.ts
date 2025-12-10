@@ -6,13 +6,14 @@ import {
 } from '../models/Provider';
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { ProviderQueue } from '../managers/ProviderQueue';
-import { NORMAL_QUEUE_POINTER } from '../constants/StoredPointers';
+import { NORMAL_QUEUE_FULFILLED, NORMAL_QUEUE_POINTER } from '../constants/StoredPointers';
 import {
     createProvider,
     createProviders,
     providerAddress1,
     providerAddress2,
     providerAddress3,
+    providerAddress4,
     TestProviderQueue,
     tokenAddress1,
     tokenAddress2,
@@ -24,11 +25,25 @@ import {
     ENABLE_INDEX_VERIFICATION,
     INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
     MAXIMUM_NUMBER_OF_PROVIDERS,
 } from '../constants/Contract';
 import { LiquidityQueueReserve } from '../models/LiquidityQueueReserve';
+import { ILiquidityQueueReserve } from '../managers/interfaces/ILiquidityQueueReserve';
+import { FulfilledProviderQueue } from '../managers/FulfilledProviderQueue';
 
 const QUOTE = u256.fromU64(100000000);
+
+//MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING
+function createNormalFulfilledQueue(
+    liquidityQueueReserve: ILiquidityQueueReserve,
+): FulfilledProviderQueue {
+    return new FulfilledProviderQueue(
+        NORMAL_QUEUE_FULFILLED,
+        tokenIdUint8Array1,
+        liquidityQueueReserve,
+    );
+}
 
 describe('ProviderQueue tests', () => {
     beforeEach(() => {
@@ -59,6 +74,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             expect(queue.currentIndex).toStrictEqual(0);
         });
@@ -76,6 +92,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             expect(queue.length).toStrictEqual(0);
         });
@@ -93,6 +110,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             queue.add(createProvider(providerAddress1, tokenAddress1));
             queue.add(createProvider(providerAddress2, tokenAddress1));
@@ -112,6 +130,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             expect(queue.startingIndex).toStrictEqual(0);
         });
@@ -129,6 +148,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             queue.getQueue().setStartingIndex(10);
             expect(queue.startingIndex).toStrictEqual(10);
@@ -147,6 +167,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             queue.restoreCurrentIndex(999);
             expect(queue.currentIndex).toStrictEqual(999);
@@ -176,6 +197,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
@@ -204,6 +226,7 @@ describe('ProviderQueue tests', () => {
                     ENABLE_INDEX_VERIFICATION,
                     5,
                     liquidityQueueReserve,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
                 const providers: Provider[] = createProviders(6, 0);
 
@@ -236,6 +259,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             const p1Index: u32 = queue.add(p1);
@@ -265,6 +289,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(p1);
@@ -308,6 +333,7 @@ describe('ProviderQueue tests', () => {
                     ENABLE_INDEX_VERIFICATION,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
                     liquidityQueueReserve,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
 
                 const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -331,13 +357,15 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
+            provider.setVirtualBTCContribution(1000);
             const index: u32 = queue.add(provider);
             liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
-            queue.resetProvider(provider, true, false);
+            queue.resetProvider(provider, true);
 
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
             expect(queue.getAt(index)).toStrictEqual(u256.Zero);
@@ -345,6 +373,7 @@ describe('ProviderQueue tests', () => {
             expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
+            expect(provider.getVirtualBTCContribution()).toStrictEqual(0);
             expect(provider.isActive()).toBeFalsy();
             expect(provider.isPriority()).toBeFalsy();
             expect(provider.isPurged()).toBeFalsy();
@@ -367,13 +396,14 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             provider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
             provider.markInitialLiquidityProvider();
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
             liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
-            queue.resetProvider(provider, true, false);
+            queue.resetProvider(provider, true);
 
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
             expect(provider.isLiquidityProvisionAllowed()).toBeFalsy();
@@ -385,6 +415,7 @@ describe('ProviderQueue tests', () => {
             expect(provider.getQueueIndex()).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
             expect(provider.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
             expect(provider.getListedTokenAtBlock()).toStrictEqual(BLOCK_NOT_SET_VALUE);
+            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(1000));
             expect(liquidityQueueReserve.liquidity).toStrictEqual(u256.Zero);
         });
 
@@ -401,6 +432,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -408,9 +440,9 @@ describe('ProviderQueue tests', () => {
 
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
             const oldLiquidity = liquidityQueueReserve.liquidity;
-            queue.resetProvider(provider, false, false);
+            queue.resetProvider(provider, false);
 
-            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+            expect(TransferHelper.transferCalled).toBeFalsy();
             expect(liquidityQueueReserve.liquidity).toStrictEqual(oldLiquidity);
         });
 
@@ -427,6 +459,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
@@ -434,9 +467,9 @@ describe('ProviderQueue tests', () => {
             queue.add(provider);
 
             liquidityQueueReserve.addToTotalReserve(provider.getLiquidityAmount().toU256());
-            queue.resetProvider(provider, true, false);
+            queue.resetProvider(provider, true);
 
-            expect(TransferHelper.safeTransferCalled).toBeFalsy();
+            expect(TransferHelper.transferCalled).toBeFalsy();
             expect(liquidityQueueReserve.liquidity).toStrictEqual(u256.Zero);
         });
     });
@@ -462,8 +495,13 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
-            const result: u32 = queue.cleanUp(0);
+
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
+            const result: u32 = queue.cleanUp(fulfilledQueue, 0, u256.fromU32(10000000));
             expect(result).toStrictEqual(0);
         });
 
@@ -480,7 +518,12 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
+
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(p1);
 
@@ -494,9 +537,78 @@ describe('ProviderQueue tests', () => {
             queue.remove(p2);
             queue.remove(p3);
 
-            const result: u32 = queue.cleanUp(0);
+            const result: u32 = queue.cleanUp(fulfilledQueue, 0, u256.fromU32(10000000));
             expect(result).toStrictEqual(2);
             expect(queue.startingIndex).toStrictEqual(2);
+        });
+
+        it('skips to reset', () => {
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
+                MAXIMUM_NUMBER_OF_PROVIDERS,
+                liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+            );
+
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
+            const p1: Provider = createProvider(providerAddress1, tokenAddress1);
+            p1.markToReset();
+            queue.add(p1);
+
+            const result: u32 = queue.cleanUp(fulfilledQueue, 0, u256.fromU32(10000000));
+            expect(result).toStrictEqual(0);
+            expect(queue.startingIndex).toStrictEqual(0);
+        });
+
+        it('push to fulfilled queue when currentProviderResetCount > this.maximumResetsBeforeQueuing', () => {
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
+            liquidityQueueReserve.addToTotalReserve(u256.fromU64(1000000000000));
+            liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU64(1000000000000));
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
+                MAXIMUM_NUMBER_OF_PROVIDERS,
+                liquidityQueueReserve,
+                2,
+            );
+
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
+            const p1: Provider = createProvider(providerAddress1, tokenAddress1);
+            p1.setLiquidityAmount(u128.from(1));
+            queue.add(p1);
+
+            const p2: Provider = createProvider(providerAddress2, tokenAddress2);
+            p2.setLiquidityAmount(u128.from(1));
+            queue.add(p2);
+
+            const p3: Provider = createProvider(providerAddress3, tokenAddress2);
+            p3.setLiquidityAmount(u128.from(1));
+            queue.add(p3);
+
+            const p4: Provider = createProvider(providerAddress4, tokenAddress2);
+            p4.setLiquidityAmount(u128.from(1));
+            queue.add(p4);
+
+            queue.cleanUp(fulfilledQueue, 0, u256.fromU32(1000000000));
+            expect(fulfilledQueue.getLength()).toStrictEqual(2);
         });
 
         it('reverts if inactive provider found', () => {
@@ -513,12 +625,17 @@ describe('ProviderQueue tests', () => {
                     ENABLE_INDEX_VERIFICATION,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
                     liquidityQueueReserve,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
+
+                const fulfilledQueue: FulfilledProviderQueue =
+                    createNormalFulfilledQueue(liquidityQueueReserve);
+
                 const p1: Provider = createProvider(providerAddress1, tokenAddress1);
                 p1.deactivate();
                 queue.add(p1);
 
-                queue.cleanUp(0);
+                queue.cleanUp(fulfilledQueue, 0, u256.fromU32(10000000));
             }).toThrow();
         });
 
@@ -534,7 +651,12 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
+
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(p1);
 
@@ -546,7 +668,7 @@ describe('ProviderQueue tests', () => {
 
             queue.remove(p1);
 
-            const result: u32 = queue.cleanUp(0);
+            const result: u32 = queue.cleanUp(fulfilledQueue, 0, u256.fromU32(10000000));
 
             expect(result).toStrictEqual(0);
             expect(queue.startingIndex).toStrictEqual(1);
@@ -565,11 +687,16 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
+
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
             const p1: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(p1);
 
-            const result = queue.cleanUp(1);
+            const result = queue.cleanUp(fulfilledQueue, 1, u256.fromU32(10000000));
             expect(result).toStrictEqual(0);
         });
     });
@@ -595,8 +722,12 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
-            expect(queue.getNextWithLiquidity(QUOTE)).toBeNull();
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
+            expect(queue.getNextWithLiquidity(fulfilledQueue, QUOTE)).toBeNull();
         });
 
         it('reverts when starting index > queue length', () => {
@@ -612,10 +743,13 @@ describe('ProviderQueue tests', () => {
                     ENABLE_INDEX_VERIFICATION,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
                     liquidityQueueReserve,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
+                const fulfilledQueue: FulfilledProviderQueue =
+                    createNormalFulfilledQueue(liquidityQueueReserve);
 
                 queue.setStartingIndex(100);
-                queue.getNextWithLiquidity(QUOTE);
+                queue.getNextWithLiquidity(fulfilledQueue, QUOTE);
             }).toThrow();
         });
 
@@ -632,7 +766,11 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             queue.add(provider1);
 
@@ -641,7 +779,7 @@ describe('ProviderQueue tests', () => {
 
             queue.remove(provider1);
 
-            expect(queue.getNextWithLiquidity(QUOTE)).toBe(provider2);
+            expect(queue.getNextWithLiquidity(fulfilledQueue, QUOTE)).toBe(provider2);
         });
 
         it('reverts if provider is priority', () => {
@@ -658,12 +796,16 @@ describe('ProviderQueue tests', () => {
                     ENABLE_INDEX_VERIFICATION,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
                     liquidityQueueReserve,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
+                const fulfilledQueue: FulfilledProviderQueue =
+                    createNormalFulfilledQueue(liquidityQueueReserve);
+
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 provider1.markPriority();
                 queue.add(provider1);
 
-                queue.getNextWithLiquidity(QUOTE);
+                queue.getNextWithLiquidity(fulfilledQueue, QUOTE);
             }).toThrow();
         });
 
@@ -681,12 +823,17 @@ describe('ProviderQueue tests', () => {
                     true,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
                     liquidityQueueReserve,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
+
+                const fulfilledQueue: FulfilledProviderQueue =
+                    createNormalFulfilledQueue(liquidityQueueReserve);
+
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider1);
                 provider1.setQueueIndex(2);
 
-                queue.getNextWithLiquidity(QUOTE);
+                queue.getNextWithLiquidity(fulfilledQueue, QUOTE);
             }).toThrow();
         });
 
@@ -704,12 +851,17 @@ describe('ProviderQueue tests', () => {
                     true,
                     MAXIMUM_NUMBER_OF_PROVIDERS,
                     liquidityQueueReserve,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
                 );
+
+                const fulfilledQueue: FulfilledProviderQueue =
+                    createNormalFulfilledQueue(liquidityQueueReserve);
+
                 const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
                 queue.add(provider1);
                 provider1.markInitialLiquidityProvider();
 
-                queue.getNextWithLiquidity(QUOTE);
+                queue.getNextWithLiquidity(fulfilledQueue, QUOTE);
             }).toThrow();
         });
 
@@ -726,7 +878,12 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
+
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
             queue.add(provider1);
@@ -736,7 +893,92 @@ describe('ProviderQueue tests', () => {
             provider2.setReservedAmount(u128.fromU64(100));
             queue.add(provider2);
 
-            expect(queue.getNextWithLiquidity(QUOTE)).toBeNull();
+            expect(queue.getNextWithLiquidity(fulfilledQueue, QUOTE)).toBeNull();
+        });
+
+        it('skips provider if provider is fulfilled', () => {
+            const liquidityQueueReserve = new LiquidityQueueReserve(
+                tokenAddress1,
+                tokenIdUint8Array1,
+            );
+
+            const queue: ProviderQueue = new ProviderQueue(
+                tokenAddress1,
+                NORMAL_QUEUE_POINTER,
+                tokenIdUint8Array1,
+                ENABLE_INDEX_VERIFICATION,
+                MAXIMUM_NUMBER_OF_PROVIDERS,
+                liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+            );
+
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
+            const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
+            provider1.markToReset();
+            queue.add(provider1);
+
+            const result = queue.getNextWithLiquidity(fulfilledQueue, QUOTE);
+
+            expect(result).toBeNull();
+        });
+
+        it('reverts if provider is purged and trying to add to fulfilled queue', () => {
+            expect(() => {
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = new ProviderQueue(
+                    tokenAddress1,
+                    NORMAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                    ENABLE_INDEX_VERIFICATION,
+                    MAXIMUM_NUMBER_OF_PROVIDERS,
+                    liquidityQueueReserve,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                );
+
+                const fulfilledQueue: FulfilledProviderQueue =
+                    createNormalFulfilledQueue(liquidityQueueReserve);
+
+                const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
+                provider1.markPurged();
+                queue.add(provider1);
+
+                queue.getNextWithLiquidity(fulfilledQueue, QUOTE);
+            }).toThrow();
+        });
+
+        it('reverts if provider liquidity <  reserved', () => {
+            expect(() => {
+                const liquidityQueueReserve = new LiquidityQueueReserve(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                );
+
+                const queue: ProviderQueue = new ProviderQueue(
+                    tokenAddress1,
+                    NORMAL_QUEUE_POINTER,
+                    tokenIdUint8Array1,
+                    ENABLE_INDEX_VERIFICATION,
+                    MAXIMUM_NUMBER_OF_PROVIDERS,
+                    liquidityQueueReserve,
+                    MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
+                );
+
+                const fulfilledQueue: FulfilledProviderQueue =
+                    createNormalFulfilledQueue(liquidityQueueReserve);
+
+                const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
+                provider1.setLiquidityAmount(u128.fromU64(100));
+                provider1.setReservedAmount(u128.fromU64(105));
+                queue.add(provider1);
+
+                queue.getNextWithLiquidity(fulfilledQueue, QUOTE);
+            }).toThrow();
         });
 
         it('returns null if provider fails min reservation and has reserved amount', () => {
@@ -752,7 +994,10 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
 
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
@@ -765,7 +1010,7 @@ describe('ProviderQueue tests', () => {
 
             liquidityQueueReserve.addToTotalReserve(provider2.getLiquidityAmount().toU256());
 
-            expect(queue.getNextWithLiquidity(QUOTE)).toBeNull();
+            expect(queue.getNextWithLiquidity(fulfilledQueue, QUOTE)).toBeNull();
             expect(liquidityQueueReserve.liquidity).toStrictEqual(
                 provider2.getLiquidityAmount().toU256(),
             );
@@ -784,9 +1029,14 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
+
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
             liquidityQueueReserve.addToVirtualTokenReserve(u256.fromU32(100000));
-            
+
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
             queue.add(provider1);
@@ -796,7 +1046,7 @@ describe('ProviderQueue tests', () => {
             const index2: u32 = queue.add(provider2);
             liquidityQueueReserve.addToTotalReserve(provider2.getLiquidityAmount().toU256());
 
-            expect(queue.getNextWithLiquidity(QUOTE)).toBeNull();
+            expect(queue.getNextWithLiquidity(fulfilledQueue, QUOTE)).toBeNull();
             expect(provider2.getLiquidityAmount()).toStrictEqual(u128.Zero);
             expect(provider2.isActive()).toBeFalsy();
             expect(provider2.getQueueIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
@@ -817,7 +1067,11 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
+            const fulfilledQueue: FulfilledProviderQueue =
+                createNormalFulfilledQueue(liquidityQueueReserve);
+
             const provider1: Provider = createProvider(providerAddress1, tokenAddress1);
             provider1.deactivate();
             queue.add(provider1);
@@ -826,7 +1080,7 @@ describe('ProviderQueue tests', () => {
             provider2.setLiquidityAmount(u128.fromU64(10000));
             queue.add(provider2);
 
-            expect(queue.getNextWithLiquidity(QUOTE)).toBe(provider2);
+            expect(queue.getNextWithLiquidity(fulfilledQueue, QUOTE)).toBe(provider2);
             expect(queue.currentIndex).toStrictEqual(2);
         });
     });
@@ -852,6 +1106,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
             const provider: Provider = createProvider(providerAddress1, tokenAddress1);
             const index: u32 = queue.add(provider);
@@ -867,6 +1122,7 @@ describe('ProviderQueue tests', () => {
                 ENABLE_INDEX_VERIFICATION,
                 MAXIMUM_NUMBER_OF_PROVIDERS,
                 liquidityQueueReserve,
+                MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING,
             );
 
             expect(queue2.length).toStrictEqual(queue.length);

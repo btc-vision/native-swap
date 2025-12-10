@@ -55,6 +55,13 @@ describe('ProviderData tests', () => {
         expect(providerData.listedTokenAtBlock).toStrictEqual(100);
     });
 
+    it('setter/getter for virtualBTCContribution', () => {
+        const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
+        expect(providerData.virtualBTCContribution).toStrictEqual(0);
+        providerData.virtualBTCContribution = 100;
+        expect(providerData.virtualBTCContribution).toStrictEqual(100);
+    });
+
     it('setter/getter for active', () => {
         const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
         expect(providerData.active).toBeFalsy();
@@ -67,6 +74,13 @@ describe('ProviderData tests', () => {
         expect(providerData.purged).toBeFalsy();
         providerData.purged = true;
         expect(providerData.purged).toBeTruthy();
+    });
+
+    it('setter/getter for toReset', () => {
+        const providerData = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
+        expect(providerData.toReset).toBeFalsy();
+        providerData.toReset = true;
+        expect(providerData.toReset).toBeTruthy();
     });
 
     it('setter/getter for purgedIndex', () => {
@@ -110,6 +124,8 @@ describe('ProviderData tests', () => {
         providerData.purged = true;
         providerData.purgedIndex = 100;
         providerData.listedTokenAtBlock = 101;
+        providerData.toReset = true;
+        providerData.virtualBTCContribution = 100;
         providerData.save();
 
         const providerData2 = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
@@ -123,6 +139,8 @@ describe('ProviderData tests', () => {
         expect(providerData2.reservedAmount).toStrictEqual(u128.fromU64(100));
         expect(providerData2.purgedIndex).toStrictEqual(100);
         expect(providerData2.listedTokenAtBlock).toStrictEqual(101);
+        expect(providerData2.toReset).toBeTruthy();
+        expect(providerData2.virtualBTCContribution).toStrictEqual(100);
     });
 
     it('saves and loads from storage when all flag false', () => {
@@ -138,6 +156,8 @@ describe('ProviderData tests', () => {
         providerData.purged = false;
         providerData.purgedIndex = 100;
         providerData.listedTokenAtBlock = 101;
+        providerData.toReset = false;
+        providerData.virtualBTCContribution = 0;
         providerData.save();
 
         const providerData2 = new ProviderData(PROVIDER_DATA_POINTER, providerBuffer);
@@ -151,6 +171,8 @@ describe('ProviderData tests', () => {
         expect(providerData2.reservedAmount).toStrictEqual(u128.fromU64(100));
         expect(providerData2.purgedIndex).toStrictEqual(100);
         expect(providerData2.listedTokenAtBlock).toStrictEqual(101);
+        expect(providerData2.toReset).toBeFalsy();
+        expect(providerData2.virtualBTCContribution).toStrictEqual(0);
     });
 
     it('resetListingValues clears listing fields', () => {
@@ -161,7 +183,11 @@ describe('ProviderData tests', () => {
         providerData.liquidityAmount = u128.fromU64(20);
         providerData.reservedAmount = u128.fromU64(10);
         providerData.queueIndex = 2;
-
+        providerData.toReset = true;
+        providerData.purged = true;
+        providerData.purgedIndex = 1;
+        providerData.listedTokenAtBlock = 101;
+        providerData.virtualBTCContribution = 100;
         providerData.resetListingProviderValues();
 
         expect(providerData.active).toBeFalsy();
@@ -169,7 +195,13 @@ describe('ProviderData tests', () => {
         expect(providerData.liquidityProvisionAllowed).toBeFalsy();
         expect(providerData.liquidityAmount).toStrictEqual(u128.Zero);
         expect(providerData.reservedAmount).toStrictEqual(u128.Zero);
-        expect(providerData.queueIndex).toBe(INDEX_NOT_SET_VALUE);
+        expect(providerData.queueIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
+        expect(providerData.toReset).toBeFalsy();
+        expect(providerData.purged).toBeFalsy();
+        expect(providerData.purgedIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
+        expect(providerData.listedTokenAtBlock).toStrictEqual(BLOCK_NOT_SET_VALUE);
+        // Should not reset virtualBTCContribution
+        expect(providerData.virtualBTCContribution).toStrictEqual(100);
     });
 
     it('resetListingValues clears listing fields except queueIndex when initial provider', () => {
@@ -181,7 +213,11 @@ describe('ProviderData tests', () => {
         providerData.reservedAmount = u128.fromU64(10);
         providerData.queueIndex = INITIAL_LIQUIDITY_PROVIDER_INDEX;
         providerData.initialLiquidityProvider = true;
-
+        providerData.toReset = true;
+        providerData.purged = true;
+        providerData.purgedIndex = 1;
+        providerData.listedTokenAtBlock = 101;
+        providerData.virtualBTCContribution = 100;
         providerData.resetListingProviderValues();
 
         expect(providerData.active).toBeFalsy();
@@ -191,6 +227,12 @@ describe('ProviderData tests', () => {
         expect(providerData.reservedAmount).toStrictEqual(u128.Zero);
         expect(providerData.queueIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
         expect(providerData.initialLiquidityProvider).toBeTruthy();
+        expect(providerData.toReset).toBeFalsy();
+        expect(providerData.purged).toBeFalsy();
+        expect(providerData.purgedIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
+        expect(providerData.listedTokenAtBlock).toStrictEqual(BLOCK_NOT_SET_VALUE);
+        // Should not reset virtualBTCContribution
+        expect(providerData.virtualBTCContribution).toStrictEqual(100);
     });
 
     it('resetAll calls both resetListingValues and resetLiquidityProviderValues', () => {
@@ -201,6 +243,11 @@ describe('ProviderData tests', () => {
         providerData.liquidityAmount = u128.fromU64(20);
         providerData.reservedAmount = u128.fromU64(10);
         providerData.queueIndex = 2;
+        providerData.toReset = true;
+        providerData.purged = true;
+        providerData.purgedIndex = 1;
+        providerData.listedTokenAtBlock = 101;
+        providerData.virtualBTCContribution = 100;
 
         providerData.resetAll();
         expect(providerData.active).toBeFalsy();
@@ -209,5 +256,11 @@ describe('ProviderData tests', () => {
         expect(providerData.liquidityAmount).toStrictEqual(u128.Zero);
         expect(providerData.reservedAmount).toStrictEqual(u128.Zero);
         expect(providerData.queueIndex).toBe(INDEX_NOT_SET_VALUE);
+        expect(providerData.toReset).toBeFalsy();
+        expect(providerData.purged).toBeFalsy();
+        expect(providerData.purgedIndex).toStrictEqual(INDEX_NOT_SET_VALUE);
+        expect(providerData.listedTokenAtBlock).toStrictEqual(BLOCK_NOT_SET_VALUE);
+        // Should not reset virtualBTCContribution
+        expect(providerData.virtualBTCContribution).toStrictEqual(100);
     });
 });

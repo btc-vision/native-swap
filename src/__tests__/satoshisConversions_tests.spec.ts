@@ -19,11 +19,11 @@ describe('SatoshisConversions tests', () => {
         TransferHelper.clearMockedResults();
     });
     describe('tokensToSatoshis()', () => {
-        it('converts tokenAmount to satoshis: (tokenAmount+1)*QUOTE_SCALE/QUOTE_SCALE', () => {
+        it('converts tokenAmount to satoshis', () => {
             const tokenAmount: u256 = u256.fromU64(5);
             const scaledPrice: u256 = QUOTE_SCALE;
             const result: u64 = tokensToSatoshis(tokenAmount, scaledPrice);
-            expect(result).toStrictEqual(6);
+            expect(result).toStrictEqual(5);
         });
 
         it('converts with scaledPrice double QUOTE_SCALE', () => {
@@ -53,7 +53,7 @@ describe('SatoshisConversions tests', () => {
             const tokenAmount128: u128 = u128.fromU64(10);
             const scaledPrice: u256 = QUOTE_SCALE;
             const result: u64 = tokensToSatoshis128(tokenAmount128, scaledPrice);
-            expect(result).toStrictEqual(11);
+            expect(result).toStrictEqual(10);
         });
     });
 

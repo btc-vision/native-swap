@@ -14,14 +14,14 @@ export class PriorityProviderQueue extends ProviderQueue {
     }
 
     protected override isEligible(provider: Provider): boolean {
-        const isActive: boolean = provider.isActive();
+        const isEligible: boolean = provider.isActive();
 
-        if (isActive) {
+        if (isEligible) {
             this.ensureIsPriority(provider);
             this.ensureProviderLiquidityIsValid(provider);
         }
 
-        return isActive;
+        return isEligible;
     }
 
     private ensureIsPriority(provider: Provider): void {

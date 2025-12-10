@@ -1,7 +1,7 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 export const INITIAL_FEE_COLLECT_ADDRESS: string =
-    'bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh';
+    'bcrt1qup339pnfsgz7rwu5qvw7e3pgdjmpda9zlwlg8ua70v3p8xl3tnqsjm472h';
 
 // tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c
 // bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh
@@ -9,7 +9,7 @@ export const INITIAL_FEE_COLLECT_ADDRESS: string =
 export const ENABLE_FEES: bool = true;
 export const QUOTE_SCALE: u256 = u256.fromU64(100_000_000);
 export const RESERVATION_EXPIRE_AFTER_IN_BLOCKS: u64 = 8;
-export const VOLATILITY_WINDOW_IN_BLOCKS: u32 = 5;
+export const VOLATILITY_WINDOW_IN_BLOCKS: u32 = 8;
 export const STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT: u64 = 600;
 export const MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT: u64 = 1000;
 export const MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT: u64 = 10_000;
@@ -20,7 +20,9 @@ export const TIMEOUT_AFTER_EXPIRATION_BLOCKS: u8 = 2;
 export const MAX_TOTAL_SATOSHIS: u256 = u256.fromU64(21_000_000 * 100_000_000);
 export const MAX_ACTIVATION_DELAY: u8 = 3;
 
-export const MIN_SATOSHI_RESERVE: u256 = u256.fromU64(100_000); // 0.001 BTC
+export const MAXIMUM_NUMBER_OF_PROVIDER_TO_RESETS_BEFORE_QUEUING: u8 = 120;
+export const MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS: u8 = 50;
+
 export const MAX_PRICE_IMPACT_BPS = u256.fromU64(10_000); // 40% 3_000 15_000
 export const MAX_CUMULATIVE_IMPACT_BPS = u256.fromU32(20_000);
 
@@ -33,24 +35,46 @@ export const INITIAL_LIQUIDITY_PROVIDER_INDEX: u32 = u32.MAX_VALUE - 1;
 export const MAXIMUM_VALID_INDEX: u32 = u32.MAX_VALUE - 2;
 export const BLOCK_NOT_SET_VALUE: u64 = U64.MAX_VALUE;
 
-export const EMIT_PURGE_EVENTS: boolean = false;
-export const EMIT_PROVIDERCONSUMED_EVENTS: boolean = false;
+export const EMIT_PURGE_EVENTS: boolean = true;
+export const EMIT_PROVIDERCONSUMED_EVENTS: boolean = true;
 export const CSV_BLOCKS_REQUIRED: i32 = 1;
+
+// Default amplification coefficient for stable pools
+// Higher A = tighter liquidity around peg, lower slippage for small trades
+// Typical values: 100-1000 for stablecoin pairs
+export const DEFAULT_STABLE_AMPLIFICATION: u64 = 100;
+
+export const POOL_TYPE_STANDARD: u8 = 0;
+export const POOL_TYPE_STABLE: u8 = 1;
+
+// Peg rate scale: pegRate is satoshis per token * 1e8
+export const PEG_RATE_SCALE: u256 = u256.fromU64(100_000_000); // 1e8
+
+// Peg rate bounds for defensive validation
+// Min: 1 sat per token (1e8 scaled) - tokens worth less than 1 sat are unrealistic
+export const MIN_PEG_RATE: u256 = u256.fromU64(100_000_000);
+
+// Max: 1M BTC per token (1e14 sats * 1e8 scale) - catches overflow from malicious tokens
+export const MAX_PEG_RATE: u256 = u256.fromUint8ArrayBE(
+    Uint8Array.wrap(
+        changetype<ArrayBuffer>([
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x1e, 0x19,
+            0xe0, 0xc9, 0xba, 0xb2,
+        ] as StaticArray<u8>),
+    ),
+);
 
 /**
  * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
  */
-export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 200;
+export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 150;
 
-export const AT_LEAST_PROVIDERS_TO_PURGE: u32 = 150;
-
-// 4 block grace period
-export const SLASH_GRACE_WINDOW: u64 = 4;
-
-// number of blocks in 14 days
-export const SLASH_RAMP_UP_BLOCKS: u64 = 2_016;
+export const AT_LEAST_PROVIDERS_TO_PURGE: u32 = 100;
 
 export const ENABLE_INDEX_VERIFICATION: boolean = false;
 
 export const MAXIMUM_QUOTE_INDEX: u64 = 500;
 export const MAXIMUM_NUMBER_OF_PROVIDERS: u32 = u32.MAX_VALUE - 1000;
+
+export let currentProviderResetCount: u8 = 0;

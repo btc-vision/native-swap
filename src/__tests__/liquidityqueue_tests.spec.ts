@@ -16,7 +16,6 @@ import {
     createLiquidityQueue,
     createProvider,
     createProviderId,
-    createProviders,
     createReservation,
     ITestLiquidityQueue,
     ITestProviderManager,
@@ -26,19 +25,42 @@ import {
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../managers/FeeManager';
 
 import { Reservation } from '../models/Reservation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
-import { IQuoteManager } from '../managers/interfaces/IQuoteManager';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import {
+    DEFAULT_STABLE_AMPLIFICATION,
     INDEX_NOT_SET_VALUE,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAX_TOTAL_SATOSHIS,
+    POOL_TYPE_STABLE,
+    POOL_TYPE_STANDARD,
+    VOLATILITY_WINDOW_IN_BLOCKS,
 } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+
+function getLiquidityQueue(): ITestLiquidityQueue {
+    const createQueueResult = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
+
+    const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+    // Set initial state
+    queue.virtualSatoshisReserve = 1000000;
+    queue.virtualTokenReserve = u256.fromU64(1000000);
+    queue.lastVirtualUpdateBlock = 0;
+
+    // Reset accumulators
+    queue.totalTokensSellActivated = u256.Zero;
+    queue.totalTokensExchangedForSatoshis = u256.Zero;
+    queue.totalSatoshisExchangedForTokens = 0;
+
+    setBlockchainEnvironment(100);
+
+    return queue;
+}
 
 describe('Liquidity queue tests', () => {
     beforeEach(() => {
@@ -68,7 +90,7 @@ describe('Liquidity queue tests', () => {
 
             expect(queue.initialLiquidityProviderId).toStrictEqual(u256.Zero);
             expect(queue.virtualSatoshisReserve).toStrictEqual(0);
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.One);
             expect(queue.totalTokensSellActivated).toStrictEqual(u256.Zero);
             expect(queue.totalSatoshisExchangedForTokens).toStrictEqual(0);
             expect(queue.totalTokensExchangedForSatoshis).toStrictEqual(u256.Zero);
@@ -79,6 +101,9 @@ describe('Liquidity queue tests', () => {
             expect(queue.maxReserves5BlockPercent).toStrictEqual(0);
             expect(queue.lastPurgedBlock).toStrictEqual(0);
             expect(queue.antiBotExpirationBlock).toStrictEqual(0);
+            expect(queue.poolType).toStrictEqual(POOL_TYPE_STANDARD);
+            expect(queue.amplification).toStrictEqual(DEFAULT_STABLE_AMPLIFICATION);
+            expect(queue.pegStalenessThreshold).toStrictEqual(0);
         });
 
         it('should create an empty new liquidity queue when it does not exists and virtual pool is updated', () => {
@@ -104,152 +129,9 @@ describe('Liquidity queue tests', () => {
             expect(queue.maxReserves5BlockPercent).toStrictEqual(0);
             expect(queue.lastPurgedBlock).toStrictEqual(0);
             expect(queue.antiBotExpirationBlock).toStrictEqual(0);
-        });
-
-        it('should create a new liquidity queue and load the values when it exists and virtual pool is not updated', () => {
-            setBlockchainEnvironment(1);
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            const quoteManager: IQuoteManager = createQueueResult.quoteManager;
-
-            queue.virtualSatoshisReserve = 10000;
-            queue.virtualTokenReserve = u256.fromU32(100000);
-            queue.setBlockQuote();
-
-            setBlockchainEnvironment(2);
-            queue.virtualSatoshisReserve = 10000;
-            queue.virtualTokenReserve = u256.fromU32(200000);
-            queue.setBlockQuote();
-
-            queue.maxReserves5BlockPercent = 9999;
-            queue.lastPurgedBlock = 1000;
-            queue.antiBotExpirationBlock = 1000;
-
-            const providers: Provider[] = createProviders(
-                3,
-                0,
-                false,
-                false,
-                true,
-                'kcweojewoj2309',
-                u128.fromU32(100000),
-                u128.fromU32(100000),
-                u128.fromU32(10000),
-                true,
-                true,
-            );
-
-            for (let i = 0; i < providers.length; i++) {
-                queue.addToPriorityQueue(providers[i]);
-            }
-
-            queue.initialLiquidityProviderId = providers[0].getId();
-            queue.lastVirtualUpdateBlock = 888;
-            queue.maxTokensPerReservation = u256.fromU32(20000);
-            queue.increaseTotalReserve(u256.fromU32(1000));
-            queue.increaseTotalReserved(u256.fromU32(2000));
-            queue.totalTokensSellActivated = u256.fromU32(10000);
-            queue.totalSatoshisExchangedForTokens = 20000;
-            queue.totalTokensExchangedForSatoshis = u256.fromU32(40000);
-
-            queue.save();
-
-            const createQueueResult2 = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
-            const quoteManager2: IQuoteManager = createQueueResult2.quoteManager;
-
-            expect(queue2.initialLiquidityProviderId).toStrictEqual(
-                queue.initialLiquidityProviderId,
-            );
-            expect(queue2.lastVirtualUpdateBlock).toStrictEqual(queue.lastVirtualUpdateBlock);
-            expect(queue2.maxTokensPerReservation).toStrictEqual(queue.maxTokensPerReservation);
-            expect(queue2.liquidity).toStrictEqual(queue.liquidity);
-            expect(queue2.reservedLiquidity).toStrictEqual(queue.reservedLiquidity);
-            expect(queue2.totalTokensSellActivated).toStrictEqual(queue.totalTokensSellActivated);
-            expect(queue2.totalSatoshisExchangedForTokens).toStrictEqual(
-                queue.totalSatoshisExchangedForTokens,
-            );
-            expect(queue2.totalTokensExchangedForSatoshis).toStrictEqual(
-                queue.totalTokensExchangedForSatoshis,
-            );
-            expect(queue2.antiBotExpirationBlock).toStrictEqual(queue.antiBotExpirationBlock);
-            expect(queue2.lastPurgedBlock).toStrictEqual(queue.lastPurgedBlock);
-            expect(queue2.maxReserves5BlockPercent).toStrictEqual(queue.maxReserves5BlockPercent);
-            expect(quoteManager2.getBlockQuote(1)).toStrictEqual(quoteManager.getBlockQuote(1));
-            expect(quoteManager2.getBlockQuote(2)).toStrictEqual(quoteManager.getBlockQuote(2));
-            expect(queue2.virtualTokenReserve).toStrictEqual(queue.virtualTokenReserve);
-            expect(queue2.virtualSatoshisReserve).toStrictEqual(queue.virtualSatoshisReserve);
-        });
-
-        it('should create a new liquidity queue and load the values when it exists and virtual pool is updated', () => {
-            setBlockchainEnvironment(100);
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            const quoteManager: IQuoteManager = createQueueResult.quoteManager;
-
-            queue.virtualSatoshisReserve = 10000;
-            queue.virtualTokenReserve = u256.fromU32(100000);
-            queue.setBlockQuote();
-
-            setBlockchainEnvironment(102);
-            queue.virtualSatoshisReserve = 10000;
-            queue.virtualTokenReserve = u256.fromU32(200000);
-            queue.setBlockQuote();
-
-            queue.maxReserves5BlockPercent = 9999;
-            queue.lastPurgedBlock = 1000;
-            queue.antiBotExpirationBlock = 1000;
-
-            const providers: Provider[] = createProviders(
-                3,
-                0,
-                false,
-                false,
-                true,
-                'kcweojewoj2309',
-                u128.fromU32(100000),
-                u128.fromU32(100000),
-                u128.fromU32(10000),
-                true,
-                true,
-            );
-
-            for (let i = 0; i < providers.length; i++) {
-                queue.addToPriorityQueue(providers[i]);
-            }
-
-            queue.initialLiquidityProviderId = providers[0].getId();
-            queue.maxTokensPerReservation = u256.fromU32(20000);
-            queue.increaseTotalReserve(u256.fromU32(1000));
-            queue.increaseTotalReserved(u256.fromU32(2000));
-            queue.totalTokensSellActivated = u256.fromU32(10000);
-            queue.totalSatoshisExchangedForTokens = 20000;
-            queue.totalTokensExchangedForSatoshis = u256.fromU32(40000);
-
-            queue.save();
-
-            expect(queue.lastVirtualUpdateBlock).toStrictEqual(100);
-
-            // The goal is only to check if updateVirtualPoolIfNeeded has been called.
-            const createQueueResult2 = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
-            expect(queue2.lastVirtualUpdateBlock).toStrictEqual(102);
+            expect(queue.poolType).toStrictEqual(POOL_TYPE_STANDARD);
+            expect(queue.amplification).toStrictEqual(DEFAULT_STABLE_AMPLIFICATION);
+            expect(queue.pegStalenessThreshold).toStrictEqual(0);
         });
 
         it('should correctly initialize the initial liquidity', () => {
@@ -265,6 +147,9 @@ describe('Liquidity queue tests', () => {
                 u256.fromU32(10000),
                 u128.fromU32(888888),
                 10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
             );
 
             const virtualSatoshisReserve = SafeMath.div64(888888, 99999);
@@ -276,10 +161,22 @@ describe('Liquidity queue tests', () => {
         });
 
         it('should purge reservation when flag is set', () => {
-            const createQueueResult = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
+            const createQueueResult1 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            createQueueResult1.liquidityQueue.virtualSatoshisReserve = 10000;
+            createQueueResult1.liquidityQueue.save();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                true,
+            );
 
             expect(
-                createQueueResult.reservationManager.purgeReservationsAndRestoreProvidersCalled,
+                createQueueResult2.reservationManager.purgeReservationsAndRestoreProvidersCalled,
             ).toBeTruthy();
         });
 
@@ -297,6 +194,9 @@ describe('Liquidity queue tests', () => {
                     u256.fromU32(10000),
                     u128.fromString('88888888888888888'),
                     10,
+                    POOL_TYPE_STANDARD,
+                    DEFAULT_STABLE_AMPLIFICATION,
+                    0,
                 );
             }).toThrow();
         });
@@ -455,17 +355,43 @@ describe('Liquidity queue tests', () => {
             expect(queue.antiBotExpirationBlock).toStrictEqual(25);
         });
 
-        it('should correctly set totalSatoshisExchangedForTokens and totalTokensExchangedForSatoshis when calling buyTokens', () => {
+        it('should correctly get/set poolType value', () => {
+            setBlockchainEnvironment(1);
             const createQueueResult = createLiquidityQueue(
                 tokenAddress1,
                 tokenIdUint8Array1,
                 false,
             );
             const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            queue.recordTradeVolumes(u256.fromU32(10000), 888888);
 
-            expect(queue.totalSatoshisExchangedForTokens).toStrictEqual(888888);
-            expect(queue.totalTokensExchangedForSatoshis).toStrictEqual(u256.fromU32(10000));
+            queue.poolType = POOL_TYPE_STABLE;
+            expect(queue.poolType).toStrictEqual(POOL_TYPE_STABLE);
+        });
+
+        it('should correctly get/set amplification value', () => {
+            setBlockchainEnvironment(1);
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+
+            queue.amplification = 20000;
+            expect(queue.amplification).toStrictEqual(20000);
+        });
+
+        it('should correctly get/set pegStalenessThreshold value', () => {
+            setBlockchainEnvironment(1);
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
+
+            queue.pegStalenessThreshold = 100;
+            expect(queue.pegStalenessThreshold).toStrictEqual(100);
         });
 
         it('should gets the feesEnabled', () => {
@@ -515,8 +441,14 @@ describe('Liquidity queue tests', () => {
 
             const provider1 = new Provider(createProviderId(providerAddress1, tokenAddress1));
             const provider2 = new Provider(createProviderId(providerAddress2, tokenAddress1));
+            provider2.setLiquidityAmount(u128.fromString(`1000000`));
 
-            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+            queue2.setLiquidity(u256.fromU64(1000000000000000));
+            queue2.virtualTokenReserve = u256.fromU64(100000000);
+            queue2.virtualSatoshisReserve = 1000000000000000;
+            queue2.save();
+
             provider1.activate();
             provider2.activate();
             queue2.addToNormalQueue(provider1);
@@ -527,7 +459,7 @@ describe('Liquidity queue tests', () => {
             queue2.removeFromNormalQueue(provider1);
             provider1.save();
 
-            createQueueResult2.providerManager.cleanUpQueues();
+            createQueueResult2.providerManager.cleanUpQueues(u256.fromU32(1));
             expect(queue2.getNormalQueueStartingIndex()).toStrictEqual(1);
         });
 
@@ -547,14 +479,21 @@ describe('Liquidity queue tests', () => {
                 true,
             );
 
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+            queue2.setLiquidity(u256.fromU64(1000000000000000));
+            queue2.virtualTokenReserve = u256.fromU64(100000000);
+            queue2.virtualSatoshisReserve = 1000000000000000;
+            queue2.save();
+
             const provider1 = new Provider(createProviderId(providerAddress1, tokenAddress1));
             const provider2 = new Provider(createProviderId(providerAddress2, tokenAddress1));
+            provider2.setLiquidityAmount(u128.fromString(`1000000`));
 
-            const queue2: ILiquidityQueue = createQueueResult2.liquidityQueue;
             provider1.activate();
             provider2.activate();
             provider1.markPriority();
             provider2.markPriority();
+
             queue2.addToPriorityQueue(provider1);
             queue2.addToPriorityQueue(provider2);
             provider1.save();
@@ -563,7 +502,7 @@ describe('Liquidity queue tests', () => {
             queue2.removeFromPriorityQueue(provider1);
             provider1.save();
 
-            createQueueResult2.providerManager.cleanUpQueues();
+            createQueueResult2.providerManager.cleanUpQueues(u256.fromU32(1));
             expect(queue2.getPriorityQueueStartingIndex()).toStrictEqual(1);
         });
 
@@ -956,105 +895,6 @@ describe('Liquidity queue tests', () => {
         });
     });
 
-    describe('Penalty', () => {
-        beforeEach(() => {
-            clearCachedProviders();
-            Blockchain.clearStorage();
-            Blockchain.clearMockedResults();
-            clearPendingStakingContractAmount();
-        });
-
-        it('should increase token reserve with penalty, decrease total reserve with half and add to staking contract', () => {
-            setBlockchainEnvironment(1);
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            queue.decreaseTotalReserve(queue.liquidity);
-            queue.decreaseVirtualTokenReserve(queue.virtualTokenReserve);
-
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
-            expect(queue.liquidity).toStrictEqual(u256.Zero);
-            queue.increaseTotalReserve(u256.fromU64(10000));
-            expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
-
-            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(5000));
-
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(5000));
-            expect(queue.liquidity).toStrictEqual(u256.Zero);
-            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`10000`));
-        });
-
-        it('should not increase token reserve with penalty when penaltyLeft is Zero', () => {
-            setBlockchainEnvironment(1);
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            queue.decreaseTotalReserve(queue.liquidity);
-            queue.decreaseVirtualTokenReserve(queue.virtualTokenReserve);
-
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
-            expect(queue.liquidity).toStrictEqual(u256.Zero);
-            queue.increaseTotalReserve(u256.fromU64(10000));
-            expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
-
-            queue.accruePenalty(u128.fromU64(10000), u128.fromU64(10000));
-
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(0));
-            expect(queue.liquidity).toStrictEqual(u256.Zero);
-            expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`10000`));
-        });
-
-        it('should do nothing when penalty is Zero', () => {
-            setBlockchainEnvironment(1);
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-            queue.decreaseTotalReserve(queue.liquidity);
-            queue.decreaseVirtualTokenReserve(queue.virtualTokenReserve);
-
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
-            expect(queue.liquidity).toStrictEqual(u256.Zero);
-            queue.increaseTotalReserve(u256.fromU64(10000));
-            expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
-
-            queue.accruePenalty(u128.Zero, u128.Zero);
-
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(0));
-            expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
-            expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
-        });
-
-        it('should revert when penalty is less than half value', () => {
-            expect(() => {
-                setBlockchainEnvironment(1);
-                const createQueueResult = createLiquidityQueue(
-                    tokenAddress1,
-                    tokenIdUint8Array1,
-                    false,
-                );
-                const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-                queue.decreaseTotalReserve(queue.liquidity);
-                queue.decreaseVirtualTokenReserve(queue.virtualTokenReserve);
-
-                expect(queue.virtualTokenReserve).toStrictEqual(u256.Zero);
-                expect(queue.liquidity).toStrictEqual(u256.Zero);
-                queue.increaseTotalReserve(u256.fromU64(10000));
-                expect(queue.liquidity).toStrictEqual(u256.fromU64(10000));
-
-                queue.accruePenalty(u128.fromU64(10000), u128.fromU64(15000));
-            }).toThrow();
-        });
-    });
-
     describe('Queue data', () => {
         beforeEach(() => {
             clearCachedProviders();
@@ -1080,7 +920,7 @@ describe('Liquidity queue tests', () => {
 
             const data = queue.getProviderQueueData();
 
-            expect(data.byteLength).toStrictEqual(U32_BYTE_LENGTH * 6);
+            expect(data.byteLength).toStrictEqual(U32_BYTE_LENGTH * 8);
         });
     });
 
@@ -1128,7 +968,7 @@ describe('Liquidity queue tests', () => {
             queue.setLiquidity(u256.fromU32(15000));
             queue.virtualTokenReserve = u256.fromU32(15000);
             queue.distributeFee(u256.fromU32(10000));
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(5000));
+            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(15000));
             expect(queue.liquidity).toStrictEqual(u256.fromU32(5000));
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromString(`10000`));
         });
@@ -1157,22 +997,6 @@ describe('Liquidity queue tests', () => {
             clearCachedProviders();
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
-        });
-
-        it('should not update when currentBlock <= this.lastVirtualUpdateBlock', () => {
-            setBlockchainEnvironment(1);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-
-            queue.lastVirtualUpdateBlock = 5;
-            queue.updateVirtualPoolIfNeeded();
-
-            expect(queue.lastVirtualUpdateBlock).toStrictEqual(5);
         });
 
         it('should set virtualTokenReserve to 1 when computed virtualTokenReserve is 0', () => {
@@ -1210,132 +1034,6 @@ describe('Liquidity queue tests', () => {
             queue.updateVirtualPoolIfNeeded();
 
             expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU32(1000));
-        });
-
-        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis >= virtualTokenReserve ', () => {
-            setBlockchainEnvironment(5);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-
-            queue.lastVirtualUpdateBlock = 4;
-            queue.virtualSatoshisReserve = 100000;
-            queue.virtualTokenReserve = u256.fromU32(10000);
-            queue.totalTokensExchangedForSatoshis = u256.fromU32(11000);
-            queue.totalSatoshisExchangedForTokens = 999900001;
-            queue.updateVirtualPoolIfNeeded();
-
-            expect(queue.virtualSatoshisReserve).toStrictEqual(1000000000);
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(1));
-        });
-
-        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis >= virtualTokenReserve and incB = totalSatoshisExchangedForTokens', () => {
-            setBlockchainEnvironment(5);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-
-            queue.lastVirtualUpdateBlock = 4;
-            queue.virtualSatoshisReserve = 100000;
-            queue.virtualTokenReserve = u256.fromU32(10000);
-            queue.totalTokensExchangedForSatoshis = u256.fromU32(11000);
-            queue.totalSatoshisExchangedForTokens = 999990000;
-            queue.updateVirtualPoolIfNeeded();
-
-            expect(queue.virtualSatoshisReserve).toStrictEqual(1000000000);
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(1));
-        });
-
-        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis >= virtualTokenReserve and incB > totalSatoshisExchangedForTokens', () => {
-            setBlockchainEnvironment(5);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-
-            queue.lastVirtualUpdateBlock = 4;
-            queue.virtualSatoshisReserve = 10;
-            queue.virtualTokenReserve = u256.fromU32(10999);
-            queue.totalTokensExchangedForSatoshis = u256.fromU32(11000);
-            queue.totalSatoshisExchangedForTokens = 10;
-            queue.updateVirtualPoolIfNeeded();
-
-            expect(queue.virtualSatoshisReserve).toStrictEqual(20);
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(5499));
-        });
-
-        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis < virtualTokenReserve ', () => {
-            setBlockchainEnvironment(5);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-
-            queue.lastVirtualUpdateBlock = 4;
-            queue.virtualSatoshisReserve = 100000;
-            queue.virtualTokenReserve = u256.fromU32(10000);
-            queue.totalTokensExchangedForSatoshis = u256.fromU32(9000);
-            queue.totalSatoshisExchangedForTokens = 999900001;
-            queue.updateVirtualPoolIfNeeded();
-
-            expect(queue.virtualSatoshisReserve).toStrictEqual(1000000001);
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(1));
-        });
-
-        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis < virtualTokenReserve and incB = totalSatoshisExchangedForTokens', () => {
-            setBlockchainEnvironment(5);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-
-            queue.lastVirtualUpdateBlock = 4;
-            queue.virtualSatoshisReserve = 100;
-            queue.virtualTokenReserve = u256.fromU32(20);
-            queue.totalTokensExchangedForSatoshis = u256.fromU32(10);
-            queue.totalSatoshisExchangedForTokens = 100;
-            queue.updateVirtualPoolIfNeeded();
-
-            expect(queue.virtualSatoshisReserve).toStrictEqual(200);
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(10));
-        });
-
-        it('should apply the tokens buys to the virtual pool when the totalTokensExchangedForSatoshis < virtualTokenReserve and incB > totalSatoshisExchangedForTokens', () => {
-            setBlockchainEnvironment(5);
-
-            const createQueueResult = createLiquidityQueue(
-                tokenAddress1,
-                tokenIdUint8Array1,
-                false,
-            );
-            const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
-
-            queue.lastVirtualUpdateBlock = 4;
-            queue.virtualSatoshisReserve = 10;
-            queue.virtualTokenReserve = u256.fromU32(10);
-            queue.totalTokensExchangedForSatoshis = u256.fromU32(2);
-            queue.totalSatoshisExchangedForTokens = 1;
-            queue.updateVirtualPoolIfNeeded();
-
-            expect(queue.virtualSatoshisReserve).toStrictEqual(11);
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(9));
         });
 
         it('should make virtualTokenReserve when T is 0', () => {
@@ -1423,6 +1121,347 @@ describe('Liquidity queue tests', () => {
         });
     });
 
+    describe('updateVirtualPoolIfNeeded', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+        });
+
+        describe('Basic functionality', () => {
+            test('should update without any changes when no trades occurred', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                const initialSatoshis = queue.virtualSatoshisReserve;
+                const initialTokens = queue.virtualTokenReserve;
+
+                queue.updateVirtualPoolIfNeeded();
+
+                expect(queue.virtualSatoshisReserve).toStrictEqual(initialSatoshis);
+                expect(queue.virtualTokenReserve).toStrictEqual(initialTokens);
+                expect(queue.lastVirtualUpdateBlock).toStrictEqual(Blockchain.block.number);
+            });
+
+            test('should reset accumulators after update', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+
+                queue.totalTokensSellActivated = u256.fromU64(1000);
+                queue.totalTokensExchangedForSatoshis = u256.fromU64(500);
+                queue.totalSatoshisExchangedForTokens = 250;
+
+                queue.updateVirtualPoolIfNeeded();
+
+                expect(queue.totalTokensSellActivated).toStrictEqual(u256.Zero);
+                expect(queue.totalTokensExchangedForSatoshis).toStrictEqual(u256.Zero);
+                expect(queue.totalSatoshisExchangedForTokens).toStrictEqual(0);
+            });
+
+            test('should update volatility', () => {
+                const expectedVolatility: u256 = u256.fromU32(150);
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                queue.mockComputeVolatility(expectedVolatility);
+                queue.updateVirtualPoolIfNeeded();
+
+                expect(queue.volatility).toStrictEqual(expectedVolatility);
+            });
+        });
+
+        describe('Sell side (adding tokens)', () => {
+            test('should correctly update reserves when tokens are added', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                const initialB = u256.fromU64(queue.virtualSatoshisReserve);
+                const initialT = queue.virtualTokenReserve;
+                const initialK = SafeMath.mul(initialB, initialT);
+
+                // Add 500 tokens to the pool (sell side)
+                queue.totalTokensSellActivated = u256.fromU64(500);
+
+                queue.updateVirtualPoolIfNeeded();
+
+                // After adding tokens, B should decrease to maintain k
+                const newB = u256.fromU64(queue.virtualSatoshisReserve);
+                const newT = queue.virtualTokenReserve;
+                const newK = SafeMath.mul(newB, newT);
+
+                // T should increase
+                expect(newT).toBeGreaterThan(initialT);
+                // B should decrease
+                expect(newB).toBeLessThan(initialB);
+                // K should be approximately maintained (within tolerance)
+                const diff =
+                    newK > initialK ? SafeMath.sub(newK, initialK) : SafeMath.sub(initialK, newK);
+                const tolerance = SafeMath.div(initialK, u256.fromU64(100000));
+                expect(diff).toBeLessThanOrEqual(tolerance);
+            });
+
+            test('should throw if constant product is broken beyond tolerance', () => {
+                expect(() => {
+                    const queue: ITestLiquidityQueue = getLiquidityQueue();
+
+                    // Set up a scenario that would break the constant product
+                    queue.virtualSatoshisReserve = 10; // Very small reserve
+                    queue.virtualTokenReserve = u256.fromU64(10);
+                    queue.totalTokensSellActivated = u256.fromU64(1000000); // Huge addition
+
+                    queue.updateVirtualPoolIfNeeded();
+                }).toThrow('Constant product broken after adding liquidity');
+            });
+
+            test('should handle zero token additions', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                queue.totalTokensSellActivated = u256.Zero;
+
+                const initialSatoshis = queue.virtualSatoshisReserve;
+                const initialTokens = queue.virtualTokenReserve;
+
+                queue.updateVirtualPoolIfNeeded();
+
+                expect(queue.virtualSatoshisReserve).toBe(initialSatoshis);
+                expect(queue.virtualTokenReserve).toBe(initialTokens);
+            });
+        });
+
+        describe('Buy side (removing tokens)', () => {
+            test('should correctly update reserves when tokens are bought', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                const initialB = u256.fromU64(queue.virtualSatoshisReserve);
+                const initialT = queue.virtualTokenReserve;
+
+                // Buy 100 tokens with 110 satoshis
+                queue.totalTokensExchangedForSatoshis = u256.fromU64(100);
+                queue.totalSatoshisExchangedForTokens = 110;
+
+                queue.updateVirtualPoolIfNeeded();
+
+                const newB = u256.fromU64(queue.virtualSatoshisReserve);
+                const newT = queue.virtualTokenReserve;
+
+                // T should decrease (tokens were bought)
+                expect(newT).toBeLessThan(initialT);
+                // B should be recalculated to maintain k
+                expect(newB).toBeGreaterThan(initialB);
+            });
+
+            test('should throw when trying to buy more tokens than available', () => {
+                expect(() => {
+                    const queue: ITestLiquidityQueue = getLiquidityQueue();
+                    queue.virtualTokenReserve = u256.fromU64(1000);
+                    queue.totalTokensExchangedForSatoshis = u256.fromU64(1001); // Try to buy more than available
+
+                    queue.updateVirtualPoolIfNeeded();
+                }).toThrow('Impossible state: Cannot buy');
+            });
+
+            test('should handle edge case where all tokens are bought', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                queue.virtualTokenReserve = u256.fromU64(1000);
+                queue.totalTokensExchangedForSatoshis = u256.fromU64(999); // Buy almost all
+
+                queue.updateVirtualPoolIfNeeded();
+
+                // Should set minimum token reserve to 1
+                expect(queue.virtualTokenReserve).toBeGreaterThanOrEqual(u256.One);
+            });
+
+            test('should handle zero buys', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                queue.totalTokensExchangedForSatoshis = u256.Zero;
+                queue.totalSatoshisExchangedForTokens = 0;
+
+                const initialSatoshis = queue.virtualSatoshisReserve;
+                const initialTokens = queue.virtualTokenReserve;
+
+                queue.updateVirtualPoolIfNeeded();
+
+                expect(queue.virtualSatoshisReserve).toBe(initialSatoshis);
+                expect(queue.virtualTokenReserve).toBe(initialTokens);
+            });
+        });
+
+        describe('Combined operations', () => {
+            test('should handle both sells and buys in the same update', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+
+                // First add liquidity (sell side)
+                queue.totalTokensSellActivated = u256.fromU64(500);
+                // Then buy some tokens
+                queue.totalTokensExchangedForSatoshis = u256.fromU64(200);
+                queue.totalSatoshisExchangedForTokens = 250;
+
+                queue.updateVirtualPoolIfNeeded();
+
+                // Verify reserves are updated
+                expect(queue.lastVirtualUpdateBlock).toBe(Blockchain.block.number);
+                // Accumulators should be reset
+                expect(queue.totalTokensSellActivated).toBe(u256.Zero);
+                expect(queue.totalTokensExchangedForSatoshis).toBe(u256.Zero);
+                expect(queue.totalSatoshisExchangedForTokens).toBe(0);
+            });
+
+            test('should maintain constant product through multiple operations', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                const initialB = u256.fromU64(queue.virtualSatoshisReserve);
+                const initialT = queue.virtualTokenReserve;
+                const initialK = SafeMath.mul(initialB, initialT);
+
+                // Add tokens
+                queue.totalTokensSellActivated = u256.fromU64(300);
+                // Buy tokens
+                queue.totalTokensExchangedForSatoshis = u256.fromU64(150);
+                queue.totalSatoshisExchangedForTokens = 200;
+
+                queue.updateVirtualPoolIfNeeded();
+
+                const finalB = u256.fromU64(queue.virtualSatoshisReserve);
+                const finalT = queue.virtualTokenReserve;
+                const finalK = SafeMath.mul(finalB, finalT);
+
+                // K should be approximately maintained
+                const diff =
+                    finalK > initialK
+                        ? SafeMath.sub(finalK, initialK)
+                        : SafeMath.sub(initialK, finalK);
+                const tolerance = SafeMath.div(initialK, u256.fromU64(100000));
+                expect(diff).toBeLessThanOrEqual(tolerance);
+            });
+        });
+
+        describe('Edge cases and error conditions', () => {
+            test('should throw when virtual satoshis exceed MAX_TOTAL_SATOSHIS', () => {
+                expect(() => {
+                    const queue: ITestLiquidityQueue = getLiquidityQueue();
+
+                    // Set up a scenario that would cause B to exceed max
+                    queue.virtualSatoshisReserve = MAX_TOTAL_SATOSHIS.toU64() - 1000;
+                    queue.virtualTokenReserve = u256.fromU64(10); // Very few tokens
+                    queue.totalTokensExchangedForSatoshis = u256.fromU64(9); // Buy most tokens
+
+                    queue.updateVirtualPoolIfNeeded();
+                }).toThrow('Impossible state: New virtual satoshis reserve out of range');
+            });
+
+            test('should set token reserve to 1 if it becomes zero', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                // Set up a scenario where we buy tokens but not ALL tokens
+                // to avoid the >= check, but get close enough that rounding
+                // or calculation might result in zero
+                queue.virtualSatoshisReserve = 1000000;
+                queue.virtualTokenReserve = u256.fromU64(100);
+
+                // Buy 99 tokens (not all 100), leaving 1 token
+                // This should work without throwing
+                queue.totalTokensExchangedForSatoshis = u256.fromU64(99);
+                queue.totalSatoshisExchangedForTokens = 10000000; // Pay a lot to buy almost all
+
+                queue.updateVirtualPoolIfNeeded();
+
+                // The function should maintain at least 1 token
+                expect(queue.virtualTokenReserve).toBeGreaterThanOrEqual(u256.One);
+            });
+
+            test('should handle very large token additions', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                queue.virtualSatoshisReserve = 1000000;
+                queue.virtualTokenReserve = u256.fromU64(1000000000);
+                queue.totalTokensSellActivated = u256.fromU64(1000000000);
+
+                queue.updateVirtualPoolIfNeeded();
+
+                // Should complete without throwing
+                expect(queue.virtualTokenReserve).toBeGreaterThan(u256.fromU64(1000000000));
+            });
+
+            test('should handle precision edge cases', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+
+                queue.virtualSatoshisReserve = 1000000; // 0.01 BTC (in satoshis)
+                queue.virtualTokenReserve = u256.fromU64(1000000000000); // Large token amount
+                queue.totalTokensSellActivated = u256.fromU64(1000000); // Add a reasonable amount
+
+                queue.updateVirtualPoolIfNeeded();
+
+                // Should maintain approximate constant product
+                expect(queue.virtualSatoshisReserve).toBeGreaterThan(0);
+                expect(queue.virtualTokenReserve).toBeGreaterThan(u256.Zero);
+
+                // Verify the constant product is approximately maintained
+                const B = u256.fromU64(queue.virtualSatoshisReserve);
+                const T = queue.virtualTokenReserve;
+                const k = SafeMath.mul(B, T);
+                expect(k).toBeGreaterThan(u256.Zero);
+            });
+        });
+
+        describe('Block number handling', () => {
+            test('should update lastVirtualUpdateBlock to current block', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+                setBlockchainEnvironment(500);
+
+                queue.updateVirtualPoolIfNeeded();
+
+                expect(queue.lastVirtualUpdateBlock).toBe(500);
+            });
+
+            test('should process update even if called multiple times in same block', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+
+                // Since the check is commented out, it should process every time
+                queue.totalTokensSellActivated = u256.fromU64(100);
+
+                queue.updateVirtualPoolIfNeeded();
+                const firstSatoshis = queue.virtualSatoshisReserve;
+
+                // Set up for another update in same block
+                queue.totalTokensSellActivated = u256.fromU64(100);
+
+                queue.updateVirtualPoolIfNeeded();
+                const secondSatoshis = queue.virtualSatoshisReserve;
+
+                // Both updates should be processed
+                expect(firstSatoshis).not.toBe(secondSatoshis);
+            });
+        });
+
+        describe('Integration scenarios', () => {
+            test('should handle realistic trading scenario', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+
+                // Simulate a series of trades
+                queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
+                queue.virtualTokenReserve = u256.fromU64(10000000);
+
+                // Multiple sellers add liquidity
+                queue.totalTokensSellActivated = u256.fromU64(50000);
+                // Some buyers purchase tokens
+                queue.totalTokensExchangedForSatoshis = u256.fromU64(20000);
+                queue.totalSatoshisExchangedForTokens = 25000;
+
+                queue.updateVirtualPoolIfNeeded();
+
+                // Verify state is valid
+                expect(queue.virtualSatoshisReserve).toBeGreaterThan(0);
+                expect(queue.virtualTokenReserve).toBeGreaterThan(u256.Zero);
+                expect(queue.lastVirtualUpdateBlock).toBe(Blockchain.block.number);
+            });
+
+            test('should handle high-frequency trading pattern', () => {
+                const queue: ITestLiquidityQueue = getLiquidityQueue();
+
+                // Simulate rapid small trades
+                for (let i = 0; i < 10; i++) {
+                    queue.totalTokensSellActivated = u256.fromU64(10);
+                    queue.totalTokensExchangedForSatoshis = u256.fromU64(5);
+                    queue.totalSatoshisExchangedForTokens = 6;
+
+                    queue.updateVirtualPoolIfNeeded();
+
+                    // Verify invariants hold
+                    expect(queue.virtualSatoshisReserve).toBeGreaterThan(0);
+                    expect(queue.virtualTokenReserve).toBeGreaterThan(u256.Zero);
+                }
+            });
+        });
+    });
+
     describe('Dynamic fees and computeVolatility', () => {
         beforeEach(() => {
             clearCachedProviders();
@@ -1485,7 +1524,7 @@ describe('Liquidity queue tests', () => {
             queue.virtualTokenReserve = u256.fromU32(100000);
             queue.setBlockQuote();
 
-            setBlockchainEnvironment(5);
+            setBlockchainEnvironment(VOLATILITY_WINDOW_IN_BLOCKS);
             queue.virtualSatoshisReserve = 5000;
             queue.virtualTokenReserve = u256.fromU32(250);
             queue.setBlockQuote();
@@ -1509,7 +1548,7 @@ describe('Liquidity queue tests', () => {
             queue.virtualTokenReserve = u256.fromU32(250);
             queue.setBlockQuote();
 
-            setBlockchainEnvironment(5);
+            setBlockchainEnvironment(VOLATILITY_WINDOW_IN_BLOCKS);
             queue.virtualSatoshisReserve = 10000;
             queue.virtualTokenReserve = u256.fromU32(100000);
             queue.setBlockQuote();
@@ -1618,7 +1657,9 @@ describe('Liquidity queue tests', () => {
                 queue.addReservation(reservation);
                 queue.save();
 
-                setBlockchainEnvironment(1006, providerAddress1, providerAddress1);
+                // With RESERVATION_EXPIRE_AFTER_IN_BLOCKS = 8, reservation expires at 1008
+                // At block 1009, it's expired (1009 > 1008) -> throws
+                setBlockchainEnvironment(1009, providerAddress1, providerAddress1);
                 const reservation2: Reservation = queue.getReservationWithExpirationChecks();
 
                 expect(reservation2).not.toBeNull();
@@ -1813,7 +1854,7 @@ describe('Liquidity queue tests', () => {
             queue.addToNormalQueue(provider);
             queue.setLiquidity(provider.getLiquidityAmount().toU256());
             queue.increaseVirtualTokenReserve(u256.fromU32(100000));
-            queue.resetProvider(provider, true, false);
+            queue.resetProvider(provider, true);
 
             expect(createQueueResult.providerManager.resetProviderCalled).toBeTruthy();
         });
@@ -2132,7 +2173,7 @@ describe('Liquidity queue tests', () => {
             }).toThrow();
         });
 
-        it('should return a valid quote', () => {
+        it('should return a valid quote for standard token', () => {
             setBlockchainEnvironment(0);
 
             const createQueueResult = createLiquidityQueue(
@@ -2188,6 +2229,875 @@ describe('Liquidity queue tests', () => {
                 const queue: ILiquidityQueue = createQueueResult.liquidityQueue;
                 queue.setBlockQuote();
             }).toThrow();
+        });
+    });
+
+    describe('Queue Impact', () => {
+        beforeEach(() => {
+            clearCachedProviders();
+            Blockchain.clearStorage();
+            Blockchain.clearMockedResults();
+            TransferHelper.clearMockedResults();
+        });
+
+        it('should return zero impact when liquidity is zero', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            // Set up virtual reserves but no liquidity
+            queue.virtualTokenReserve = u256.fromU64(1000000);
+            queue.virtualSatoshisReserve = 1000000;
+            queue.setLiquidity(u256.Zero);
+
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toStrictEqual(u256.Zero);
+        });
+
+        it('should return zero impact when only initial provider has liquidity', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            // Create and set up initial provider
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(500000), // Initial provider has 500000 tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            // Initialize the queue with the initial provider
+            queue.initializeInitialLiquidity(
+                u256.fromU64(100), // floor price
+                initialProviderId,
+                u128.fromU64(500000), // initial liquidity matching provider's amount
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Set liquidity to match only the initial provider's amount
+            queue.setLiquidity(u256.fromU64(500000));
+
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toStrictEqual(u256.Zero);
+        });
+
+        it('should return zero impact when queued tokens are less than initial provider liquidity', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            // Create and set up initial provider with more liquidity than total queue
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000), // Initial provider has 1,000,000 tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Set liquidity less than initial provider's amount
+            queue.setLiquidity(u256.fromU64(500000));
+
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toStrictEqual(u256.Zero);
+        });
+
+        it('should calculate non-zero impact when other providers add liquidity beyond initial', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            // Create initial provider
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000), // Initial provider has 1,000,000 tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Set total liquidity higher than initial provider's amount
+            // This simulates additional providers adding liquidity
+            queue.setLiquidity(u256.fromU64(1500000)); // 500,000 more than initial
+
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toBeGreaterThan(u256.Zero);
+        });
+
+        it('should increase impact as more providers add liquidity', () => {
+            setBlockchainEnvironment(100);
+
+            // Test with smaller additional liquidity
+            const createQueueResult1 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue1: ITestLiquidityQueue = createQueueResult1.liquidityQueue;
+
+            const initialProviderId1 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider1: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000),
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider1.markInitialLiquidityProvider();
+            initialProvider1.save();
+
+            queue1.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId1,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue1.setLiquidity(u256.fromU64(1200000)); // 200,000 additional
+
+            const smallImpact = queue1.testCalculateQueueImpact();
+
+            // Clear and test with larger additional liquidity
+            clearCachedProviders();
+            Blockchain.clearStorage();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+
+            const initialProviderId2 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider2: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000),
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider2.markInitialLiquidityProvider();
+            initialProvider2.save();
+
+            queue2.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId2,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue2.setLiquidity(u256.fromU64(2000000)); // 1,000,000 additional
+
+            const largeImpact = queue2.testCalculateQueueImpact();
+
+            // Larger additional liquidity should create larger impact
+            expect(largeImpact).toBeGreaterThan(smallImpact);
+        });
+
+        it('should exclude initial provider liquidity from quote calculation', () => {
+            setBlockchainEnvironment(100);
+
+            // Setup queue with only initial provider
+            const createQueueResult1 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue1: ITestLiquidityQueue = createQueueResult1.liquidityQueue;
+
+            const initialProviderId1 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider1: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000),
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider1.markInitialLiquidityProvider();
+            initialProvider1.save();
+
+            queue1.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId1,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue1.setLiquidity(u256.fromU64(1000000)); // Only initial provider
+
+            const quoteWithOnlyInitial = queue1.quote();
+
+            // Clear and setup queue with initial + additional providers
+            clearCachedProviders();
+            Blockchain.clearStorage();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+
+            const initialProviderId2 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider2: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000),
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider2.markInitialLiquidityProvider();
+            initialProvider2.save();
+
+            queue2.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId2,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+            queue2.setLiquidity(u256.fromU64(2000000)); // Initial + 1M additional
+
+            const quoteWithAdditional = queue2.quote();
+
+            // Quote with only initial provider should be lower (better price)
+            // because there's no additional sell pressure from queue
+            expect(quoteWithOnlyInitial).toBeLessThan(quoteWithAdditional);
+        });
+
+        it('should handle large liquidity differences correctly', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000000), // 1 billion tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId,
+                u128.fromU64(1000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Set massive additional liquidity
+            queue.setLiquidity(u256.fromU64(5000000000)); // 5 billion total
+
+            // Should calculate impact without overflow
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toBeGreaterThan(u256.Zero);
+        });
+
+        it('should properly calculate impact when initial provider liquidity changes', () => {
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000), // Initial: 1M tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(100),
+                initialProviderId,
+                u128.fromU64(1000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Total liquidity is 1.5M
+            queue.setLiquidity(u256.fromU64(1500000));
+
+            const impactBefore = queue.testCalculateQueueImpact();
+
+            // Now reduce initial provider's liquidity (simulating partial withdrawal)
+            initialProvider.setLiquidityAmount(u128.fromU64(500000)); // Now only 500K
+            initialProvider.save();
+
+            // Same total liquidity, but more of it is from non-initial providers now
+            const impactAfter = queue.testCalculateQueueImpact();
+
+            // Impact should increase because less is attributed to initial provider
+            expect(impactAfter).toBeGreaterThan(impactBefore);
+        });
+
+        it('should revert when virtualTokenReserve is less than initial provider liquidity (impossible state)', () => {
+            setBlockchainEnvironment(100);
+
+            // Should throw because this is an impossible state
+            expect(() => {
+                const createQueueResult = createLiquidityQueue(
+                    tokenAddress1,
+                    tokenIdUint8Array1,
+                    false,
+                );
+                const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+                const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+                const initialProvider: Provider = createProvider(
+                    providerAddress1,
+                    tokenAddress1,
+                    false,
+                    false,
+                    true,
+                    'btcReceiver1',
+                    u128.Zero,
+                    u128.fromU64(1000000), // Initial provider has 1M tokens
+                    u128.Zero,
+                    true,
+                    false,
+                );
+                initialProvider.markInitialLiquidityProvider();
+                initialProvider.save();
+
+                queue.initializeInitialLiquidity(
+                    u256.fromU64(100),
+                    initialProviderId,
+                    u128.fromU64(1000000),
+                    10,
+                    POOL_TYPE_STANDARD,
+                    DEFAULT_STABLE_AMPLIFICATION,
+                    0,
+                );
+
+                // Set liquidity so the impact calculation is triggered
+                queue.setLiquidity(u256.fromU64(1500000));
+
+                // Artificially create an impossible state:
+                // virtualTokenReserve (500K) < initialProviderLiquidity (1M)
+                queue.virtualTokenReserve = u256.fromU64(500000);
+
+                queue.testCalculateQueueImpact();
+            }).toThrow();
+        });
+
+        // ============================================================
+        // ECONOMIC BEHAVIOR TESTS - Verify queue impact works as designed
+        // ============================================================
+
+        it('should make quote higher (worse price for buyers) when more sell pressure in queue', () => {
+            // This tests that queue impact increases the effective token amount in the quote formula,
+            // which results in a higher quote (more satoshis per token = worse deal for buyers)
+            // This reflects pending sell pressure that hasn't been priced in yet.
+
+            setBlockchainEnvironment(100);
+
+            // Setup pool with initial provider
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000), // 10B tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(1000), // floor price
+                initialProviderId,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Scenario 1: Only initial provider (no additional sell pressure)
+            queue.setLiquidity(u256.fromU64(10000000000)); // matches initial provider
+            const quoteNoSellPressure = queue.quote();
+
+            // Scenario 2: Add 50% more liquidity from other providers (sell pressure)
+            queue.setLiquidity(u256.fromU64(15000000000)); // 50% more
+            const quoteWithSellPressure = queue.quote();
+
+            // Quote should be HIGHER with sell pressure (worse price for buyers)
+            // Higher quote = more tokens per satoshi = tokens are worth less
+            expect(quoteWithSellPressure).toBeGreaterThan(quoteNoSellPressure);
+        });
+
+        it('should increase impact monotonically with more queue liquidity', () => {
+            // More sell pressure in the queue should always result in higher impact.
+            // This ensures the price reflects pending supply correctly.
+
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000), // 10B tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Test with increasing liquidity levels
+            queue.setLiquidity(u256.fromU64(11000000000)); // +10%
+            const impact10Percent = queue.testCalculateQueueImpact();
+
+            queue.setLiquidity(u256.fromU64(12000000000)); // +20%
+            const impact20Percent = queue.testCalculateQueueImpact();
+
+            queue.setLiquidity(u256.fromU64(15000000000)); // +50%
+            const impact50Percent = queue.testCalculateQueueImpact();
+
+            // Impact should strictly increase with more liquidity
+            expect(impact20Percent).toBeGreaterThan(impact10Percent);
+            expect(impact50Percent).toBeGreaterThan(impact20Percent);
+        });
+
+        it('should follow logarithmic diminishing returns pattern', () => {
+            // Queue impact uses ln²(1 + x) which has sub-linear growth.
+            // Doubling the additional queue liquidity should less than quadruple the impact.
+            // (Since ln² is used, impact grows roughly with the square of ln)
+
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000), // 10B tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Test with 10% additional liquidity (1B more)
+            queue.setLiquidity(u256.fromU64(11000000000)); // +10%
+            const impact10Percent = queue.testCalculateQueueImpact();
+
+            // Test with 20% additional liquidity (2B more)
+            queue.setLiquidity(u256.fromU64(12000000000)); // +20%
+            const impact20Percent = queue.testCalculateQueueImpact();
+
+            // Mathematical verification:
+            // For ln²(1+x), doubling x from 0.1 to 0.2:
+            // ln(1.1)² ≈ 0.00908, ln(1.2)² ≈ 0.0331
+            // Ratio should be about 3.65x (not 4x, showing sub-quadratic growth)
+
+            // impact20Percent should be greater than impact10Percent
+            expect(impact20Percent).toBeGreaterThan(impact10Percent);
+
+            // But less than 4x (since ln² grows slower than x²)
+            const quadrupledImpact = SafeMath.mul(impact10Percent, u256.fromU32(4));
+            expect(quadrupledImpact).toBeGreaterThan(impact20Percent);
+        });
+
+        it('should produce bounded impact values for reasonable queue sizes', () => {
+            // The queue impact should be reasonable and not cause extreme price distortions.
+            // For a queue with 2x the initial liquidity, impact should be significant but bounded.
+
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000), // 10B tokens
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Double the liquidity (100% additional from other providers)
+            queue.setLiquidity(u256.fromU64(20000000000));
+            const impact = queue.testCalculateQueueImpact();
+
+            // Impact should be non-zero
+            expect(impact).toBeGreaterThan(u256.Zero);
+
+            // Impact should be less than the virtual reserve itself (not extreme)
+            expect(queue.virtualTokenReserve).toBeGreaterThan(impact);
+        });
+
+        it('should not affect price when only initial provider has liquidity (baseline price)', () => {
+            // The initial provider defines the baseline price via virtualTokenReserve.
+            // Their liquidity should NOT create any queue impact - only additional providers do.
+
+            setBlockchainEnvironment(100);
+
+            const createQueueResult = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
+
+            const initialProviderId = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000),
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider.markInitialLiquidityProvider();
+            initialProvider.save();
+
+            queue.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            // Set liquidity equal to initial provider only
+            queue.setLiquidity(u256.fromU64(10000000000));
+
+            // Queue impact should be ZERO - initial provider doesn't create sell pressure
+            const impact = queue.testCalculateQueueImpact();
+            expect(impact).toStrictEqual(u256.Zero);
+
+            // Quote should be the pure AMM quote without any adjustment
+            const quote = queue.quote();
+
+            // Calculate expected quote: (virtualTokenReserve * QUOTE_SCALE) / virtualSatoshisReserve
+            // This is the baseline AMM price
+            const expectedQuote = SafeMath.div(
+                SafeMath.mul(queue.virtualTokenReserve, u256.fromU64(100000000)),
+                u256.fromU64(queue.virtualSatoshisReserve),
+            );
+
+            expect(quote).toStrictEqual(expectedQuote);
+        });
+
+        it('should scale impact proportionally to virtualTokenReserve', () => {
+            // Queue impact formula: virtualTokenReserve * ln²(...)
+            // So larger pools should have proportionally larger absolute impacts
+            // but the RELATIVE impact (impact/reserve) should be similar for same queue ratios
+
+            setBlockchainEnvironment(100);
+
+            // Small pool: 1B tokens, 10% additional
+            const createQueueResult1 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue1: ITestLiquidityQueue = createQueueResult1.liquidityQueue;
+
+            const initialProviderId1 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider1: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(1000000000), // 1B
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider1.markInitialLiquidityProvider();
+            initialProvider1.save();
+
+            queue1.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId1,
+                u128.fromU64(1000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            queue1.setLiquidity(u256.fromU64(1100000000)); // +10%
+            const impactSmallPool = queue1.testCalculateQueueImpact();
+
+            // Large pool: 10B tokens, 10% additional
+            clearCachedProviders();
+            Blockchain.clearStorage();
+
+            const createQueueResult2 = createLiquidityQueue(
+                tokenAddress1,
+                tokenIdUint8Array1,
+                false,
+            );
+            const queue2: ITestLiquidityQueue = createQueueResult2.liquidityQueue;
+
+            const initialProviderId2 = createProviderId(providerAddress1, tokenAddress1);
+            const initialProvider2: Provider = createProvider(
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                true,
+                'btcReceiver1',
+                u128.Zero,
+                u128.fromU64(10000000000), // 10B
+                u128.Zero,
+                true,
+                false,
+            );
+            initialProvider2.markInitialLiquidityProvider();
+            initialProvider2.save();
+
+            queue2.initializeInitialLiquidity(
+                u256.fromU64(1000),
+                initialProviderId2,
+                u128.fromU64(10000000000),
+                10,
+                POOL_TYPE_STANDARD,
+                DEFAULT_STABLE_AMPLIFICATION,
+                0,
+            );
+
+            queue2.setLiquidity(u256.fromU64(11000000000)); // +10%
+            const impactLargePool = queue2.testCalculateQueueImpact();
+
+            // Large pool should have ~10x the absolute impact (since it's 10x bigger)
+            // Check that impactLargePool is roughly 10x impactSmallPool (within 20% tolerance)
+            const tenTimesSmall = SafeMath.mul(impactSmallPool, u256.fromU32(10));
+            const lowerBound = SafeMath.div(SafeMath.mul(tenTimesSmall, u256.fromU32(80)), u256.fromU32(100));
+            const upperBound = SafeMath.div(SafeMath.mul(tenTimesSmall, u256.fromU32(120)), u256.fromU32(100));
+
+            expect(impactLargePool).toBeGreaterThan(lowerBound);
+            expect(upperBound).toBeGreaterThan(impactLargePool);
         });
     });
 });

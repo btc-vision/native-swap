@@ -28,6 +28,7 @@ import { SwapOperation } from '../operations/SwapOperation';
 import {
     INITIAL_FEE_COLLECT_ADDRESS,
     INITIAL_LIQUIDITY_PROVIDER_INDEX,
+    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
 } from '../constants/Contract';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
@@ -134,6 +135,7 @@ describe('SwapOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -210,6 +212,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -271,6 +274,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -304,7 +308,7 @@ describe('SwapOperation tests', () => {
             expect(reservationActiveList.get(0)).toBeFalsy();
         });
 
-        it('should executeTrade => provider updated, liquidity queue update, safeTransfer called ', () => {
+        it('should executeTrade => provider updated, liquidity queue update, transfer called ', () => {
             setBlockchainEnvironment(100, msgSender1, msgSender1);
             Blockchain.mockValidateBitcoinAddressResult(true);
 
@@ -348,6 +352,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -372,19 +377,18 @@ describe('SwapOperation tests', () => {
             queue4.liquidityQueue.save();
 
             expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
-
             expect(initialProvider.getLiquidityAmount()).toStrictEqual(
-                u128.fromString(`999990000000000000000000`),
+                u128.fromString(`999993333333333333333334`),
             );
             expect(queue4.liquidityQueue.liquidity).toStrictEqual(
-                u256.fromString(`999990000000000000000000`),
+                u256.fromString(`999993333333333333333334`),
             );
             expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue4.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(10000);
             expect(queue4.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
-                u256.fromString(`9980000000000000000`),
+                u256.fromString(`6666666666666666666`),
             );
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
 
         it('should executeTrade with 2 different providers => 1 provider updated, liquidity queue update, safeTransfer called ', () => {
@@ -431,6 +435,7 @@ describe('SwapOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -449,6 +454,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -485,10 +491,10 @@ describe('SwapOperation tests', () => {
             expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue4.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(10000);
             expect(queue4.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
-                u256.fromString(`9990814375050294936`),
+                u256.fromString(`6673334999165833125`),
             );
             expect(reservationActiveList.get(0)).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
 
         it('should executeTrade with 2 different providers => 2 providers updated, liquidity queue update, safeTransfer called when satoshis = 15600 ', () => {
@@ -537,6 +543,7 @@ describe('SwapOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -553,6 +560,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -586,17 +594,17 @@ describe('SwapOperation tests', () => {
 
             expect(queue4.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue4.liquidityQueue.liquidity).toStrictEqual(
-                u256.fromString(`1000984383095766454448798`),
+                u256.fromString(`1000989589597401301300325`),
             );
             expect(provider2.getLiquidityAmount()).toStrictEqual(
-                u128.fromString(`984383095766454448798`),
+                u128.fromString(`989589597401301300325`),
             );
             expect(provider2.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(initialProvider.getLiquidityAmount()).toStrictEqual(
                 u128.fromString(`1000000000000000000000000`),
             );
             expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
             expect(reservationList.getLength()).toStrictEqual(1);
             expect(reservationActiveList.get(0)).toBeFalsy();
         });
@@ -649,6 +657,7 @@ describe('SwapOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -666,6 +675,7 @@ describe('SwapOperation tests', () => {
                 receiverAddress2CSV,
                 true,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp2.execute();
@@ -682,6 +692,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -692,7 +703,7 @@ describe('SwapOperation tests', () => {
             expect(initialProvider.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(provider2.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(provider3.getReservedAmount()).toStrictEqual(
-                u128.fromString(`10021627509671387302`),
+                u128.fromString(`6679826502706791897`),
             );
 
             const transactionOutput: TransactionOutput[] = [];
@@ -721,10 +732,10 @@ describe('SwapOperation tests', () => {
             expect(queue5.liquidityQueue.reservedLiquidity).toStrictEqual(u256.Zero);
             expect(queue5.liquidityQueue.totalSatoshisExchangedForTokens).toStrictEqual(10000);
             expect(queue5.liquidityQueue.totalTokensExchangedForSatoshis).toStrictEqual(
-                u256.fromString(`10001584254652044528`),
+                u256.fromString(`6679826502706791897`),
             );
             expect(reservationActiveList.get(0)).toBeFalsy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
     });
 
@@ -820,6 +831,7 @@ describe('SwapOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -881,6 +893,7 @@ describe('SwapOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -941,6 +954,7 @@ describe('SwapOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -1016,6 +1030,7 @@ describe('SwapOperation tests', () => {
                     u256.Zero,
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
                 );
 
                 reserveOp.execute();
@@ -1102,6 +1117,7 @@ describe('SwapOperation tests', () => {
                 receiverAddress1CSV,
                 false,
                 false,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             listOp.execute();
@@ -1120,6 +1136,7 @@ describe('SwapOperation tests', () => {
                 u256.Zero,
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
+                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
             );
 
             reserveOp.execute();
@@ -1145,7 +1162,7 @@ describe('SwapOperation tests', () => {
 
             const reservation = new Reservation(tokenAddress1, providerAddress3);
             expect(reservation.getSwapped()).toBeTruthy();
-            expect(TransferHelper.safeTransferCalled).toBeTruthy();
+            expect(TransferHelper.transferCalled).toBeTruthy();
         });
     });
 });

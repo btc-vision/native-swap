@@ -55,7 +55,7 @@ export class Reservation {
     }
 
     public static load(reservationId: u128): Reservation {
-        return new Reservation(Address.dead(), Address.dead(), reservationId.toUint8Array(true));
+        return new Reservation(Address.zero(), Address.zero(), reservationId.toUint8Array(true));
     }
 
     public addProvider(providerData: ReservationProviderData): void {

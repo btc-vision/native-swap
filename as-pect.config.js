@@ -21,7 +21,7 @@ export default {
      * A set of globs passed to the glob package that qualify typescript files for testing.
      */
     entries: ['src/__tests__/**/*.spec.ts'],
-    //entries: ['src/__tests__/**/swapoperation_tests.spec.ts'],
+    //entries: ['src/__tests__/**/pool_stress_complete_test.spec.ts'],
 
     /**
      * A set of globs passed to the glob package that quality files to be added to each test.
@@ -35,23 +35,29 @@ export default {
      * Add your required AssemblyScript imports here.
      */
     async instantiate(memory, createImports, instantiate, binary) {
-        let memory2;
-        const resp = instantiate(
-            binary,
-            createImports({
-                env: {
-                    memory,
-                    'console.log': (data) => {
-                        log(data, memory2);
+        try {
+            let memory2;
+            const resp = instantiate(
+                binary,
+                createImports({
+                    env: {
+                        memory,
+                        'console.log': (data) => {
+                            log(data, memory2);
+                        },
                     },
-                },
-            }),
-        );
+                }),
+            );
 
-        const { exports } = await resp;
-        memory2 = exports.memory || memory;
+            const { exports } = await resp;
+            memory2 = exports.memory || memory;
 
-        return resp;
+            return resp;
+        } catch (e) {
+            console.log(e);
+        }
+
+        throw new Error(`Something went wrong`);
     },
     /** Enable code coverage. */
     coverage: [

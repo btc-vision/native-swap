@@ -106,6 +106,33 @@ export class Provider {
     }
 
     /**
+     * @method toReset
+     * @description Gets if the provider needs to be resets.
+     * @returns {boolean} - true if the provider needs to be resets; false if not.
+     */
+    public toReset(): boolean {
+        return this.providerData.toReset;
+    }
+
+    /**
+     * @method markToReset
+     * @description Mark the provider to be resets.
+     * @returns {void}
+     */
+    public markToReset(): void {
+        this.providerData.toReset = true;
+    }
+
+    /**
+     * @method clearToReset
+     * @description Clear the provider as to be resets.
+     * @returns {void}
+     */
+    public clearToReset(): void {
+        this.providerData.toReset = false;
+    }
+
+    /**
      * @method isInitialLiquidityProvider
      * @description Gets if the provider is an initial liquidity provider.
      * @returns {boolean} - true if an initial liquidity provider; false if not.
@@ -283,7 +310,7 @@ export class Provider {
      * @returns {boolean} - true if reserved amount is valid; false if not.
      */
     public canCoverReservedAmount(): boolean {
-        return u128.lt(this.getLiquidityAmount(), this.getReservedAmount()) ? false : true;
+        return !u128.lt(this.getLiquidityAmount(), this.getReservedAmount());
     }
 
     /**
@@ -520,15 +547,11 @@ export function transferPendingAmountToStakingContract(
     stakingContractAddress: Address,
 ): void {
     if (!pendingStakingContractAmount.isZero()) {
-        if (stakingContractAddress.isZero() || stakingContractAddress.isDead()) {
+        if (stakingContractAddress.isZero()) {
             throw new Revert('NATIVE_SWAP: Staking contract address is not set.');
         }
 
-        TransferHelper.transfer(
-            tokenAddress,
-            stakingContractAddress,
-            pendingStakingContractAmount,
-        );
+        TransferHelper.transfer(tokenAddress, stakingContractAddress, pendingStakingContractAmount);
     }
 }
 

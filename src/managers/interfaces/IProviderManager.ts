@@ -22,6 +22,10 @@ export interface IProviderManager {
 
     addToPriorityPurgedQueue(provider: Provider): u32;
 
+    addToNormalFulfilledQueue(provider: Provider): void;
+
+    addToPriorityFulfilledQueue(provider: Provider): void;
+
     cleanUpQueues(currentQuote: u256): void;
 
     getIdFromQueue(index: u32, type: ProviderTypes): u256;
@@ -36,7 +40,7 @@ export interface IProviderManager {
 
     getQueueData(): Uint8Array;
 
-    purgeAndRestoreProvider(data: ReservationProviderData): void;
+    purgeAndRestoreProvider(data: ReservationProviderData, quote: u256): void;
 
     removeFromNormalQueue(provider: Provider): void;
 
@@ -44,7 +48,9 @@ export interface IProviderManager {
 
     removeFromPurgeQueue(provider: Provider): void;
 
-    resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void;
+    resetFulfilledProviders(count: u8): u8;
+
+    resetProvider(provider: Provider, burnRemainingFunds: boolean): void;
 
     resetStartingIndex(): void;
 

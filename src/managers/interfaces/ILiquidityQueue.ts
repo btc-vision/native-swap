@@ -22,9 +22,11 @@ export interface ILiquidityQueue {
     virtualSatoshisReserve: u64;
     virtualTokenReserve: u256;
 
-    cleanUpQueues(currentQuote: u256): void;
+    poolType: u8;
+    amplification: u64;
+    pegStalenessThreshold: u64;
 
-    accruePenalty(penalty: u128, half: u128): void;
+    cleanUpQueues(currentQuote: u256): void;
 
     addReservation(reservation: Reservation): void;
 
@@ -85,11 +87,16 @@ export interface ILiquidityQueue {
         providerId: u256,
         initialLiquidity: u128,
         maxReserves5BlockPercent: u64,
+        poolType: u8,
+        amplification: u64,
+        pegStalenessThreshold: u64,
     ): void;
 
     purgeReservationsAndRestoreProviders(currentQuote: u256): void;
 
     quote(): u256;
+
+    //reCalcQuote(): void;
 
     removeFromNormalQueue(provider: Provider): void;
 
@@ -97,7 +104,9 @@ export interface ILiquidityQueue {
 
     removeFromPurgeQueue(provider: Provider): void;
 
-    resetProvider(provider: Provider, burnRemainingFunds: boolean, canceled: boolean): void; //false,true
+    resetFulfilledProviders(count: u8): u8;
+
+    resetProvider(provider: Provider, burnRemainingFunds: boolean): void;
 
     save(): void;
 
