@@ -37,6 +37,8 @@ import { Reservation } from '../models/Reservation';
 const TOKEN_DECIMALS: u32 = 18;
 const POOL_TOKEN_AMOUNT: u128 = u128.fromString('10000000000000000000000000'); // 10M tokens * 10^18
 const MINIMUM_RESERVE_AMOUNT: u64 = MINIMUM_TRADE_SIZE_IN_SAT; // 10,000 sats
+// accounts500 reserve double to ensure tokens remain above minimum value for listing after price changes
+const ACCOUNTS500_RESERVE_AMOUNT: u64 = MINIMUM_TRADE_SIZE_IN_SAT * 2; // 20,000 sats
 const LARGE_PURCHASE_AMOUNT: u64 = 1_000_000_000; // 10 BTC in satoshis
 const ONE_BTC_IN_SATS: u64 = 100_000_000;
 
@@ -156,17 +158,62 @@ function swapForAccount(
     block: u64,
     initialProvider: Provider,
     satoshisToSend: u64,
+    logDetails: bool = false,
 ): void {
     setBlockchainEnvironment(block, account, account);
     const lq = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
-    // Build transaction outputs
+    // First, check the reservation state
+    const reservation = new Reservation(tokenAddress1, account);
+    const providerCount = reservation.getProviderCount();
+
+    if (logDetails) {
+        Blockchain.log(`=== SWAP DEBUG for block ${block} ===`);
+        Blockchain.log(`Reservation provider count: ${providerCount}`);
+        Blockchain.log(`Reservation is valid: ${reservation.isValid() ? 'YES' : 'NO'}`);
+        Blockchain.log(`Reservation is expired: ${reservation.isExpired() ? 'YES' : 'NO'}`);
+        Blockchain.log(`Reservation creation block: ${reservation.getCreationBlock()}`);
+        Blockchain.log(`Reservation expiration block: ${reservation.getExpirationBlock()}`);
+    }
+
+    // Build transaction outputs - need to send to EACH provider in the reservation
     const txOut: TransactionOutput[] = [];
     txOut.push(new TransactionOutput(0, 0, null, 'random_change_address', 0));
     txOut.push(new TransactionOutput(1, 0, null, INITIAL_FEE_COLLECT_ADDRESS, 100));
+
+    // Add outputs for each provider in the reservation
+    let outputIndex: u16 = 2;
+    for (let i: u32 = 0; i < providerCount; i++) {
+        const providerData = reservation.getProviderAt(i);
+
+        if (logDetails) {
+            Blockchain.log(`Provider ${i}: index=${providerData.providerIndex}, amount=${providerData.providedAmount.toString()}, type=${providerData.providerType}`);
+        }
+
+        // Get the actual provider to find their BTC receiver
+        const provider = lq.providerManager.getProviderFromQueue(
+            providerData.providerIndex,
+            providerData.providerType,
+        );
+        const btcReceiver = provider.getBtcReceiver();
+
+        if (logDetails) {
+            Blockchain.log(`Provider ${i}: btcReceiver=${btcReceiver}, liquidity=${provider.getLiquidityAmount().toString()}`);
+        }
+
+        // Send satoshis to this provider
+        txOut.push(new TransactionOutput(outputIndex, 0, null, btcReceiver, satoshisToSend));
+        outputIndex++;
+    }
+
+    // Also add output for initial provider (as fallback)
     txOut.push(
-        new TransactionOutput(2, 0, null, initialProvider.getBtcReceiver(), satoshisToSend),
+        new TransactionOutput(outputIndex, 0, null, initialProvider.getBtcReceiver(), satoshisToSend),
     );
+
+    if (logDetails) {
+        Blockchain.log(`Total tx outputs: ${txOut.length}`);
+    }
 
     Blockchain.mockTransactionOutput(txOut);
 
@@ -492,14 +539,15 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         );
 
         // ============== PHASE 9: 500 New Accounts Reserve ==============
-        Blockchain.log('=== PHASE 9: 500 new accounts reserving ===');
+        Blockchain.log('=== PHASE 9: 500 new accounts reserving (20,000 sats each) ===');
 
         // Skip block 113
-        // Block 114: 250 accounts reserve
+        // Block 114: 250 accounts reserve with ACCOUNTS500_RESERVE_AMOUNT (20,000 sats)
+        // This ensures tokens will be worth >= minimum listing value after price changes
         Blockchain.log('Block 114: First 250 new accounts reserving');
         for (let i: i32 = 0; i < 250; i++) {
             const account = accounts500[i];
-            const reservation = reserveForAccount(account, MINIMUM_RESERVE_AMOUNT, 114);
+            const reservation = reserveForAccount(account, ACCOUNTS500_RESERVE_AMOUNT, 114);
 
             const reservedTokens = getReservationTotalTokens(reservation);
             tokensPhase9.set(u32(i), reservedTokens);
@@ -518,7 +566,7 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         Blockchain.log('Block 115: Remaining 250 new accounts reserving');
         for (let i: i32 = 250; i < 500; i++) {
             const account = accounts500[i];
-            const reservation = reserveForAccount(account, MINIMUM_RESERVE_AMOUNT, 115);
+            const reservation = reserveForAccount(account, ACCOUNTS500_RESERVE_AMOUNT, 115);
 
             const reservedTokens = getReservationTotalTokens(reservation);
             tokensPhase9.set(u32(i), reservedTokens);
@@ -554,7 +602,12 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         Blockchain.log('Block 116: Swapping first 200 of 500 reservations');
         for (let i: i32 = 0; i < 200; i++) {
             const account = accounts500[i];
-            swapForAccount(account, 116, initialProvider, MINIMUM_RESERVE_AMOUNT);
+            // Log details for first few swaps to debug the failure
+            const shouldLog = i < 3;
+            if (shouldLog) {
+                Blockchain.log(`--- Attempting swap ${i} ---`);
+            }
+            swapForAccount(account, 116, initialProvider, ACCOUNTS500_RESERVE_AMOUNT, shouldLog);
         }
 
         const quoteAfterPhase10 = getPoolQuote(116);
@@ -574,7 +627,7 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         Blockchain.log('Block 117: Swapping remaining 300 reservations');
         for (let i: i32 = 200; i < 500; i++) {
             const account = accounts500[i];
-            swapForAccount(account, 117, initialProvider, MINIMUM_RESERVE_AMOUNT);
+            swapForAccount(account, 117, initialProvider, ACCOUNTS500_RESERVE_AMOUNT);
         }
 
         // Create 1000 new reservations from original accounts
@@ -598,8 +651,9 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         // ============== PHASE 12: Concurrent List and Swap ==============
         Blockchain.log('=== PHASE 12: Concurrent list and swap ===');
 
-        // Block 118: Swap 400 + list from accounts500 (they just swapped, have tokens)
-        Blockchain.log('Block 118: Swap 400 reservations + list from accounts');
+        // Block 118: Swap 400 + list from accounts500
+        // accounts500 reserved 20,000 sats each - their tokens should be worth >= minimum
+        Blockchain.log('Block 118: Swap 400 reservations + list from accounts500');
 
         for (let i: i32 = 0; i < 200; i++) {
             const account = accounts500[i];
@@ -608,6 +662,7 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
                 listTokensForAccount(account, tokensToList, 118, u32(2000 + i));
             }
         }
+        Blockchain.log('Block 118: Listed tokens from 200 accounts');
 
         for (let i: i32 = 0; i < 400; i++) {
             const account = accounts1000[i];
@@ -619,7 +674,7 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         Blockchain.log(`Quote after block 118: ${quoteAfterBlock118.toString()}`);
 
         // Block 119: Swap 350 + list from more accounts
-        Blockchain.log('Block 119: Swap 350 reservations + list from accounts');
+        Blockchain.log('Block 119: Swap 350 reservations + list from accounts500');
 
         for (let i: i32 = 200; i < 350; i++) {
             const account = accounts500[i];
@@ -628,6 +683,7 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
                 listTokensForAccount(account, tokensToList, 119, u32(2000 + i));
             }
         }
+        Blockchain.log('Block 119: Listed tokens from 150 accounts');
 
         for (let i: i32 = 400; i < 750; i++) {
             const account = accounts1000[i];
@@ -638,7 +694,7 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
         quoteHistory.push(quoteAfterBlock119);
         Blockchain.log(`Quote after block 119: ${quoteAfterBlock119.toString()}`);
 
-        // Block 120: Swap remaining 250 + list remaining
+        // Block 120: Swap remaining 250 + list remaining tokens
         Blockchain.log('Block 120: Swap remaining 250 + list remaining tokens');
 
         for (let i: i32 = 350; i < 500; i++) {
@@ -648,6 +704,7 @@ describe('Pool Stress Test - Complete 12 Phase Verification', () => {
                 listTokensForAccount(account, tokensToList, 120, u32(2000 + i));
             }
         }
+        Blockchain.log('Block 120: Listed tokens from 150 accounts');
 
         for (let i: i32 = 750; i < 1000; i++) {
             const account = accounts1000[i];
