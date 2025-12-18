@@ -23,7 +23,7 @@ export class FulfilledProviderQueue {
     }
 
     public add(providerIndex: u32): void {
-        this.queue.push(providerIndex, true);
+        this.queue.push(providerIndex, false);
     }
 
     public reset(count: u8, associatedQueue: ProviderQueue): u8 {
@@ -43,7 +43,9 @@ export class FulfilledProviderQueue {
 
     protected ensureProviderIsFulfilled(provider: Provider): void {
         if (!provider.toReset()) {
-            throw new Revert(`Impossible state: provider is not fulfilled.`);
+            throw new Revert(
+                `Impossible state: provider is not fulfilled. ProviderId: ${provider.getId()}`,
+            );
         }
     }
 
