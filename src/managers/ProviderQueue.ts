@@ -1,17 +1,7 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import {
-    Address,
-    Blockchain,
-    Potential,
-    Revert,
-    StoredU256Array,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, Potential, Revert, StoredU256Array, } from '@btc-vision/btc-runtime/runtime';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
-import {
-    currentProviderResetCount,
-    INDEX_NOT_SET_VALUE,
-    MAXIMUM_VALID_INDEX,
-} from '../constants/Contract';
+import { currentProviderResetCount, INDEX_NOT_SET_VALUE, MAXIMUM_VALID_INDEX, } from '../constants/Contract';
 import { ProviderTypes } from '../types/ProviderTypes';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
 import { ProviderFulfilledEvent } from '../events/ProviderFulfilledEvent';
@@ -95,22 +85,7 @@ export class ProviderQueue {
             );
 
             if (!meetMinLiquidity) {
-                if (provider.hasReservedAmount() || provider.isPurged()) {
-                    // TODO: IMPORTANT! IF THE USER COMPLETE HIS SWAP WITH THE RESERVED TOKENS AND THE PROVIDER
-                    //  HAS DUST LEFT, HE SHOULD BE RESET AND THE DURST BURNED!
-                    /*const worthSat = tokensToSatoshis128(
-                        provider.getAvailableLiquidityAmount(),
-                        currentQuote,
-                    );
-
-                    Blockchain.log(
-                        `----- Provider at index ${index} does not meet minimum reservation. Skipping from queue. (${provider.getAvailableLiquidityAmount()} tokens left, worth ${worthSat} sat, quote: ${currentQuote}). Will get restored eventually from the purge queue. -----`,
-                    );*/
-                } else {
-                    /*Blockchain.log(
-                        `!---! Resetting provider at index ${index}. Minimum liquidity not met. !---!`,
-                    );*/
-
+                if (!(provider.hasReservedAmount() || provider.isPurged())) {
                     // This provider must be purged safely.
                     if (currentProviderResetCount >= this.maximumResetsBeforeQueuing) {
                         this.addProviderToFulfilledQueue(provider, fulfilledQueue);
