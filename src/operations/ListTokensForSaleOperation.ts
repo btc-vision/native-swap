@@ -4,6 +4,7 @@ import { addAmountToStakingContract, getProvider, Provider } from '../models/Pro
 import {
     BitcoinAddresses,
     Blockchain,
+    ExtendedAddress,
     Network,
     Revert,
     SafeMath,
@@ -199,8 +200,10 @@ export class ListTokensForSaleOperation extends BaseOperation {
         );
 
         if (!isValidCSV) {
+            const expected = ExtendedAddress.toCSV(this.receiver, CSV_BLOCKS_REQUIRED);
+
             throw new Revert(
-                `NATIVE_SWAP: Invalid receiver address. Expected CSV P2WSH address with ${CSV_BLOCKS_REQUIRED} blocks.`,
+                `NATIVE_SWAP: Invalid receiver address. Expected CSV P2WSH address with ${CSV_BLOCKS_REQUIRED} blocks. (not ${this.receiverStr}, expected ${expected})`,
             );
         }
     }

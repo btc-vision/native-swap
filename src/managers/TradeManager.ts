@@ -26,16 +26,19 @@ import { ProviderConsumedEvent } from '../events/ProviderConsumedEvent';
 
 export class TradeManager implements ITradeManager {
     protected readonly consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
+
     private readonly providerManager: IProviderManager;
     private readonly reservationManager: IReservationManager;
     private readonly quoteManager: IQuoteManager;
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
+
     private totalTokensPurchased: u256 = u256.Zero;
     private totalTokensRefunded: u256 = u256.Zero;
     private totalSatoshisSpent: u64 = 0;
     private totalSatoshisRefunded: u64 = 0;
     private tokensReserved: u256 = u256.Zero;
     private quoteToUse: u256 = u256.Zero;
+
     private readonly maximumResetsBeforeQueuing: u8;
 
     constructor(
@@ -85,7 +88,6 @@ export class TradeManager implements ITradeManager {
             }
 
             const satoshisSent: u64 = this.getSatoshisSent(provider.getBtcReceiver());
-
             if (satoshisSent !== 0) {
                 this.tryExecuteNormalOrPriorityTrade(
                     provider,
