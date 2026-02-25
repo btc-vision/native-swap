@@ -1,5 +1,11 @@
 import { BaseOperation } from './BaseOperation';
-import { Address, Blockchain, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
+import {
+    Address,
+    Blockchain,
+    ExtendedAddress,
+    Revert,
+    SafeMath,
+} from '@btc-vision/btc-runtime/runtime';
 import { Reservation } from '../models/Reservation';
 import { LiquidityReservedEvent } from '../events/LiquidityReservedEvent';
 import { ReservationCreatedEvent } from '../events/ReservationCreatedEvent';
@@ -28,17 +34,24 @@ import { Provider } from '../models/Provider';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 
 export class ReserveLiquidityOperation extends BaseOperation {
+    protected readonly consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
+
     protected currentQuote: u256 = u256.Zero;
     protected remainingTokens: u256 = u256.Zero;
     protected reservedProviderCount: u8 = 0;
+
     private readonly buyer: Address;
     private readonly maximumAmountInSats: u64;
     private readonly minimumAmountOutTokens: u256;
     private readonly providerId: u256;
 
+    private readonly sender: Uint8Array;
+
     private readonly activationDelay: u8;
+
     private reservedTokens: u256 = u256.Zero;
     private satoshisSpent: u64 = 0;
+
     private readonly maximumProvidersPerReservation: u8;
     private readonly numberOfFulfilledProviderToResets: u8;
 
@@ -51,6 +64,7 @@ export class ReserveLiquidityOperation extends BaseOperation {
         activationDelay: u8,
         maximumProvidersPerReservation: u8,
         numberOfFulfilledProviderToResets: u8,
+        sender: Uint8Array,
     ) {
         super(liquidityQueue);
 
@@ -61,21 +75,28 @@ export class ReserveLiquidityOperation extends BaseOperation {
         this.activationDelay = activationDelay;
         this.maximumProvidersPerReservation = maximumProvidersPerReservation;
         this.numberOfFulfilledProviderToResets = numberOfFulfilledProviderToResets;
+        this.sender = sender;
     }
 
     public override execute(): void {
         this.checkPreConditions();
         const reservation: Reservation = this.createReservation();
         this.getValidQuote();
+
         this.liquidityQueue.purgeReservationsAndRestoreProviders(this.currentQuote);
+
         this.ensureEnoughLiquidity();
         this.computeTokenRemaining();
+        this.verifySentEnoughSatoshi();
+
         this.reserve(reservation);
         this.ensureMinimumTokenReserved();
+
         this.liquidityQueue.increaseTotalReserved(this.reservedTokens);
         this.liquidityQueue.addReservation(reservation);
         this.liquidityQueue.setBlockQuote();
         this.liquidityQueue.cleanUpQueues(this.currentQuote);
+
         this.tryResetFulfilledProviders();
         this.emitReservationCreatedEvent();
     }
@@ -105,6 +126,29 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
     protected limitByAvailableLiquidity(tokens: u256): u256 {
         return SafeMath.min(this.liquidityQueue.availableLiquidity, tokens);
+    }
+
+    protected getSatoshisSent(address: string): u64 {
+        let totalSatoshis: u64 = 0;
+        const outputs = Blockchain.tx.outputs;
+
+        for (let i = 0; i < outputs.length; i++) {
+            const output = outputs[i];
+
+            if (output.to === address) {
+                totalSatoshis = SafeMath.add64(totalSatoshis, output.value);
+            }
+        }
+
+        const consumedSatoshis: u64 = this.consumedOutputsFromUTXOs.has(address)
+            ? this.consumedOutputsFromUTXOs.get(address)
+            : 0;
+
+        if (totalSatoshis < consumedSatoshis) {
+            throw new Revert('Impossible state: Double spend detected.');
+        }
+
+        return totalSatoshis - consumedSatoshis;
     }
 
     private tryResetFulfilledProviders(): void {
@@ -444,6 +488,24 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
     private limitByReservationCap(tokens: u256): u256 {
         return SafeMath.min(tokens, this.liquidityQueue.getMaximumTokensLeftBeforeCap());
+    }
+
+    private verifySentEnoughSatoshi(): void {
+        if (this.activationDelay === 0) {
+            throw new Revert(
+                'NATIVE_SWAP: Activation delay cannot be zero. Please set a positive activation delay to allow on-chain proof of ownership.',
+            );
+        }
+
+        const csvAddress = ExtendedAddress.toCSV(this.sender, this.activationDelay);
+        const sentSatoshis: u64 = this.getSatoshisSent(csvAddress);
+
+        const remainingSatoshis: u64 = tokensToSatoshis(this.remainingTokens, this.currentQuote);
+        if (remainingSatoshis > sentSatoshis) {
+            throw new Revert(
+                `NATIVE_SWAP: You must prove that you own at least ${remainingSatoshis} satoshis by sending them to yourself (${csvAddress}). Only ${sentSatoshis} sat were sent.`,
+            );
+        }
     }
 
     private reserve(reservation: Reservation): void {

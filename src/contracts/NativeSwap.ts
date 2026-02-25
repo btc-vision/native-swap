@@ -63,6 +63,7 @@ import { IDynamicFee } from '../managers/interfaces/IDynamicFee';
 import { DynamicFee } from '../managers/DynamicFee';
 import { WithdrawListingOperation } from '../operations/WithdrawListingOperation';
 import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
+import { UpgradeContract } from '../events/UpgradeContract';
 
 class GetLiquidityQueueResult {
     public liquidityQueue: ILiquidityQueue;
@@ -115,7 +116,7 @@ export class NativeSwap extends ReentrancyGuard {
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('reserve(address,uint64,uint256,uint8)'):
+            case encodeSelector('reserve(address,uint64,uint256,uint8,bytes)'):
                 return this.reserve(calldata);
             case encodeSelector('swap(address)'):
                 return this.swap(calldata);
@@ -171,9 +172,38 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getFeesAddress(calldata);
             case encodeSelector('onOP20Received(address,address,uint256,bytes)'):
                 return this.onOP20Received(calldata);
+            case encodeSelector('upgrade(address,bytes)'):
+                return this.upgrade(calldata);
             default:
                 return super.execute(method, calldata);
         }
+    }
+
+    public override onUpdate(calldata: Calldata): void {
+        super.onUpdate(calldata);
+    }
+
+    private upgrade(calldata: Calldata): BytesWriter {
+        if (Blockchain.tx.sender !== Blockchain.tx.origin) {
+            throw new Revert('NATIVE_SWAP: origin must be the sender.');
+        }
+
+        if (Blockchain.isContract(Blockchain.tx.sender)) {
+            throw new Revert('NATIVE_SWAP: sender must be EOA');
+        }
+
+        this.onlyDeployer(Blockchain.tx.sender);
+
+        const address: Address = calldata.readAddress();
+        const calldataUpgrade: Uint8Array = calldata.readBytesWithLength();
+
+        const writer = new BytesWriter(calldataUpgrade.length);
+        writer.writeBytes(calldataUpgrade);
+
+        Blockchain.updateContractFromExisting(address, writer);
+        Blockchain.emit(new UpgradeContract(address));
+
+        return new BytesWriter(0);
     }
 
     private getAntibotSettings(calldata: Calldata): BytesWriter {
@@ -496,9 +526,14 @@ export class NativeSwap extends ReentrancyGuard {
         const maximumAmountIn: u64 = calldata.readU64();
         const minimumAmountOut: u256 = calldata.readU256();
         const activationDelay: u8 = calldata.readU8();
+        const sender: Uint8Array = calldata.readBytesWithLength();
+        if (sender.length !== 33) {
+            throw new Revert('Invalid sender');
+        }
+
         this._tokenAddress = token.clone();
 
-        this._reserve(token, maximumAmountIn, minimumAmountOut, activationDelay);
+        this._reserve(token, maximumAmountIn, minimumAmountOut, activationDelay, sender);
 
         return new BytesWriter(0);
     }
@@ -508,6 +543,7 @@ export class NativeSwap extends ReentrancyGuard {
         maximumAmountIn: u64,
         minimumAmountOut: u256,
         activationDelay: u8,
+        sender: Uint8Array,
     ): void {
         this.ensureValidTokenAddress(token);
 
@@ -530,6 +566,7 @@ export class NativeSwap extends ReentrancyGuard {
             activationDelay,
             MAXIMUM_PROVIDER_PER_RESERVATIONS,
             MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+            sender,
         );
 
         operation.execute();
