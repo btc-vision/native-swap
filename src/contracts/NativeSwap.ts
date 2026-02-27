@@ -63,7 +63,7 @@ import { IDynamicFee } from '../managers/interfaces/IDynamicFee';
 import { DynamicFee } from '../managers/DynamicFee';
 import { WithdrawListingOperation } from '../operations/WithdrawListingOperation';
 import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
-import { UpdateContract } from '../events/UpdateContract';
+import { ContractUpdatedEvent } from '../events/ContractUpdatedEvent';
 
 class GetLiquidityQueueResult {
     public liquidityQueue: ILiquidityQueue;
@@ -201,7 +201,7 @@ export class NativeSwap extends ReentrancyGuard {
         writer.writeBytes(updateCalldata);
 
         Blockchain.updateContractFromExisting(address, writer);
-        Blockchain.emit(new UpdateContract(address));
+        Blockchain.emit(new ContractUpdatedEvent(address));
 
         return new BytesWriter(0);
     }
