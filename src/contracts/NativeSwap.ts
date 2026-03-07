@@ -63,7 +63,7 @@ import { IDynamicFee } from '../managers/interfaces/IDynamicFee';
 import { DynamicFee } from '../managers/DynamicFee';
 import { WithdrawListingOperation } from '../operations/WithdrawListingOperation';
 import { SELECTOR_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime/utils/lengths';
-import { UpgradeContract } from '../events/UpgradeContract';
+import { ContractUpdatedEvent } from '../events/ContractUpdatedEvent';
 
 class GetLiquidityQueueResult {
     public liquidityQueue: ILiquidityQueue;
@@ -172,8 +172,8 @@ export class NativeSwap extends ReentrancyGuard {
                 return this.getFeesAddress(calldata);
             case encodeSelector('onOP20Received(address,address,uint256,bytes)'):
                 return this.onOP20Received(calldata);
-            case encodeSelector('upgrade(address,bytes)'):
-                return this.upgrade(calldata);
+            case encodeSelector('update(address,bytes)'):
+                return this.update(calldata);
             default:
                 return super.execute(method, calldata);
         }
@@ -183,7 +183,7 @@ export class NativeSwap extends ReentrancyGuard {
         super.onUpdate(calldata);
     }
 
-    private upgrade(calldata: Calldata): BytesWriter {
+    private update(calldata: Calldata): BytesWriter {
         if (Blockchain.tx.sender !== Blockchain.tx.origin) {
             throw new Revert('NATIVE_SWAP: origin must be the sender.');
         }
@@ -195,13 +195,13 @@ export class NativeSwap extends ReentrancyGuard {
         this.onlyDeployer(Blockchain.tx.sender);
 
         const address: Address = calldata.readAddress();
-        const calldataUpgrade: Uint8Array = calldata.readBytesWithLength();
+        const updateCalldata: Uint8Array = calldata.readBytesWithLength();
 
-        const writer = new BytesWriter(calldataUpgrade.length);
-        writer.writeBytes(calldataUpgrade);
+        const writer = new BytesWriter(updateCalldata.length);
+        writer.writeBytes(updateCalldata);
 
         Blockchain.updateContractFromExisting(address, writer);
-        Blockchain.emit(new UpgradeContract(address));
+        Blockchain.emit(new ContractUpdatedEvent(address));
 
         return new BytesWriter(0);
     }
