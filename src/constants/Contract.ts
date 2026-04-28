@@ -67,7 +67,7 @@ export const MAX_PEG_RATE: u256 = u256.fromUint8ArrayBE(
 );
 
 /**
- * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
+ * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10.
  */
 export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 150;
 
