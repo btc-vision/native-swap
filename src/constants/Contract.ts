@@ -78,4 +78,31 @@ export const ENABLE_INDEX_VERIFICATION: boolean = false;
 export const MAXIMUM_QUOTE_INDEX: u64 = 500;
 export const MAXIMUM_NUMBER_OF_PROVIDERS: u32 = u32.MAX_VALUE - 1000;
 
+// Queue impact: scaled fixed-point unit (1.0 == 1_000_000)
+export const QUEUE_IMPACT_SCALE_U64: u64 = 1_000_000;
+
+// Queue impact: 7 days of Bitcoin-like blocks. Time at which the age term reaches its
+// calibration target (70% crash from age alone).
+export const QUEUE_TARGET_CLEARANCE_BLOCKS: u64 = 1_008;
+
+// Queue impact: stress floor as a ratio of virtualTokenReserve, scaled by QUEUE_IMPACT_SCALE.
+// 10_000 == 1% of T. Queues smaller than this age the pool at half speed or less.
+export const QUEUE_STRESS_FLOOR_RATIO_U64: u64 = 10_000;
+
+// Queue impact: recovery floor as a ratio of virtualTokenReserve. 50_000 == 5% of T.
+// Sets a minimum recoveryDepth so tiny dust buys cannot earn full demand credit.
+export const QUEUE_RECOVERY_FLOOR_RATIO_U64: u64 = 50_000;
+
+// Queue impact: size term coefficients for R_size(x) = αx + β·x²/(x + x0).
+// α = 0.30, β = 1.50, x0 = 0.40. Linear-plus-saturating-quadratic shape: handles dust
+// gracefully and keeps marginal pressure under heavy queues, unlike the saturating
+// log-squared shape used previously.
+export const QUEUE_SIZE_ALPHA_U64: u64 = 300_000;
+export const QUEUE_SIZE_BETA_U64: u64 = 1_500_000;
+export const QUEUE_SIZE_X0_U64: u64 = 400_000;
+
+// Queue impact: age coefficient γ. Calibrated for a 70% crash from age alone at 7 days:
+//   R = 1 / 0.30 - 1 = 2.333333333  ->  scaled = 2_333_333
+export const QUEUE_AGE_GAMMA_U64: u64 = 2_333_333;
+
 export let currentProviderResetCount: u8 = 0;
