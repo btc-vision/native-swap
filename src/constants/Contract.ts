@@ -1,7 +1,7 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 export const INITIAL_FEE_COLLECT_ADDRESS: string =
-    'bc1qwlfqavw7lc79kj86ydkx4d275v4chqy7ne4nylzsjk4zpl2xpp2stnmscm';
+    'bcrt1pe0slk2klsxckhf90hvu8g0688rxt9qts6thuxk3u4ymxeejw53gs0xjlhn'; //'bc1qwlfqavw7lc79kj86ydkx4d275v4chqy7ne4nylzsjk4zpl2xpp2stnmscm';
 
 // opt1qdn74lndmxp9f2m7tgfw8lmh939yeefym4qa7qatc3eaqs8jdlx9srz7kar;
 // tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c
