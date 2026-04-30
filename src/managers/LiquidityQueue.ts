@@ -932,10 +932,14 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
 
         const currentBlock: u64 = Blockchain.block.number;
-        const lastBlock: u64 = this.bytecodeUpgradeAdjustedLastBlock(currentBlock);
+        const stored: u64 = this.lastQueueImpactBlock;
 
+        if (stored === currentBlock) {
+            return;
+        }
+
+        const lastBlock: u64 = this.bytecodeUpgradeAdjustedLastBlock(stored, currentBlock);
         if (currentBlock <= lastBlock) {
-            this.lastQueueImpactBlock = currentBlock;
             return;
         }
 
@@ -958,8 +962,9 @@ export class LiquidityQueue implements ILiquidityQueue {
     // first run. The math itself decides each pool's punishment from its current
     // queueStress: a full queue (x≥1) lands at A ≈ N (the 70% crash target), partial
     // queues land proportionally lower, an empty queue gets A = 0 (no impact).
-    private bytecodeUpgradeAdjustedLastBlock(currentBlock: u64): u64 {
-        const stored: u64 = this.lastQueueImpactBlock;
+    // Takes stored as a parameter so callers can SLOAD it once and pass it to both
+    // this helper and the same-block short-circuit check.
+    private bytecodeUpgradeAdjustedLastBlock(stored: u64, currentBlock: u64): u64 {
         if (stored !== 0) {
             return stored;
         }
@@ -1013,11 +1018,17 @@ export class LiquidityQueue implements ILiquidityQueue {
             SCALE,
         );
 
-        // Q_before is the queue *as it stood before this trade*. recordTradeVolumes does
-        // not mutate liquidity, so getEffectiveQueuedTokens here returns the pre-trade Q.
-        const effectiveQueuedTokensBefore = this.getEffectiveQueuedTokens();
+        // Reconstruct Q_before. The buy flow has already reduced this.liquidity by the
+        // consumed providers' amounts (TradeManager calls subFromTotalReserve directly,
+        // distributeFee removes the fee, decreaseTotalReserve removes the post-fee
+        // amount), so getEffectiveQueuedTokens() here returns Q_after. Adding tokensOut
+        // (the pre-fee amount = total tokens removed from the reserve by this trade)
+        // recovers Q_before. If part of tokensOut came from the initial provider, this
+        // overestimates Q_before, which only inflates recoveryDepth and thus shrinks
+        // the demand proof — safe direction.
+        const queueBefore = SafeMath.add(this.getEffectiveQueuedTokens(), tokensOut);
 
-        let recoveryDepth = effectiveQueuedTokensBefore;
+        let recoveryDepth = queueBefore;
         if (u256.lt(recoveryDepth, recoveryFloorTokens)) {
             recoveryDepth = recoveryFloorTokens;
         }
@@ -1177,7 +1188,8 @@ export class LiquidityQueue implements ILiquidityQueue {
         const distress: u64 = this.queueDistressScaled;
 
         const currentBlock: u64 = Blockchain.block.number;
-        const lastBlock: u64 = this.bytecodeUpgradeAdjustedLastBlock(currentBlock);
+        const stored: u64 = this.lastQueueImpactBlock;
+        const lastBlock: u64 = this.bytecodeUpgradeAdjustedLastBlock(stored, currentBlock);
 
         // Treat negative time (reorg) as zero accumulation.
         if (currentBlock <= lastBlock) {
