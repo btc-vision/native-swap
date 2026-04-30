@@ -11,6 +11,7 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
     POOL_TYPES_POINTER,
+    QUEUE_IMPACT_POINTER,
     RESERVATION_SETTINGS_POINTER,
 } from '../constants/StoredPointers';
 
@@ -64,6 +65,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     private readonly settings: StoredU64;
     private readonly _maxTokensPerReservation: StoredU256;
     private readonly _poolTypes: StoredU64;
+    private readonly _queueImpact: StoredU64;
     private readonly timeoutEnabled: boolean;
 
     constructor(
@@ -91,6 +93,7 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         this.settings = new StoredU64(RESERVATION_SETTINGS_POINTER, tokenIdUint8Array);
         this._poolTypes = new StoredU64(POOL_TYPES_POINTER, tokenIdUint8Array);
+        this._queueImpact = new StoredU64(QUEUE_IMPACT_POINTER, tokenIdUint8Array);
         this.timeoutEnabled = timeoutEnabled;
 
         this.updateVirtualPoolIfNeeded();
@@ -170,35 +173,35 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public get queueDistressScaled(): u64 {
-        return this.settings.get(4);
+        return this._queueImpact.get(0);
     }
 
     public set queueDistressScaled(value: u64) {
-        this.settings.set(4, value);
+        this._queueImpact.set(0, value);
     }
 
     public get lastQueueImpactBlock(): u64 {
-        return this.settings.get(5);
+        return this._queueImpact.get(1);
     }
 
     public set lastQueueImpactBlock(value: u64) {
-        this.settings.set(5, value);
+        this._queueImpact.set(1, value);
     }
 
     public get demandCreditBlock(): u64 {
-        return this.settings.get(6);
+        return this._queueImpact.get(2);
     }
 
     public set demandCreditBlock(value: u64) {
-        this.settings.set(6, value);
+        this._queueImpact.set(2, value);
     }
 
     public get demandCreditScaled(): u64 {
-        return this.settings.get(7);
+        return this._queueImpact.get(3);
     }
 
     public set demandCreditScaled(value: u64) {
-        this.settings.set(7, value);
+        this._queueImpact.set(3, value);
     }
 
     public get liquidity(): u256 {
@@ -566,6 +569,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.providerManager.save();
         this.quoteManager.save();
         this._poolTypes.save();
+        this._queueImpact.save();
     }
 
     public setBlockQuote(): void {
