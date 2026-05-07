@@ -1,16 +1,10 @@
-import {
-    Address,
-    Blockchain,
-    Revert,
-    SafeMath,
-    StoredU256,
-    StoredU64,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, Revert, SafeMath, StoredU256, StoredU64, } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 import {
     ANTI_BOT_MAX_TOKENS_PER_RESERVATION,
     POOL_TYPES_POINTER,
+    QUEUE_IMPACT_POINTER,
     RESERVATION_SETTINGS_POINTER,
 } from '../constants/StoredPointers';
 
@@ -25,6 +19,14 @@ import {
     PEG_RATE_SCALE,
     POOL_TYPE_STABLE,
     POOL_TYPE_STANDARD,
+    QUEUE_AGE_GAMMA_U64,
+    QUEUE_IMPACT_SCALE_U64,
+    QUEUE_RECOVERY_FLOOR_RATIO_U64,
+    QUEUE_SIZE_ALPHA_U64,
+    QUEUE_SIZE_BETA_U64,
+    QUEUE_SIZE_X0_U64,
+    QUEUE_STRESS_FLOOR_RATIO_U64,
+    QUEUE_TARGET_CLEARANCE_BLOCKS,
     QUOTE_SCALE,
     TEN_THOUSAND_U256,
     VOLATILITY_WINDOW_IN_BLOCKS,
@@ -56,6 +58,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     private readonly settings: StoredU64;
     private readonly _maxTokensPerReservation: StoredU256;
     private readonly _poolTypes: StoredU64;
+    private readonly _queueImpact: StoredU64;
     private readonly timeoutEnabled: boolean;
 
     constructor(
@@ -83,6 +86,7 @@ export class LiquidityQueue implements ILiquidityQueue {
 
         this.settings = new StoredU64(RESERVATION_SETTINGS_POINTER, tokenIdUint8Array);
         this._poolTypes = new StoredU64(POOL_TYPES_POINTER, tokenIdUint8Array);
+        this._queueImpact = new StoredU64(QUEUE_IMPACT_POINTER, tokenIdUint8Array);
         this.timeoutEnabled = timeoutEnabled;
 
         this.updateVirtualPoolIfNeeded();
@@ -159,6 +163,38 @@ export class LiquidityQueue implements ILiquidityQueue {
 
     public set lastVirtualUpdateBlock(value: u64) {
         this.settings.set(3, value);
+    }
+
+    public get queueDistressScaled(): u64 {
+        return this._queueImpact.get(0);
+    }
+
+    public set queueDistressScaled(value: u64) {
+        this._queueImpact.set(0, value);
+    }
+
+    public get lastQueueImpactBlock(): u64 {
+        return this._queueImpact.get(1);
+    }
+
+    public set lastQueueImpactBlock(value: u64) {
+        this._queueImpact.set(1, value);
+    }
+
+    public get demandCreditBlock(): u64 {
+        return this._queueImpact.get(2);
+    }
+
+    public set demandCreditBlock(value: u64) {
+        this._queueImpact.set(2, value);
+    }
+
+    public get demandCreditScaled(): u64 {
+        return this._queueImpact.get(3);
+    }
+
+    public set demandCreditScaled(value: u64) {
+        this._queueImpact.set(3, value);
     }
 
     public get liquidity(): u256 {
@@ -302,6 +338,9 @@ export class LiquidityQueue implements ILiquidityQueue {
             );
         }
 
+        this.updateQueueDistressAge();
+        this.applyQueueDemandCredit(tokensOut, currentVirtualT);
+
         this.increaseTotalSatoshisExchangedForTokens(satoshisIn);
         this.increaseTotalTokensExchangedForSatoshis(tokensOut);
     }
@@ -318,10 +357,12 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public decreaseTotalReserve(value: u256): void {
+        this.updateQueueDistressAge();
         this.liquidityQueueReserve.subFromTotalReserve(value);
     }
 
     public decreaseTotalReserved(value: u256): void {
+        this.updateQueueDistressAge();
         this.liquidityQueueReserve.subFromTotalReserved(value);
     }
 
@@ -403,14 +444,17 @@ export class LiquidityQueue implements ILiquidityQueue {
     }
 
     public increaseTotalTokensSellActivated(value: u256): void {
+        this.updateQueueDistressAge();
         this.liquidityQueueReserve.addToTotalTokensSellActivated(value);
     }
 
     public increaseTotalReserve(value: u256): void {
+        this.updateQueueDistressAge();
         this.liquidityQueueReserve.addToTotalReserve(value);
     }
 
     public increaseTotalReserved(value: u256): void {
+        this.updateQueueDistressAge();
         this.liquidityQueueReserve.addToTotalReserved(value);
     }
 
@@ -444,6 +488,11 @@ export class LiquidityQueue implements ILiquidityQueue {
             this.amplification = amplification;
             this.pegStalenessThreshold = pegStalenessThreshold;
         }
+
+        this.queueDistressScaled = 0;
+        this.lastQueueImpactBlock = Blockchain.block.number;
+        this.demandCreditBlock = Blockchain.block.number;
+        this.demandCreditScaled = 0;
     }
 
     public isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean {
@@ -485,6 +534,8 @@ export class LiquidityQueue implements ILiquidityQueue {
             return this.stableQuoteWithPeg(TOKEN, u256.fromU64(BTC));
         }
 
+        this.updateQueueDistressAge();
+
         const queueImpact = this.calculateQueueImpact();
         const effectiveT = SafeMath.add(TOKEN, queueImpact);
 
@@ -513,6 +564,7 @@ export class LiquidityQueue implements ILiquidityQueue {
         this.providerManager.save();
         this.quoteManager.save();
         this._poolTypes.save();
+        this._queueImpact.save();
     }
 
     public setBlockQuote(): void {
@@ -562,6 +614,36 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
 
         return volatility;
+    }
+
+    private updateQueueDistressAge(): void {
+        if (this.isStablePool) {
+            return;
+        }
+
+        const currentBlock: u64 = Blockchain.block.number;
+        const stored: u64 = this.lastQueueImpactBlock;
+
+        if (stored === currentBlock) {
+            return;
+        }
+
+        const lastBlock: u64 = this.bytecodeUpgradeAdjustedLastBlock(stored, currentBlock);
+        //if (currentBlock <= lastBlock) {
+        //    return;
+        //}
+
+        const effectiveQueuedTokens = this.getEffectiveQueuedTokens();
+        const queueStressScaled = this.getQueueStressScaled(effectiveQueuedTokens);
+
+        if (queueStressScaled !== 0) {
+            const elapsedBlocks: u64 = currentBlock - lastBlock;
+            const addedDistress: u64 = elapsedBlocks * queueStressScaled;
+
+            this.queueDistressScaled = SafeMath.add64(this.queueDistressScaled, addedDistress);
+        }
+
+        this.lastQueueImpactBlock = currentBlock;
     }
 
     /**
@@ -873,60 +955,286 @@ export class LiquidityQueue implements ILiquidityQueue {
         return new StableSwapResult(newT, newB);
     }
 
+    // Bytecode-upgrade migration: when lastQueueImpactBlock has never been written
+    // (== 0), synthesize a "last touch" K = N blocks in the past so the existing
+    // elapsed·queueStress accumulation produces a calibration-aligned distress on
+    // first run. The math itself decides each pool's punishment from its current
+    // queueStress: a full queue (x≥1) lands at A ≈ N (the 70% crash target), partial
+    // queues land proportionally lower, an empty queue gets A = 0 (no impact).
+    // Takes stored as a parameter so callers can SLOAD it once and pass it to both
+
+    // this helper and the same-block short-circuit check.
+    private bytecodeUpgradeAdjustedLastBlock(stored: u64, currentBlock: u64): u64 {
+        if (stored !== 0) {
+            return stored;
+        }
+
+        const k: u64 = QUEUE_TARGET_CLEARANCE_BLOCKS;
+        return currentBlock > k ? currentBlock - k : 0;
+    }
+
+    // Demand credit (= demand proof): organic buys reduce accumulated queue distress,
+    // capped at one full QUEUE_IMPACT_SCALE per block to prevent a whale from splitting
+    // a buy across many calls in one block to multiply the recovery effect.
+    //
+    // recoveryDepth = max(Q_before, T · recoveryFloor)
+    // demandProof  = min(SCALE, tokensBought · N · SCALE / recoveryDepth)
+    //
+    // The floor stops dust buys from earning full credit when the queue is empty: a
+    // dead pool with Q=0 still requires real volume (5% of T per N blocks) to clear A.
+    private applyQueueDemandCredit(tokensOut: u256, virtualTokenReserveBefore: u256): void {
+        if (this.isStablePool) {
+            return;
+        }
+
+        if (tokensOut.isZero()) {
+            return;
+        }
+
+        if (virtualTokenReserveBefore.isZero()) {
+            return;
+        }
+
+        if (this.queueDistressScaled === 0) {
+            return;
+        }
+
+        const currentBlock: u64 = Blockchain.block.number;
+
+        if (this.demandCreditBlock !== currentBlock) {
+            this.demandCreditBlock = currentBlock;
+            this.demandCreditScaled = 0;
+        }
+
+        if (this.demandCreditScaled >= QUEUE_IMPACT_SCALE_U64) {
+            return;
+        }
+
+        const SCALE = u256.fromU64(QUEUE_IMPACT_SCALE_U64);
+
+        // recoveryFloorTokens = T · recoveryFloorRatio / SCALE
+        const recoveryFloorTokens = SafeMath.div(
+            SafeMath.mul(virtualTokenReserveBefore, u256.fromU64(QUEUE_RECOVERY_FLOOR_RATIO_U64)),
+            SCALE,
+        );
+
+        // Reconstruct Q_before. The buy flow has already reduced this.liquidity by the
+        // consumed providers' amounts (TradeManager calls subFromTotalReserve directly,
+        // distributeFee removes the fee, decreaseTotalReserve removes the post-fee
+        // amount), so getEffectiveQueuedTokens() here returns Q_after. Adding tokensOut
+        // (the pre-fee amount = total tokens removed from the reserve by this trade)
+        // recovers Q_before. If part of tokensOut came from the initial provider, this
+        // overestimates Q_before, which only inflates recoveryDepth and thus shrinks
+        // the demand proof — safe direction.
+        const queueBefore = SafeMath.add(this.getEffectiveQueuedTokens(), tokensOut);
+
+        let recoveryDepth = queueBefore;
+        if (u256.lt(recoveryDepth, recoveryFloorTokens)) {
+            recoveryDepth = recoveryFloorTokens;
+        }
+
+        if (recoveryDepth.isZero()) {
+            return;
+        }
+
+        // rawDemandProofScaled = tokensOut · N · SCALE / recoveryDepth
+        const numerator = SafeMath.mul(
+            SafeMath.mul(tokensOut, u256.fromU64(QUEUE_TARGET_CLEARANCE_BLOCKS)),
+            SCALE,
+        );
+        const rawDemandProofScaled = SafeMath.div(numerator, recoveryDepth);
+
+        const availableCreditScaled: u64 = QUEUE_IMPACT_SCALE_U64 - this.demandCreditScaled;
+        let creditScaled: u64 = availableCreditScaled;
+
+        if (u256.lt(rawDemandProofScaled, u256.fromU64(availableCreditScaled))) {
+            creditScaled = rawDemandProofScaled.toU64();
+        }
+
+        if (creditScaled === 0) {
+            return;
+        }
+
+        if (creditScaled >= this.queueDistressScaled) {
+            this.queueDistressScaled = 0;
+        } else {
+            this.queueDistressScaled = SafeMath.sub64(this.queueDistressScaled, creditScaled);
+        }
+
+        this.demandCreditScaled = SafeMath.add64(this.demandCreditScaled, creditScaled);
+    }
+
     private calculateQueueImpact(): u256 {
+        if (this.virtualTokenReserve.isZero()) {
+            return u256.Zero;
+        }
+
+        if (this.initialLiquidityProviderId.isZero()) {
+            return u256.Zero;
+        }
+
+        const effectiveQueuedTokens = this.getEffectiveQueuedTokens();
+
+        const sizeImpact = this.calculateQueueSizeImpact(effectiveQueuedTokens);
+        const ageImpact = this.calculateQueueAgeImpact(effectiveQueuedTokens);
+
+        return SafeMath.add(sizeImpact, ageImpact);
+    }
+
+    private getEffectiveQueuedTokens(): u256 {
         const queuedTokens = this.liquidity;
 
         if (queuedTokens.isZero()) {
             return u256.Zero;
         }
 
-        // Guard: Pool must be initialized (virtualTokenReserve > 0)
-        // If not initialized, return zero impact
         if (this.virtualTokenReserve.isZero()) {
             return u256.Zero;
         }
 
-        // Guard: initialLiquidityProviderId must be set
-        // If not set, return zero impact (pool not fully initialized)
         if (this.initialLiquidityProviderId.isZero()) {
             return u256.Zero;
         }
 
-        // Get the initial provider and exclude their liquidity from the queue impact
         const initialProvider: Provider = getProvider(this.initialLiquidityProviderId);
         const initialProviderLiquidity: u256 = u256.fromU128(initialProvider.getLiquidityAmount());
 
-        // Sanity check: virtualTokenReserve should never be less than initial provider's current liquidity
-        // because the virtual pool was initialized from their liquidity and can only grow from there
-        // (other providers add to it). If it's smaller, it means tokens were bought, but those buys
-        // should have reduced the initial provider's liquidity proportionally.
+        // Sanity check: virtualTokenReserve should never be less than initial provider's current
+        // liquidity because the virtual pool was initialized from their liquidity and can only
+        // grow from there.
         if (u256.lt(this.virtualTokenReserve, initialProviderLiquidity)) {
             throw new Revert(
                 `Impossible state: virtualTokenReserve (${this.virtualTokenReserve}) < initialProviderLiquidity (${initialProviderLiquidity})`,
             );
         }
 
-        // Exclude initial provider's liquidity from queue impact calculation
         if (u256.le(queuedTokens, initialProviderLiquidity)) {
             return u256.Zero;
         }
 
-        const effectiveQueuedTokens = SafeMath.sub(queuedTokens, initialProviderLiquidity);
+        return SafeMath.sub(queuedTokens, initialProviderLiquidity);
+    }
 
-        // Calculate ln(1 + effectiveQueuedTokens/virtualTokenReserve)
-        // = ln((virtualTokenReserve + effectiveQueuedTokens) / virtualTokenReserve)
-        // Using preciseLogRatio for correct handling of different bit lengths
-        const SCALE = u256.fromU64(1000000);
+    // R_size(x) = αx + β · x² / (x + x0)
+    //   α, β, x0 are scaled by SCALE.
+    //   Linear term gives constant marginal pressure for any queue size.
+    //   Saturating quadratic gives O(x²) for tiny queues, O(βx) for large queues.
+    //   Returns the scaled R_size applied to T as token units (T · R_size).
+    private calculateQueueSizeImpact(effectiveQueuedTokens: u256): u256 {
+        if (effectiveQueuedTokens.isZero()) {
+            return u256.Zero;
+        }
 
-        const numerator = SafeMath.add(this.virtualTokenReserve, effectiveQueuedTokens);
-        const lnValue: u256 = SafeMath.preciseLogRatio(numerator, this.virtualTokenReserve);
+        if (this.virtualTokenReserve.isZero()) {
+            return u256.Zero;
+        }
 
-        const lnSquared = SafeMath.div(SafeMath.mul(lnValue, lnValue), SCALE);
+        const SCALE = u256.fromU64(QUEUE_IMPACT_SCALE_U64);
 
-        return SafeMath.div(
-            SafeMath.mul(this.virtualTokenReserve, lnSquared),
+        const xScaled = SafeMath.div(
+            SafeMath.mul(effectiveQueuedTokens, SCALE),
+            this.virtualTokenReserve,
+        );
+
+        // term1_scaled = α · x_scaled / SCALE  (== α · x in scaled units)
+        const term1 = SafeMath.div(
+            SafeMath.mul(u256.fromU64(QUEUE_SIZE_ALPHA_U64), xScaled),
             SCALE,
         );
+
+        // term2_scaled = β · x_scaled² / (SCALE · (x_scaled + x0_scaled))
+        const x0Scaled = u256.fromU64(QUEUE_SIZE_X0_U64);
+        const denominator = SafeMath.mul(SCALE, SafeMath.add(xScaled, x0Scaled));
+        let term2 = u256.Zero;
+        if (!denominator.isZero()) {
+            const xSquared = SafeMath.mul(xScaled, xScaled);
+            term2 = SafeMath.div(
+                SafeMath.mul(u256.fromU64(QUEUE_SIZE_BETA_U64), xSquared),
+                denominator,
+            );
+        }
+
+        const rSizeScaled = SafeMath.add(term1, term2);
+
+        return SafeMath.div(SafeMath.mul(this.virtualTokenReserve, rSizeScaled), SCALE);
+    }
+
+    private calculateQueueAgeImpact(effectiveQueuedTokens: u256): u256 {
+        const effectiveDistressScaled = this.getEffectiveQueueDistressScaled(effectiveQueuedTokens);
+
+        if (effectiveDistressScaled === 0) {
+            return u256.Zero;
+        }
+
+        const SCALE = u256.fromU64(QUEUE_IMPACT_SCALE_U64);
+
+        // u_scaled = A_scaled / N
+        const uScaled = SafeMath.div(
+            u256.fromU64(effectiveDistressScaled),
+            u256.fromU64(QUEUE_TARGET_CLEARANCE_BLOCKS),
+        );
+
+        const uSquaredScaled = SafeMath.div(SafeMath.mul(uScaled, uScaled), SCALE);
+
+        const ageRatioScaled = SafeMath.div(
+            SafeMath.mul(u256.fromU64(QUEUE_AGE_GAMMA_U64), uSquaredScaled),
+            SCALE,
+        );
+
+        return SafeMath.div(SafeMath.mul(this.virtualTokenReserve, ageRatioScaled), SCALE);
+    }
+
+    private getEffectiveQueueDistressScaled(effectiveQueuedTokens: u256): u64 {
+        const distress: u64 = this.queueDistressScaled;
+
+        const currentBlock: u64 = Blockchain.block.number;
+        const stored: u64 = this.lastQueueImpactBlock;
+        const lastBlock: u64 = this.bytecodeUpgradeAdjustedLastBlock(stored, currentBlock);
+
+        // Treat negative time (reorg) as zero accumulation.
+        if (currentBlock <= lastBlock) {
+            return distress;
+        }
+
+        const queueStressScaled = this.getQueueStressScaled(effectiveQueuedTokens);
+
+        if (queueStressScaled === 0) {
+            return distress;
+        }
+
+        // elapsedBlocks * queueStressScaled fits in u64: queueStressScaled <= 1e6,
+        // and even ~1e10 elapsed blocks (centuries) keeps the product under 1e16.
+        // The running sum of queueDistressScaled has the same headroom: u64.MAX ≈ 1.8e19.
+        const elapsedBlocks: u64 = currentBlock - lastBlock;
+        const addedDistress: u64 = elapsedBlocks * queueStressScaled;
+
+        return SafeMath.add64(distress, addedDistress);
+    }
+
+    private getQueueStressScaled(effectiveQueuedTokens: u256): u64 {
+        if (effectiveQueuedTokens.isZero()) {
+            return 0;
+        }
+
+        if (this.virtualTokenReserve.isZero()) {
+            return 0;
+        }
+
+        const SCALE = u256.fromU64(QUEUE_IMPACT_SCALE_U64);
+
+        // floorTokens = virtualTokenReserve * QUEUE_STRESS_FLOOR_RATIO / SCALE
+        const floorTokens = SafeMath.div(
+            SafeMath.mul(this.virtualTokenReserve, u256.fromU64(QUEUE_STRESS_FLOOR_RATIO_U64)),
+            SCALE,
+        );
+
+        const denominator = SafeMath.add(effectiveQueuedTokens, floorTokens);
+
+        if (denominator.isZero()) {
+            return QUEUE_IMPACT_SCALE_U64;
+        }
+
+        return SafeMath.div(SafeMath.mul(effectiveQueuedTokens, SCALE), denominator).toU64();
     }
 
     /*private calculateQueueImpact(): u256 {

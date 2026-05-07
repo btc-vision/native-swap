@@ -48,3 +48,4 @@ export const NORMAL_QUEUE_FULFILLED: u16 = Blockchain.nextPointer;
 export const PRIORITY_QUEUE_FULFILLED: u16 = Blockchain.nextPointer;
 
 export const POOL_TYPES_POINTER: u16 = Blockchain.nextPointer;
+export const QUEUE_IMPACT_POINTER: u16 = Blockchain.nextPointer;

@@ -3,6 +3,7 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 export const INITIAL_FEE_COLLECT_ADDRESS: string =
     'bc1qwlfqavw7lc79kj86ydkx4d275v4chqy7ne4nylzsjk4zpl2xpp2stnmscm';
 
+//'bcrt1pe0slk2klsxckhf90hvu8g0688rxt9qts6thuxk3u4ymxeejw53gs0xjlhn'; //'bc1qwlfqavw7lc79kj86ydkx4d275v4chqy7ne4nylzsjk4zpl2xpp2stnmscm';
 // opt1qdn74lndmxp9f2m7tgfw8lmh939yeefym4qa7qatc3eaqs8jdlx9srz7kar;
 // tb1p823gdnqvk8a90f8cu30w8ywvk29uh8txtqqnsmk6f5ktd7hlyl0q3cyz4c
 // bcrt1plz0svv3wl05qrrv0dx8hvh5mgqc7jf3mhqgtw8jnj3l3d3cs6lzsfc3mxh
@@ -67,7 +68,7 @@ export const MAX_PEG_RATE: u256 = u256.fromUint8ArrayBE(
 );
 
 /**
- * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10. !!!!??? 10???
+ * WARNING. This is very important because the limit of input UTXOs possible per transaction is 250. We give ourselves an error margin of 10.
  */
 export const MAXIMUM_PROVIDER_PER_RESERVATIONS: u8 = 150;
 
@@ -77,5 +78,32 @@ export const ENABLE_INDEX_VERIFICATION: boolean = false;
 
 export const MAXIMUM_QUOTE_INDEX: u64 = 500;
 export const MAXIMUM_NUMBER_OF_PROVIDERS: u32 = u32.MAX_VALUE - 1000;
+
+// Queue impact: scaled fixed-point unit (1.0 == 1_000_000)
+export const QUEUE_IMPACT_SCALE_U64: u64 = 1_000_000;
+
+// Queue impact: 7 days of Bitcoin-like blocks. Time at which the age term reaches its
+// calibration target (70% crash from age alone).
+export const QUEUE_TARGET_CLEARANCE_BLOCKS: u64 = 1_008;
+
+// Queue impact: stress floor as a ratio of virtualTokenReserve, scaled by QUEUE_IMPACT_SCALE.
+// 10_000 == 1% of T. Queues smaller than this age the pool at half speed or less.
+export const QUEUE_STRESS_FLOOR_RATIO_U64: u64 = 10_000;
+
+// Queue impact: recovery floor as a ratio of virtualTokenReserve. 50_000 == 5% of T.
+// Sets a minimum recoveryDepth so tiny dust buys cannot earn full demand credit.
+export const QUEUE_RECOVERY_FLOOR_RATIO_U64: u64 = 50_000;
+
+// Queue impact: size term coefficients for R_size(x) = αx + β·x²/(x + x0).
+// α = 0.30, β = 1.50, x0 = 0.40. Linear-plus-saturating-quadratic shape: handles dust
+// gracefully and keeps marginal pressure under heavy queues, unlike the saturating
+// log-squared shape used previously.
+export const QUEUE_SIZE_ALPHA_U64: u64 = 300_000;
+export const QUEUE_SIZE_BETA_U64: u64 = 1_500_000;
+export const QUEUE_SIZE_X0_U64: u64 = 400_000;
+
+// Queue impact: age coefficient γ. Calibrated for a 70% crash from age alone at 7 days:
+//   R = 1 / 0.30 - 1 = 2.333333333  ->  scaled = 2_333_333
+export const QUEUE_AGE_GAMMA_U64: u64 = 2_333_333;
 
 export let currentProviderResetCount: u8 = 0;
