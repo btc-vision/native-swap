@@ -1,11 +1,4 @@
-import {
-    Address,
-    Blockchain,
-    Revert,
-    SafeMath,
-    StoredU256,
-    StoredU64,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, Revert, SafeMath, StoredU256, StoredU64, } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 import {
@@ -541,6 +534,8 @@ export class LiquidityQueue implements ILiquidityQueue {
             return this.stableQuoteWithPeg(TOKEN, u256.fromU64(BTC));
         }
 
+        this.updateQueueDistressAge();
+
         const queueImpact = this.calculateQueueImpact();
         const effectiveT = SafeMath.add(TOKEN, queueImpact);
 
@@ -619,6 +614,36 @@ export class LiquidityQueue implements ILiquidityQueue {
         }
 
         return volatility;
+    }
+
+    private updateQueueDistressAge(): void {
+        if (this.isStablePool) {
+            return;
+        }
+
+        const currentBlock: u64 = Blockchain.block.number;
+        const stored: u64 = this.lastQueueImpactBlock;
+
+        if (stored === currentBlock) {
+            return;
+        }
+
+        const lastBlock: u64 = this.bytecodeUpgradeAdjustedLastBlock(stored, currentBlock);
+        //if (currentBlock <= lastBlock) {
+        //    return;
+        //}
+
+        const effectiveQueuedTokens = this.getEffectiveQueuedTokens();
+        const queueStressScaled = this.getQueueStressScaled(effectiveQueuedTokens);
+
+        if (queueStressScaled !== 0) {
+            const elapsedBlocks: u64 = currentBlock - lastBlock;
+            const addedDistress: u64 = elapsedBlocks * queueStressScaled;
+
+            this.queueDistressScaled = SafeMath.add64(this.queueDistressScaled, addedDistress);
+        }
+
+        this.lastQueueImpactBlock = currentBlock;
     }
 
     /**
@@ -930,36 +955,6 @@ export class LiquidityQueue implements ILiquidityQueue {
         return new StableSwapResult(newT, newB);
     }
 
-    private updateQueueDistressAge(): void {
-        if (this.isStablePool) {
-            return;
-        }
-
-        const currentBlock: u64 = Blockchain.block.number;
-        const stored: u64 = this.lastQueueImpactBlock;
-
-        if (stored === currentBlock) {
-            return;
-        }
-
-        const lastBlock: u64 = this.bytecodeUpgradeAdjustedLastBlock(stored, currentBlock);
-        if (currentBlock <= lastBlock) {
-            return;
-        }
-
-        const effectiveQueuedTokens = this.getEffectiveQueuedTokens();
-        const queueStressScaled = this.getQueueStressScaled(effectiveQueuedTokens);
-
-        if (queueStressScaled !== 0) {
-            const elapsedBlocks: u64 = currentBlock - lastBlock;
-            const addedDistress: u64 = elapsedBlocks * queueStressScaled;
-
-            this.queueDistressScaled = SafeMath.add64(this.queueDistressScaled, addedDistress);
-        }
-
-        this.lastQueueImpactBlock = currentBlock;
-    }
-
     // Bytecode-upgrade migration: when lastQueueImpactBlock has never been written
     // (== 0), synthesize a "last touch" K = N blocks in the past so the existing
     // elapsed·queueStress accumulation produces a calibration-aligned distress on
@@ -967,6 +962,7 @@ export class LiquidityQueue implements ILiquidityQueue {
     // queueStress: a full queue (x≥1) lands at A ≈ N (the 70% crash target), partial
     // queues land proportionally lower, an empty queue gets A = 0 (no impact).
     // Takes stored as a parameter so callers can SLOAD it once and pass it to both
+
     // this helper and the same-block short-circuit check.
     private bytecodeUpgradeAdjustedLastBlock(stored: u64, currentBlock: u64): u64 {
         if (stored !== 0) {
