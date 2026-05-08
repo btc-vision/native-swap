@@ -1,10 +1,4 @@
-import {
-    clearCachedProviders,
-    clearPendingStakingContractAmount,
-    getProvider,
-    Provider,
-    saveAllProviders,
-} from '../models/Provider';
+import { clearCachedProviders, getProvider, Provider, saveAllProviders } from '../models/Provider';
 import {
     Address,
     Blockchain,
@@ -867,15 +861,25 @@ describe('Reserve, swap and purge tests', () => {
 
         // Log actual post-swap values for Reservation2
         log(`After Res2 swap - LP1 reserved: ${liquidityProvider1.getReservedAmount().toString()}`);
-        log(`After Res2 swap - LP1 available: ${liquidityProvider1.getAvailableLiquidityAmount().toString()}`);
+        log(
+            `After Res2 swap - LP1 available: ${liquidityProvider1.getAvailableLiquidityAmount().toString()}`,
+        );
         log(`After Res2 swap - LP2 reserved: ${liquidityProvider2.getReservedAmount().toString()}`);
-        log(`After Res2 swap - LP2 available: ${liquidityProvider2.getAvailableLiquidityAmount().toString()}`);
+        log(
+            `After Res2 swap - LP2 available: ${liquidityProvider2.getAvailableLiquidityAmount().toString()}`,
+        );
         log(`After Res2 swap - LP3 reserved: ${liquidityProvider3.getReservedAmount().toString()}`);
-        log(`After Res2 swap - LP3 available: ${liquidityProvider3.getAvailableLiquidityAmount().toString()}`);
+        log(
+            `After Res2 swap - LP3 available: ${liquidityProvider3.getAvailableLiquidityAmount().toString()}`,
+        );
         log(`After Res2 swap - LP4 reserved: ${liquidityProvider4.getReservedAmount().toString()}`);
-        log(`After Res2 swap - LP4 available: ${liquidityProvider4.getAvailableLiquidityAmount().toString()}`);
+        log(
+            `After Res2 swap - LP4 available: ${liquidityProvider4.getAvailableLiquidityAmount().toString()}`,
+        );
         log(`After Res2 swap - init reserved: ${initialProvider.getReservedAmount().toString()}`);
-        log(`After Res2 swap - init available: ${initialProvider.getAvailableLiquidityAmount().toString()}`);
+        log(
+            `After Res2 swap - init available: ${initialProvider.getAvailableLiquidityAmount().toString()}`,
+        );
 
         // After swap of Reservation2, LP1/LP2 stay as they were (part of Reservation1, not Reservation2)
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
@@ -926,16 +930,36 @@ describe('Reserve, swap and purge tests', () => {
         swap([receiverAddress4CSV, receiverAddress3CSV], [484000, 10000]);
 
         // Log values after partial swap
-        log(`After partial swap - LP1 reserved: ${liquidityProvider1.getReservedAmount().toString()}`);
-        log(`After partial swap - LP1 available: ${liquidityProvider1.getAvailableLiquidityAmount().toString()}`);
-        log(`After partial swap - LP2 reserved: ${liquidityProvider2.getReservedAmount().toString()}`);
-        log(`After partial swap - LP2 available: ${liquidityProvider2.getAvailableLiquidityAmount().toString()}`);
-        log(`After partial swap - LP3 reserved: ${liquidityProvider3.getReservedAmount().toString()}`);
-        log(`After partial swap - LP3 available: ${liquidityProvider3.getAvailableLiquidityAmount().toString()}`);
-        log(`After partial swap - LP4 reserved: ${liquidityProvider4.getReservedAmount().toString()}`);
-        log(`After partial swap - LP4 available: ${liquidityProvider4.getAvailableLiquidityAmount().toString()}`);
-        log(`After partial swap - init reserved: ${initialProvider.getReservedAmount().toString()}`);
-        log(`After partial swap - init available: ${initialProvider.getAvailableLiquidityAmount().toString()}`);
+        log(
+            `After partial swap - LP1 reserved: ${liquidityProvider1.getReservedAmount().toString()}`,
+        );
+        log(
+            `After partial swap - LP1 available: ${liquidityProvider1.getAvailableLiquidityAmount().toString()}`,
+        );
+        log(
+            `After partial swap - LP2 reserved: ${liquidityProvider2.getReservedAmount().toString()}`,
+        );
+        log(
+            `After partial swap - LP2 available: ${liquidityProvider2.getAvailableLiquidityAmount().toString()}`,
+        );
+        log(
+            `After partial swap - LP3 reserved: ${liquidityProvider3.getReservedAmount().toString()}`,
+        );
+        log(
+            `After partial swap - LP3 available: ${liquidityProvider3.getAvailableLiquidityAmount().toString()}`,
+        );
+        log(
+            `After partial swap - LP4 reserved: ${liquidityProvider4.getReservedAmount().toString()}`,
+        );
+        log(
+            `After partial swap - LP4 available: ${liquidityProvider4.getAvailableLiquidityAmount().toString()}`,
+        );
+        log(
+            `After partial swap - init reserved: ${initialProvider.getReservedAmount().toString()}`,
+        );
+        log(
+            `After partial swap - init available: ${initialProvider.getAvailableLiquidityAmount().toString()}`,
+        );
 
         // LP1 was in Res1 with no satoshis sent - restored
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(u128.Zero);
@@ -981,13 +1005,21 @@ describe('Reserve, swap and purge tests', () => {
 
         // Log values after Reservation3
         log(`After Res3 - LP1 reserved: ${liquidityProvider1.getReservedAmount().toString()}`);
-        log(`After Res3 - LP1 available: ${liquidityProvider1.getAvailableLiquidityAmount().toString()}`);
+        log(
+            `After Res3 - LP1 available: ${liquidityProvider1.getAvailableLiquidityAmount().toString()}`,
+        );
         log(`After Res3 - LP2 reserved: ${liquidityProvider2.getReservedAmount().toString()}`);
-        log(`After Res3 - LP2 available: ${liquidityProvider2.getAvailableLiquidityAmount().toString()}`);
+        log(
+            `After Res3 - LP2 available: ${liquidityProvider2.getAvailableLiquidityAmount().toString()}`,
+        );
         log(`After Res3 - LP4 reserved: ${liquidityProvider4.getReservedAmount().toString()}`);
-        log(`After Res3 - LP4 available: ${liquidityProvider4.getAvailableLiquidityAmount().toString()}`);
+        log(
+            `After Res3 - LP4 available: ${liquidityProvider4.getAvailableLiquidityAmount().toString()}`,
+        );
         log(`After Res3 - init reserved: ${initialProvider.getReservedAmount().toString()}`);
-        log(`After Res3 - init available: ${initialProvider.getAvailableLiquidityAmount().toString()}`);
+        log(
+            `After Res3 - init available: ${initialProvider.getAvailableLiquidityAmount().toString()}`,
+        );
 
         expect(liquidityProvider1.getReservedAmount()).toStrictEqual(
             u128.fromString(`1000000000000000000000`),

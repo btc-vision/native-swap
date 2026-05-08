@@ -1,11 +1,5 @@
 import { BaseOperation } from './BaseOperation';
-import {
-    Address,
-    Blockchain,
-    ExtendedAddress,
-    Revert,
-    SafeMath,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, ExtendedAddress, Revert, SafeMath, } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Reservation } from '../models/Reservation';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
@@ -20,7 +14,6 @@ import {
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
     MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
     MINIMUM_TRADE_SIZE_IN_SAT,
-    RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
     STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
 } from '../constants/Contract';
 
@@ -193,11 +186,11 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 `NATIVE_SWAP: maxAmountInSats below minimum trade size (${MINIMUM_TRADE_SIZE_IN_SAT}).`,
             );
         }
-        if (this.maximumProvidersPerReservation == 0 ||
-            this.maximumProvidersPerReservation > MAXIMUM_PROVIDER_PER_RESERVATIONS) {
-            throw new Revert(
-                `NATIVE_SWAP: maximumProvidersPerReservation out of range.`,
-            );
+        if (
+            this.maximumProvidersPerReservation == 0 ||
+            this.maximumProvidersPerReservation > MAXIMUM_PROVIDER_PER_RESERVATIONS
+        ) {
+            throw new Revert(`NATIVE_SWAP: maximumProvidersPerReservation out of range.`);
         }
     }
 

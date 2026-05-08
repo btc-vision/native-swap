@@ -19,7 +19,13 @@ describe('ReservationProviderData tests', () => {
         const fillPrice: u128 = TickMath.tickToPrice(tick);
         const creationBlock: u64 = 100;
 
-        const data = new ReservationProviderData(providerId, amount, tick, fillPrice, creationBlock);
+        const data = new ReservationProviderData(
+            providerId,
+            amount,
+            tick,
+            fillPrice,
+            creationBlock,
+        );
 
         expect<bool>(u256.eq(data.providerId, providerId)).toBe(true);
         expect(data.providedAmount).toStrictEqual(amount);

@@ -31,7 +31,6 @@ import {
     AT_LEAST_PROVIDERS_TO_PURGE,
     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
-    MAX_TICK,
     SWAP_FEE_BPS,
     SWAP_FEE_DENOM,
 } from '../constants/Contract';
@@ -61,7 +60,6 @@ import { UpdateListingOperation } from '../operations/UpdateListingOperation';
 import { WithdrawListingOperation } from '../operations/WithdrawListingOperation';
 
 import { ContractUpdatedEvent } from '../events/ContractUpdatedEvent';
-import { TickMath } from '../utils/TickMath';
 import { FeeManager } from '../managers/FeeManager';
 
 class GetLiquidityQueueResult {
@@ -471,7 +469,9 @@ export class NativeSwap extends ReentrancyGuard {
         const token: Address = calldata.readAddress();
         const satoshisIn: u64 = calldata.readU64();
 
-        const w: BytesWriter = new BytesWriter(U256_BYTE_LENGTH + U64_BYTE_LENGTH + U128_BYTE_LENGTH);
+        const w: BytesWriter = new BytesWriter(
+            U256_BYTE_LENGTH + U64_BYTE_LENGTH + U128_BYTE_LENGTH,
+        );
         if (satoshisIn == 0) {
             w.writeU256(u256.Zero);
             w.writeU64(0);
@@ -557,7 +557,10 @@ export class NativeSwap extends ReentrancyGuard {
         purgeOldReservations: boolean,
         timeoutEnabled: boolean = false,
     ): GetLiquidityQueueResult {
-        const liquidityQueueReserve: ILiquidityQueueReserve = new LiquidityQueueReserve(token, tokenId);
+        const liquidityQueueReserve: ILiquidityQueueReserve = new LiquidityQueueReserve(
+            token,
+            tokenId,
+        );
         const tickBitmapManager: ITickBitmapManager = new TickBitmapManager(
             token,
             tokenId,

@@ -3093,8 +3093,14 @@ describe('Liquidity queue tests', () => {
             // Large pool should have ~10x the absolute impact (since it's 10x bigger)
             // Check that impactLargePool is roughly 10x impactSmallPool (within 20% tolerance)
             const tenTimesSmall = SafeMath.mul(impactSmallPool, u256.fromU32(10));
-            const lowerBound = SafeMath.div(SafeMath.mul(tenTimesSmall, u256.fromU32(80)), u256.fromU32(100));
-            const upperBound = SafeMath.div(SafeMath.mul(tenTimesSmall, u256.fromU32(120)), u256.fromU32(100));
+            const lowerBound = SafeMath.div(
+                SafeMath.mul(tenTimesSmall, u256.fromU32(80)),
+                u256.fromU32(100),
+            );
+            const upperBound = SafeMath.div(
+                SafeMath.mul(tenTimesSmall, u256.fromU32(120)),
+                u256.fromU32(100),
+            );
 
             expect(impactLargePool).toBeGreaterThan(lowerBound);
             expect(upperBound).toBeGreaterThan(impactLargePool);
