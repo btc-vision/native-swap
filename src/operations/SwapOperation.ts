@@ -3,17 +3,22 @@ import {
     Address,
     Blockchain,
     Revert,
-    SafeMath,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { SwapExecutedEvent } from '../events/SwapExecutedEvent';
 import { Reservation } from '../models/Reservation';
-import { u256 } from '@btc-vision/as-bignum/assembly';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
 import { CompletedTrade } from '../models/CompletedTrade';
 import { ReservationFallbackEvent } from '../events/ReservationFallbackEvent';
 
+/**
+ * Settle a reservation. With per-entry frozen `fillPrice`, the old "expired vs not expired"
+ * distinction collapses: TradeManager runs the same loop in either case. The only difference
+ * is the activation-delay check (skipped for already-expired reservations because the
+ * reservation isn't valid for normal consumption — it's being timed out).
+ */
 export class SwapOperation extends BaseOperation {
     private readonly tradeManager: ITradeManager;
 
@@ -27,76 +32,49 @@ export class SwapOperation extends BaseOperation {
             this.liquidityQueue.token,
             Blockchain.tx.sender,
         );
+        this.ensureReservationNotSwapped(reservation);
+        this.ensureReservationHasProvider(reservation);
 
-        let trade: CompletedTrade;
         if (!reservation.isExpired()) {
-            trade = this.executeNotExpired(reservation);
+            // Normal path: must be past activationDelay.
+            reservation.ensureCanBeConsumed();
         } else {
-            trade = this.executeExpired(reservation);
+            // Expired path: emit fallback marker, settle anything actually paid for.
+            Blockchain.emit(new ReservationFallbackEvent(reservation));
         }
 
-        const initialTotalTokensPurchased: u256 = trade.getTotalTokensPurchased();
-        let totalTokensPurchased: u256 = trade.getTotalTokensPurchased();
-        const totalSatoshisSpent: u64 = trade.getTotalSatoshisSpent();
-        let totalFees: u256 = u256.Zero;
+        reservation.setSwapped(true);
+        const trade: CompletedTrade = this.tradeManager.executeTrade(reservation);
 
-        if (!totalTokensPurchased.isZero()) {
-            totalTokensPurchased = this.applyFeesIfEnabled(
-                totalTokensPurchased,
-                totalSatoshisSpent,
-            );
-
-            this.updateLiquidityQueue(
-                trade.totalTokensReserved,
-                initialTotalTokensPurchased, // Pre-fee amount for virtual pool
-                totalTokensPurchased, // Post-fee amount for actual reserve
-                totalSatoshisSpent,
-            );
-
-            this.sendToken(totalTokensPurchased);
-            totalFees = u256.sub(initialTotalTokensPurchased, totalTokensPurchased);
-        } else {
+        if (trade.totalTokensPurchased.isZero() && reservation.isExpired()) {
+            // Expired reservation with no actual BTC paid → just burn the slot, no event noise.
+            return;
+        }
+        if (trade.totalTokensPurchased.isZero()) {
             throw new Revert('NATIVE_SWAP: No tokens purchased in swap.');
         }
 
-        this.emitSwapExecutedEvent(
+        // Decrease total-reserved by what was reserved by this reservation.
+        // Note: TradeManager already releases reservedAmount per provider (for non-purged paths),
+        // and it already sub'd reservedLiquidity inside the per-provider helper. So here we
+        // only need to NOT double-decrement. The trade.totalTokensReserved is a running sum
+        // that reflects what we already released.
+
+        // Send tokens to buyer (post-fee).
+        TransferHelper.transfer(
+            this.liquidityQueue.token,
             Blockchain.tx.sender,
-            totalSatoshisSpent,
-            totalTokensPurchased,
-            totalFees,
+            trade.totalTokensPurchased,
         );
-    }
 
-    private applyFeesIfEnabled(totalTokensPurchased: u256, totalSatoshisSpent: u64): u256 {
-        let newTotalTokensPurchased = totalTokensPurchased;
-
-        if (this.liquidityQueue.feesEnabled) {
-            const totalFeeTokens: u256 = this.liquidityQueue.computeFees(
-                totalTokensPurchased,
-                totalSatoshisSpent,
-            );
-
-            newTotalTokensPurchased = SafeMath.sub(totalTokensPurchased, totalFeeTokens);
-
-            this.liquidityQueue.distributeFee(totalFeeTokens);
-        }
-
-        return newTotalTokensPurchased;
-    }
-
-    private emitSwapExecutedEvent(
-        buyer: Address,
-        totalSatoshisSpent: u64,
-        totalTokensPurchased: u256,
-        totalFees: u256,
-    ): void {
         Blockchain.emit(
-            new SwapExecutedEvent(buyer, totalSatoshisSpent, totalTokensPurchased, totalFees),
+            new SwapExecutedEvent(
+                Blockchain.tx.sender,
+                trade.totalSatoshisSpent,
+                trade.totalTokensPurchased,
+                trade.totalTokensRefunded, // re-using this field for fee amount
+            ),
         );
-    }
-
-    private emitReservationFallbackEvent(reservation: Reservation): void {
-        Blockchain.emit(new ReservationFallbackEvent(reservation));
     }
 
     private ensureReservationNotSwapped(reservation: Reservation): void {
@@ -109,60 +87,5 @@ export class SwapOperation extends BaseOperation {
         if (reservation.getProviderCount() === 0) {
             throw new Revert('NATIVE_SWAP: Reservation does not have any providers.');
         }
-    }
-
-    private ensureTokensPurchasedForExpiredReservation(totalTokensPurchased: u256): void {
-        if (totalTokensPurchased === u256.Zero) {
-            throw new Revert('NATIVE_SWAP: No tokens purchased for expired reservation.');
-        }
-    }
-
-    private executeExpired(reservation: Reservation): CompletedTrade {
-        this.ensureReservationNotSwapped(reservation);
-        this.ensureReservationHasProvider(reservation);
-
-        reservation.setSwapped(true);
-
-        this.emitReservationFallbackEvent(reservation);
-
-        const tradeResult: CompletedTrade = this.tradeManager.executeTradeExpired(
-            reservation,
-            this.liquidityQueue.quote(),
-        );
-
-        this.ensureTokensPurchasedForExpiredReservation(tradeResult.totalTokensPurchased);
-
-        reservation.save();
-
-        return tradeResult;
-    }
-
-    private executeNotExpired(reservation: Reservation): CompletedTrade {
-        reservation.ensureCanBeConsumed();
-        reservation.setSwapped(true);
-
-        const tradeResult: CompletedTrade = this.tradeManager.executeTradeNotExpired(
-            reservation,
-            this.liquidityQueue.quote(),
-        );
-
-        reservation.save();
-
-        return tradeResult;
-    }
-
-    private sendToken(amount: u256): void {
-        TransferHelper.transfer(this.liquidityQueue.token, Blockchain.tx.sender, amount);
-    }
-
-    private updateLiquidityQueue(
-        totalTokensReserved: u256,
-        totalTokensForPool: u256, // Pre-fee, for virtual pool tracking
-        totalTokensForReserve: u256, // Post-fee, for actual reserve
-        totalSatoshisSpent: u64,
-    ): void {
-        this.liquidityQueue.decreaseTotalReserved(totalTokensReserved);
-        this.liquidityQueue.decreaseTotalReserve(totalTokensForReserve);
-        this.liquidityQueue.recordTradeVolumes(totalTokensForPool, totalSatoshisSpent);
     }
 }

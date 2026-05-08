@@ -1,5 +1,3 @@
-import { IReservationManager } from './interfaces/IReservationManager';
-import { Reservation } from '../models/Reservation';
 import {
     Address,
     Blockchain,
@@ -19,13 +17,21 @@ import {
     PURGE_RESERVATION_INDEX_POINTER,
     RESERVATION_IDS_BY_BLOCK_POINTER,
 } from '../constants/StoredPointers';
-import { EMIT_PURGE_EVENTS, RESERVATION_EXPIRE_AFTER_IN_BLOCKS } from '../constants/Contract';
-import { IProviderManager } from './interfaces/IProviderManager';
-import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
+import {
+    EMIT_PURGE_EVENTS,
+    RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+} from '../constants/Contract';
+import { Reservation } from '../models/Reservation';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { ReservationPurgedEvent } from '../events/ReservationPurgedEvent';
+import { IReservationManager } from './interfaces/IReservationManager';
+import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
+import { ITickBitmapManager } from './interfaces/ITickBitmapManager';
 
-export class PurgedResult {
+/**
+ * Result of one `purgeBlockIncremental` round.
+ */
+class PurgedResult {
     constructor(
         public readonly freed: u256,
         public readonly providersPurged: u32,
@@ -33,24 +39,36 @@ export class PurgedResult {
     ) {}
 }
 
+/**
+ * Per-block index of active reservations + gas-bounded incremental purge.
+ *
+ * Storage:
+ *   - `blocksWithReservations: StoredU64Array` — blocks that have at least one reservation
+ *   - per-block `RESERVATION_IDS_BY_BLOCK_POINTER` — list of reservation IDs created at that block
+ *   - per-block `ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER` — flag per slot (active=true, deactivated=false)
+ *   - per-block `PURGE_RESERVATION_INDEX_POINTER` — cursor into the per-block list (for incremental purge)
+ *
+ * Purge cursor preserves gas-bounded behavior: each call processes up to
+ * `AT_LEAST_PROVIDERS_TO_PURGE` providers and saves cursor for the next call.
+ */
 export class ReservationManager implements IReservationManager {
     protected readonly blocksWithReservations: StoredU64Array;
     protected readonly tokenIdUint8Array: Uint8Array;
     protected atLeastProvidersToPurge: u32;
     private readonly token: Address;
-    private readonly providerManager: IProviderManager;
+    private readonly tickBitmapManager: ITickBitmapManager;
     private readonly liquidityQueueReserve: ILiquidityQueueReserve;
 
     constructor(
         token: Address,
         tokenIdUint8Array: Uint8Array,
-        providerManager: IProviderManager,
+        tickBitmapManager: ITickBitmapManager,
         liquidityQueueReserve: ILiquidityQueueReserve,
         atLeastProvidersToPurge: u32,
     ) {
         this.token = token;
         this.tokenIdUint8Array = tokenIdUint8Array;
-        this.providerManager = providerManager;
+        this.tickBitmapManager = tickBitmapManager;
         this.liquidityQueueReserve = liquidityQueueReserve;
         this.blocksWithReservations = new StoredU64Array(
             BLOCKS_WITH_RESERVATIONS_POINTER,
@@ -59,6 +77,9 @@ export class ReservationManager implements IReservationManager {
         this.atLeastProvidersToPurge = atLeastProvidersToPurge;
     }
 
+    /**
+     * Index a freshly-created reservation under its creation block.
+     */
     public addReservation(blockNumber: u64, reservation: Reservation): void {
         const reservationIndex: u32 = this.pushToReservationList(blockNumber, reservation.getId());
         const reservationActiveIndex: u32 = this.pushToActiveList(blockNumber);
@@ -74,6 +95,7 @@ export class ReservationManager implements IReservationManager {
         return this.blocksWithReservations.getLength();
     }
 
+    /** Mark a reservation as deactivated (post-swap). */
     public deactivateReservation(reservation: Reservation): void {
         const reservationActiveList = this.getActiveListForBlock(reservation.getCreationBlock());
         reservationActiveList.set(reservation.getPurgeIndex(), false);
@@ -82,24 +104,31 @@ export class ReservationManager implements IReservationManager {
 
     public getReservationIdAtIndex(blockNumber: u64, index: u32): u128 {
         const reservationList: StoredU128Array = this.getReservationListForBlock(blockNumber);
-
         return reservationList.get(index);
     }
 
+    /** Convenience constructor used by `LiquidityQueue.getReservationWithExpirationChecks`. */
     public getReservationWithExpirationChecks(owner: Address): Reservation {
         const reservation: Reservation = new Reservation(this.token, owner);
         reservation.ensureCanBeConsumed();
-
         return reservation;
     }
 
     public isReservationActiveAtIndex(blockNumber: u64, index: u32): boolean {
         const activeReservationList: StoredBooleanArray = this.getActiveListForBlock(blockNumber);
-
         return !!activeReservationList.get(index);
     }
 
-    public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64, currentQuote: u256): u64 {
+    /**
+     * Incremental purge: iterate `blocksWithReservations` from the head while the block
+     * is older than the grace window, processing up to `atLeastProvidersToPurge` per call.
+     * For each active expired reservation, restore each provider entry via
+     * `tickBitmapManager.purgeAndRestoreProvider(data)`.
+     *
+     * @param {u64} lastPurgedBlock - prior cursor.
+     * @returns {u64}               - new cursor.
+     */
+    public purgeReservationsAndRestoreProviders(lastPurgedBlock: u64): u64 {
         const currentBlockNumber: u64 = Blockchain.block.number;
 
         if (currentBlockNumber <= RESERVATION_EXPIRE_AFTER_IN_BLOCKS) {
@@ -107,34 +136,23 @@ export class ReservationManager implements IReservationManager {
         }
 
         const maxBlockToPurge: u64 = currentBlockNumber - RESERVATION_EXPIRE_AFTER_IN_BLOCKS;
-        if (maxBlockToPurge <= lastPurgedBlock) {
-            this.providerManager.restoreCurrentIndex();
-            return lastPurgedBlock;
-        }
-
-        if (this.blocksWithReservations.getLength() === 0) {
-            this.providerManager.restoreCurrentIndex();
-            return maxBlockToPurge;
-        }
+        if (maxBlockToPurge <= lastPurgedBlock) return lastPurgedBlock;
+        if (this.blocksWithReservations.getLength() === 0) return maxBlockToPurge;
 
         let freed: u256 = u256.Zero;
         let providersPurged: u32 = 0;
-        let touched = false; // deleted at least one reservation
-        let shifted = false; // dropped at least one whole block
+        let touched: bool = false;
+        let shifted: bool = false;
 
         while (
             this.blocksWithReservations.getLength() > 0 &&
             providersPurged < this.atLeastProvidersToPurge
         ) {
-            const blk = this.blocksWithReservations.get(0);
-
-            // block must be strictly older than the grace window
-            if (blk >= maxBlockToPurge) {
-                break;
-            }
+            const blk: u64 = this.blocksWithReservations.get(0);
+            if (blk >= maxBlockToPurge) break;
 
             const budget: u32 = this.atLeastProvidersToPurge - providersPurged;
-            const res: PurgedResult = this.purgeBlockIncremental(blk, budget, currentQuote);
+            const res: PurgedResult = this.purgeBlockIncremental(blk, budget);
 
             providersPurged += res.providersPurged;
             freed = SafeMath.add(freed, res.freed);
@@ -145,38 +163,33 @@ export class ReservationManager implements IReservationManager {
                 shifted = true;
                 continue;
             }
-
-            if (res.providersPurged === 0) {
-                // nothing more to do this round
-                break;
-            }
+            if (res.providersPurged === 0) break;
         }
 
-        if (shifted || touched) {
-            this.blocksWithReservations.save();
-        }
+        if (shifted || touched) this.blocksWithReservations.save();
 
-        this.providerManager.cleanUpQueues(currentQuote);
+        // Advance cleanup at the cheapest tick (lazy — only touches one tick).
+        this.tickBitmapManager.cleanUpQueues();
 
         if (touched) {
             this.liquidityQueueReserve.subFromTotalReserved(freed);
-            this.providerManager.resetStartingIndex();
-        } else {
-            this.providerManager.restoreCurrentIndex();
         }
 
         let newLastPurgedBlock: u64 = lastPurgedBlock;
         if (shifted) {
             if (this.blocksWithReservations.getLength() === 0) {
-                newLastPurgedBlock = maxBlockToPurge; // queue empty
+                newLastPurgedBlock = maxBlockToPurge;
             } else {
-                const head = this.blocksWithReservations.get(0); // > maxBlock
-                newLastPurgedBlock = head > 0 ? head - 1 : 0; // under-flow guard
+                const head: u64 = this.blocksWithReservations.get(0);
+                newLastPurgedBlock = head > 0 ? head - 1 : 0;
             }
         }
-
         return newLastPurgedBlock;
     }
+
+    // ========================================================================
+    // Internal helpers
+    // ========================================================================
 
     protected getActiveListForBlock(blockNumber: u64): StoredBooleanArray {
         const writer: BytesWriter = new BytesWriter(
@@ -184,38 +197,29 @@ export class ReservationManager implements IReservationManager {
         );
         writer.writeU64(blockNumber);
         writer.writeBytes(this.tokenIdUint8Array);
-
-        const keyBytes: Uint8Array = writer.getBuffer();
-        return new StoredBooleanArray(ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER, keyBytes);
+        return new StoredBooleanArray(ACTIVE_RESERVATION_IDS_BY_BLOCK_POINTER, writer.getBuffer());
     }
 
     protected getReservationListForBlock(blockNumber: u64): StoredU128Array {
         const writer: BytesWriter = new BytesWriter(
             U64_BYTE_LENGTH + this.tokenIdUint8Array.length,
         );
-
         writer.writeU64(blockNumber);
         writer.writeBytes(this.tokenIdUint8Array);
-
-        const keyBytes: Uint8Array = writer.getBuffer();
-        return new StoredU128Array(RESERVATION_IDS_BY_BLOCK_POINTER, keyBytes);
+        return new StoredU128Array(RESERVATION_IDS_BY_BLOCK_POINTER, writer.getBuffer());
     }
 
     protected pushToActiveList(blockNumber: u64): u32 {
-        const reservationActiveList: StoredBooleanArray = this.getActiveListForBlock(blockNumber);
-
-        const index: u32 = reservationActiveList.push(true);
-        reservationActiveList.save();
-
+        const list: StoredBooleanArray = this.getActiveListForBlock(blockNumber);
+        const index: u32 = list.push(true);
+        list.save();
         return index;
     }
 
     protected pushToReservationList(blockNumber: u64, reservationId: u128): u32 {
-        const reservationList: StoredU128Array = this.getReservationListForBlock(blockNumber);
-
-        const index: u32 = reservationList.push(reservationId);
-        reservationList.save();
-
+        const list: StoredU128Array = this.getReservationListForBlock(blockNumber);
+        const index: u32 = list.push(reservationId);
+        list.save();
         return index;
     }
 
@@ -227,7 +231,6 @@ export class ReservationManager implements IReservationManager {
 
     private ensureReservationPurgeIndexMatch(reservation: Reservation, currentIndex: u32): void {
         const purgeIndex: u32 = reservation.getPurgeIndex();
-
         if (purgeIndex !== currentIndex) {
             throw new Revert(
                 `Impossible state: reservation ${reservation.getId()} purge index mismatch (expected: ${currentIndex}, actual: ${purgeIndex})`,
@@ -243,18 +246,12 @@ export class ReservationManager implements IReservationManager {
 
     private getPurgeIndexStore(blockNumber: u64): StoredU32 {
         const writer = new BytesWriter(U64_BYTE_LENGTH + this.tokenIdUint8Array.length);
-
         writer.writeU64(blockNumber);
         writer.writeBytes(this.tokenIdUint8Array);
-
         return new StoredU32(PURGE_RESERVATION_INDEX_POINTER, writer.getBuffer());
     }
 
-    private purgeBlockIncremental(
-        blockNumber: u64,
-        nbProvidersToPurge: u32,
-        quote: u256,
-    ): PurgedResult {
+    private purgeBlockIncremental(blockNumber: u64, nbProvidersToPurge: u32): PurgedResult {
         const reservations = this.getReservationListForBlock(blockNumber);
         const actives = this.getActiveListForBlock(blockNumber);
         const reservationsLength: u32 = reservations.getLength();
@@ -272,7 +269,7 @@ export class ReservationManager implements IReservationManager {
                 this.ensureReservationPurgeIndexMatch(reservation, index);
 
                 const providerCount: u32 = reservation.getProviderCount();
-                const freed: u256 = this.restoreReservation(reservation, providerCount, quote);
+                const freed: u256 = this.restoreReservation(reservation, providerCount);
                 totalFreed = SafeMath.add(totalFreed, freed);
                 totalProvidersPurged += providerCount;
 
@@ -291,13 +288,12 @@ export class ReservationManager implements IReservationManager {
                     );
                 }
             }
-
             index++;
         }
 
         actives.save();
 
-        const finished = index >= reservationsLength;
+        const finished: bool = index >= reservationsLength;
         if (finished) {
             this.writePurgeCursor(blockNumber, 0);
         } else {
@@ -308,13 +304,11 @@ export class ReservationManager implements IReservationManager {
     }
 
     private pushBlockIfNotExists(blockNumber: u64): void {
-        let addBlock: boolean = true;
+        let addBlock: bool = true;
         const length: u32 = this.blocksWithReservations.getLength();
-
         if (length > 0) {
             addBlock = this.blocksWithReservations.get(length - 1) !== blockNumber;
         }
-
         if (addBlock) {
             this.blocksWithReservations.push(blockNumber);
             this.blocksWithReservations.save();
@@ -325,15 +319,17 @@ export class ReservationManager implements IReservationManager {
         return this.getPurgeIndexStore(blockNumber).get(0);
     }
 
-    private restoreReservation(reservation: Reservation, providerCount: u32, quote: u256): u256 {
+    /**
+     * Walk every provider entry in this expired reservation, restore the reserved
+     * tokens, and push the provider onto their tick's purged sub-queue (or fulfilled
+     * queue for dust). Returns total tokens freed.
+     */
+    private restoreReservation(reservation: Reservation, providerCount: u32): u256 {
         let restoredLiquidity: u256 = u256.Zero;
-
         for (let index: u32 = 0; index < providerCount; index++) {
             const data: ReservationProviderData = reservation.getProviderAt(index);
-
-            this.providerManager.purgeAndRestoreProvider(data, quote);
-
-            restoredLiquidity = SafeMath.add(restoredLiquidity, data.providedAmount.toU256());
+            const freed: u256 = this.tickBitmapManager.purgeAndRestoreProvider(data);
+            restoredLiquidity = SafeMath.add(restoredLiquidity, freed);
         }
 
         reservation.setPurged(true);
@@ -344,8 +340,8 @@ export class ReservationManager implements IReservationManager {
     }
 
     private writePurgeCursor(blockNumber: u64, index: u32): void {
-        const purgeIndexStore = this.getPurgeIndexStore(blockNumber);
-        purgeIndexStore.set(0, index);
-        purgeIndexStore.save();
+        const store = this.getPurgeIndexStore(blockNumber);
+        store.set(0, index);
+        store.save();
     }
 }

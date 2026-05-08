@@ -12,8 +12,8 @@
   "author": "MotoSwap",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@types/node": "^25.5.0",
-    "prettier": "^3.8.1"
+    "@types/node": "^25.6.2",
+    "prettier": "^3.8.3"
   },
   "keywords": [
     "bitcoin",
@@ -29,18 +29,18 @@
   "type": "module",
   "dependencies": {
     "@btc-vision/as-bignum": "^1.0.0",
-    "@btc-vision/as-covers-assembly": "^0.4.4",
-    "@btc-vision/as-covers-transform": "^0.4.4",
+    "@btc-vision/as-covers-assembly": "^0.4.5",
+    "@btc-vision/as-covers-transform": "^0.4.5",
     "@btc-vision/as-loader": "^0.0.0",
-    "@btc-vision/as-pect-assembly": "^8.2.0",
-    "@btc-vision/as-pect-cli": "^8.2.0",
-    "@btc-vision/as-pect-transform": "^8.2.0",
+    "@btc-vision/as-pect-assembly": "^8.3.0",
+    "@btc-vision/as-pect-cli": "^8.3.0",
+    "@btc-vision/as-pect-transform": "^8.3.0",
     "@btc-vision/assemblyscript": "^0.29.3",
-    "@btc-vision/btc-runtime": "^1.11.0",
+    "@btc-vision/btc-runtime": "file:../btc-runtime",
     "@btc-vision/opnet-transform": "^1.2.2",
     "@eslint/js": "10.0.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.1"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.2"
   }
 }
