@@ -1,6 +1,6 @@
 import { BaseOperation } from './BaseOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
+import { getProvider, Provider } from '../models/Provider';
 import {
     BitcoinAddresses,
     Blockchain,
@@ -10,369 +10,159 @@ import {
     SafeMath,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
-import { tokensToSatoshis } from '../utils/SatoshisConversion';
-import { getTotalFeeCollected } from '../utils/BlockchainUtils';
 import { LiquidityListedEvent } from '../events/LiquidityListedEvent';
-import { FeeManager } from '../managers/FeeManager';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import {
     CSV_BLOCKS_REQUIRED,
-    currentProviderResetCount,
-    INDEX_NOT_SET_VALUE,
-    MAX_CUMULATIVE_IMPACT_BPS,
-    MAX_PRICE_IMPACT_BPS,
+    MAX_TICK,
+    MIN_TICK,
     MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
-    PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
-    PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX,
-    TEN_THOUSAND_U256,
 } from '../constants/Contract';
+import { TickMath } from '../utils/TickMath';
 
+/**
+ * List `amountIn` tokens at the given `priceTick`. Two paths:
+ *   - first-list: provider not active → activate, set priceTick, push onto FIFO[tick]
+ *   - top-up: provider already active at the SAME tick → just bump liquidityAmount
+ *
+ * To list at a different tick, the provider must `updateListing` first (or withdraw).
+ *
+ * **Minimum-value enforcement (NON-NEGOTIABLE)**: total post-op liquidity must be
+ * worth ≥ `MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT` (= 20,000 sats) at the chosen tick.
+ *
+ * No listing fee, no priority tax. Buyer pays the 0.3% swap fee at settlement.
+ */
 export class ListTokensForSaleOperation extends BaseOperation {
     private readonly providerId: u256;
     private readonly amountIn: u128;
     private readonly amountIn256: u256;
     private readonly receiver: Uint8Array;
     private readonly receiverStr: string;
-    private readonly usePriorityQueue: boolean;
-    private readonly isForInitialLiquidity: boolean;
+    private readonly priceTick: i32;
     private readonly provider: Provider;
-    private readonly oldLiquidity: u128;
-    private readonly numberOfFulfilledProviderToResets: u8;
 
     constructor(
         liquidityQueue: ILiquidityQueue,
         providerId: u256,
         amountIn: u128,
         receiver: Uint8Array,
-        receiverStr: string, // Ensure we recompute the right string
-        usePriorityQueue: boolean,
-        isForInitialLiquidity: boolean,
-        numberOfFulfilledProviderToResets: u8,
+        receiverStr: string,
+        priceTick: i32,
     ) {
         super(liquidityQueue);
-
         this.providerId = providerId;
         this.amountIn = amountIn;
         this.amountIn256 = amountIn.toU256();
         this.receiver = receiver;
         this.receiverStr = receiverStr;
-        this.usePriorityQueue = usePriorityQueue;
-        this.isForInitialLiquidity = isForInitialLiquidity;
-        this.numberOfFulfilledProviderToResets = numberOfFulfilledProviderToResets;
-
-        const provider: Provider = getProvider(providerId);
-        this.provider = provider;
-        this.oldLiquidity = provider.getLiquidityAmount();
+        this.priceTick = priceTick;
+        this.provider = getProvider(providerId);
     }
 
     public override execute(): void {
         this.checkPreConditions();
-        this.transferToken();
-        this.emitLiquidityListedEvent();
-        this.tryResetFulfilledProviders();
-    }
 
-    protected activateSlashing(netAmountIn: u256): void {
-        const netAmountIn128 = netAmountIn.toU128();
-        const newTotal: u128 = SafeMath.add128(this.oldLiquidity, netAmountIn128);
-        const oldHalfCred: u128 = this.half(this.oldLiquidity);
-        const newHalfCred: u128 = this.half(newTotal);
-        const deltaHalf: u128 = SafeMath.sub128(newHalfCred, oldHalfCred);
+        const wasActive: bool = this.provider.isActive();
+        const totalAfter: u128 = SafeMath.add128(this.provider.getLiquidityAmount(), this.amountIn);
 
-        if (deltaHalf.isZero()) {
-            return;
-        }
+        // Minimum listing value: enforced on TOTAL liquidity at this tick, post-op.
+        this.ensureLiquidityNotTooLowAtTick(totalAfter, this.priceTick);
 
-        const currentT = this.liquidityQueue.virtualTokenReserve;
-        const currentB = u256.fromU64(this.liquidityQueue.virtualSatoshisReserve);
+        this.pullInTokens();
 
-        if (currentT.isZero() || currentB.isZero()) {
-            throw new Revert(`NATIVE_SWAP: Pool not initialized.`);
-        }
-
-        const deltaHalf256 = deltaHalf.toU256();
-
-        const maxAllowedAddition = SafeMath.div(
-            SafeMath.mul(currentT, MAX_PRICE_IMPACT_BPS),
-            TEN_THOUSAND_U256,
-        );
-
-        if (deltaHalf256 > maxAllowedAddition) {
-            throw new Revert(
-                `NATIVE_SWAP: Listing too large relative to pool. ` +
-                    `Adding ${deltaHalf256} tokens but max allowed is ${maxAllowedAddition} ` +
-                    `(${MAX_PRICE_IMPACT_BPS} bps of ${currentT} virtual reserve).`,
-            );
-        }
-
-        const pendingSells = this.liquidityQueue.totalTokensSellActivated;
-        const totalPending = SafeMath.add(deltaHalf256, pendingSells);
-
-        const maxCumulativeAddition = SafeMath.div(
-            SafeMath.mul(currentT, MAX_CUMULATIVE_IMPACT_BPS),
-            TEN_THOUSAND_U256,
-        );
-
-        if (totalPending > maxCumulativeAddition) {
-            throw new Revert(
-                `NATIVE_SWAP: Cumulative pending sells too high. ` +
-                    `Total pending would be ${totalPending}, max allowed is ${maxCumulativeAddition}.`,
-            );
-        }
-
-        // Track BTC contribution based on net amount too
-        const currentQuote = this.liquidityQueue.quote();
-        if (!currentQuote.isZero()) {
-            const newTokensBtcValue = tokensToSatoshis(netAmountIn, currentQuote);
-            const existingContribution = this.provider.getVirtualBTCContribution();
-            this.provider.setVirtualBTCContribution(existingContribution + newTokensBtcValue);
-        }
-
-        this.liquidityQueue.increaseTotalTokensSellActivated(deltaHalf256);
-        this.liquidityQueue.updateVirtualPoolIfNeeded();
-        this.liquidityQueue.purgeReservationsAndRestoreProviders(this.liquidityQueue.quote());
-    }
-
-    private tryResetFulfilledProviders(): void {
-        if (currentProviderResetCount < this.numberOfFulfilledProviderToResets) {
-            const count: u8 = this.numberOfFulfilledProviderToResets - currentProviderResetCount;
-            this.liquidityQueue.resetFulfilledProviders(count);
-        }
-    }
-
-    private ensureValidReceiverAddress(receiver: string): void {
-        if (Blockchain.validateBitcoinAddress(receiver) == false) {
-            throw new Revert('NATIVE_SWAP: Invalid receiver address.');
-        }
-    }
-
-    private addProviderToQueue(): void {
-        this.provider.activate();
-
-        if (!this.isForInitialLiquidity) {
-            // In case the provider is already in the queue, do not add it another time.
-            // This can be the case when listing tokens with already listed tokens
-            const queueIndex: u32 = this.provider.getQueueIndex();
-
-            if (this.usePriorityQueue) {
-                this.provider.markPriority();
-
-                if (
-                    queueIndex === INDEX_NOT_SET_VALUE ||
-                    (queueIndex !== INDEX_NOT_SET_VALUE &&
-                        queueIndex < this.liquidityQueue.getPriorityQueueStartingIndex())
-                ) {
-                    this.liquidityQueue.addToPriorityQueue(this.provider);
-                }
-            } else {
-                if (
-                    queueIndex === INDEX_NOT_SET_VALUE ||
-                    (queueIndex !== INDEX_NOT_SET_VALUE &&
-                        queueIndex < this.liquidityQueue.getNormalQueueStartingIndex())
-                ) {
-                    this.liquidityQueue.addToNormalQueue(this.provider);
-                }
-            }
-        }
-    }
-
-    private assignBlockNumber(): void {
-        this.provider.setListedTokenAtBlock(Blockchain.block.number);
-    }
-
-    private assignReceiver(): void {
-        const hasReceiver: boolean = this.provider.hasReservedAmount();
-        if (hasReceiver && this.provider.getBtcReceiver() !== this.receiverStr) {
-            throw new Revert('NATIVE_SWAP: Cannot change receiver address while reserved.');
-        } else if (!hasReceiver) {
-            this.verifyReceiverAddress();
-
+        if (!wasActive) {
+            this.provider.activate();
+            this.provider.setPriceTick(this.priceTick);
             this.provider.setBtcReceiver(this.receiverStr);
+            this.provider.setListedTokenAtBlock(Blockchain.block.number);
+            this.liquidityQueue.addToTickFIFO(this.provider, this.priceTick);
+        }
+
+        this.provider.addToLiquidityAmount(this.amountIn);
+        this.liquidityQueue.increaseTotalReserve(this.amountIn256);
+        this.provider.save();
+
+        Blockchain.emit(
+            new LiquidityListedEvent(
+                this.provider.getLiquidityAmount(),
+                this.receiverStr,
+                this.priceTick,
+            ),
+        );
+    }
+
+    private checkPreConditions(): void {
+        if (!this.liquidityQueue.isPoolRegistered()) {
+            throw new Revert(
+                'NATIVE_SWAP: Pool not registered for this token. Call createPool first.',
+            );
+        }
+        if (this.amountIn.isZero()) {
+            throw new Revert('NATIVE_SWAP: Amount in cannot be zero.');
+        }
+        if (this.priceTick < MIN_TICK || this.priceTick > MAX_TICK) {
+            throw new Revert(
+                `NATIVE_SWAP: tick ${this.priceTick} out of range [${MIN_TICK}, ${MAX_TICK}].`,
+            );
+        }
+
+        // If already listed, top-up MUST be at the same tick. Different tick → use updateListing.
+        if (this.provider.isActive()) {
+            if (this.priceTick != this.provider.getPriceTick()) {
+                throw new Revert(
+                    `NATIVE_SWAP: Provider already listed at tick ${this.provider.getPriceTick()}. Use updateListing to change price.`,
+                );
+            }
+            // Same-tick top-up is allowed even while frozen. We do NOT call any
+            // "no active reservation" guard — adding liquidity behind existing
+            // reservations is safe.
+        }
+
+        // Liquidity overflow guard (u128.add128 already revert-on-overflow, but be explicit)
+        if (
+            !u128.lt(this.provider.getLiquidityAmount(), SafeMath.sub128(u128.Max, this.amountIn))
+        ) {
+            throw new Revert('NATIVE_SWAP: Liquidity overflow. Add a smaller amount.');
+        }
+
+        // CSV P2WSH receiver verification — required on first list, optional rebind disallowed.
+        if (!this.provider.isActive()) {
+            this.verifyReceiverAddress();
+        } else if (this.provider.getBtcReceiver() !== this.receiverStr) {
+            throw new Revert('NATIVE_SWAP: Cannot change receiver address while listed.');
+        }
+    }
+
+    /**
+     * Enforce: `(amount * tickToPrice(tick)) >> 88 >= MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT`.
+     * Same helper used by `CreatePoolOperation`.
+     */
+    private ensureLiquidityNotTooLowAtTick(amount: u128, tick: i32): void {
+        const fillPrice: u128 = TickMath.tickToPrice(tick);
+        const sats: u64 = TickMath.tokensToSatoshis(amount, fillPrice);
+        if (sats < MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT) {
+            throw new Revert(
+                `NATIVE_SWAP: Listing worth ${sats} sats; minimum is ${MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT}.`,
+            );
         }
     }
 
     private verifyReceiverAddress(): void {
+        if (!Blockchain.validateBitcoinAddress(this.receiverStr)) {
+            throw new Revert('NATIVE_SWAP: Invalid receiver address.');
+        }
         const isValidCSV = BitcoinAddresses.verifyCsvP2wshAddress(
             this.receiver,
             CSV_BLOCKS_REQUIRED,
             this.receiverStr,
             Network.hrp(Blockchain.network),
         );
-
         if (!isValidCSV) {
             const expected = ExtendedAddress.toCSV(this.receiver, CSV_BLOCKS_REQUIRED);
-
             throw new Revert(
-                `NATIVE_SWAP: Invalid receiver address. Expected CSV P2WSH address with ${CSV_BLOCKS_REQUIRED} blocks. (not ${this.receiverStr}, expected ${expected})`,
+                `NATIVE_SWAP: Invalid receiver address. Expected CSV P2WSH with ${CSV_BLOCKS_REQUIRED} blocks. (got ${this.receiverStr}, expected ${expected})`,
             );
         }
-    }
-
-    private assertQueueSwitchAllowed(): void {
-        if (this.provider.isPriority() && this.oldLiquidity.isZero()) {
-            throw new Revert(
-                `Impossible state: Provider has no liquidity but still in the priority queue.`,
-            );
-        }
-
-        const switched: boolean = this.usePriorityQueue !== this.provider.isPriority();
-
-        if (switched && !this.oldLiquidity.isZero()) {
-            throw new Revert(
-                `NATIVE_SWAP: Your current listing must be fully purchased before you can switch the queue type.`,
-            );
-        }
-    }
-
-    private calculateTax(): u128 {
-        return SafeMath.div128(
-            SafeMath.mul128(this.amountIn, PERCENT_TOKENS_FOR_PRIORITY_QUEUE_TAX),
-            PERCENT_TOKENS_FOR_PRIORITY_FACTOR_TAX,
-        );
-    }
-
-    private checkPreConditions(): void {
-        if (this.usePriorityQueue) {
-            this.ensureEnoughPriorityFees();
-        }
-
-        this.ensureValidReceiverAddress(this.receiverStr);
-        this.ensureAmountInIsNotZero();
-        this.ensureNoLiquidityOverflow();
-        this.ensureNoActivePositionInPriorityQueue();
-        this.ensureProviderNotAlreadyProvidingLiquidity();
-        this.ensureNoActiveReservation();
-        this.ensureProviderIsNotPurged();
-        this.ensureProviderIsNotFulfilled();
-
-        if (!this.isForInitialLiquidity) {
-            this.ensurePriceIsNotZero();
-            this.ensureInitialProviderAddOnce();
-            this.ensureLiquidityNotTooLowInSatoshis();
-        }
-    }
-
-    private deductTaxIfPriority(): u256 {
-        if (!this.usePriorityQueue) {
-            return u256.Zero;
-        }
-
-        const tax: u128 = this.calculateTax();
-
-        if (tax.isZero()) {
-            return u256.Zero;
-        }
-
-        const tax256: u256 = tax.toU256();
-
-        // Only deduct from provider's amount
-        this.provider.subtractFromLiquidityAmount(tax);
-
-        // Send to staking
-        addAmountToStakingContract(tax256);
-
-        // Return tax amount so caller can adjust what goes into reserves
-        return tax256;
-    }
-
-    private emitLiquidityListedEvent(): void {
-        Blockchain.emit(
-            new LiquidityListedEvent(this.provider.getLiquidityAmount(), this.receiverStr),
-        );
-    }
-
-    private ensureAmountInIsNotZero(): void {
-        if (this.amountIn.isZero()) {
-            throw new Revert('NATIVE_SWAP: Amount in cannot be zero.');
-        }
-    }
-
-    private ensureEnoughPriorityFees(): void {
-        const feesCollected: u64 = getTotalFeeCollected();
-        const costPriorityQueue: u64 = FeeManager.priorityQueueBaseFee;
-
-        if (feesCollected < costPriorityQueue) {
-            throw new Revert('NATIVE_SWAP: Not enough fees for priority queue.');
-        }
-    }
-
-    private ensureInitialProviderAddOnce(): void {
-        if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProviderId)) {
-            throw new Revert(
-                `NATIVE_SWAP: Initial provider can only add once, if not initialLiquidity.`,
-            );
-        }
-    }
-
-    private ensureLiquidityNotTooLowInSatoshis(): void {
-        const currentPrice: u256 = this.liquidityQueue.quote();
-        const liquidityInSatoshis: u64 = tokensToSatoshis(this.amountIn256, currentPrice);
-
-        if (liquidityInSatoshis < MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT) {
-            throw new Revert(
-                `NATIVE_SWAP: Liquidity value is too low in satoshis. (provided: ${liquidityInSatoshis}.)`,
-            );
-        }
-    }
-
-    private ensureNoActivePositionInPriorityQueue(): void {
-        if (this.provider.isPriority() && !this.usePriorityQueue) {
-            throw new Revert(
-                'NATIVE_SWAP: You already have an active position in the priority queue. Please use the priority queue.',
-            );
-        }
-    }
-
-    private ensureNoActiveReservation(): void {
-        if (this.provider.hasReservedAmount()) {
-            throw new Revert(
-                `NATIVE_SWAP: All active reservations on your listing must be completed before listing again.`,
-            );
-        }
-    }
-
-    private ensureProviderIsNotFulfilled(): void {
-        if (this.provider.toReset()) {
-            throw new Revert(
-                'NATIVE_SWAP: Provider is in the reset queue and needs to be resets first. Try again in a few blocks.',
-            );
-        }
-    }
-
-    private ensureProviderIsNotPurged(): void {
-        if (this.provider.isPurged()) {
-            throw new Revert(
-                `NATIVE_SWAP: You are in the purge queue. Your current listing must be bought before listing again.`,
-            );
-        }
-    }
-
-    private ensureNoLiquidityOverflow(): void {
-        if (!u128.lt(this.oldLiquidity, SafeMath.sub128(u128.Max, this.amountIn))) {
-            throw new Revert('NATIVE_SWAP: Liquidity overflow. Please add a smaller amount.');
-        }
-    }
-
-    private ensurePriceIsNotZero(): void {
-        const currentPrice: u256 = this.liquidityQueue.quote();
-        if (currentPrice.isZero()) {
-            throw new Revert(
-                'NATIVE_SWAP: Quote is zero. Please set initial price if you are the owner of the token.',
-            );
-        }
-    }
-
-    private ensureProviderNotAlreadyProvidingLiquidity(): void {
-        if (this.provider.isLiquidityProvisionAllowed()) {
-            throw new Revert(
-                'NATIVE_SWAP: You have an active position partially fulfilled. You must wait until it is fully fulfilled.',
-            );
-        }
-    }
-
-    private half(value: u128): u128 {
-        const halfFloor = SafeMath.div128(value, u128.fromU32(2));
-        return u128.add(halfFloor, u128.and(value, u128.One));
     }
 
     private pullInTokens(): void {
@@ -382,32 +172,5 @@ export class ListTokensForSaleOperation extends BaseOperation {
             Blockchain.contractAddress,
             this.amountIn256,
         );
-    }
-
-    private snapshotBlockQuote(): void {
-        this.liquidityQueue.setBlockQuote();
-    }
-
-    private transferToken(): void {
-        this.pullInTokens();
-        this.assertQueueSwitchAllowed();
-        this.addProviderToQueue();
-        this.updateProviderLiquidity(); // Sets to oldLiquidity + amountIn (GROSS)
-        this.assignBlockNumber();
-        this.assignReceiver();
-
-        const taxAmount = this.deductTaxIfPriority(); // Subtracts tax from provider
-        const netAmount = SafeMath.sub(this.amountIn256, taxAmount);
-
-        this.liquidityQueue.increaseTotalReserve(netAmount);
-        if (!this.isForInitialLiquidity) {
-            this.activateSlashing(netAmount);
-        }
-        this.snapshotBlockQuote();
-    }
-
-    private updateProviderLiquidity(): void {
-        const updatedAmount: u128 = SafeMath.add128(this.oldLiquidity, this.amountIn);
-        this.provider.setLiquidityAmount(updatedAmount);
     }
 }

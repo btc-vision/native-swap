@@ -1,59 +1,53 @@
 import { BaseOperation } from './BaseOperation';
-import {
-    Address,
-    Blockchain,
-    ExtendedAddress,
-    Revert,
-    SafeMath,
-} from '@btc-vision/btc-runtime/runtime';
+import { Address, Blockchain, ExtendedAddress, Revert, SafeMath, } from '@btc-vision/btc-runtime/runtime';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Reservation } from '../models/Reservation';
+import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { LiquidityReservedEvent } from '../events/LiquidityReservedEvent';
 import { ReservationCreatedEvent } from '../events/ReservationCreatedEvent';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { FeeManager } from '../managers/FeeManager';
-import { getTotalFeeCollected } from '../utils/BlockchainUtils';
-import {
-    CappedTokensResult,
-    satoshisToTokens,
-    satoshisToTokens128,
-    tokensToSatoshis,
-    tokensToSatoshis128,
-} from '../utils/SatoshisConversion';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
+import { Provider } from '../models/Provider';
+import { TickMath } from '../utils/TickMath';
 import {
-    currentProviderResetCount,
-    INDEX_NOT_SET_VALUE,
-    INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAX_ACTIVATION_DELAY,
+    MAX_TICK,
+    MAXIMUM_PROVIDER_PER_RESERVATIONS,
     MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
     MINIMUM_TRADE_SIZE_IN_SAT,
-    RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
     STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
 } from '../constants/Contract';
-import { Provider } from '../models/Provider';
-import { ReservationProviderData } from '../models/ReservationProdiverData';
 
+/**
+ * Walk the bitmap from cheapest tick upward and reserve providers' liquidity until the
+ * buyer's `maxAmountInSats` is exhausted or `maxProviders` is reached.
+ *
+ * For each picked provider:
+ *   - read the provider's tick → fillPrice via TickMath
+ *   - reserve `tokensToReserve = min(avail, sats_budget_to_tokens)`
+ *   - record an entry: `(providerId, providedAmount, tick, fillPrice, creationBlock)`
+ *   - bump `provider.latestReservedUntilBlock` (monotonic max — locks listing for cancel/update)
+ *   - dust-snap if leftover would be < 1k sats: snap up provider's full availableLiquidity
+ *
+ * Minimums enforced:
+ *   - buyer-side: `maxAmountInSats >= MINIMUM_TRADE_SIZE_IN_SAT` (10k)
+ *   - per-entry:  walk breaks when `tokensToReserve` would be worth < 1,000 sats
+ *
+ * The buyer must prove ownership by sending `remainingSats` to a CSV P2WSH derived from
+ * their pubkey + activationDelay — preserved from the existing flow.
+ */
 export class ReserveLiquidityOperation extends BaseOperation {
-    protected readonly consumedOutputsFromUTXOs: Map<string, u64> = new Map<string, u64>();
-
-    protected currentQuote: u256 = u256.Zero;
-    protected remainingTokens: u256 = u256.Zero;
-    protected reservedProviderCount: u8 = 0;
-
     private readonly buyer: Address;
+    private readonly providerId: u256;
     private readonly maximumAmountInSats: u64;
     private readonly minimumAmountOutTokens: u256;
-    private readonly providerId: u256;
-
-    private readonly sender: Uint8Array;
-
     private readonly activationDelay: u8;
+    private readonly maximumProvidersPerReservation: u8;
+    private readonly numberOfFulfilledProviderToResets: u8;
+    private readonly sender: Uint8Array;
 
     private reservedTokens: u256 = u256.Zero;
     private satoshisSpent: u64 = 0;
-
-    private readonly maximumProvidersPerReservation: u8;
-    private readonly numberOfFulfilledProviderToResets: u8;
+    private reservedProviderCount: u8 = 0;
 
     constructor(
         liquidityQueue: ILiquidityQueue,
@@ -67,9 +61,8 @@ export class ReserveLiquidityOperation extends BaseOperation {
         sender: Uint8Array,
     ) {
         super(liquidityQueue);
-
-        this.buyer = buyer;
         this.providerId = providerId;
+        this.buyer = buyer;
         this.maximumAmountInSats = maximumAmountInSats;
         this.minimumAmountOutTokens = minimumAmountOutTokens;
         this.activationDelay = activationDelay;
@@ -80,479 +73,201 @@ export class ReserveLiquidityOperation extends BaseOperation {
 
     public override execute(): void {
         this.checkPreConditions();
+
         const reservation: Reservation = this.createReservation();
-        this.getValidQuote();
 
-        this.liquidityQueue.purgeReservationsAndRestoreProviders(this.currentQuote);
+        // Run incremental purge before walking — frees any expired reservations' reserved tokens.
+        this.liquidityQueue.purgeReservationsAndRestoreProviders();
 
-        this.ensureEnoughLiquidity();
-        this.computeTokenRemaining();
         this.verifySentEnoughSatoshi();
 
-        this.reserve(reservation);
+        this.reserveProviders(reservation);
+
         this.ensureMinimumTokenReserved();
 
         this.liquidityQueue.increaseTotalReserved(this.reservedTokens);
         this.liquidityQueue.addReservation(reservation);
-        this.liquidityQueue.setBlockQuote();
-        this.liquidityQueue.cleanUpQueues(this.currentQuote);
+        this.liquidityQueue.cleanUpQueues();
 
-        this.tryResetFulfilledProviders();
-        this.emitReservationCreatedEvent();
+        Blockchain.emit(new ReservationCreatedEvent(this.reservedTokens, this.satoshisSpent));
     }
 
-    protected reserveFromProvider(reservation: Reservation, provider: Provider): void {
-        const availableLiquidity: u128 = provider.getAvailableLiquidityAmount();
-        const tokensToAttempt: u128 = this.computeTokensToReserve(availableLiquidity);
+    /**
+     * The walk. Updates running totals and emits LiquidityReservedEvent per entry.
+     */
+    private reserveProviders(reservation: Reservation): void {
+        let remainingSats: u64 = this.maximumAmountInSats;
 
-        const satoshis: u64 = this.computeSatoshisWithMinimumCheck(
-            tokensToAttempt,
-            availableLiquidity,
-        );
+        while (
+            remainingSats >= STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT &&
+            this.reservedProviderCount < this.maximumProvidersPerReservation
+        ) {
+            const tick: i32 = this.liquidityQueue.bestTick();
+            if (tick > MAX_TICK) break;
+            const fillPrice: u128 = TickMath.tickToPrice(tick);
 
-        const tokenResult: CappedTokensResult = satoshisToTokens128(satoshis, this.currentQuote);
+            const provider: Provider | null = this.liquidityQueue.getNextProviderWithLiquidity();
+            if (provider === null) break;
 
-        // Cap by tokensToAttempt to prevent rounding from inflating the reservation
-        const finalTokensToReserve: u128 = SafeMath.min128(tokenResult.tokens, tokensToAttempt);
+            const avail: u128 = provider.getAvailableLiquidityAmount();
+            const tokensFitsBudget: u128 = TickMath.satoshisToTokens(remainingSats, fillPrice);
+            let tokensToReserve: u128 = u128.lt(avail, tokensFitsBudget) ? avail : tokensFitsBudget;
 
-        if (!finalTokensToReserve.isZero()) {
-            this.applyReservation(reservation, provider, finalTokensToReserve, satoshis);
+            // Per-provider minimum (≥ 1,000 sats) — walk breaks if not met.
+            if (!Provider.meetsMinimumReservationAmountAtTick(tokensToReserve, tick)) break;
 
-            this.handleProviderPurgeQueues(provider);
-
-            this.reservedProviderCount++;
-        }
-    }
-
-    protected limitByAvailableLiquidity(tokens: u256): u256 {
-        return SafeMath.min(this.liquidityQueue.availableLiquidity, tokens);
-    }
-
-    protected getSatoshisSent(address: string): u64 {
-        let totalSatoshis: u64 = 0;
-        const outputs = Blockchain.tx.outputs;
-
-        for (let i = 0; i < outputs.length; i++) {
-            const output = outputs[i];
-
-            if (output.to === address) {
-                totalSatoshis = SafeMath.add64(totalSatoshis, output.value);
+            // Dust-snap: if leftover after this reservation would be below the per-provider
+            // minimum, grab the whole remaining liquidity into THIS entry as a bonus to the
+            // buyer (the dust would otherwise be stranded). The buyer's sats spend is capped
+            // at their existing budget — the provider effectively absorbs the dust loss.
+            let dustSnapped: bool = false;
+            const leftoverTokens: u128 = SafeMath.sub128(avail, tokensToReserve);
+            if (!leftoverTokens.isZero()) {
+                const leftoverSats: u64 = TickMath.tokensToSatoshis(leftoverTokens, fillPrice);
+                if (leftoverSats < MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
+                    tokensToReserve = avail;
+                    dustSnapped = true;
+                }
             }
+
+            // Buyer's sats spent for this entry. If dust-snapped, cap at remainingSats —
+            // the bonus tokens are free to the buyer.
+            let sats: u64 = TickMath.tokensToSatoshis(tokensToReserve, fillPrice);
+            if (dustSnapped && sats > remainingSats) {
+                sats = remainingSats;
+            }
+            if (sats == 0) break; // shouldn't happen given the min checks, defensive guard
+
+            provider.addToReservedAmount(tokensToReserve);
+            provider.bumpLatestReservedUntilBlock(reservation.getExpirationBlock());
+
+            reservation.addProvider(
+                new ReservationProviderData(
+                    provider.getId(),
+                    tokensToReserve,
+                    tick,
+                    fillPrice,
+                    reservation.getCreationBlock(),
+                ),
+            );
+            Blockchain.emit(
+                new LiquidityReservedEvent(
+                    provider.getBtcReceiver(),
+                    sats,
+                    tokensToReserve,
+                    provider.getId(),
+                    tick,
+                    fillPrice,
+                ),
+            );
+
+            this.reservedTokens = SafeMath.add(this.reservedTokens, tokensToReserve.toU256());
+            this.satoshisSpent = SafeMath.add64(this.satoshisSpent, sats);
+            remainingSats = SafeMath.sub64(remainingSats, sats);
+            this.reservedProviderCount += 1;
+            if (remainingSats == 0) break;
         }
 
-        const consumedSatoshis: u64 = this.consumedOutputsFromUTXOs.has(address)
-            ? this.consumedOutputsFromUTXOs.get(address)
-            : 0;
-
-        if (totalSatoshis < consumedSatoshis) {
-            throw new Revert('Impossible state: Double spend detected.');
-        }
-
-        return totalSatoshis - consumedSatoshis;
+        reservation.save();
     }
 
-    private tryResetFulfilledProviders(): void {
-        if (currentProviderResetCount < this.numberOfFulfilledProviderToResets) {
-            const count: u8 = this.numberOfFulfilledProviderToResets - currentProviderResetCount;
-            this.liquidityQueue.resetFulfilledProviders(count);
-        }
-    }
-
-    private applyReservation(
-        reservation: Reservation,
-        provider: Provider,
-        tokens: u128,
-        satoshis: u64,
-    ): void {
-        const tokens256: u256 = tokens.toU256();
-
-        this.increaseReservedTokens(tokens256);
-        this.decreaseRemainingTokens(tokens256);
-        this.increaseSatoshisSpent(satoshis);
-        provider.addToReservedAmount(tokens);
-
-        reservation.addProvider(
-            new ReservationProviderData(
-                provider.getQueueIndex(),
-                tokens,
-                provider.getProviderType(),
-                reservation.getCreationBlock(),
-            ),
-        );
-
-        this.emitLiquidityReservedEvent(
-            provider.getId(),
-            provider.getBtcReceiver(),
-            satoshis,
-            tokens,
-        );
-    }
+    // ========================================================================
+    // Pre-conditions / guards
+    // ========================================================================
 
     private checkPreConditions(): void {
-        this.ensureNotOwnLiquidity();
-        this.ensureActivationDelayValid();
-        this.ensureMaximumAmountInNotZero();
-        this.ensureMaximumAmountInNotBelowTradeSize();
-        this.ensurePoolExistsForToken();
-        this.ensureSufficientFeesCollected();
+        if (!this.liquidityQueue.isPoolRegistered()) {
+            throw new Revert(
+                'NATIVE_SWAP: Pool not registered for this token. Call createPool first.',
+            );
+        }
+        if (this.activationDelay == 0 || this.activationDelay > MAX_ACTIVATION_DELAY) {
+            throw new Revert(
+                `NATIVE_SWAP: activationDelay must be in (0, ${MAX_ACTIVATION_DELAY}]; got ${this.activationDelay}.`,
+            );
+        }
+        if (this.maximumAmountInSats == 0) {
+            throw new Revert('NATIVE_SWAP: maxAmountInSats cannot be zero.');
+        }
+        // Buyer-side minimum: at least MINIMUM_TRADE_SIZE_IN_SAT (10,000 sats).
+        if (this.maximumAmountInSats < MINIMUM_TRADE_SIZE_IN_SAT) {
+            throw new Revert(
+                `NATIVE_SWAP: maxAmountInSats below minimum trade size (${MINIMUM_TRADE_SIZE_IN_SAT}).`,
+            );
+        }
+        if (
+            this.maximumProvidersPerReservation == 0 ||
+            this.maximumProvidersPerReservation > MAXIMUM_PROVIDER_PER_RESERVATIONS
+        ) {
+            throw new Revert(`NATIVE_SWAP: maximumProvidersPerReservation out of range.`);
+        }
     }
 
     private createReservation(): Reservation {
         const reservation: Reservation = new Reservation(this.liquidityQueue.token, this.buyer);
-        this.ensureUserNotTimedOut(reservation);
-        this.ensureReservationPurged(reservation);
-        this.ensureNoActiveReservation(reservation);
+
+        // If a previous reservation exists and is expired, allow re-use after purge.
+        // Otherwise, reject — only one active reservation per (token, buyer).
+        if (reservation.isExpired()) {
+            if (reservation.isDirty()) {
+                reservation.delete(false);
+            }
+        } else {
+            throw new Revert(
+                'NATIVE_SWAP: You already have an active reservation. Swap or wait for expiration.',
+            );
+        }
+
+        // Honor user timeout (if enabled by pool settings).
+        if (
+            this.liquidityQueue.timeOutEnabled &&
+            Blockchain.block.number <= reservation.getUserTimeoutBlockExpiration()
+        ) {
+            throw new Revert('NATIVE_SWAP: User is timed out.');
+        }
 
         reservation.setActivationDelay(this.activationDelay);
         reservation.setCreationBlock(Blockchain.block.number);
         reservation.setSwapped(false);
         reservation.setPurged(false);
         reservation.save();
-
         return reservation;
     }
 
-    private computeTokenRemaining(): void {
-        const tokens: u256 = satoshisToTokens(this.maximumAmountInSats, this.currentQuote);
-        const limitedByLiquidity: u256 = this.limitByAvailableLiquidity(tokens);
-
-        // Check against FUTURE pool state after pending trades
-        //const limitedByFuturePool: u256 = this.limitByFuturePoolState(limitedByLiquidity);
-        this.ensureAvailableLiquidityNonZero(limitedByLiquidity);
-
-        const limitedByCap: u256 = this.limitByReservationCap(limitedByLiquidity);
-        this.ensureCapNotReached(limitedByCap);
-        this.ensureMinimumReservationMet(limitedByCap);
-        this.ensureBelowMaxTokensPerReservation(limitedByCap);
-
-        this.remainingTokens = limitedByCap;
-    }
-
-    private computeTokensToReserve(availableLiquidity: u128): u128 {
-        let targetTokensToReserve: u128;
-
-        if (u256.ge(this.remainingTokens, availableLiquidity.toU256())) {
-            targetTokensToReserve = availableLiquidity;
-        } else {
-            // As remainingTokens(u256) < availableLiquidity (u128), then we are sure remainingTokens fits in an u128
-            targetTokensToReserve = this.remainingTokens.toU128();
-        }
-
-        return targetTokensToReserve;
-    }
-
-    private computeSatoshisWithMinimumCheck(tokens: u128, availableLiquidity: u128): u64 {
-        const availableLiquidityCost: u64 = tokensToSatoshis128(
-            availableLiquidity,
-            this.currentQuote,
-        );
-        const tokensCost: u64 = tokensToSatoshis128(tokens, this.currentQuote);
-        const leftover: u64 = SafeMath.sub64(availableLiquidityCost, tokensCost);
-
-        // If the available liquidity falls below the minimum after the buy,
-        // include the remaining in the reservation cost. This will
-        // return a slightly bigger number of tokens than the requested.
-        return leftover < MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT
-            ? availableLiquidityCost
-            : tokensCost;
-    }
-
-    private decreaseRemainingTokens(value: u256): void {
-        if (u256.gt(this.remainingTokens, value)) {
-            this.remainingTokens = SafeMath.sub(this.remainingTokens, value);
-        } else {
-            this.remainingTokens = u256.Zero;
-        }
-    }
-
-    private emitReservationCreatedEvent(): void {
-        Blockchain.emit(new ReservationCreatedEvent(this.reservedTokens, this.satoshisSpent));
-    }
-
-    private emitLiquidityReservedEvent(
-        providerId: u256,
-        btcReceiver: string,
-        costInSatoshis: u64,
-        tokenAmount: u128,
-    ): void {
-        Blockchain.emit(
-            new LiquidityReservedEvent(btcReceiver, costInSatoshis, tokenAmount, providerId),
-        );
-    }
-
-    private ensureActivationDelayValid(): void {
-        if (this.activationDelay > MAX_ACTIVATION_DELAY) {
+    /**
+     * Buyer must prove ownership by sending sats to their own CSV-derived address.
+     * The required amount is `maximumAmountInSats` (the budget). If they sent less,
+     * it caps how many providers we can fill on settlement — but at reservation time
+     * we already require the full budget to be locked.
+     */
+    private verifySentEnoughSatoshi(): void {
+        const csvAddress: string = ExtendedAddress.toCSV(this.sender, this.activationDelay);
+        const sentSatoshis: u64 = this.getSatoshisSent(csvAddress);
+        if (this.maximumAmountInSats > sentSatoshis) {
             throw new Revert(
-                `NATIVE_SWAP: Activation delay cannot be greater than ${MAX_ACTIVATION_DELAY}.`,
+                `NATIVE_SWAP: prove ownership by sending ${this.maximumAmountInSats} sats to ${csvAddress}; sent ${sentSatoshis}.`,
             );
         }
     }
 
-    private ensureAvailableLiquidityNonZero(tokens: u256): void {
-        if (tokens.isZero()) {
-            throw new Revert('NATIVE_SWAP: Not enough liquidity available.');
+    private getSatoshisSent(address: string): u64 {
+        let total: u64 = 0;
+        const outputs = Blockchain.tx.outputs;
+        for (let i = 0; i < outputs.length; i++) {
+            const out = outputs[i];
+            if (out.to === address) total = SafeMath.add64(total, out.value);
         }
-    }
-
-    private ensureBelowMaxTokensPerReservation(tokens: u256): void {
-        if (Blockchain.block.number <= this.liquidityQueue.antiBotExpirationBlock) {
-            if (u256.gt(tokens, this.liquidityQueue.maxTokensPerReservation)) {
-                throw new Revert('NATIVE_SWAP: Cannot exceed anti-bot max tokens per reservation.');
-            }
-        }
-    }
-
-    private ensureCapNotReached(tokens: u256): void {
-        if (tokens.isZero()) {
-            throw new Revert('NATIVE_SWAP: Maximum reservation limit reached. Try again later.');
-        }
-    }
-
-    private ensureCurrentQuoteValid(): void {
-        if (this.currentQuote.isZero()) {
-            throw new Revert('Impossible state: Token is worth infinity.');
-        }
-    }
-
-    private ensureEnoughLiquidity(): void {
-        if (u256.lt(this.liquidityQueue.liquidity, this.liquidityQueue.reservedLiquidity)) {
-            throw new Revert('Impossible state: liquidity < reservedLiquidity.');
-        }
-    }
-
-    private ensureMaximumAmountInNotBelowTradeSize(): void {
-        if (this.maximumAmountInSats < MINIMUM_TRADE_SIZE_IN_SAT) {
-            throw new Revert(
-                `NATIVE_SWAP: Requested amount is below minimum trade size ${this.maximumAmountInSats} < ${MINIMUM_TRADE_SIZE_IN_SAT}.`,
-            );
-        }
-    }
-
-    private ensureMaximumAmountInNotZero(): void {
-        if (this.maximumAmountInSats === 0) {
-            throw new Revert('NATIVE_SWAP: Maximum amount in cannot be zero.');
-        }
-    }
-
-    private ensureMinimumReservationMet(tokens: u256): void {
-        const satCost: u64 = tokensToSatoshis(tokens, this.currentQuote);
-
-        if (satCost < MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
-            throw new Revert(
-                `NATIVE_SWAP: Minimum liquidity not met. satoshis: (${satCost}, tokens: ${tokens}, quote: ${this.currentQuote}).`,
-            );
-        }
+        return total;
     }
 
     private ensureMinimumTokenReserved(): void {
         if (this.reservedTokens.isZero()) {
-            throw new Revert(`NATIVE_SWAP: No liquidity reserved; no more liquidity available.`);
+            throw new Revert('NATIVE_SWAP: No liquidity reserved.');
         }
-
         if (u256.lt(this.reservedTokens, this.minimumAmountOutTokens)) {
             throw new Revert(
-                `NATIVE_SWAP: Not enough liquidity reserved; wanted ${this.minimumAmountOutTokens}, got ${this.reservedTokens}, spent ${this.satoshisSpent}, leftover tokens: ${this.remainingTokens}, quote: ${this.currentQuote}.`,
+                `NATIVE_SWAP: Not enough liquidity reserved (got ${this.reservedTokens}, wanted ${this.minimumAmountOutTokens}).`,
             );
         }
-    }
-
-    private ensureProviderNotFulfilled(provider: Provider): void {
-        if (provider.toReset()) {
-            throw new Revert(`Impossible state: provider ${provider.getId()} is fulfilled.`);
-        }
-    }
-
-    private ensureNoRepeatedProvider(currentId: u256, lastId: u256): void {
-        if (u256.eq(currentId, lastId)) {
-            throw new Revert(`Impossible state: repeated provider, ${currentId} === ${lastId}.`);
-        }
-    }
-
-    private ensureNotOwnLiquidity(): void {
-        if (u256.eq(this.providerId, this.liquidityQueue.initialLiquidityProviderId)) {
-            throw new Revert('NATIVE_SWAP: You cannot reserve your own liquidity.');
-        }
-    }
-
-    private ensurePoolExistsForToken(): void {
-        if (this.liquidityQueue.initialLiquidityProviderId.isZero()) {
-            throw new Revert('NATIVE_SWAP: No pool exists for token.');
-        }
-    }
-
-    private ensureQueueIndexIsSet(provider: Provider): void {
-        if (provider.getQueueIndex() === INDEX_NOT_SET_VALUE) {
-            throw new Revert(
-                `Impossible state: provider ${provider.getId()} has INDEX_NOT_SET_VALUE index.`,
-            );
-        }
-    }
-
-    private ensureNoActiveReservation(reservation: Reservation): void {
-        if (reservation.isExpired()) {
-            if (reservation.isDirty()) {
-                reservation.delete(false); // Ensure reservation is reset
-            }
-        } else {
-            throw new Revert(
-                'NATIVE_SWAP: You already have an active reservation. Swap or wait for expiration before creating another',
-            );
-        }
-    }
-
-    private ensureReservationPurged(reservation: Reservation): void {
-        if (!reservation.isExpired()) {
-            return;
-        }
-
-        const creationBlock: u64 = reservation.getCreationBlock();
-        if (creationBlock <= RESERVATION_EXPIRE_AFTER_IN_BLOCKS) {
-            return;
-        }
-
-        const reservationId: u128 = this.liquidityQueue.getReservationIdAtIndex(
-            creationBlock,
-            reservation.getPurgeIndex(),
-        );
-
-        if (!u128.eq(reservationId, reservation.getId())) {
-            throw new Revert(
-                `NATIVE_SWAP: Invalid reservationId ${reservationId} != ${reservation.getId()}`,
-            );
-        }
-
-        const activeReservation: boolean = this.liquidityQueue.isReservationActiveAtIndex(
-            creationBlock,
-            reservation.getPurgeIndex(),
-        );
-
-        if (activeReservation) {
-            throw new Revert(
-                `NATIVE_SWAP: You may not reserve at this time. Your previous reservation has not been purged yet. Please try again later.`,
-            );
-        }
-    }
-
-    private ensureSufficientFeesCollected(): void {
-        const totalFee: u64 = getTotalFeeCollected();
-
-        if (totalFee < FeeManager.reservationBaseFee) {
-            throw new Revert(
-                `NATIVE_SWAP: Insufficient fees collected. (Received: ${totalFee} - Wanted: ${FeeManager.reservationBaseFee})`,
-            );
-        }
-    }
-
-    private ensureUserNotTimedOut(reservation: Reservation): void {
-        const userTimeoutUntilBlock: u64 = reservation.getUserTimeoutBlockExpiration();
-
-        if (
-            this.liquidityQueue.timeOutEnabled &&
-            Blockchain.block.number <= userTimeoutUntilBlock
-        ) {
-            throw new Revert('NATIVE_SWAP: User is timed out.');
-        }
-    }
-
-    private getValidQuote(): void {
-        this.currentQuote = this.liquidityQueue.quote();
-        this.ensureCurrentQuoteValid();
-    }
-
-    private handleProviderPurgeQueues(provider: Provider): void {
-        if (provider.isPurged()) {
-            if (
-                !Provider.meetsMinimumReservationAmount(
-                    provider.getAvailableLiquidityAmount(),
-                    this.currentQuote,
-                )
-            ) {
-                // Here, the provider will always have a reserved amount
-                // so no needs to check if we need to reset the provider
-                this.liquidityQueue.removeFromPurgeQueue(provider);
-            }
-        }
-    }
-
-    private increaseReservedTokens(value: u256): void {
-        this.reservedTokens = SafeMath.add(this.reservedTokens, value);
-    }
-
-    private increaseSatoshisSpent(value: u64): void {
-        this.satoshisSpent = SafeMath.add64(this.satoshisSpent, value);
-    }
-
-    private isSmallerThanMinimumReservationAmount(satoshis: u64): boolean {
-        return satoshis < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT;
-    }
-
-    private limitByReservationCap(tokens: u256): u256 {
-        return SafeMath.min(tokens, this.liquidityQueue.getMaximumTokensLeftBeforeCap());
-    }
-
-    private verifySentEnoughSatoshi(): void {
-        if (this.activationDelay === 0) {
-            throw new Revert(
-                'NATIVE_SWAP: Activation delay cannot be zero. Please set a positive activation delay to allow on-chain proof of ownership.',
-            );
-        }
-
-        const csvAddress = ExtendedAddress.toCSV(this.sender, this.activationDelay);
-        const sentSatoshis: u64 = this.getSatoshisSent(csvAddress);
-
-        const remainingSatoshis: u64 = tokensToSatoshis(this.remainingTokens, this.currentQuote);
-        if (remainingSatoshis > sentSatoshis) {
-            throw new Revert(
-                `NATIVE_SWAP: You must prove that you own at least ${remainingSatoshis} satoshis by sending them to yourself (${csvAddress}). Only ${sentSatoshis} sat were sent.`,
-            );
-        }
-    }
-
-    private reserve(reservation: Reservation): void {
-        let lastIndex: u32 = INDEX_NOT_SET_VALUE;
-        let lastProviderId: u256 = u256.Zero;
-
-        while (!this.remainingTokens.isZero()) {
-            const remainingSatoshis: u64 = tokensToSatoshis(
-                this.remainingTokens,
-                this.currentQuote,
-            );
-
-            if (this.isSmallerThanMinimumReservationAmount(remainingSatoshis)) {
-                break;
-            }
-
-            const provider: Provider | null = this.liquidityQueue.getNextProviderWithLiquidity(
-                this.currentQuote,
-            );
-
-            if (provider === null) {
-                break;
-            }
-
-            this.ensureQueueIndexIsSet(provider);
-
-            // If we see repeated initial liquidity provider => break
-            if (
-                provider.getQueueIndex() === INITIAL_LIQUIDITY_PROVIDER_INDEX &&
-                lastIndex === INITIAL_LIQUIDITY_PROVIDER_INDEX
-            ) {
-                break;
-            }
-
-            this.ensureNoRepeatedProvider(provider.getId(), lastProviderId);
-            this.ensureProviderNotFulfilled(provider);
-
-            lastProviderId = provider.getId();
-            lastIndex = provider.getQueueIndex();
-
-            this.reserveFromProvider(reservation, provider);
-
-            if (this.reservedProviderCount === this.maximumProvidersPerReservation) {
-                break;
-            }
-        }
-
-        reservation.save();
     }
 }

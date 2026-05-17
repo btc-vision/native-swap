@@ -1,192 +1,158 @@
 import { BaseOperation } from './BaseOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Blockchain, BytesWriter, encodeSelector, Revert } from '@btc-vision/btc-runtime/runtime';
-import { ListTokensForSaleOperation } from './ListTokensForSaleOperation';
-import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { getProvider, Provider } from '../models/Provider';
 import {
-    DEFAULT_STABLE_AMPLIFICATION,
-    INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
-    POOL_TYPE_STABLE,
-    POOL_TYPE_STANDARD,
+    Address,
+    BitcoinAddresses,
+    Blockchain,
+    ExtendedAddress,
+    Network,
+    Revert,
+    TransferHelper,
+    ZERO_ADDRESS,
+} from '@btc-vision/btc-runtime/runtime';
+import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
+import { LiquidityListedEvent } from '../events/LiquidityListedEvent';
+import { PoolCreatedEvent } from '../events/PoolCreatedEvent';
+import {
+    CSV_BLOCKS_REQUIRED,
+    MAX_TICK,
+    MIN_TICK,
+    MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT,
 } from '../constants/Contract';
+import { TickMath } from '../utils/TickMath';
 
-export const PEG_UPDATED_AT_SELECTOR = encodeSelector('pegUpdatedAt()');
-
+/**
+ * Register a pool for `token` (one-time per token, first caller wins).
+ *
+ * If `initialLiquidity > 0`, the caller becomes the **original liquidity provider** —
+ * the first entry in `FIFO[initialTick]`. They have no special privileges; just first
+ * in queue at their chosen tick.
+ *
+ * Permissionless: any EOA can call. If nobody calls it, no pool exists for this token
+ * and every `listLiquidity` / `reserve` reverts.
+ */
 export class CreatePoolOperation extends BaseOperation {
-    private readonly floorPrice: u256;
+    private readonly token: Address;
     private readonly providerId: u256;
     private readonly initialLiquidity: u128;
+    private readonly initialTick: i32;
     private readonly receiver: Uint8Array;
     private readonly receiverStr: string;
-    private readonly antiBotEnabledFor: u16;
-    private readonly antiBotMaximumTokensPerReservation: u256;
-    private readonly maxReservesIn5BlocksPercent: u16;
-    private readonly poolType: u8;
-    private readonly amplification: u64;
-    private readonly pegStalenessThreshold: u64;
 
     constructor(
         liquidityQueue: ILiquidityQueue,
-        floorPrice: u256,
+        token: Address,
         providerId: u256,
         initialLiquidity: u128,
+        initialTick: i32,
         receiver: Uint8Array,
         receiverStr: string,
-        antiBotEnabledFor: u16,
-        antiBotMaximumTokensPerReservation: u256,
-        maxReservesIn5BlocksPercent: u16,
-        poolType: u8 = POOL_TYPE_STANDARD,
-        amplification: u64 = DEFAULT_STABLE_AMPLIFICATION,
-        pegStalenessThreshold: u64 = 0,
     ) {
         super(liquidityQueue);
-
-        this.floorPrice = floorPrice;
+        this.token = token;
         this.providerId = providerId;
         this.initialLiquidity = initialLiquidity;
+        this.initialTick = initialTick;
         this.receiver = receiver;
         this.receiverStr = receiverStr;
-        this.antiBotEnabledFor = antiBotEnabledFor;
-        this.antiBotMaximumTokensPerReservation = antiBotMaximumTokensPerReservation;
-        this.maxReservesIn5BlocksPercent = maxReservesIn5BlocksPercent;
-        this.poolType = poolType;
-        this.amplification = amplification;
-        this.pegStalenessThreshold = pegStalenessThreshold;
     }
 
     public override execute(): void {
-        this.checkPreConditions();
-        this.initializeInitialProvider();
-        this.listTokenForSale();
-        this.applyAntibotSettingsIfNeeded();
+        this.ensureValidToken();
+        this.ensurePoolNotAlreadyRegistered();
+
+        if (!this.initialLiquidity.isZero()) {
+            this.ensureTickInRange(this.initialTick);
+            this.ensureLiquidityNotTooLowAtTick(this.initialLiquidity, this.initialTick);
+            this.verifyReceiverAddress();
+        }
+
+        // Mark pool as registered first — subsequent listLiquidity/reserve gates pass.
+        this.liquidityQueue.registerPool();
+
+        if (!this.initialLiquidity.isZero()) {
+            const provider: Provider = getProvider(this.providerId);
+            this.pullInTokens(this.initialLiquidity);
+            provider.activate();
+            provider.setPriceTick(this.initialTick);
+            provider.setBtcReceiver(this.receiverStr);
+            provider.setLiquidityAmount(this.initialLiquidity);
+            provider.setListedTokenAtBlock(Blockchain.block.number);
+            this.liquidityQueue.addToTickFIFO(provider, this.initialTick);
+            this.liquidityQueue.increaseTotalReserve(this.initialLiquidity.toU256());
+            provider.save();
+
+            Blockchain.emit(
+                new LiquidityListedEvent(this.initialLiquidity, this.receiverStr, this.initialTick),
+            );
+        }
+
+        Blockchain.emit(
+            new PoolCreatedEvent(
+                this.token,
+                Blockchain.tx.sender,
+                this.initialLiquidity,
+                this.initialTick,
+            ),
+        );
     }
 
-    private applyAntibotSettingsIfNeeded(): void {
-        if (this.antiBotEnabledFor > 0) {
-            this.liquidityQueue.antiBotExpirationBlock =
-                Blockchain.block.number + u64(this.antiBotEnabledFor);
-            this.liquidityQueue.maxTokensPerReservation = this.antiBotMaximumTokensPerReservation;
+    private ensureValidToken(): void {
+        if (this.token.equals(ZERO_ADDRESS)) {
+            throw new Revert('NATIVE_SWAP: token cannot be zero address.');
+        }
+        if (this.token.equals(Blockchain.contractAddress)) {
+            throw new Revert('NATIVE_SWAP: token cannot be the NativeSwap contract itself.');
         }
     }
 
-    private checkPreConditions(): void {
-        this.ensureReceiverAddressValid();
-        this.ensureFloorPriceNotZero();
-        this.ensureInitialLiquidityNotZero();
-        this.ensureAntibotSettingsValid();
-        this.ensureInitialLiquidityProviderNotAlreadySet();
-        this.ensureMaxReservesIn5BlocksPercentValid();
-        this.ensurePoolTypeValid();
-        this.ensureAmplificationValid();
-        this.ensureStableTokenImplementsInterface();
-    }
-
-    private ensurePoolTypeValid(): void {
-        if (this.poolType !== POOL_TYPE_STANDARD && this.poolType !== POOL_TYPE_STABLE) {
-            throw new Revert('NATIVE_SWAP: Invalid pool type. Must be 0 (standard) or 1 (stable).');
+    private ensurePoolNotAlreadyRegistered(): void {
+        if (this.liquidityQueue.isPoolRegistered()) {
+            throw new Revert('NATIVE_SWAP: Pool already registered for this token.');
         }
     }
 
-    private ensureAmplificationValid(): void {
-        if (this.poolType === POOL_TYPE_STABLE) {
-            if (this.amplification < 1 || this.amplification > 10000) {
-                throw new Revert('NATIVE_SWAP: Amplification must be between 1 and 10000.');
-            }
+    private ensureTickInRange(tick: i32): void {
+        if (tick < MIN_TICK || tick > MAX_TICK) {
+            throw new Revert(`NATIVE_SWAP: tick ${tick} out of range [${MIN_TICK}, ${MAX_TICK}].`);
         }
     }
 
-    /**
-     * For stable pools, verify the token implements IOP20Stable by calling pegUpdatedAt().
-     * If the call reverts, createPool reverts. Simple interface detection.
-     */
-    private ensureStableTokenImplementsInterface(): void {
-        if (this.poolType !== POOL_TYPE_STABLE) {
-            return;
-        }
-
-        const calldata = new BytesWriter(4);
-        calldata.writeSelector(PEG_UPDATED_AT_SELECTOR);
-
-        // This will revert if token doesn't implement pegUpdatedAt()
-        const result = Blockchain.call(this.liquidityQueue.token, calldata);
-
-        const lastUpdated = result.data.readU64();
-
-        if (lastUpdated === 0) {
-            throw new Revert('NATIVE_SWAP: pegUpdatedAt() returned zero, invalid stable token.');
-        }
-    }
-
-    private ensureAntibotSettingsValid(): void {
-        if (this.antiBotEnabledFor !== 0 && this.antiBotMaximumTokensPerReservation.isZero()) {
-            throw new Revert('NATIVE_SWAP: Anti-bot max tokens per reservation cannot be zero.');
-        }
-    }
-
-    private ensureFloorPriceNotZero(): void {
-        if (this.floorPrice.isZero()) {
-            throw new Revert('NATIVE_SWAP: Floor price cannot be zero.');
-        }
-    }
-
-    private ensureInitialLiquidityNotZero(): void {
-        if (this.initialLiquidity.isZero()) {
-            throw new Revert('NATIVE_SWAP: Initial liquidity cannot be zero.');
-        }
-    }
-
-    private ensureInitialLiquidityProviderNotAlreadySet(): void {
-        if (!this.liquidityQueue.initialLiquidityProviderId.isZero()) {
-            throw new Revert('NATIVE_SWAP: Base quote already set.');
-        }
-    }
-
-    private ensureMaxReservesIn5BlocksPercentValid(): void {
-        if (this.maxReservesIn5BlocksPercent > 100) {
+    private ensureLiquidityNotTooLowAtTick(amount: u128, tick: i32): void {
+        const fillPrice: u128 = TickMath.tickToPrice(tick);
+        const sats: u64 = TickMath.tokensToSatoshis(amount, fillPrice);
+        if (sats < MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT) {
             throw new Revert(
-                'NATIVE_SWAP: The maximum reservation percentage for 5 blocks must be less than or equal to 100.',
+                `NATIVE_SWAP: Bootstrap worth ${sats} sats; minimum is ${MINIMUM_LIQUIDITY_VALUE_ADD_LIQUIDITY_IN_SAT}.`,
             );
         }
     }
 
-    private ensureReceiverAddressValid(): void {
-        if (Blockchain.validateBitcoinAddress(this.receiverStr) == false) {
+    private verifyReceiverAddress(): void {
+        if (!Blockchain.validateBitcoinAddress(this.receiverStr)) {
             throw new Revert('NATIVE_SWAP: Invalid receiver address.');
+        }
+        const isValidCSV = BitcoinAddresses.verifyCsvP2wshAddress(
+            this.receiver,
+            CSV_BLOCKS_REQUIRED,
+            this.receiverStr,
+            Network.hrp(Blockchain.network),
+        );
+        if (!isValidCSV) {
+            const expected = ExtendedAddress.toCSV(this.receiver, CSV_BLOCKS_REQUIRED);
+            throw new Revert(
+                `NATIVE_SWAP: Invalid receiver address. Expected CSV P2WSH with ${CSV_BLOCKS_REQUIRED} blocks. (got ${this.receiverStr}, expected ${expected})`,
+            );
         }
     }
 
-    private initializeInitialProvider(): void {
-        const initialProvider: Provider = getProvider(this.providerId);
-
-        initialProvider.markInitialLiquidityProvider();
-        initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
-        initialProvider.save();
-
-        this.liquidityQueue.initializeInitialLiquidity(
-            this.floorPrice,
-            this.providerId,
-            this.initialLiquidity,
-            this.maxReservesIn5BlocksPercent,
-            this.poolType,
-            this.amplification,
-            this.pegStalenessThreshold,
+    private pullInTokens(amount: u128): void {
+        TransferHelper.transferFrom(
+            this.token,
+            Blockchain.tx.sender,
+            Blockchain.contractAddress,
+            amount.toU256(),
         );
-    }
-
-    private listTokenForSale(): void {
-        const listTokenForSaleOp: ListTokensForSaleOperation = new ListTokensForSaleOperation(
-            this.liquidityQueue,
-            this.providerId,
-            this.initialLiquidity,
-            this.receiver,
-            this.receiverStr,
-            false,
-            true,
-            MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
-        );
-
-        listTokenForSaleOp.execute();
     }
 }

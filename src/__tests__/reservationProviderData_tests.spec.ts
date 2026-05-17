@@ -1,8 +1,8 @@
 import { clearCachedProviders } from '../models/Provider';
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
-import { ProviderTypes } from '../types/ProviderTypes';
-import { u128 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
+import { TickMath } from '../utils/TickMath';
 
 describe('ReservationProviderData tests', () => {
     beforeEach(() => {
@@ -12,17 +12,36 @@ describe('ReservationProviderData tests', () => {
         TransferHelper.clearMockedResults();
     });
 
-    it('constructor sets providerIndex, providedAmount, and providerType correctly', () => {
-        const index: u32 = 7;
+    it('constructor stores providerId, providedAmount, tick, fillPrice, creationBlock', () => {
+        const providerId: u256 = u256.fromU64(7);
         const amount: u128 = u128.fromU64(12345);
-        const type: ProviderTypes = ProviderTypes.Normal;
-        const creationBlock = 100;
+        const tick: i32 = 1234;
+        const fillPrice: u128 = TickMath.tickToPrice(tick);
+        const creationBlock: u64 = 100;
 
-        const data = new ReservationProviderData(index, amount, type, creationBlock);
+        const data = new ReservationProviderData(
+            providerId,
+            amount,
+            tick,
+            fillPrice,
+            creationBlock,
+        );
 
-        expect(data.providerIndex).toStrictEqual(index);
+        expect<bool>(u256.eq(data.providerId, providerId)).toBe(true);
         expect(data.providedAmount).toStrictEqual(amount);
-        expect(data.providerType).toStrictEqual(type);
-        expect(data.creationBlock).toStrictEqual(creationBlock);
+        expect<i32>(data.tick).toBe(tick);
+        expect<bool>(u128.eq(data.fillPrice, fillPrice)).toBe(true);
+        expect<u64>(data.creationBlock).toBe(creationBlock);
+    });
+
+    it('preserves negative ticks correctly', () => {
+        const providerId: u256 = u256.fromU64(42);
+        const amount: u128 = u128.fromU64(1);
+        const tick: i32 = -5_000;
+        const fillPrice: u128 = TickMath.tickToPrice(tick);
+
+        const data = new ReservationProviderData(providerId, amount, tick, fillPrice, 1);
+
+        expect<i32>(data.tick).toBe(tick);
     });
 });

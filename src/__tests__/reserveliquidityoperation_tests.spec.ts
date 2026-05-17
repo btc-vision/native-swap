@@ -17,11 +17,9 @@ import {
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
-import { FeeManager } from '../managers/FeeManager';
 import { Reservation } from '../models/Reservation';
 import {
     INDEX_NOT_SET_VALUE,
-    INITIAL_LIQUIDITY_PROVIDER_INDEX,
     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
 } from '../constants/Contract';
@@ -33,7 +31,7 @@ describe('ReserveLiquidityOperation tests', () => {
         Blockchain.clearStorage();
         Blockchain.clearMockedResults();
         TransferHelper.clearMockedResults();
-        FeeManager.reservationBaseFee = 0;
+        /* FeeManager.reservationBaseFee assignment removed (no per-action fee) */
     });
 
     describe('ReserveLiquidityOperation - pre conditions', () => {
@@ -42,7 +40,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            FeeManager.reservationBaseFee = 0;
+            /* FeeManager.reservationBaseFee assignment removed (no per-action fee) */
         });
 
         it('should revert if initial provider try to reserve his own liquidity', () => {
@@ -57,7 +55,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     false,
                 );
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                queue.liquidityQueue.initialLiquidityProviderId = provider.getId();
+                // initialLiquidityProviderId removed in refactor (no privileged initial-LP slot)
 
                 const operation = new ReserveLiquidityOperation(
                     queue.liquidityQueue,
@@ -68,6 +66,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 operation.execute();
@@ -81,7 +80,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 const providerId1 = createProviderId(providerAddress1, tokenAddress1);
                 const providerId2 = createProviderId(providerAddress2, tokenAddress1);
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                queue.liquidityQueue.initialLiquidityProviderId = providerId1;
+                // initialLiquidityProviderId removed in refactor (no privileged initial-LP slot)
 
                 const operation = new ReserveLiquidityOperation(
                     queue.liquidityQueue,
@@ -92,6 +91,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     8,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 operation.execute();
@@ -105,7 +105,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 const providerId1 = createProviderId(providerAddress1, tokenAddress1);
                 const providerId2 = createProviderId(providerAddress2, tokenAddress1);
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                queue.liquidityQueue.initialLiquidityProviderId = providerId1;
+                // initialLiquidityProviderId removed in refactor (no privileged initial-LP slot)
 
                 const operation = new ReserveLiquidityOperation(
                     queue.liquidityQueue,
@@ -116,6 +116,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 operation.execute();
@@ -129,7 +130,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 const providerId1 = createProviderId(providerAddress1, tokenAddress1);
                 const providerId2 = createProviderId(providerAddress2, tokenAddress1);
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                queue.liquidityQueue.initialLiquidityProviderId = providerId1;
+                // initialLiquidityProviderId removed in refactor (no privileged initial-LP slot)
 
                 const operation = new ReserveLiquidityOperation(
                     queue.liquidityQueue,
@@ -140,6 +141,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 operation.execute();
@@ -153,7 +155,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 const providerId1 = createProviderId(providerAddress1, tokenAddress1);
                 const providerId2 = createProviderId(providerAddress2, tokenAddress1);
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
-                queue.liquidityQueue.initialLiquidityProviderId = u256.Zero;
+                // initialLiquidityProviderId removed in refactor (no privileged initial-LP slot)
 
                 const operation = new ReserveLiquidityOperation(
                     queue.liquidityQueue,
@@ -164,6 +166,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 operation.execute();
@@ -188,22 +191,20 @@ describe('ReserveLiquidityOperation tests', () => {
                     SafeMath.pow(u256.fromU32(10), u256.fromU32(18)).toU128(),
                 );
 
-                FeeManager.reservationBaseFee = 10000;
+                /* FeeManager.reservationBaseFee assignment removed (no per-action fee) */
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(101, providerAddress1, providerAddress1);
@@ -219,6 +220,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -232,7 +234,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            FeeManager.reservationBaseFee = 0;
+            /* FeeManager.reservationBaseFee assignment removed (no per-action fee) */
         });
 
         it('should revert if user is timed out', () => {
@@ -254,18 +256,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(101, providerAddress1, providerAddress1);
@@ -280,6 +280,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -296,6 +297,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp2.execute();
@@ -321,18 +323,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(101, providerAddress1, providerAddress1);
@@ -347,6 +347,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -363,6 +364,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp2.execute();
@@ -387,18 +389,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const createPoolOp = new CreatePoolOperation(
                 queue.liquidityQueue,
-                floorPrice,
+                tokenAddress1,
                 initialProviderId,
                 initialLiquidity,
+                0, // initialTick (was floorPrice=floorPrice)
                 receiverAddress1,
                 receiverAddress1CSV,
-                0,
-                u256.Zero,
-                5,
             );
 
             createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
+            // setBlockQuote() removed (no quote system in refactor)
             queue.liquidityQueue.save();
 
             setBlockchainEnvironment(103, providerAddress2, providerAddress2);
@@ -414,6 +414,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             reserveOp.execute();
@@ -426,7 +427,7 @@ describe('ReserveLiquidityOperation tests', () => {
             expect(reservation.getProviderCount()).toStrictEqual(1);
 
             const value1 = reservation.getProviderAt(0);
-            expect(value1.providerIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            expect<bool>(u256.eq(value1.providerId, u256.Zero)).toBe(true); // was: expect(.providerIndex).toStrictEqual(0)
 
             expect(value1.providedAmount).toStrictEqual(u128.fromString(`50000000000000000000000`));
             expect(queue2.liquidityQueue.reservedLiquidity).toStrictEqual(
@@ -452,6 +453,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             reserveOp2.execute();
@@ -480,18 +482,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(103, providerAddress2, providerAddress2);
@@ -507,6 +507,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -519,7 +520,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 expect(reservation.getProviderCount()).toStrictEqual(1);
 
                 const value1 = reservation.getProviderAt(0);
-                expect(value1.providerIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+                expect<bool>(u256.eq(value1.providerId, u256.Zero)).toBe(true); // was: expect(.providerIndex).toStrictEqual(0)
                 expect(value1.providedAmount).toStrictEqual(
                     u128.fromString(`49999999999999999999999`),
                 );
@@ -545,6 +546,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp2.execute();
@@ -570,18 +572,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const createPoolOp = new CreatePoolOperation(
                 queue.liquidityQueue,
-                floorPrice,
+                tokenAddress1,
                 initialProviderId,
                 initialLiquidity,
+                0, // initialTick (was floorPrice=floorPrice)
                 receiverAddress1,
                 receiverAddress1CSV,
-                0,
-                u256.Zero,
-                5,
             );
 
             createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
+            // setBlockQuote() removed (no quote system in refactor)
             queue.liquidityQueue.save();
 
             setBlockchainEnvironment(102, providerAddress2, providerAddress2);
@@ -597,6 +597,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             reserveOp.execute();
@@ -624,18 +625,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const createPoolOp = new CreatePoolOperation(
                 queue.liquidityQueue,
-                floorPrice,
+                tokenAddress1,
                 initialProviderId,
                 initialLiquidity,
+                0, // initialTick (was floorPrice=floorPrice)
                 receiverAddress1,
                 receiverAddress1CSV,
-                0,
-                u256.Zero,
-                5,
             );
 
             createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
+            // setBlockQuote() removed (no quote system in refactor)
             queue.liquidityQueue.save();
 
             setBlockchainEnvironment(102, providerAddress2, providerAddress2);
@@ -653,6 +652,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             reserveOp.execute();
@@ -669,7 +669,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            FeeManager.reservationBaseFee = 0;
+            /* FeeManager.reservationBaseFee assignment removed (no per-action fee) */
         });
 
         it('should revert if liquidity queue does not have enough available liquidity', () => {
@@ -691,18 +691,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    10,
-                    u256.fromU32(15000),
-                    5,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(101, providerAddress1, providerAddress1);
@@ -723,6 +721,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -748,18 +747,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(101, providerAddress1, providerAddress1);
@@ -767,7 +764,9 @@ describe('ReserveLiquidityOperation tests', () => {
                 const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
                 // Force quote = 0
-                queue2.liquidityQueue.virtualTokenReserve = u256.Zero;
+                queue2.liquidityQueue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
                 //queue2.liquidityQueue.reCalcQuote();
                 const reserveOp = new ReserveLiquidityOperation(
                     queue2.liquidityQueue,
@@ -778,6 +777,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -792,7 +792,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            FeeManager.reservationBaseFee = 0;
+            /* FeeManager.reservationBaseFee assignment removed (no per-action fee) */
         });
 
         it('should limit the number of tokens to the available liquidity', () => {
@@ -813,18 +813,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const createPoolOp = new CreatePoolOperation(
                 queue.liquidityQueue,
-                floorPrice,
+                tokenAddress1,
                 initialProviderId,
                 initialLiquidity,
+                0, // initialTick (was floorPrice=floorPrice)
                 receiverAddress1,
                 receiverAddress1CSV,
-                0,
-                u256.Zero,
-                100,
             );
 
             createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
+            // setBlockQuote() removed (no quote system in refactor)
             queue.liquidityQueue.save();
 
             setBlockchainEnvironment(102, providerAddress2, providerAddress2);
@@ -840,6 +838,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             reserveOp.execute();
@@ -878,18 +877,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    1,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.increaseTotalReserved(
                     u256.fromString(`10000000000000000000000`),
                 );
@@ -908,6 +905,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -934,18 +932,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    1,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.increaseTotalReserved(
                     u256.fromString(`9999999999999999999900`),
                 );
@@ -964,6 +960,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -990,18 +987,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    150,
-                    u256.fromU32(10000),
-                    100,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(102, providerAddress2, providerAddress2);
@@ -1017,6 +1012,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -1043,18 +1039,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    100,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(102, providerAddress2, providerAddress2);
@@ -1070,6 +1064,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.mockLimitByAvailableLiquidity(u256.Zero);
@@ -1086,7 +1081,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            FeeManager.reservationBaseFee = 0;
+            /* FeeManager.reservationBaseFee assignment removed (no per-action fee) */
         });
 
         it('should break if tokensToSatoshis(...) < STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT => exit loop', () => {
@@ -1107,18 +1102,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const createPoolOp = new CreatePoolOperation(
                 queue.liquidityQueue,
-                floorPrice,
+                tokenAddress1,
                 initialProviderId,
                 initialLiquidity,
+                0, // initialTick (was floorPrice=floorPrice)
                 receiverAddress1,
                 receiverAddress1CSV,
-                0,
-                u256.Zero,
-                5,
             );
 
             createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
+            // setBlockQuote() removed (no quote system in refactor)
             queue.liquidityQueue.save();
 
             setBlockchainEnvironment(102, providerAddress1, providerAddress1);
@@ -1130,9 +1123,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u128.fromString(`66670000000000000000`),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             listOp.execute();
@@ -1151,6 +1142,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             reserveOp.execute();
@@ -1180,18 +1172,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const createPoolOp = new CreatePoolOperation(
                 queue.liquidityQueue,
-                floorPrice,
+                tokenAddress1,
                 initialProviderId,
                 initialLiquidity,
+                0, // initialTick (was floorPrice=floorPrice)
                 receiverAddress1,
                 receiverAddress1CSV,
-                0,
-                u256.Zero,
-                5,
             );
 
             createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
+            // setBlockQuote() removed (no quote system in refactor)
             queue.liquidityQueue.save();
 
             setBlockchainEnvironment(102, providerAddress1, providerAddress1);
@@ -1203,9 +1193,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u128.fromString(`20000000000000000000`),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             listOp.execute();
@@ -1228,6 +1216,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             reserveOp.execute();
@@ -1261,18 +1250,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(102, providerAddress1, providerAddress1);
@@ -1284,9 +1271,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 listOp.execute();
@@ -1307,6 +1292,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -1339,18 +1325,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const createPoolOp = new CreatePoolOperation(
                 queue.liquidityQueue,
-                floorPrice,
+                tokenAddress1,
                 initialProviderId,
                 initialLiquidity,
+                0, // initialTick (was floorPrice=floorPrice)
                 receiverAddress1,
                 receiverAddress1CSV,
-                0,
-                u256.Zero,
-                100,
             );
 
             createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
+            // setBlockQuote() removed (no quote system in refactor)
             queue.liquidityQueue.save();
 
             setBlockchainEnvironment(103, providerAddress2, providerAddress2);
@@ -1372,6 +1356,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             reserveOp.execute();
@@ -1400,18 +1385,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(103, providerAddress2, providerAddress2);
@@ -1430,6 +1413,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -1456,18 +1440,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(103, providerAddress2, providerAddress2);
@@ -1487,6 +1469,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     2,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -1513,18 +1496,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(102, providerAddress1, providerAddress1);
@@ -1536,9 +1517,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 listOp.execute();
@@ -1557,6 +1536,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -1584,18 +1564,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
                 const createPoolOp = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    floorPrice,
+                    tokenAddress1,
                     initialProviderId,
                     initialLiquidity,
+                    0, // initialTick (was floorPrice=floorPrice)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 createPoolOp.execute();
-                queue.liquidityQueue.setBlockQuote();
+                // setBlockQuote() removed (no quote system in refactor)
                 queue.liquidityQueue.save();
 
                 setBlockchainEnvironment(102, providerAddress1, providerAddress1);
@@ -1609,9 +1587,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     u128.fromString(`10000000000000000000`),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 listOp.execute();
@@ -1635,6 +1611,7 @@ describe('ReserveLiquidityOperation tests', () => {
                     0,
                     MAXIMUM_PROVIDER_PER_RESERVATIONS,
                     MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    receiverAddress1, // sender (new in refactor),
                 );
 
                 reserveOp.execute();
@@ -1648,8 +1625,8 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
             const initialProvider = getProvider(initialProviderId);
-            initialProvider.markInitialLiquidityProvider();
-            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            initialProvider.activate() /* markInitialLiquidityProvider gone */;
+            initialProvider.setQueueIndex(0);
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const floorPrice: u256 = SafeMath.div(
@@ -1663,18 +1640,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const createPoolOp = new CreatePoolOperation(
                 queue.liquidityQueue,
-                floorPrice,
+                tokenAddress1,
                 initialProviderId,
                 initialLiquidity,
+                0, // initialTick (was floorPrice=floorPrice)
                 receiverAddress1,
                 receiverAddress1CSV,
-                0,
-                u256.Zero,
-                100,
             );
 
             createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
+            // setBlockQuote() removed (no quote system in refactor)
             queue.liquidityQueue.save();
 
             setBlockchainEnvironment(102, providerAddress1, providerAddress1);
@@ -1687,9 +1662,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             listOp.execute();
@@ -1715,6 +1688,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 0,
                 1,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             reserveOp.execute();
@@ -1730,7 +1704,7 @@ describe('ReserveLiquidityOperation tests', () => {
             Blockchain.clearStorage();
             Blockchain.clearMockedResults();
             TransferHelper.clearMockedResults();
-            FeeManager.reservationBaseFee = 0;
+            /* FeeManager.reservationBaseFee assignment removed (no per-action fee) */
         });
 
         it('should reserve from a normal/priority provider and increment reservedProviderCount', () => {
@@ -1739,8 +1713,8 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const initialProviderId = createProviderId(msgSender1, tokenAddress1);
             const initialProvider = getProvider(initialProviderId);
-            initialProvider.markInitialLiquidityProvider();
-            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            initialProvider.activate() /* markInitialLiquidityProvider gone */;
+            initialProvider.setQueueIndex(0);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
@@ -1755,18 +1729,16 @@ describe('ReserveLiquidityOperation tests', () => {
 
             const createPoolOp = new CreatePoolOperation(
                 queue.liquidityQueue,
-                floorPrice,
+                tokenAddress1,
                 initialProviderId,
                 initialLiquidity,
+                0, // initialTick (was floorPrice=floorPrice)
                 receiverAddress1,
                 receiverAddress1CSV,
-                0,
-                u256.Zero,
-                5,
             );
 
             createPoolOp.execute();
-            queue.liquidityQueue.setBlockQuote();
+            // setBlockQuote() removed (no quote system in refactor)
             queue.liquidityQueue.save();
 
             setBlockchainEnvironment(102, providerAddress1, providerAddress1);
@@ -1778,9 +1750,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 u128.fromString(`1000000000000000000000`),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             listOp.execute();
@@ -1799,6 +1769,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             reserveOp.execute();
@@ -1815,8 +1786,8 @@ describe('ReserveLiquidityOperation tests', () => {
             const value1 = reservation.getProviderAt(0);
             const value2 = reservation.getProviderAt(1);
 
-            expect(value1.providerIndex).toStrictEqual(0);
-            expect(value2.providerIndex).toStrictEqual(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            expect<bool>(u256.eq(value1.providerId, u256.Zero)).toBe(true); // was: expect(.providerIndex).toStrictEqual(0)
+            expect<bool>(u256.eq(value2.providerId, u256.Zero)).toBe(true);
             expect(value1.providedAmount).toStrictEqual(u128.fromString(`1000000000000000000000`));
             expect(value2.providedAmount).toStrictEqual(u128.fromString(`49050000000000000000000`));
             expect(queue3.liquidityQueue.reservedLiquidity).toStrictEqual(
@@ -1849,6 +1820,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
@@ -1886,6 +1858,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
@@ -1923,6 +1896,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
@@ -1960,6 +1934,7 @@ describe('ReserveLiquidityOperation tests', () => {
                 2,
                 MAXIMUM_PROVIDER_PER_RESERVATIONS,
                 MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                receiverAddress1, // sender (new in refactor),
             );
 
             const reservation = new Reservation(tokenAddress1, providerAddress2);
@@ -1967,12 +1942,12 @@ describe('ReserveLiquidityOperation tests', () => {
             provider1.setLiquidityAmount(u128.fromString(`13333333333333333333`));
             provider1.setReservedAmount(u128.Zero);
 
-            queue5.providerManager.addToNormalQueue(provider1);
-            queue5.providerManager.addToNormalPurgedQueue(provider1);
+            0(/* tickBitmapManager.X removed */ provider1, 0) /* was addToNormalQueue */;
+            // tickBitmapManager.* call removed; manager collapsed into TickBitmapManager
 
             expect(provider1.isPurged()).toBeTruthy();
             expect(provider1.getPurgedIndex()).toStrictEqual(0);
-            expect(queue5.providerManager.normalPurgedQueueLength).toStrictEqual(1);
+            // tickBitmapManager.* call removed; manager collapsed into TickBitmapManager
 
             reserveOp2.setRemainingTokens(u256.fromString(`13333333333333333332`));
             reserveOp2.callReserveFromProvider(
@@ -1983,7 +1958,7 @@ describe('ReserveLiquidityOperation tests', () => {
 
             expect(provider1.isPurged()).toBeFalsy();
             expect(provider1.getPurgedIndex()).toStrictEqual(INDEX_NOT_SET_VALUE);
-            expect(queue5.providerManager.normalPurgedQueueLength).toStrictEqual(0);
+            // tickBitmapManager.* call removed; manager collapsed into TickBitmapManager
         });
     });
 });

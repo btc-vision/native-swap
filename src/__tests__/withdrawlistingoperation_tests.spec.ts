@@ -28,7 +28,11 @@ describe('WithdrawListingOperation tests', () => {
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
-            const operation = new WithdrawListingOperation(queue.liquidityQueue, provider.getId());
+            const operation = new WithdrawListingOperation(
+                queue.liquidityQueue,
+                queue.tickBitmapManager,
+                provider.getId(),
+            );
 
             operation.execute();
         }).toThrow();
@@ -41,7 +45,11 @@ describe('WithdrawListingOperation tests', () => {
         provider.setLiquidityAmount(u128.fromU64(100000));
 
         const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-        const operation = new WithdrawListingOperation(queue.liquidityQueue, provider.getId());
+        const operation = new WithdrawListingOperation(
+            queue.liquidityQueue,
+            queue.tickBitmapManager,
+            provider.getId(),
+        );
         operation.execute();
 
         expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
@@ -62,7 +70,11 @@ describe('WithdrawListingOperation tests', () => {
         provider.setLiquidityAmount(u128.fromU64(100000));
 
         const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-        const operation = new WithdrawListingOperation(queue.liquidityQueue, provider.getId());
+        const operation = new WithdrawListingOperation(
+            queue.liquidityQueue,
+            queue.tickBitmapManager,
+            provider.getId(),
+        );
         operation.execute();
 
         expect(provider.getLiquidityAmount()).toStrictEqual(u128.Zero);
