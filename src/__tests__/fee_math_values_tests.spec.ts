@@ -40,41 +40,38 @@ describe('Fee math — exact values at boundary amounts', () => {
         const ns: u64[] = [1, 100, 200, 300, 333];
         for (let i = 0; i < ns.length; i++) {
             const fee: u256 = FeeManager.computeSwapFee(u256.fromU64(ns[i]));
-            expect<bool>(fee.isZero()).toBe(
-                true,
-                `fee(${ns[i]}) expected 0, got ${fee}`,
-            );
+            expect<bool>(fee.isZero()).toBe(true, `fee(${ns[i]}) expected 0, got ${fee}`);
         }
     });
 
     it('fee(334) = 1 (first non-zero — boundary at 334 * 30 / 10000 = 1.002)', () => {
-        expect<bool>(
-            u256.eq(FeeManager.computeSwapFee(u256.fromU64(334)), u256.fromU64(1)),
-        ).toBe(true);
+        expect<bool>(u256.eq(FeeManager.computeSwapFee(u256.fromU64(334)), u256.fromU64(1))).toBe(
+            true,
+        );
     });
 
     it('fee(666) = 1; fee(667) = 2 (second boundary)', () => {
-        expect<bool>(
-            u256.eq(FeeManager.computeSwapFee(u256.fromU64(666)), u256.fromU64(1)),
-        ).toBe(true);
-        expect<bool>(
-            u256.eq(FeeManager.computeSwapFee(u256.fromU64(667)), u256.fromU64(2)),
-        ).toBe(true);
+        expect<bool>(u256.eq(FeeManager.computeSwapFee(u256.fromU64(666)), u256.fromU64(1))).toBe(
+            true,
+        );
+        expect<bool>(u256.eq(FeeManager.computeSwapFee(u256.fromU64(667)), u256.fromU64(2))).toBe(
+            true,
+        );
     });
 
     it('fee(1000) = 3 (exact integer point)', () => {
-        expect<bool>(
-            u256.eq(FeeManager.computeSwapFee(u256.fromU64(1000)), u256.fromU64(3)),
-        ).toBe(true);
+        expect<bool>(u256.eq(FeeManager.computeSwapFee(u256.fromU64(1000)), u256.fromU64(3))).toBe(
+            true,
+        );
     });
 
     it('fee(3333) = 9; fee(3334) = 10', () => {
-        expect<bool>(
-            u256.eq(FeeManager.computeSwapFee(u256.fromU64(3333)), u256.fromU64(9)),
-        ).toBe(true);
-        expect<bool>(
-            u256.eq(FeeManager.computeSwapFee(u256.fromU64(3334)), u256.fromU64(10)),
-        ).toBe(true);
+        expect<bool>(u256.eq(FeeManager.computeSwapFee(u256.fromU64(3333)), u256.fromU64(9))).toBe(
+            true,
+        );
+        expect<bool>(u256.eq(FeeManager.computeSwapFee(u256.fromU64(3334)), u256.fromU64(10))).toBe(
+            true,
+        );
     });
 
     it('fee(10_000) = 30 (= SWAP_FEE_BPS exactly)', () => {
@@ -91,10 +88,7 @@ describe('Fee math — exact values at boundary amounts', () => {
 
     it('fee(10_000_000) = 30_000', () => {
         expect<bool>(
-            u256.eq(
-                FeeManager.computeSwapFee(u256.fromU64(10_000_000)),
-                u256.fromU64(30_000),
-            ),
+            u256.eq(FeeManager.computeSwapFee(u256.fromU64(10_000_000)), u256.fromU64(30_000)),
         ).toBe(true);
     });
 
@@ -118,10 +112,7 @@ describe('Fee math — invariants', () => {
             // fee ≤ N * 30 / 10000 (floor): equivalent to fee * 10000 ≤ N * 30
             const lhs: u256 = u256.mul(fee, u256.fromU64(10_000));
             const rhs: u256 = u256.mul(u256.fromU64(ns[i]), u256.fromU64(30));
-            expect<bool>(u256.le(lhs, rhs)).toBe(
-                true,
-                `fee(${ns[i]}) too large: ${fee}`,
-            );
+            expect<bool>(u256.le(lhs, rhs)).toBe(true, `fee(${ns[i]}) too large: ${fee}`);
         }
     });
 
@@ -141,7 +132,7 @@ describe('Fee math — invariants', () => {
 
     it('fee scales linearly with N at clean multiples', () => {
         // fee(N) / N == 0.003 (give or take floor), so fee(k * N) ≈ k * fee(N) for clean N.
-        const baseN: u64 = 10_000;       // fee = 30
+        const baseN: u64 = 10_000; // fee = 30
         const baseFee: u256 = u256.fromU64(30);
         const ks: u64[] = [1, 2, 5, 10, 100, 1_000];
         for (let i = 0; i < ks.length; i++) {

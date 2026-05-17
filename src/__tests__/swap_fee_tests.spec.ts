@@ -6,7 +6,6 @@ import {
     clearCachedProviders,
     clearPendingStakingContractAmount,
     getPendingStakingContractAmount,
-    Provider,
 } from '../models/Provider';
 import {
     createLiquidityQueue,
@@ -84,8 +83,15 @@ describe('Swap fee — flat 0.3% via TradeManager', () => {
 
         const tick: i32 = 0; // 1 sat per base unit
         const provider = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(100_000), u128.fromU64(50_000),
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(100_000),
+            u128.fromU64(50_000),
         );
         provider.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(provider, tick);
@@ -125,8 +131,15 @@ describe('Swap fee — flat 0.3% via TradeManager', () => {
 
         const tick: i32 = 0;
         const provider = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(100_000), u128.fromU64(20_000),
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(100_000),
+            u128.fromU64(20_000),
         );
         provider.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(provider, tick);
@@ -168,12 +181,26 @@ describe('Swap fee — flat 0.3% via TradeManager', () => {
 
         const tick: i32 = 0;
         const pA = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(60_000), u128.fromU64(20_000),
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(60_000),
+            u128.fromU64(20_000),
         );
         const pB = createProvider(
-            providerAddress2, tokenAddress1, false, false, false,
-            receiverAddress2CSV, u128.Zero, u128.fromU64(60_000), u128.fromU64(15_000),
+            providerAddress2,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress2CSV,
+            u128.Zero,
+            u128.fromU64(60_000),
+            u128.fromU64(15_000),
         );
         pA.setPriceTick(tick);
         pB.setPriceTick(tick);

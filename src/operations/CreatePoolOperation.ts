@@ -84,11 +84,7 @@ export class CreatePoolOperation extends BaseOperation {
             provider.save();
 
             Blockchain.emit(
-                new LiquidityListedEvent(
-                    this.initialLiquidity,
-                    this.receiverStr,
-                    this.initialTick,
-                ),
+                new LiquidityListedEvent(this.initialLiquidity, this.receiverStr, this.initialTick),
             );
         }
 
@@ -119,9 +115,7 @@ export class CreatePoolOperation extends BaseOperation {
 
     private ensureTickInRange(tick: i32): void {
         if (tick < MIN_TICK || tick > MAX_TICK) {
-            throw new Revert(
-                `NATIVE_SWAP: tick ${tick} out of range [${MIN_TICK}, ${MAX_TICK}].`,
-            );
+            throw new Revert(`NATIVE_SWAP: tick ${tick} out of range [${MIN_TICK}, ${MAX_TICK}].`);
         }
     }
 

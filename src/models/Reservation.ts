@@ -15,7 +15,7 @@ import {
     RESERVATION_PROVIDER_IDS,
     RESERVATION_TICKS,
 } from '../constants/StoredPointers';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128 } from '@btc-vision/as-bignum/assembly';
 import { ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { ReservationData } from './ReservationData';
 import { ReservationProviderData } from './ReservationProdiverData';
@@ -138,10 +138,18 @@ export class Reservation {
         }
     }
 
-    public getActivationDelay(): u8 { return this.reservationData.activationDelay; }
-    public getCreationBlock(): u64 { return this.reservationData.creationBlock; }
-    public getExpirationBlock(): u64 { return this.reservationData.expirationBlock; }
-    public getId(): u128 { return this.id; }
+    public getActivationDelay(): u8 {
+        return this.reservationData.activationDelay;
+    }
+    public getCreationBlock(): u64 {
+        return this.reservationData.creationBlock;
+    }
+    public getExpirationBlock(): u64 {
+        return this.reservationData.expirationBlock;
+    }
+    public getId(): u128 {
+        return this.id;
+    }
 
     /**
      * @method getProviderAt
@@ -157,16 +165,32 @@ export class Reservation {
         );
     }
 
-    public getProviderCount(): u32 { return this.reservedProviderIds.getLength(); }
+    public getProviderCount(): u32 {
+        return this.reservedProviderIds.getLength();
+    }
 
-    public getPurged(): boolean { return this.reservationData.purged; }
-    public getPurgeIndex(): u32 { return this.reservationData.purgeIndex; }
-    public getSwapped(): boolean { return this.reservationData.swapped; }
-    public getUserTimeoutBlockExpiration(): u64 { return this.reservationData.userTimeoutExpirationBlock; }
+    public getPurged(): boolean {
+        return this.reservationData.purged;
+    }
+    public getPurgeIndex(): u32 {
+        return this.reservationData.purgeIndex;
+    }
+    public getSwapped(): boolean {
+        return this.reservationData.swapped;
+    }
+    public getUserTimeoutBlockExpiration(): u64 {
+        return this.reservationData.userTimeoutExpirationBlock;
+    }
 
-    public isDirty(): boolean { return this.reservedProviderIds.getLength() > 0; }
-    public isExpired(): boolean { return Blockchain.block.number > this.reservationData.expirationBlock; }
-    public isValid(): boolean { return !this.isExpired() && this.reservedProviderIds.getLength() > 0; }
+    public isDirty(): boolean {
+        return this.reservedProviderIds.getLength() > 0;
+    }
+    public isExpired(): boolean {
+        return Blockchain.block.number > this.reservationData.expirationBlock;
+    }
+    public isValid(): boolean {
+        return !this.isExpired() && this.reservedProviderIds.getLength() > 0;
+    }
 
     public save(): void {
         this.reservationData.save();
@@ -176,12 +200,24 @@ export class Reservation {
         this.reservedFillPrices.save();
     }
 
-    public setActivationDelay(value: u8): void { this.reservationData.activationDelay = value; }
-    public setCreationBlock(value: u64): void { this.reservationData.creationBlock = value; }
-    public setPurged(value: boolean): void { this.reservationData.purged = value; }
-    public setPurgeIndex(index: u32): void { this.reservationData.purgeIndex = index; }
-    public setSwapped(value: boolean): void { this.reservationData.swapped = value; }
-    public timeoutUser(): void { this.reservationData.timeout = true; }
+    public setActivationDelay(value: u8): void {
+        this.reservationData.activationDelay = value;
+    }
+    public setCreationBlock(value: u64): void {
+        this.reservationData.creationBlock = value;
+    }
+    public setPurged(value: boolean): void {
+        this.reservationData.purged = value;
+    }
+    public setPurgeIndex(index: u32): void {
+        this.reservationData.purgeIndex = index;
+    }
+    public setSwapped(value: boolean): void {
+        this.reservationData.swapped = value;
+    }
+    public timeoutUser(): void {
+        this.reservationData.timeout = true;
+    }
 
     public toString(): string {
         return `Reservation ${this.getId().toString()} (expirationBlock: ${this.getExpirationBlock()} - block: ${Blockchain.block.number} - entries: ${this.reservedProviderIds.getLength()})`;

@@ -5,14 +5,12 @@ import {
     createLiquidityQueue,
     createProvider,
     msgSender1,
-    ownerAddress1,
     providerAddress1,
     receiverAddress1CSV,
     setBlockchainEnvironment,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
-import { Reservation } from '../models/Reservation';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { TickMath } from '../utils/TickMath';
 import { WithdrawListingOperation } from '../operations/WithdrawListingOperation';
@@ -60,8 +58,15 @@ describe('Freeze invariant — provider.latestReservedUntilBlock', () => {
     it('bumpLatestReservedUntilBlock is monotonic non-decreasing', () => {
         setBlockchainEnvironment(1, msgSender1, msgSender1);
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
 
         p.bumpLatestReservedUntilBlock(20);
@@ -79,8 +84,15 @@ describe('Freeze invariant — provider.latestReservedUntilBlock', () => {
     it('isListingFrozen returns true when block.number <= latestReservedUntilBlock', () => {
         setBlockchainEnvironment(10, msgSender1, msgSender1);
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         p.bumpLatestReservedUntilBlock(20);
         expect<bool>(p.isListingFrozen()).toBe(true);
@@ -102,8 +114,15 @@ describe('Freeze invariant — provider.latestReservedUntilBlock', () => {
             q.liquidityQueue.save();
 
             const p = createProvider(
-                providerAddress1, tokenAddress1, false, false, false,
-                receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                false,
+                receiverAddress1CSV,
+                u128.Zero,
+                u128.fromU64(50_000),
+                u128.Zero,
             );
             p.setPriceTick(0);
             q.tickBitmapManager.addToTickFIFO(p, 0);
@@ -128,8 +147,15 @@ describe('Freeze invariant — provider.latestReservedUntilBlock', () => {
         q.liquidityQueue.save();
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         p.setPriceTick(0);
         q.tickBitmapManager.addToTickFIFO(p, 0);
@@ -139,11 +165,7 @@ describe('Freeze invariant — provider.latestReservedUntilBlock', () => {
 
         // Move past the freeze block — withdraw should succeed.
         setBlockchainEnvironment(211, providerAddress1, providerAddress1);
-        const op = new WithdrawListingOperation(
-            q.liquidityQueue,
-            q.tickBitmapManager,
-            p.getId(),
-        );
+        const op = new WithdrawListingOperation(q.liquidityQueue, q.tickBitmapManager, p.getId());
         op.execute();
 
         const after: Provider = getProvider(p.getId());
@@ -158,8 +180,15 @@ describe('Freeze invariant — provider.latestReservedUntilBlock', () => {
         q.liquidityQueue.save();
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         p.setPriceTick(0);
         q.tickBitmapManager.addToTickFIFO(p, 0);
@@ -173,11 +202,7 @@ describe('Freeze invariant — provider.latestReservedUntilBlock', () => {
 
         // Still inside freeze window (block 305 ≤ 400), but withdrawMode bypasses guard.
         setBlockchainEnvironment(305, providerAddress1, providerAddress1);
-        const op = new WithdrawListingOperation(
-            q.liquidityQueue,
-            q.tickBitmapManager,
-            p.getId(),
-        );
+        const op = new WithdrawListingOperation(q.liquidityQueue, q.tickBitmapManager, p.getId());
         op.execute();
 
         const after: Provider = getProvider(p.getId());
@@ -188,8 +213,15 @@ describe('Freeze invariant — provider.latestReservedUntilBlock', () => {
         // Simulate the reserve walk's bookkeeping side effect directly.
         setBlockchainEnvironment(50, msgSender1, msgSender1);
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
 
         // Two reservations against the same provider at different blocks.

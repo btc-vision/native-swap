@@ -41,11 +41,7 @@ import {
  * Mock the buyer's "prove ownership" output — send `sats` to the buyer's CSV
  * (which is derived from `(sender bytes, activationDelay)` in the operation).
  */
-function mockBuyerOutputForReserve(
-    senderBytes: Uint8Array,
-    activationDelay: u8,
-    sats: u64,
-): void {
+function mockBuyerOutputForReserve(senderBytes: Uint8Array, activationDelay: u8, sats: u64): void {
     const csv = ExtendedAddress.toCSV(senderBytes, <u32>activationDelay);
     Blockchain.mockTransactionOutput([
         new TransactionOutput(0, <u8>TransactionOutputFlags.hasTo, null, csv, sats),
@@ -70,8 +66,15 @@ describe('Reserve walk — dust-snap', () => {
         // Provider at tick 0 with avail = 10_500 base units (= 10_500 sats).
         const tick: i32 = 0;
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(10_500), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(10_500),
+            u128.Zero,
         );
         p.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(p, tick);
@@ -111,8 +114,15 @@ describe('Reserve walk — dust-snap', () => {
 
         const tick: i32 = 0;
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(11_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(11_000),
+            u128.Zero,
         );
         p.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(p, tick);
@@ -151,8 +161,15 @@ describe('Reserve walk — dust-snap', () => {
 
         const tick: i32 = 0;
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(15_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(15_000),
+            u128.Zero,
         );
         p.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(p, tick);

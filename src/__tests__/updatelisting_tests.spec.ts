@@ -1,5 +1,5 @@
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u128 } from '@btc-vision/as-bignum/assembly';
 import { clearCachedProviders, getProvider, Provider } from '../models/Provider';
 import {
     createLiquidityQueue,
@@ -44,8 +44,15 @@ describe('UpdateListingOperation — atomic move-tick', () => {
             q.liquidityQueue.save();
 
             const p = createProvider(
-                providerAddress1, tokenAddress1, false, false, false,
-                receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                false,
+                receiverAddress1CSV,
+                u128.Zero,
+                u128.fromU64(50_000),
+                u128.Zero,
             );
             p.deactivate(); // no active listing
 
@@ -67,8 +74,15 @@ describe('UpdateListingOperation — atomic move-tick', () => {
             q.liquidityQueue.save();
 
             const p = createProvider(
-                providerAddress1, tokenAddress1, false, false, false,
-                receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                false,
+                receiverAddress1CSV,
+                u128.Zero,
+                u128.fromU64(50_000),
+                u128.Zero,
             );
             p.setPriceTick(0);
             q.tickBitmapManager.addToTickFIFO(p, 0);
@@ -92,8 +106,15 @@ describe('UpdateListingOperation — atomic move-tick', () => {
             q.liquidityQueue.save();
 
             const p = createProvider(
-                providerAddress1, tokenAddress1, false, false, false,
-                receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                false,
+                receiverAddress1CSV,
+                u128.Zero,
+                u128.fromU64(50_000),
+                u128.Zero,
             );
             p.setPriceTick(0);
             q.tickBitmapManager.addToTickFIFO(p, 0);
@@ -116,8 +137,15 @@ describe('UpdateListingOperation — atomic move-tick', () => {
             q.liquidityQueue.save();
 
             const p = createProvider(
-                providerAddress1, tokenAddress1, false, false, false,
-                receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+                providerAddress1,
+                tokenAddress1,
+                false,
+                false,
+                false,
+                receiverAddress1CSV,
+                u128.Zero,
+                u128.fromU64(50_000),
+                u128.Zero,
             );
             p.setPriceTick(0);
             q.tickBitmapManager.addToTickFIFO(p, 0);
@@ -139,8 +167,15 @@ describe('UpdateListingOperation — atomic move-tick', () => {
         q.liquidityQueue.save();
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         p.setPriceTick(500);
         q.tickBitmapManager.addToTickFIFO(p, 500);
@@ -165,8 +200,15 @@ describe('UpdateListingOperation — atomic move-tick', () => {
         q.liquidityQueue.save();
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         const oldTick: i32 = 100;
         const newTick: i32 = -250;
@@ -199,8 +241,15 @@ describe('UpdateListingOperation — atomic move-tick', () => {
         q.liquidityQueue.save();
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         p.setPriceTick(0);
         q.tickBitmapManager.addToTickFIFO(p, 0);

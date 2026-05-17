@@ -71,8 +71,15 @@ describe('Per-tick purge → restore flow', () => {
 
         const tick: i32 = 0;
         const provider = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         provider.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(provider, tick);
@@ -111,8 +118,15 @@ describe('Per-tick purge → restore flow', () => {
 
         // Alice was listed first and got a reservation against her.
         const pAlice = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         pAlice.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(pAlice, tick);
@@ -127,8 +141,15 @@ describe('Per-tick purge → restore flow', () => {
 
         // Bob lists fresh at the same tick AFTER Alice was reserved against.
         const pBob = createProvider(
-            providerAddress2, tokenAddress1, false, false, false,
-            receiverAddress2CSV, u128.Zero, u128.fromU64(30_000), u128.Zero,
+            providerAddress2,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress2CSV,
+            u128.Zero,
+            u128.fromU64(30_000),
+            u128.Zero,
         );
         pBob.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(pBob, tick);
@@ -159,8 +180,15 @@ describe('Per-tick purge → restore flow', () => {
 
         const tick: i32 = -100;
         const provider = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         provider.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(provider, tick);

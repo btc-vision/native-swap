@@ -37,9 +37,7 @@ export class TickMath {
      */
     public static tickToPrice(tick: i32): u128 {
         if (tick < MIN_TICK || tick > MAX_TICK) {
-            throw new Revert(
-                `TickMath: tick ${tick} out of range [${MIN_TICK}, ${MAX_TICK}].`,
-            );
+            throw new Revert(`TickMath: tick ${tick} out of range [${MIN_TICK}, ${MAX_TICK}].`);
         }
 
         const absTick: u32 = tick < 0 ? <u32>-tick : <u32>tick;
@@ -51,7 +49,7 @@ export class TickMath {
         //   ratio = (ratio * RATIO_AT_BIT[k]) >> FP_SHIFT
         // Worst-case product at |tick|=54116 is ~2^254, fits u256.
         for (let k: u32 = 0; k < 16; k++) {
-            if ((absTick & (<u32>1 << k)) != 0) {
+            if ((absTick & ((<u32>1) << k)) != 0) {
                 const product: u256 = SafeMath.mul(ratio, ratioAtBit(k));
                 ratio = u256.shr(product, <i32>FP_SHIFT);
             }
@@ -83,10 +81,10 @@ export class TickMath {
      * Returns 256 if the word is entirely zero.
      */
     public static countTrailingZeros(word: u256): u32 {
-        if (word.lo1 != 0) return <u32>(ctz<u64>(word.lo1));
-        if (word.lo2 != 0) return 64 + <u32>(ctz<u64>(word.lo2));
-        if (word.hi1 != 0) return 128 + <u32>(ctz<u64>(word.hi1));
-        if (word.hi2 != 0) return 192 + <u32>(ctz<u64>(word.hi2));
+        if (word.lo1 != 0) return <u32>ctz<u64>(word.lo1);
+        if (word.lo2 != 0) return 64 + <u32>ctz<u64>(word.lo2);
+        if (word.hi1 != 0) return 128 + <u32>ctz<u64>(word.hi1);
+        if (word.hi2 != 0) return 192 + <u32>ctz<u64>(word.hi2);
         return 256;
     }
 

@@ -1,5 +1,5 @@
 import { clearCachedProviders, getProvider } from '../models/Provider';
-import { Blockchain, BytesWriter } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import {
     createLiquidityQueue,
@@ -167,7 +167,6 @@ describe('CreatePoolOperation tests', () => {
                 operation.execute();
             }).toThrow();
         });
-
     });
 
     describe('CreatePoolOperation execute', () => {
@@ -185,14 +184,14 @@ describe('CreatePoolOperation tests', () => {
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const operation = new CreatePoolOperation(
-                    queue.liquidityQueue,
-                    tokenAddress1,
-                    initialProviderId,
-                    u128.fromU64(1000000),
-                    0, // initialTick (was floorPrice=u256.fromU64(100))
-                    receiverAddress1,
-                    receiverAddress1CSV,
-                );
+                queue.liquidityQueue,
+                tokenAddress1,
+                initialProviderId,
+                u128.fromU64(1000000),
+                0, // initialTick (was floorPrice=u256.fromU64(100))
+                receiverAddress1,
+                receiverAddress1CSV,
+            );
 
             operation.execute();
             queue.liquidityQueue.save();

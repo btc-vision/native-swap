@@ -1,8 +1,7 @@
-import { StoredString } from '@btc-vision/btc-runtime/runtime';
+import { SafeMath, StoredString } from '@btc-vision/btc-runtime/runtime';
 import { FEES_ADDRESS_POINTER } from '../constants/StoredPointers';
 import { INITIAL_FEE_COLLECT_ADDRESS, SWAP_FEE_BPS, SWAP_FEE_DENOM } from '../constants/Contract';
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { SafeMath } from '@btc-vision/btc-runtime/runtime';
 
 /**
  * Slim fee manager. With the flat 0.3% swap fee hardcoded in `Contract.ts`, the only

@@ -173,9 +173,7 @@ describe('tokensToSatoshis / satoshisToTokens — exact values at named ticks', 
         const fp: u128 = TickMath.tickToPrice(0);
         expect<u64>(TickMath.tokensToSatoshis(u128.fromU64(1), fp)).toBe(1);
         expect<u64>(TickMath.tokensToSatoshis(u128.fromU64(123_456), fp)).toBe(123_456);
-        expect<bool>(
-            u128.eq(TickMath.satoshisToTokens(7_777, fp), u128.fromU64(7_777)),
-        ).toBe(true);
+        expect<bool>(u128.eq(TickMath.satoshisToTokens(7_777, fp), u128.fromU64(7_777))).toBe(true);
     });
 
     it('at tick 1, 1 token rounds to 1 sat; 1000 tokens round to 1000 sats', () => {
@@ -216,10 +214,7 @@ describe('tokensToSatoshis / satoshisToTokens — exact values at named ticks', 
         const samples: u64[] = [1, 100, 1_000_000, 100_000_000, 2_100_000_000_000_000];
         for (let i = 0; i < samples.length; i++) {
             const s: u64 = samples[i];
-            const back: u64 = TickMath.tokensToSatoshis(
-                TickMath.satoshisToTokens(s, fp),
-                fp,
-            );
+            const back: u64 = TickMath.tokensToSatoshis(TickMath.satoshisToTokens(s, fp), fp);
             expect<u64>(back).toBe(s);
         }
     });

@@ -1,11 +1,5 @@
 import { BaseOperation } from './BaseOperation';
-import {
-    Address,
-    Blockchain,
-    Revert,
-    TransferHelper,
-} from '@btc-vision/btc-runtime/runtime';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { Blockchain, Revert, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { SwapExecutedEvent } from '../events/SwapExecutedEvent';
 import { Reservation } from '../models/Reservation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';

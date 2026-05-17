@@ -1,37 +1,17 @@
-import {
-    clearCachedProviders,
-    clearPendingStakingContractAmount,
-    getPendingStakingContractAmount,
-    Provider,
-} from '../models/Provider';
-import {
-    Blockchain,
-    SafeMath,
-    StoredBooleanArray,
-    StoredU128Array,
-    TransferHelper,
-    U32_BYTE_LENGTH,
-} from '@btc-vision/btc-runtime/runtime';
+import { clearCachedProviders, Provider } from '../models/Provider';
+import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import {
     createLiquidityQueue,
-    createProvider,
-    createProviderId,
-    createReservation,
     ITestLiquidityQueue,
-    // ITestProviderManager removed — ProviderManager merged into TickBitmapManager
-    providerAddress1,
-    providerAddress2,
     setBlockchainEnvironment,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
-import { FeeManager } from '../managers/FeeManager';
 
 import { Reservation } from '../models/Reservation';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
-import { ReservationProviderData } from '../models/ReservationProdiverData';
 // ProviderTypes removed in refactor — priority queue is gone
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 
 function getLiquidityQueue(): ITestLiquidityQueue {
     const createQueueResult = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);

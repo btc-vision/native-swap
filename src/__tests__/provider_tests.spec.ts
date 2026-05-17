@@ -571,10 +571,7 @@ describe('Provider tests', () => {
 
         it('returns false when cost < strict minimum (at tick 0, 10 base units = 10 sats < 1k)', () => {
             // Was: Provider.meetsMinimumReservationAmount(amount, quote); quote system gone.
-            const res: boolean = Provider.meetsMinimumReservationAmountAtTick(
-                u128.fromU64(10),
-                0,
-            );
+            const res: boolean = Provider.meetsMinimumReservationAmountAtTick(u128.fromU64(10), 0);
             expect(res).toBeFalsy();
         });
 

@@ -238,7 +238,8 @@ describe('Reservation manager tests', () => {
                 new ReservationProviderData(
                     u256.fromU64(0),
                     u128.fromU32(1000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -309,7 +310,8 @@ describe('Reservation manager tests', () => {
                     new ReservationProviderData(
                         u256.fromU64(0),
                         u128.fromU32(1000),
-                        0, u128.Zero,
+                        0,
+                        u128.Zero,
                         reservation.getCreationBlock(),
                     ),
                 );
@@ -346,7 +348,8 @@ describe('Reservation manager tests', () => {
                     new ReservationProviderData(
                         u256.fromU64(0),
                         u128.fromU32(1000),
-                        0, u128.Zero,
+                        0,
+                        u128.Zero,
                         reservation.getCreationBlock(),
                     ),
                 );
@@ -488,7 +491,7 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
-            const quote = u256.Zero /* quoteManager.getBlockQuote removed */;
+            const quote = u256.Zero; /* quoteManager.getBlockQuote removed */
             const manager = createLiquidityQueueResult.reservationManager;
             const result = manager.purgeReservationsAndRestoreProviders(0);
 
@@ -504,7 +507,7 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
-            const quote = u256.Zero /* quoteManager.getBlockQuote removed */;
+            const quote = u256.Zero; /* quoteManager.getBlockQuote removed */
             const manager = createLiquidityQueueResult.reservationManager;
             const result = manager.purgeReservationsAndRestoreProviders(0);
 
@@ -520,7 +523,7 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
-            const quote = u256.Zero /* quoteManager.getBlockQuote removed */;
+            const quote = u256.Zero; /* quoteManager.getBlockQuote removed */
             const manager = createLiquidityQueueResult.reservationManager;
             const result = manager.purgeReservationsAndRestoreProviders(96);
 
@@ -549,10 +552,16 @@ describe('Reservation manager tests', () => {
             // removed in refactor: line referenced a now-deleted manager
 
             provider1.addToReservedAmount(u128.fromU64(150000));
-            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(provider1, 0) /* was addToNormalQueue */;
+            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(
+                provider1,
+                0,
+            ) /* was addToNormalQueue */;
 
             provider2.addToReservedAmount(u128.fromU64(250000));
-            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(provider2, 0) /* was addToNormalQueue */;
+            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(
+                provider2,
+                0,
+            ) /* was addToNormalQueue */;
 
             const reservationManager = createLiquidityQueueResult.reservationManager;
             reservationManager.setAtLeastProvidersToPurge(2);
@@ -562,7 +571,8 @@ describe('Reservation manager tests', () => {
                 new ReservationProviderData(
                     provider1.getId() /* was getQueueIndex() */,
                     u128.fromU64(150000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     100,
                 ),
             );
@@ -574,7 +584,8 @@ describe('Reservation manager tests', () => {
                 new ReservationProviderData(
                     provider2.getId() /* was getQueueIndex() */,
                     u128.fromU64(100000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     100,
                 ),
             );
@@ -586,7 +597,8 @@ describe('Reservation manager tests', () => {
                 new ReservationProviderData(
                     provider2.getId() /* was getQueueIndex() */,
                     u128.fromU64(150000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     100,
                 ),
             );
@@ -602,7 +614,7 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
-            const quote = u256.Zero /* quoteManager.getBlockQuote removed */;
+            const quote = u256.Zero; /* quoteManager.getBlockQuote removed */
             const manager2 = createLiquidityQueueResult2.reservationManager;
             manager2.setAtLeastProvidersToPurge(2);
             manager2.purgeReservationsAndRestoreProviders(100);
@@ -634,10 +646,16 @@ describe('Reservation manager tests', () => {
             // removed in refactor: line referenced a now-deleted manager
 
             provider1.addToReservedAmount(u128.fromU64(150000));
-            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(provider1, 0) /* was addToNormalQueue */;
+            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(
+                provider1,
+                0,
+            ) /* was addToNormalQueue */;
 
             provider2.addToReservedAmount(u128.fromU64(250000));
-            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(provider2, 0) /* was addToNormalQueue */;
+            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(
+                provider2,
+                0,
+            ) /* was addToNormalQueue */;
 
             const reservationManager = createLiquidityQueueResult.reservationManager;
 
@@ -646,7 +664,8 @@ describe('Reservation manager tests', () => {
                 new ReservationProviderData(
                     provider1.getId() /* was getQueueIndex() */,
                     u128.fromU64(150000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     100,
                 ),
             );
@@ -658,7 +677,8 @@ describe('Reservation manager tests', () => {
                 new ReservationProviderData(
                     provider2.getId() /* was getQueueIndex() */,
                     u128.fromU64(100000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     100,
                 ),
             );
@@ -670,7 +690,8 @@ describe('Reservation manager tests', () => {
                 new ReservationProviderData(
                     provider2.getId() /* was getQueueIndex() */,
                     u128.fromU64(150000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     100,
                 ),
             );
@@ -686,7 +707,7 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
-            const quote = u256.Zero /* quoteManager.getBlockQuote removed */;
+            const quote = u256.Zero; /* quoteManager.getBlockQuote removed */
             const manager2 = createLiquidityQueueResult2.reservationManager;
             manager2.purgeReservationsAndRestoreProviders(100);
 
@@ -720,7 +741,7 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
-            const quote = u256.Zero /* quoteManager.getBlockQuote removed */;
+            const quote = u256.Zero; /* quoteManager.getBlockQuote removed */
             const manager2 = createLiquidityQueueResult2.reservationManager;
             const lastPurgedBlock = manager2.purgeReservationsAndRestoreProviders(100);
 
@@ -751,7 +772,10 @@ describe('Reservation manager tests', () => {
                 // removed in refactor: line referenced a now-deleted manager
 
                 provider1.addToReservedAmount(u128.fromU64(150000));
-                createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(provider1, 0) /* was addToNormalQueue */;
+                createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(
+                    provider1,
+                    0,
+                ) /* was addToNormalQueue */;
 
                 const reservationManager = createLiquidityQueueResult.reservationManager;
 
@@ -761,7 +785,8 @@ describe('Reservation manager tests', () => {
                     new ReservationProviderData(
                         provider1.getId() /* was getQueueIndex() */,
                         u128.fromU64(150000),
-                        0, u128.Zero,
+                        0,
+                        u128.Zero,
                         110,
                     ),
                 );
@@ -777,7 +802,7 @@ describe('Reservation manager tests', () => {
                     false,
                 );
 
-                const quote = u256.Zero /* quoteManager.getBlockQuote removed */;
+                const quote = u256.Zero; /* quoteManager.getBlockQuote removed */
                 const manager2 = createLiquidityQueueResult2.reservationManager;
                 manager2.purgeReservationsAndRestoreProviders(100);
             }).toThrow();
@@ -807,7 +832,10 @@ describe('Reservation manager tests', () => {
                 // removed in refactor: line referenced a now-deleted manager
 
                 provider1.addToReservedAmount(u128.fromU64(150000));
-                createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(provider1, 0) /* was addToNormalQueue */;
+                createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(
+                    provider1,
+                    0,
+                ) /* was addToNormalQueue */;
 
                 const reservationManager = createLiquidityQueueResult.reservationManager;
 
@@ -817,7 +845,8 @@ describe('Reservation manager tests', () => {
                     new ReservationProviderData(
                         provider1.getId() /* was getQueueIndex() */,
                         u128.fromU64(150000),
-                        0, u128.Zero,
+                        0,
+                        u128.Zero,
                         100,
                     ),
                 );
@@ -834,7 +863,7 @@ describe('Reservation manager tests', () => {
                     false,
                 );
 
-                const quote = u256.Zero /* quoteManager.getBlockQuote removed */;
+                const quote = u256.Zero; /* quoteManager.getBlockQuote removed */
                 const manager2 = createLiquidityQueueResult2.reservationManager;
                 manager2.purgeReservationsAndRestoreProviders(100);
             }).toThrow();
@@ -862,11 +891,17 @@ describe('Reservation manager tests', () => {
             // removed in refactor: line referenced a now-deleted manager
 
             provider1.addToReservedAmount(u128.fromU64(150000));
-            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(provider1, 0) /* was addToNormalQueue */;
+            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(
+                provider1,
+                0,
+            ) /* was addToNormalQueue */;
             provider1.save();
 
             provider2.addToReservedAmount(u128.fromU64(250000));
-            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(provider2, 0) /* was addToNormalQueue */;
+            createLiquidityQueueResult.tickBitmapManager.addToTickFIFO(
+                provider2,
+                0,
+            ) /* was addToNormalQueue */;
             provider2.save();
 
             const reservationManager = createLiquidityQueueResult.reservationManager;
@@ -876,7 +911,8 @@ describe('Reservation manager tests', () => {
                 new ReservationProviderData(
                     provider1.getId() /* was getQueueIndex() */,
                     u128.fromU64(150000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     100,
                 ),
             );
@@ -899,7 +935,8 @@ describe('Reservation manager tests', () => {
                 new ReservationProviderData(
                     provider2.getId() /* was getQueueIndex() */,
                     u128.fromU64(100000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     101,
                 ),
             );
@@ -914,9 +951,10 @@ describe('Reservation manager tests', () => {
                 false,
             );
 
-            const quote = u256.Zero /* quoteManager.getBlockQuote removed */;
+            const quote = u256.Zero; /* quoteManager.getBlockQuote removed */
             const reservationManager3 = createLiquidityQueueResult3.reservationManager;
-            const newLastExpirationBlock = reservationManager3.purgeReservationsAndRestoreProviders(100);
+            const newLastExpirationBlock =
+                reservationManager3.purgeReservationsAndRestoreProviders(100);
 
             expect(reservationManager3.blockWithReservationsLength()).toStrictEqual(1);
             expect(newLastExpirationBlock).toStrictEqual(101);

@@ -1,9 +1,10 @@
 import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { clearCachedProviders, getProvider, Provider } from '../models/Provider';
+import { clearCachedProviders, Provider } from '../models/Provider';
 import {
     createLiquidityQueue,
     createProvider,
+    msgSender1,
     providerAddress1,
     providerAddress2,
     providerAddress3,
@@ -12,7 +13,6 @@ import {
     receiverAddress2CSV,
     receiverAddress3CSV,
     receiverAddress4CSV,
-    msgSender1,
     setBlockchainEnvironment,
     tokenAddress1,
     tokenIdUint8Array1,
@@ -51,8 +51,15 @@ describe('Multi-tick walk with mixed purged/FIFO', () => {
 
         // pPurgedAtCheap — listed at cheap tick, then pushed onto purged sub-queue
         const pPurgedAtCheap = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         pPurgedAtCheap.setPriceTick(tickCheap);
         q.tickBitmapManager.addToTickFIFO(pPurgedAtCheap, tickCheap);
@@ -60,24 +67,45 @@ describe('Multi-tick walk with mixed purged/FIFO', () => {
 
         // pFreshAtCheap — listed at cheap tick AFTER, into FIFO only
         const pFreshAtCheap = createProvider(
-            providerAddress2, tokenAddress1, false, false, false,
-            receiverAddress2CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress2,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress2CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         pFreshAtCheap.setPriceTick(tickCheap);
         q.tickBitmapManager.addToTickFIFO(pFreshAtCheap, tickCheap);
 
         // pFreshAtMid — fresh listing at mid tick
         const pFreshAtMid = createProvider(
-            providerAddress3, tokenAddress1, false, false, false,
-            receiverAddress3CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress3,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress3CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         pFreshAtMid.setPriceTick(tickMid);
         q.tickBitmapManager.addToTickFIFO(pFreshAtMid, tickMid);
 
         // pFreshAtHigh — fresh listing at high tick
         const pFreshAtHigh = createProvider(
-            providerAddress4, tokenAddress1, false, false, false,
-            receiverAddress4CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress4,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress4CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         pFreshAtHigh.setPriceTick(tickHigh);
         q.tickBitmapManager.addToTickFIFO(pFreshAtHigh, tickHigh);
@@ -125,16 +153,30 @@ describe('Multi-tick walk with mixed purged/FIFO', () => {
 
         // Only one provider at cheapest tick, and they're purged.
         const pCheapPurged = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         pCheapPurged.setPriceTick(tickCheap);
         q.tickBitmapManager.addToTickFIFO(pCheapPurged, tickCheap);
         q.tickBitmapManager.addToTickPurged(pCheapPurged, tickCheap);
 
         const pHigh = createProvider(
-            providerAddress2, tokenAddress1, false, false, false,
-            receiverAddress2CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress2,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress2CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         pHigh.setPriceTick(tickHigh);
         q.tickBitmapManager.addToTickFIFO(pHigh, tickHigh);
@@ -152,15 +194,29 @@ describe('Multi-tick walk with mixed purged/FIFO', () => {
         const tickHigh: i32 = 5000;
 
         const pCheap = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         pCheap.setPriceTick(tickCheap);
         q.tickBitmapManager.addToTickFIFO(pCheap, tickCheap);
 
         const pHigh = createProvider(
-            providerAddress2, tokenAddress1, false, false, false,
-            receiverAddress2CSV, u128.Zero, u128.fromU64(50_000), u128.Zero,
+            providerAddress2,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress2CSV,
+            u128.Zero,
+            u128.fromU64(50_000),
+            u128.Zero,
         );
         pHigh.setPriceTick(tickHigh);
         q.tickBitmapManager.addToTickFIFO(pHigh, tickHigh);

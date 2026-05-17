@@ -2,12 +2,7 @@ import { Blockchain, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { TransactionOutput } from '@btc-vision/btc-runtime/runtime/env/classes/UTXO';
 import { TransactionOutputFlags } from '@btc-vision/btc-runtime/runtime/env/enums/TransactionFlags';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import {
-    clearCachedProviders,
-    clearPendingStakingContractAmount,
-    getPendingStakingContractAmount,
-    Provider,
-} from '../models/Provider';
+import { clearCachedProviders, clearPendingStakingContractAmount } from '../models/Provider';
 import {
     createLiquidityQueue,
     createProvider,
@@ -91,8 +86,15 @@ describe('Per-entry fillPrice settlement — exact values', () => {
         );
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(20_000), u128.fromU64(10_000),
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(20_000),
+            u128.fromU64(10_000),
         );
         p.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(p, tick);
@@ -135,8 +137,15 @@ describe('Per-entry fillPrice settlement — exact values', () => {
         );
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(20_000), u128.fromU64(10_000),
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(20_000),
+            u128.fromU64(10_000),
         );
         p.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(p, tick);
@@ -176,8 +185,15 @@ describe('Per-entry fillPrice settlement — exact values', () => {
         const expectedActualTokens: u128 = TickMath.satoshisToTokens(sentSats, fillPrice);
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(100_000), u128.fromU64(50_000),
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(100_000),
+            u128.fromU64(50_000),
         );
         p.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(p, tick);
@@ -226,12 +242,26 @@ describe('Per-entry fillPrice settlement — exact values', () => {
         );
 
         const pA = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(10_000), u128.fromU64(reserveA),
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(10_000),
+            u128.fromU64(reserveA),
         );
         const pB = createProvider(
-            providerAddress2, tokenAddress1, false, false, false,
-            receiverAddress2CSV, u128.Zero, u128.fromU64(10_000), u128.fromU64(reserveB),
+            providerAddress2,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress2CSV,
+            u128.Zero,
+            u128.fromU64(10_000),
+            u128.fromU64(reserveB),
         );
         pA.setPriceTick(tickA);
         pB.setPriceTick(tickB);
@@ -275,7 +305,7 @@ describe('Per-entry fillPrice settlement — exact values', () => {
         q.liquidityQueue.save();
 
         const tickReserve: i32 = 100; // frozen tick for this entry
-        const tickAfter: i32 = -100;  // provider moves here AFTER reserve
+        const tickAfter: i32 = -100; // provider moves here AFTER reserve
         const tokensRequested: u64 = 10_000;
 
         const requiredSatsAtFrozen: u64 = TickMath.tokensToSatoshis(
@@ -284,8 +314,15 @@ describe('Per-entry fillPrice settlement — exact values', () => {
         );
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(20_000), u128.fromU64(tokensRequested),
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(20_000),
+            u128.fromU64(tokensRequested),
         );
         p.setPriceTick(tickReserve);
         q.tickBitmapManager.addToTickFIFO(p, tickReserve);
@@ -309,13 +346,8 @@ describe('Per-entry fillPrice settlement — exact values', () => {
 
         const result = q.tradeManager.executeTrade(r);
 
-        const expectedFee: u256 = u256.fromU64(
-            (tokensRequested * SWAP_FEE_BPS) / SWAP_FEE_DENOM,
-        );
-        const expectedBuyerOut: u256 = u256.sub(
-            u256.fromU64(tokensRequested),
-            expectedFee,
-        );
+        const expectedFee: u256 = u256.fromU64((tokensRequested * SWAP_FEE_BPS) / SWAP_FEE_DENOM);
+        const expectedBuyerOut: u256 = u256.sub(u256.fromU64(tokensRequested), expectedFee);
         expect<bool>(u256.eq(result.totalTokensPurchased, expectedBuyerOut)).toBe(true);
         // The sats spent should be the FROZEN-tick amount, not the after-tick amount.
         expect<u64>(result.totalSatoshisSpent).toBe(requiredSatsAtFrozen);

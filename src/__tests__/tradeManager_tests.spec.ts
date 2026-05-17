@@ -21,7 +21,7 @@ import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Reservation } from '../models/Reservation';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 // ProviderTypes removed in refactor — priority queue is gone
-import { INDEX_NOT_SET_VALUE, MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS } from '../constants/Contract';
+import { INDEX_NOT_SET_VALUE } from '../constants/Contract';
 
 const dummyBTCReceiver: string = 'dj2d89j22j23jdwejhd2903du02';
 
@@ -66,7 +66,8 @@ describe('TradeManager tests', () => {
                     new ReservationProviderData(
                         u256.fromU64(0),
                         u128.fromU32(10),
-                        0, u128.Zero,
+                        0,
+                        u128.Zero,
                         reservation.getCreationBlock(),
                     ),
                 );
@@ -102,7 +103,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     u256.fromU64(0),
                     u128.fromU32(10),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -172,7 +174,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromU32(5000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -252,7 +255,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromU32(5000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -331,7 +335,8 @@ describe('TradeManager tests', () => {
                     new ReservationProviderData(
                         provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                         u128.fromU32(100000),
-                        0, u128.Zero,
+                        0,
+                        u128.Zero,
                         reservation.getCreationBlock(),
                     ),
                 );
@@ -407,7 +412,8 @@ describe('TradeManager tests', () => {
                     new ReservationProviderData(
                         provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                         u128.fromU32(5000),
-                        0, u128.Zero,
+                        0,
+                        u128.Zero,
                         reservation.getCreationBlock(),
                     ),
                 );
@@ -482,7 +488,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromU32(5000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -564,7 +571,8 @@ describe('TradeManager tests', () => {
                     new ReservationProviderData(
                         provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                         u128.fromU32(5000),
-                        0, u128.Zero,
+                        0,
+                        u128.Zero,
                         reservation.getCreationBlock(),
                     ),
                 );
@@ -640,7 +648,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromU32(5000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -664,9 +673,9 @@ describe('TradeManager tests', () => {
 
             queue4.tradeManager.executeTrade(reservation2);
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(995000));
-            expect(queue4.liquidityQueue.liquidity /* totalTokensSellActivated gone */).toStrictEqual(
-                u256.fromU64(500000),
-            );
+            expect(
+                queue4.liquidityQueue.liquidity /* totalTokensSellActivated gone */,
+            ).toStrictEqual(u256.fromU64(500000));
         });
 
         it('should reset provider when only dust remaining', () => {
@@ -719,7 +728,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromU32(999999),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -795,7 +805,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromU32(999999),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -874,7 +885,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromU32(999999),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -951,7 +963,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromU32(5000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -1130,7 +1143,8 @@ describe('TradeManager tests', () => {
                     new ReservationProviderData(
                         provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                         u128.fromU32(5000),
-                        0, u128.Zero,
+                        0,
+                        u128.Zero,
                         reservation.getCreationBlock(),
                     ),
                 );
@@ -1270,7 +1284,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromU32(5000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -1351,7 +1366,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromU32(5000),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -1435,7 +1451,8 @@ describe('TradeManager tests', () => {
                     new ReservationProviderData(
                         provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                         u128.fromString(`5000000000`),
-                        0, u128.Zero,
+                        0,
+                        u128.Zero,
                         reservation.getCreationBlock(),
                     ),
                 );
@@ -1511,7 +1528,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromString(`5000000000`),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -1538,9 +1556,9 @@ describe('TradeManager tests', () => {
             expect(result.totalTokensPurchased).toStrictEqual(u256.fromU64(1000000000));
             expect(result.totalSatoshisSpent).toStrictEqual(1000);
 
-            expect(queue4.liquidityQueue.liquidity /* totalTokensSellActivated gone */).toStrictEqual(
-                SafeMath.div128(providerLiquidity, u128.fromU32(2)).toU256(),
-            );
+            expect(
+                queue4.liquidityQueue.liquidity /* totalTokensSellActivated gone */,
+            ).toStrictEqual(SafeMath.div128(providerLiquidity, u128.fromU32(2)).toU256());
 
             expect(provider.getLiquidityAmount()).toStrictEqual(
                 u128.fromString(`999999999999000000000`),
@@ -1599,7 +1617,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromString(`5000000000`),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -1626,9 +1645,9 @@ describe('TradeManager tests', () => {
             expect(result.totalTokensPurchased).toStrictEqual(u256.fromU64(5000000000));
             expect(result.totalSatoshisSpent).toStrictEqual(5000);
 
-            expect(queue4.liquidityQueue.liquidity /* totalTokensSellActivated gone */).toStrictEqual(
-                SafeMath.div128(providerLiquidity, u128.fromU32(2)).toU256(),
-            );
+            expect(
+                queue4.liquidityQueue.liquidity /* totalTokensSellActivated gone */,
+            ).toStrictEqual(SafeMath.div128(providerLiquidity, u128.fromU32(2)).toU256());
 
             expect(provider.getLiquidityAmount()).toStrictEqual(
                 u128.fromString(`999999999995000000000`),
@@ -1687,7 +1706,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     providerLiquidity,
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -1721,9 +1741,9 @@ describe('TradeManager tests', () => {
             expect(result.totalTokensPurchased).toStrictEqual(u256.fromU64(1000000000));
             expect(result.totalSatoshisSpent).toStrictEqual(1000);
 
-            expect(queue4.liquidityQueue.liquidity /* totalTokensSellActivated gone */).toStrictEqual(
-                SafeMath.div(providerLiquidity.toU256(), u256.fromU64(2)),
-            );
+            expect(
+                queue4.liquidityQueue.liquidity /* totalTokensSellActivated gone */,
+            ).toStrictEqual(SafeMath.div(providerLiquidity.toU256(), u256.fromU64(2)));
 
             expect(reservation2.getPurged()).toBeFalsy();
         });
@@ -1780,7 +1800,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     providerLiquidity,
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -1813,9 +1834,9 @@ describe('TradeManager tests', () => {
             expect(result.totalTokensPurchased).toStrictEqual(u256.fromU64(1000000000));
             expect(result.totalSatoshisSpent).toStrictEqual(1000);
 
-            expect(queue5.liquidityQueue.liquidity /* totalTokensSellActivated gone */).toStrictEqual(
-                SafeMath.div(providerLiquidity.toU256(), u256.fromU64(2)),
-            );
+            expect(
+                queue5.liquidityQueue.liquidity /* totalTokensSellActivated gone */,
+            ).toStrictEqual(SafeMath.div(providerLiquidity.toU256(), u256.fromU64(2)));
 
             expect(provider.getLiquidityAmount()).toStrictEqual(
                 SafeMath.sub128(providerLiquidity, u128.fromU64(1000000000)),
@@ -1876,7 +1897,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromString(`5000000000`),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -1954,7 +1976,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromString(`5000000000`),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -2032,7 +2055,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     provider.getId() /* was getQueueIndex() — providerId is u256 in new API */,
                     u128.fromString(`5000000000`),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );
@@ -2083,7 +2107,8 @@ describe('TradeManager tests', () => {
                 new ReservationProviderData(
                     initialProvider.getId() /* was getQueueIndex() */,
                     u128.fromString(`5000000000`),
-                    0, u128.Zero,
+                    0,
+                    u128.Zero,
                     reservation.getCreationBlock(),
                 ),
             );

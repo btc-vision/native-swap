@@ -15,10 +15,7 @@ import {
 import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
-import {
-    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
-    MAXIMUM_PROVIDER_PER_RESERVATIONS,
-} from '../constants/Contract';
+import { MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS, MAXIMUM_PROVIDER_PER_RESERVATIONS, } from '../constants/Contract';
 
 /**
  * Pool registration gate.
@@ -71,8 +68,13 @@ describe('Pool registration gate', () => {
             const providerId = createProviderId(msgSender1, tokenAddress1);
 
             const op1 = new CreatePoolOperation(
-                q.liquidityQueue, tokenAddress1, providerId, u128.Zero, 0,
-                receiverAddress1, receiverAddress1CSV,
+                q.liquidityQueue,
+                tokenAddress1,
+                providerId,
+                u128.Zero,
+                0,
+                receiverAddress1,
+                receiverAddress1CSV,
             );
             op1.execute();
             q.liquidityQueue.save();
@@ -80,8 +82,13 @@ describe('Pool registration gate', () => {
             // Second createPool against the same token must revert.
             const q2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
             const op2 = new CreatePoolOperation(
-                q2.liquidityQueue, tokenAddress1, providerId, u128.Zero, 0,
-                receiverAddress1, receiverAddress1CSV,
+                q2.liquidityQueue,
+                tokenAddress1,
+                providerId,
+                u128.Zero,
+                0,
+                receiverAddress1,
+                receiverAddress1CSV,
             );
             op2.execute();
         }).toThrow();
@@ -134,8 +141,13 @@ describe('Pool registration gate', () => {
         const providerId = createProviderId(msgSender1, tokenAddress1);
 
         const op = new CreatePoolOperation(
-            q.liquidityQueue, tokenAddress1, providerId, u128.Zero, 0,
-            receiverAddress1, receiverAddress1CSV,
+            q.liquidityQueue,
+            tokenAddress1,
+            providerId,
+            u128.Zero,
+            0,
+            receiverAddress1,
+            receiverAddress1CSV,
         );
         op.execute();
 

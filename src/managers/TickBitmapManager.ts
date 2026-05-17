@@ -3,11 +3,10 @@ import {
     Address,
     Blockchain,
     BytesWriter,
-    Potential,
     Revert,
     SafeMath,
-    StoredU32,
     StoredU256Array,
+    StoredU32,
     StoredU32Array,
 } from '@btc-vision/btc-runtime/runtime';
 import { StoredMapU256 } from '@btc-vision/btc-runtime/runtime/storage/maps/StoredMapU256';
@@ -19,13 +18,7 @@ import {
     TICK_LOWEST_WORD_POINTER,
     TICK_PURGED_POINTER,
 } from '../constants/StoredPointers';
-import {
-    BITMAP_WORD_COUNT,
-    INDEX_NOT_SET_VALUE,
-    MAX_TICK,
-    MIN_TICK,
-    TICK_OFFSET,
-} from '../constants/Contract';
+import { BITMAP_WORD_COUNT, INDEX_NOT_SET_VALUE, MAX_TICK, MIN_TICK } from '../constants/Contract';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { TickMath } from '../utils/TickMath';
@@ -289,14 +282,22 @@ export class TickBitmapManager implements ITickBitmapManager {
                 // No state mutation; we just account tokens.
 
                 // Add tokens accountable from purged/fifo at this tick (using fresh reads)
-                const tickTokens: u256 = this.previewAtTick(tick, fillPrice, remainingSats, maxProviders - walked);
+                const tickTokens: u256 = this.previewAtTick(
+                    tick,
+                    fillPrice,
+                    remainingSats,
+                    maxProviders - walked,
+                );
                 if (tickTokens.isZero()) {
                     // tick had no usable liquidity; advance scratch
                 } else {
                     const sats: u64 = TickMath.tokensToSatoshis(tickTokens.toU128(), fillPrice);
                     if (sats > remainingSats) {
                         // partial fill — this tick uses all remaining sats
-                        const partialTokens: u128 = TickMath.satoshisToTokens(remainingSats, fillPrice);
+                        const partialTokens: u128 = TickMath.satoshisToTokens(
+                            remainingSats,
+                            fillPrice,
+                        );
                         totalTokens = SafeMath.add(totalTokens, partialTokens.toU256());
                         return totalTokens;
                     }
@@ -314,67 +315,6 @@ export class TickBitmapManager implements ITickBitmapManager {
 
         return totalTokens;
     }
-
-    /** Helper used by the per-tick loop in `previewWalk`. Pure aggregate. */
-    private previewAtTick(tick: i32, fillPrice: u128, budgetSats: u64, providerBudget: u32): u256 {
-        let total: u256 = u256.Zero;
-        if (providerBudget == 0 || budgetSats == 0) return total;
-
-        const purged: StoredU32Array = this.openPurged(tick);
-        const fifo: StoredU256Array = this.openFifo(tick);
-
-        let walked: u32 = 0;
-
-        // purged sub-queue first
-        const pStart: u32 = purged.startingIndex();
-        const pLen: u32 = purged.getLength();
-        for (let i: u32 = pStart; i < pLen && walked < providerBudget; i++) {
-            const fifoIdx: u32 = purged.get_physical(i);
-            if (fifoIdx == INDEX_NOT_SET_VALUE) continue;
-            if (fifoIdx >= fifo.getLength()) continue;
-            const pid: u256 = fifo.get_physical(fifoIdx);
-            if (pid.isZero()) continue;
-            const provider: Provider = getProvider(pid);
-            if (!provider.isActive() || provider.toReset()) continue;
-            const avail: u128 = provider.getAvailableLiquidityAmount();
-            if (avail.isZero()) continue;
-            total = SafeMath.add(total, avail.toU256());
-            walked++;
-        }
-
-        // FIFO
-        const fStart: u32 = fifo.startingIndex();
-        const fLen: u32 = fifo.getLength();
-        for (let i: u32 = fStart; i < fLen && walked < providerBudget; i++) {
-            const pid: u256 = fifo.get_physical(i);
-            if (pid.isZero()) continue;
-            const provider: Provider = getProvider(pid);
-            if (!provider.isActive() || provider.toReset()) continue;
-            const avail: u128 = provider.getAvailableLiquidityAmount();
-            if (avail.isZero()) continue;
-            // Skip if also in purged (avoid double-counting)
-            if (provider.isPurged()) continue;
-            total = SafeMath.add(total, avail.toU256());
-            walked++;
-        }
-
-        return total;
-    }
-
-    private previewScan(
-        _purged: StoredU32Array,
-        _fifo: StoredU256Array,
-        _fillPrice: u128,
-        walked: u32,
-        _maxProviders: u32,
-    ): u32 {
-        // Stub: real walking is in previewAtTick. This return is just to match the loop API above.
-        return walked;
-    }
-
-    // ========================================================================
-    // Cleanup helpers
-    // ========================================================================
 
     /**
      * Advance starting indices past dead heads (tombstoned, fully consumed, or to-reset).
@@ -449,9 +389,7 @@ export class TickBitmapManager implements ITickBitmapManager {
                 if (provider.toReset()) {
                     provider.clearToReset();
                     provider.resetListingProviderValues();
-                    Blockchain.emit(
-                        new ProviderFulfilledEvent(provider.getId(), true, u256.Zero),
-                    );
+                    Blockchain.emit(new ProviderFulfilledEvent(provider.getId(), true, u256.Zero));
                     resetCount++;
                 }
             }
@@ -467,8 +405,7 @@ export class TickBitmapManager implements ITickBitmapManager {
     }
 
     // ========================================================================
-    // Reservation purge → push provider back to per-tick purged sub-queue
-    // (called by ReservationManager.restoreReservation per entry)
+    // Cleanup helpers
     // ========================================================================
 
     /**
@@ -481,9 +418,7 @@ export class TickBitmapManager implements ITickBitmapManager {
     public purgeAndRestoreProvider(data: ReservationProviderData): u256 {
         const provider: Provider = getProvider(data.providerId);
         if (u128.lt(provider.getReservedAmount(), data.providedAmount)) {
-            throw new Revert(
-                'Impossible state: reserved amount smaller than reservation entry.',
-            );
+            throw new Revert('Impossible state: reserved amount smaller than reservation entry.');
         }
         provider.subtractFromReservedAmount(data.providedAmount);
 
@@ -502,10 +437,6 @@ export class TickBitmapManager implements ITickBitmapManager {
 
         return data.providedAmount.toU256();
     }
-
-    // ========================================================================
-    // Read-only views
-    // ========================================================================
 
     /**
      * @method getCurrentBestTick
@@ -527,10 +458,76 @@ export class TickBitmapManager implements ITickBitmapManager {
         return MAX_TICK + 1;
     }
 
+    // ========================================================================
+    // Reservation purge → push provider back to per-tick purged sub-queue
+    // (called by ReservationManager.restoreReservation per entry)
+    // ========================================================================
+
     /** Persist all owned storage. */
     public save(): void {
         this.fulfilledQueue.save();
         this.lowestWord.save();
+    }
+
+    // ========================================================================
+    // Read-only views
+    // ========================================================================
+
+    /** Helper used by the per-tick loop in `previewWalk`. Pure aggregate. */
+    private previewAtTick(tick: i32, fillPrice: u128, budgetSats: u64, providerBudget: u32): u256 {
+        let total: u256 = u256.Zero;
+        if (providerBudget == 0 || budgetSats == 0) return total;
+
+        const purged: StoredU32Array = this.openPurged(tick);
+        const fifo: StoredU256Array = this.openFifo(tick);
+
+        let walked: u32 = 0;
+
+        // purged sub-queue first
+        const pStart: u32 = purged.startingIndex();
+        const pLen: u32 = purged.getLength();
+        for (let i: u32 = pStart; i < pLen && walked < providerBudget; i++) {
+            const fifoIdx: u32 = purged.get_physical(i);
+            if (fifoIdx == INDEX_NOT_SET_VALUE) continue;
+            if (fifoIdx >= fifo.getLength()) continue;
+            const pid: u256 = fifo.get_physical(fifoIdx);
+            if (pid.isZero()) continue;
+            const provider: Provider = getProvider(pid);
+            if (!provider.isActive() || provider.toReset()) continue;
+            const avail: u128 = provider.getAvailableLiquidityAmount();
+            if (avail.isZero()) continue;
+            total = SafeMath.add(total, avail.toU256());
+            walked++;
+        }
+
+        // FIFO
+        const fStart: u32 = fifo.startingIndex();
+        const fLen: u32 = fifo.getLength();
+        for (let i: u32 = fStart; i < fLen && walked < providerBudget; i++) {
+            const pid: u256 = fifo.get_physical(i);
+            if (pid.isZero()) continue;
+            const provider: Provider = getProvider(pid);
+            if (!provider.isActive() || provider.toReset()) continue;
+            const avail: u128 = provider.getAvailableLiquidityAmount();
+            if (avail.isZero()) continue;
+            // Skip if also in purged (avoid double-counting)
+            if (provider.isPurged()) continue;
+            total = SafeMath.add(total, avail.toU256());
+            walked++;
+        }
+
+        return total;
+    }
+
+    private previewScan(
+        _purged: StoredU32Array,
+        _fifo: StoredU256Array,
+        _fillPrice: u128,
+        walked: u32,
+        _maxProviders: u32,
+    ): u32 {
+        // Stub: real walking is in previewAtTick. This return is just to match the loop API above.
+        return walked;
     }
 
     // ========================================================================
@@ -562,7 +559,10 @@ export class TickBitmapManager implements ITickBitmapManager {
                 if (this._cursorTick <= MAX_TICK && TickMath.wordIdx(this._cursorTick) == wordIdx) {
                     const cursorBit: u32 = <u32>TickMath.bitIdx(this._cursorTick);
                     if (cursorBit > 0) {
-                        const lowMask: u256 = u256.sub(u256.shl(u256.One, <i32>cursorBit), u256.One);
+                        const lowMask: u256 = u256.sub(
+                            u256.shl(u256.One, <i32>cursorBit),
+                            u256.One,
+                        );
                         scratch = u256.and(scratch, u256.sub(u256.Max, lowMask));
                     }
                 }
@@ -608,10 +608,13 @@ export class TickBitmapManager implements ITickBitmapManager {
             const provider: Provider = getProvider(pid);
             if (provider.toReset() || !provider.isActive()) continue;
             if (provider.getAvailableLiquidityAmount().isZero()) continue;
-            if (!Provider.meetsMinimumReservationAmountAtTick(
-                provider.getAvailableLiquidityAmount(),
-                tick,
-            )) continue;
+            if (
+                !Provider.meetsMinimumReservationAmountAtTick(
+                    provider.getAvailableLiquidityAmount(),
+                    tick,
+                )
+            )
+                continue;
 
             return provider;
         }
@@ -637,10 +640,13 @@ export class TickBitmapManager implements ITickBitmapManager {
             if (provider.toReset() || !provider.isActive()) continue;
             if (provider.isPurged()) continue; // returned via scanPurged
             if (provider.getAvailableLiquidityAmount().isZero()) continue;
-            if (!Provider.meetsMinimumReservationAmountAtTick(
-                provider.getAvailableLiquidityAmount(),
-                tick,
-            )) continue;
+            if (
+                !Provider.meetsMinimumReservationAmountAtTick(
+                    provider.getAvailableLiquidityAmount(),
+                    tick,
+                )
+            )
+                continue;
 
             return provider;
         }

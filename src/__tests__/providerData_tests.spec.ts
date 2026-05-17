@@ -3,11 +3,7 @@ import { Blockchain, TransferHelper, u256To30Bytes } from '@btc-vision/btc-runti
 import { ProviderData } from '../models/ProviderData';
 import { PROVIDER_DATA_POINTER } from '../constants/StoredPointers';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import {
-    BLOCK_NOT_SET_VALUE,
-    INDEX_NOT_SET_VALUE,
-    // INITIAL_LIQUIDITY_PROVIDER_INDEX removed in refactor
-} from '../constants/Contract';
+import { BLOCK_NOT_SET_VALUE, INDEX_NOT_SET_VALUE } from '../constants/Contract';
 
 const providerBuffer: Uint8Array = u256To30Bytes(u256.fromU64(1111111111111111));
 describe('ProviderData tests', () => {

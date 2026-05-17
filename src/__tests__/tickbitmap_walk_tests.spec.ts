@@ -7,18 +7,14 @@ import {
     providerAddress1,
     providerAddress2,
     providerAddress3,
-    providerAddress4,
-    providerAddress5,
     receiverAddress1CSV,
     receiverAddress2CSV,
     receiverAddress3CSV,
-    receiverAddress4CSV,
-    receiverAddress5CSV,
     setBlockchainEnvironment,
     tokenAddress1,
     tokenIdUint8Array1,
 } from './test_helper';
-import { MAX_TICK, MIN_TICK } from '../constants/Contract';
+import { MAX_TICK } from '../constants/Contract';
 
 /**
  * Bitmap walk + per-tick FIFO + purged sub-queue ordering.
@@ -55,7 +51,9 @@ describe('TickBitmapManager — bitmap walk + FIFO ordering', () => {
         const p = createProvider(
             providerAddress1,
             tokenAddress1,
-            false, false, false,
+            false,
+            false,
+            false,
             receiverAddress1CSV,
             u128.Zero,
             u128.fromU64(1_000_000),
@@ -71,16 +69,37 @@ describe('TickBitmapManager — bitmap walk + FIFO ordering', () => {
         const q = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
         const pA = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         const pB = createProvider(
-            providerAddress2, tokenAddress1, false, false, false,
-            receiverAddress2CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress2,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress2CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         const pC = createProvider(
-            providerAddress3, tokenAddress1, false, false, false,
-            receiverAddress3CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress3,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress3CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         pA.setPriceTick(500);
         pB.setPriceTick(-200);
@@ -100,12 +119,26 @@ describe('TickBitmapManager — bitmap walk + FIFO ordering', () => {
         const tick: i32 = 250;
 
         const pA = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         const pB = createProvider(
-            providerAddress2, tokenAddress1, false, false, false,
-            receiverAddress2CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress2,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress2CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         pA.setPriceTick(tick);
         pB.setPriceTick(tick);
@@ -128,12 +161,26 @@ describe('TickBitmapManager — bitmap walk + FIFO ordering', () => {
 
         // Provider A listed first via FIFO. Provider B listed second, then pushed to purged[T].
         const pFresh = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         const pPurged = createProvider(
-            providerAddress2, tokenAddress1, false, false, false,
-            receiverAddress2CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress2,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress2CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         pFresh.setPriceTick(tick);
         pPurged.setPriceTick(tick);
@@ -152,12 +199,26 @@ describe('TickBitmapManager — bitmap walk + FIFO ordering', () => {
         const q = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
         const pCheap = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         const pExpensive = createProvider(
-            providerAddress2, tokenAddress1, false, false, false,
-            receiverAddress2CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress2,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress2CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         pCheap.setPriceTick(-100);
         pExpensive.setPriceTick(300);
@@ -182,8 +243,15 @@ describe('TickBitmapManager — bitmap walk + FIFO ordering', () => {
         const tick: i32 = 2000;
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         p.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(p, tick);
@@ -203,12 +271,26 @@ describe('TickBitmapManager — bitmap walk + FIFO ordering', () => {
         const tick: i32 = 3000;
 
         const pFresh = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         const pPurged = createProvider(
-            providerAddress2, tokenAddress1, false, false, false,
-            receiverAddress2CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress2,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress2CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         pFresh.setPriceTick(tick);
         pPurged.setPriceTick(tick);
@@ -231,8 +313,15 @@ describe('TickBitmapManager — bitmap walk + FIFO ordering', () => {
         const tick: i32 = 4000;
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.fromU64(1_000_000), u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.fromU64(1_000_000),
+            u128.Zero,
         );
         p.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(p, tick);
@@ -252,8 +341,15 @@ describe('TickBitmapManager — bitmap walk + FIFO ordering', () => {
         const tick: i32 = 5000;
 
         const p = createProvider(
-            providerAddress1, tokenAddress1, false, false, false,
-            receiverAddress1CSV, u128.Zero, u128.Zero, u128.Zero,
+            providerAddress1,
+            tokenAddress1,
+            false,
+            false,
+            false,
+            receiverAddress1CSV,
+            u128.Zero,
+            u128.Zero,
+            u128.Zero,
         );
         p.setPriceTick(tick);
         q.tickBitmapManager.addToTickFIFO(p, tick);

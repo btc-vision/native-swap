@@ -8,17 +8,10 @@ import {
     Networks,
     StoredBooleanArray,
     StoredU128Array,
-    StoredU256Array,
-    StoredU32Array,
     U64_BYTE_LENGTH,
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
-
-// Network MUST be set before module-level toCSV(...) calls below — those
-// reach into Network.hrp(Blockchain.network) at init time.
-Blockchain.network = Networks.Regtest;
-
 import { getProvider, Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
 import { LiquidityQueue } from '../managers/LiquidityQueue';
@@ -29,17 +22,17 @@ import { TradeManager } from '../managers/TradeManager';
 
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { ILiquidityQueueReserve } from '../managers/interfaces/ILiquidityQueueReserve';
-import { IReservationManager } from '../managers/interfaces/IReservationManager';
 import { ITickBitmapManager } from '../managers/interfaces/ITickBitmapManager';
 import { ITradeManager } from '../managers/interfaces/ITradeManager';
 
 import { ReserveLiquidityOperation } from '../operations/ReserveLiquidityOperation';
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
 
-import {
-    AT_LEAST_PROVIDERS_TO_PURGE,
-    CSV_BLOCKS_REQUIRED,
-} from '../constants/Contract';
+import { AT_LEAST_PROVIDERS_TO_PURGE, CSV_BLOCKS_REQUIRED } from '../constants/Contract';
+
+// Network MUST be set before module-level toCSV(...) calls below — those
+// reach into Network.hrp(Blockchain.network) at init time.
+Blockchain.network = Networks.Regtest;
 
 // ============================================================================
 // Canonical addresses (preserved verbatim from the old harness so existing
@@ -353,8 +346,38 @@ export function createProviders(
 
     for (let i: u8 = startIndex; i < nbProviderToAdd + startIndex; i++) {
         const address: Address = new Address([
-            68, 153, 66, 199, 127, 168, 221, 199, 156, 120, 43, 34, 88, 0, 29, 93, 123, 133, 101,
-            220, 185, 192, 64, 105, 97, 112, 200, 3, 234, 133, 61, i,
+            68,
+            153,
+            66,
+            199,
+            127,
+            168,
+            221,
+            199,
+            156,
+            120,
+            43,
+            34,
+            88,
+            0,
+            29,
+            93,
+            123,
+            133,
+            101,
+            220,
+            185,
+            192,
+            64,
+            105,
+            97,
+            112,
+            200,
+            3,
+            234,
+            133,
+            61,
+            i,
         ]);
         const provider = createProvider(
             address,
@@ -480,10 +503,14 @@ export class TestLiquidityQueue extends LiquidityQueue implements ITestLiquidity
         this.liquidityQueueReserve.liquidity = value;
     }
 
-    public purgeCalled(): boolean { return this._purgeCalled; }
+    public purgeCalled(): boolean {
+        return this._purgeCalled;
+    }
 
     /** @deprecated kept for compat — `updateVirtualPoolIfNeeded` removed in refactor */
-    public updateCalled(): boolean { return false; }
+    public updateCalled(): boolean {
+        return false;
+    }
 }
 
 export class TestReservationManager extends ReservationManager {
@@ -494,7 +521,9 @@ export class TestReservationManager extends ReservationManager {
         return super.purgeReservationsAndRestoreProviders(lastPurgedBlock);
     }
 
-    public purgeCalled(): boolean { return this._purgeCalled; }
+    public purgeCalled(): boolean {
+        return this._purgeCalled;
+    }
 
     public lastBlockReservation(): u64 {
         const length: u32 = this.blocksWithReservations.getLength();
@@ -636,7 +665,11 @@ export class TestReserveLiquidityOperation extends ReserveLiquidityOperation {
     }
 
     /** @deprecated kept for compat; routes to the new internal walk if the API still exists */
-    public callReserveFromProvider(_reservation: Reservation, _provider: Provider, _quote: u256): void {
+    public callReserveFromProvider(
+        _reservation: Reservation,
+        _provider: Provider,
+        _quote: u256,
+    ): void {
         // no-op: in the new arch the walk is driven entirely from `execute()`
     }
 
