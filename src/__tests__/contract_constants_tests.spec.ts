@@ -1,4 +1,4 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import {
     AT_LEAST_PROVIDERS_TO_PURGE,
     BITMAP_WORD_COUNT,
@@ -130,8 +130,7 @@ describe('Contract constants — invariants', (): void => {
     });
 
     it('trade-size floor is a clean multiple of per-entry strict minimum', (): void => {
-        expect<u64>(
-            MINIMUM_TRADE_SIZE_IN_SAT % STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
-        ).toBe(0);
+        expect<u64>(MINIMUM_TRADE_SIZE_IN_SAT % STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT)
+            .toBe(0);
     });
 });

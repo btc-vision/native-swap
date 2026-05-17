@@ -88,93 +88,59 @@ export class Provider {
      * @method isActive
      * @description Whether this provider has an active listing in some `FIFO[priceTick]`.
      */
-    public isActive(): boolean {
-        return this.providerData.active;
-    }
+    public isActive(): boolean { return this.providerData.active; }
 
     /** Mark the provider as actively listed. */
-    public activate(): void {
-        this.providerData.active = true;
-    }
+    public activate(): void { this.providerData.active = true; }
 
     /** Mark the provider as inactive (e.g., after withdraw). */
-    public deactivate(): void {
-        this.providerData.active = false;
-    }
+    public deactivate(): void { this.providerData.active = false; }
 
     /**
      * @method toReset
      * @description Whether the provider sits in the global fulfilled queue waiting to be
      * fully purged from storage by `resetFulfilledProviders(count)`.
      */
-    public toReset(): boolean {
-        return this.providerData.toReset;
-    }
+    public toReset(): boolean { return this.providerData.toReset; }
 
     /** Enqueue this provider for the global fulfilled queue (dust cleanup path). */
-    public markToReset(): void {
-        this.providerData.toReset = true;
-    }
+    public markToReset(): void { this.providerData.toReset = true; }
 
     /** Clear the toReset flag (after the lazy reset path completes). */
-    public clearToReset(): void {
-        this.providerData.toReset = false;
-    }
+    public clearToReset(): void { this.providerData.toReset = false; }
 
     /**
      * @method isPurged
      * @description Whether the provider is currently sitting in `purged[priceTick]`
      * (fast-path re-allocation queue after a reservation against them expired).
      */
-    public isPurged(): boolean {
-        return this.providerData.purged;
-    }
+    public isPurged(): boolean { return this.providerData.purged; }
 
     /** Mark the provider as residing in the per-tick purged sub-queue. */
-    public markPurged(): void {
-        this.providerData.purged = true;
-    }
+    public markPurged(): void { this.providerData.purged = true; }
 
     /** Clear the purged flag (when removed from the purged sub-queue). */
-    public clearPurged(): void {
-        this.providerData.purged = false;
-    }
+    public clearPurged(): void { this.providerData.purged = false; }
 
     // ========================================================================
     // Tick & queue position
     // ========================================================================
 
     /** @returns {i32} The tick this provider listed at. */
-    public getPriceTick(): i32 {
-        return this.providerData.priceTick;
-    }
-    public setPriceTick(value: i32): void {
-        this.providerData.priceTick = value;
-    }
+    public getPriceTick(): i32 { return this.providerData.priceTick; }
+    public setPriceTick(value: i32): void { this.providerData.priceTick = value; }
 
     /** @returns {u32} Position inside `FIFO[priceTick]`. */
-    public getTickFifoIndex(): u32 {
-        return this.providerData.tickFifoIndex;
-    }
-    public setTickFifoIndex(value: u32): void {
-        this.providerData.tickFifoIndex = value;
-    }
+    public getTickFifoIndex(): u32 { return this.providerData.tickFifoIndex; }
+    public setTickFifoIndex(value: u32): void { this.providerData.tickFifoIndex = value; }
 
     /** Compatibility alias for `tickFifoIndex` (legacy call sites use `queueIndex`). */
-    public getQueueIndex(): u32 {
-        return this.providerData.queueIndex;
-    }
-    public setQueueIndex(value: u32): void {
-        this.providerData.queueIndex = value;
-    }
+    public getQueueIndex(): u32 { return this.providerData.queueIndex; }
+    public setQueueIndex(value: u32): void { this.providerData.queueIndex = value; }
 
     /** @returns {u32} Position inside `purged[priceTick]`, or INDEX_NOT_SET_VALUE if not purged. */
-    public getPurgedIndex(): u32 {
-        return this.providerData.purgedIndex;
-    }
-    public setPurgedIndex(value: u32): void {
-        this.providerData.purgedIndex = value;
-    }
+    public getPurgedIndex(): u32 { return this.providerData.purgedIndex; }
+    public setPurgedIndex(value: u32): void { this.providerData.purgedIndex = value; }
 
     // ========================================================================
     // Freeze invariant: latestReservedUntilBlock
@@ -219,24 +185,16 @@ export class Provider {
     // Block of first listing (informational, used in events)
     // ========================================================================
 
-    public getListedTokenAtBlock(): u64 {
-        return this.providerData.listedTokenAtBlock;
-    }
-    public setListedTokenAtBlock(value: u64): void {
-        this.providerData.listedTokenAtBlock = value;
-    }
+    public getListedTokenAtBlock(): u64 { return this.providerData.listedTokenAtBlock; }
+    public setListedTokenAtBlock(value: u64): void { this.providerData.listedTokenAtBlock = value; }
 
     // ========================================================================
     // Token amounts (base units, u128)
     // ========================================================================
 
     /** @returns {u128} Tokens currently locked by active reservations against this provider. */
-    public getReservedAmount(): u128 {
-        return this.providerData.reservedAmount;
-    }
-    public setReservedAmount(value: u128): void {
-        this.providerData.reservedAmount = value;
-    }
+    public getReservedAmount(): u128 { return this.providerData.reservedAmount; }
+    public setReservedAmount(value: u128): void { this.providerData.reservedAmount = value; }
 
     public addToReservedAmount(value: u128): void {
         this.providerData.reservedAmount = SafeMath.add128(this.providerData.reservedAmount, value);
@@ -255,18 +213,11 @@ export class Provider {
     }
 
     /** @returns {u128} Total tokens this provider has listed (reserved + available). */
-    public getLiquidityAmount(): u128 {
-        return this.providerData.liquidityAmount;
-    }
-    public setLiquidityAmount(value: u128): void {
-        this.providerData.liquidityAmount = value;
-    }
+    public getLiquidityAmount(): u128 { return this.providerData.liquidityAmount; }
+    public setLiquidityAmount(value: u128): void { this.providerData.liquidityAmount = value; }
 
     public addToLiquidityAmount(value: u128): void {
-        this.providerData.liquidityAmount = SafeMath.add128(
-            this.providerData.liquidityAmount,
-            value,
-        );
+        this.providerData.liquidityAmount = SafeMath.add128(this.providerData.liquidityAmount, value);
     }
 
     public hasLiquidityAmount(): boolean {
@@ -274,10 +225,7 @@ export class Provider {
     }
 
     public subtractFromLiquidityAmount(value: u128): void {
-        this.providerData.liquidityAmount = SafeMath.sub128(
-            this.providerData.liquidityAmount,
-            value,
-        );
+        this.providerData.liquidityAmount = SafeMath.sub128(this.providerData.liquidityAmount, value);
     }
 
     /**
@@ -299,29 +247,21 @@ export class Provider {
     // ========================================================================
 
     /** @returns {string} The provider's CSV P2WSH receiver address (where buyers send sats). */
-    public getBtcReceiver(): string {
-        return this.internalBTCReceiver.value;
-    }
-    public setBtcReceiver(value: string): void {
-        this.internalBTCReceiver.value = value;
-    }
+    public getBtcReceiver(): string { return this.internalBTCReceiver.value; }
+    public setBtcReceiver(value: string): void { this.internalBTCReceiver.value = value; }
 
     // ========================================================================
     // Identity
     // ========================================================================
 
-    public getId(): u256 {
-        return this.id;
-    }
+    public getId(): u256 { return this.id; }
 
     // ========================================================================
     // Lifecycle
     // ========================================================================
 
     /** Reset everything. Currently equivalent to `resetListingProviderValues`. */
-    public resetAll(): void {
-        this.providerData.resetAll();
-    }
+    public resetAll(): void { this.providerData.resetAll(); }
 
     /**
      * @method resetListingProviderValues
@@ -334,9 +274,7 @@ export class Provider {
     }
 
     /** Persist any in-memory changes to storage. Called by `saveAllProviders` at txn commit. */
-    public save(): void {
-        this.providerData.save();
-    }
+    public save(): void { this.providerData.save(); }
 
     private ensureBTCReceiver(): void {
         if (this._btcReceiver === null) {

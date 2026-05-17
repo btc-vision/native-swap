@@ -1,5 +1,11 @@
 import { BaseOperation } from './BaseOperation';
-import { Address, Blockchain, ExtendedAddress, Revert, SafeMath, } from '@btc-vision/btc-runtime/runtime';
+import {
+    Address,
+    Blockchain,
+    ExtendedAddress,
+    Revert,
+    SafeMath,
+} from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Reservation } from '../models/Reservation';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
@@ -14,6 +20,7 @@ import {
     MAXIMUM_PROVIDER_PER_RESERVATIONS,
     MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
     MINIMUM_TRADE_SIZE_IN_SAT,
+    RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
     STRICT_MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT,
 } from '../constants/Contract';
 
@@ -117,16 +124,25 @@ export class ReserveLiquidityOperation extends BaseOperation {
             if (!Provider.meetsMinimumReservationAmountAtTick(tokensToReserve, tick)) break;
 
             // Dust-snap: if leftover after this reservation would be below the per-provider
-            // minimum, grab the whole remaining liquidity into THIS entry.
+            // minimum, grab the whole remaining liquidity into THIS entry as a bonus to the
+            // buyer (the dust would otherwise be stranded). The buyer's sats spend is capped
+            // at their existing budget — the provider effectively absorbs the dust loss.
+            let dustSnapped: bool = false;
             const leftoverTokens: u128 = SafeMath.sub128(avail, tokensToReserve);
             if (!leftoverTokens.isZero()) {
                 const leftoverSats: u64 = TickMath.tokensToSatoshis(leftoverTokens, fillPrice);
                 if (leftoverSats < MINIMUM_PROVIDER_RESERVATION_AMOUNT_IN_SAT) {
                     tokensToReserve = avail;
+                    dustSnapped = true;
                 }
             }
 
-            const sats: u64 = TickMath.tokensToSatoshis(tokensToReserve, fillPrice);
+            // Buyer's sats spent for this entry. If dust-snapped, cap at remainingSats —
+            // the bonus tokens are free to the buyer.
+            let sats: u64 = TickMath.tokensToSatoshis(tokensToReserve, fillPrice);
+            if (dustSnapped && sats > remainingSats) {
+                sats = remainingSats;
+            }
             if (sats == 0) break; // shouldn't happen given the min checks, defensive guard
 
             provider.addToReservedAmount(tokensToReserve);
@@ -186,11 +202,11 @@ export class ReserveLiquidityOperation extends BaseOperation {
                 `NATIVE_SWAP: maxAmountInSats below minimum trade size (${MINIMUM_TRADE_SIZE_IN_SAT}).`,
             );
         }
-        if (
-            this.maximumProvidersPerReservation == 0 ||
-            this.maximumProvidersPerReservation > MAXIMUM_PROVIDER_PER_RESERVATIONS
-        ) {
-            throw new Revert(`NATIVE_SWAP: maximumProvidersPerReservation out of range.`);
+        if (this.maximumProvidersPerReservation == 0 ||
+            this.maximumProvidersPerReservation > MAXIMUM_PROVIDER_PER_RESERVATIONS) {
+            throw new Revert(
+                `NATIVE_SWAP: maximumProvidersPerReservation out of range.`,
+            );
         }
     }
 

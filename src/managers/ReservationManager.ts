@@ -17,7 +17,10 @@ import {
     PURGE_RESERVATION_INDEX_POINTER,
     RESERVATION_IDS_BY_BLOCK_POINTER,
 } from '../constants/StoredPointers';
-import { EMIT_PURGE_EVENTS, RESERVATION_EXPIRE_AFTER_IN_BLOCKS } from '../constants/Contract';
+import {
+    EMIT_PURGE_EVENTS,
+    RESERVATION_EXPIRE_AFTER_IN_BLOCKS,
+} from '../constants/Contract';
 import { Reservation } from '../models/Reservation';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { ReservationPurgedEvent } from '../events/ReservationPurgedEvent';

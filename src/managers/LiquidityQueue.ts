@@ -1,6 +1,9 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, Blockchain, StoredU64 } from '@btc-vision/btc-runtime/runtime';
-import { LAST_PURGED_BLOCK_POINTER, POOL_REGISTERED_POINTER } from '../constants/StoredPointers';
+import {
+    LAST_PURGED_BLOCK_POINTER,
+    POOL_REGISTERED_POINTER,
+} from '../constants/StoredPointers';
 import { MAX_TICK } from '../constants/Contract';
 import { Provider } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
@@ -55,35 +58,6 @@ export class LiquidityQueue implements ILiquidityQueue {
     // Pool registration
     // ============================================================
 
-    public get availableLiquidity(): u256 {
-        return this.liquidityQueueReserve.availableLiquidity;
-    }
-
-    public get liquidity(): u256 {
-        return this.liquidityQueueReserve.liquidity;
-    }
-
-    // ============================================================
-    // Reserve / aggregate getters
-    // ============================================================
-
-    public get reservedLiquidity(): u256 {
-        return this.liquidityQueueReserve.reservedLiquidity;
-    }
-
-    public get lastPurgedBlock(): u64 {
-        return this._lastPurgedBlock.get(0);
-    }
-
-    public set lastPurgedBlock(value: u64) {
-        this._lastPurgedBlock.set(0, value);
-        this._lastPurgedBlock.save();
-    }
-
-    public get timeOutEnabled(): bool {
-        return this._timeoutEnabled;
-    }
-
     /** Has `createPool` been called for this token? Required for listLiquidity / reserve. */
     public isPoolRegistered(): bool {
         return this._poolRegistered.get(0) != 0;
@@ -94,6 +68,22 @@ export class LiquidityQueue implements ILiquidityQueue {
         this._poolRegistered.set(0, 1);
         this._poolRegistered.save();
     }
+
+    // ============================================================
+    // Reserve / aggregate getters
+    // ============================================================
+
+    public get availableLiquidity(): u256 { return this.liquidityQueueReserve.availableLiquidity; }
+    public get liquidity(): u256 { return this.liquidityQueueReserve.liquidity; }
+    public get reservedLiquidity(): u256 { return this.liquidityQueueReserve.reservedLiquidity; }
+
+    public get lastPurgedBlock(): u64 { return this._lastPurgedBlock.get(0); }
+    public set lastPurgedBlock(value: u64) {
+        this._lastPurgedBlock.set(0, value);
+        this._lastPurgedBlock.save();
+    }
+
+    public get timeOutEnabled(): bool { return this._timeoutEnabled; }
 
     // ============================================================
     // Reservation manager façade
@@ -185,18 +175,10 @@ export class LiquidityQueue implements ILiquidityQueue {
     // Reserve counters
     // ============================================================
 
-    public increaseTotalReserve(value: u256): void {
-        this.liquidityQueueReserve.addToTotalReserve(value);
-    }
-    public increaseTotalReserved(value: u256): void {
-        this.liquidityQueueReserve.addToTotalReserved(value);
-    }
-    public decreaseTotalReserve(value: u256): void {
-        this.liquidityQueueReserve.subFromTotalReserve(value);
-    }
-    public decreaseTotalReserved(value: u256): void {
-        this.liquidityQueueReserve.subFromTotalReserved(value);
-    }
+    public increaseTotalReserve(value: u256): void { this.liquidityQueueReserve.addToTotalReserve(value); }
+    public increaseTotalReserved(value: u256): void { this.liquidityQueueReserve.addToTotalReserved(value); }
+    public decreaseTotalReserve(value: u256): void { this.liquidityQueueReserve.subFromTotalReserve(value); }
+    public decreaseTotalReserved(value: u256): void { this.liquidityQueueReserve.subFromTotalReserved(value); }
 
     public save(): void {
         this.tickBitmapManager.save();

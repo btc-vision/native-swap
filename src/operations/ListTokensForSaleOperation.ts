@@ -63,7 +63,10 @@ export class ListTokensForSaleOperation extends BaseOperation {
         this.checkPreConditions();
 
         const wasActive: bool = this.provider.isActive();
-        const totalAfter: u128 = SafeMath.add128(this.provider.getLiquidityAmount(), this.amountIn);
+        const totalAfter: u128 = SafeMath.add128(
+            this.provider.getLiquidityAmount(),
+            this.amountIn,
+        );
 
         // Minimum listing value: enforced on TOTAL liquidity at this tick, post-op.
         this.ensureLiquidityNotTooLowAtTick(totalAfter, this.priceTick);
@@ -119,9 +122,7 @@ export class ListTokensForSaleOperation extends BaseOperation {
         }
 
         // Liquidity overflow guard (u128.add128 already revert-on-overflow, but be explicit)
-        if (
-            !u128.lt(this.provider.getLiquidityAmount(), SafeMath.sub128(u128.Max, this.amountIn))
-        ) {
+        if (!u128.lt(this.provider.getLiquidityAmount(), SafeMath.sub128(u128.Max, this.amountIn))) {
             throw new Revert('NATIVE_SWAP: Liquidity overflow. Add a smaller amount.');
         }
 

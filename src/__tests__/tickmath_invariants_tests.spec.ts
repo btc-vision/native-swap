@@ -1,6 +1,13 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { TickMath } from '../utils/TickMath';
-import { BITMAP_WORD_COUNT, FP_SHIFT, MAX_TICK, MIN_TICK, ratioAtBit, } from '../constants/Contract';
+import {
+    BITMAP_WORD_COUNT,
+    FP_SHIFT,
+    MAX_TICK,
+    MIN_TICK,
+    TICK_OFFSET,
+    ratioAtBit,
+} from '../constants/Contract';
 
 /**
  * Pure-math invariants for TickMath. None of these tests touch storage or any
@@ -48,7 +55,10 @@ describe('TickMath — monotonicity', (): void => {
         const lo: u256 = u256.lt(diffScaled, p1000) ? diffScaled : p1000;
         const hi: u256 = u256.lt(diffScaled, p1000) ? p1000 : diffScaled;
         const absErr: u256 = u256.sub(hi, lo);
-        const tolerance: u256 = u256.div(u256.mul(p1000, u256.fromU64(5)), u256.fromU64(1_000));
+        const tolerance: u256 = u256.div(
+            u256.mul(p1000, u256.fromU64(5)),
+            u256.fromU64(1_000),
+        );
         expect<bool>(u256.le(absErr, tolerance)).toBe(true);
     });
 });
@@ -96,7 +106,9 @@ describe('TickMath — boundary ratio table', (): void => {
     });
 
     it('ratioAtBit(15) ≈ 1.001^32768 × 2^88 (the largest stored constant)', (): void => {
-        const expected: u256 = u256.fromString('51819170982739684170545163151439426777124');
+        const expected: u256 = u256.fromString(
+            '51819170982739684170545163151439426777124',
+        );
         const actual: u256 = ratioAtBit(15);
         expect<bool>(u256.eq(actual, expected)).toBe(true);
     });

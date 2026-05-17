@@ -39,44 +39,26 @@ export class ProviderData {
     // ------------------------------------------------------------------------
 
     private _active: boolean = false;
-    @inline public get active(): boolean {
-        this.ensureValues();
-        return this._active;
-    }
+    @inline public get active(): boolean { this.ensureValues(); return this._active; }
     public set active(value: boolean) {
         this.ensureValues();
-        if (this._active !== value) {
-            this._active = value;
-            this.stateChanged = true;
-        }
+        if (this._active !== value) { this._active = value; this.stateChanged = true; }
     }
 
     /** Provider has been pushed to their tick's purged sub-queue (fast-path re-allocation). */
     private _purged: boolean = false;
-    @inline public get purged(): boolean {
-        this.ensureValues();
-        return this._purged;
-    }
+    @inline public get purged(): boolean { this.ensureValues(); return this._purged; }
     public set purged(value: boolean) {
         this.ensureValues();
-        if (this._purged !== value) {
-            this._purged = value;
-            this.stateChanged = true;
-        }
+        if (this._purged !== value) { this._purged = value; this.stateChanged = true; }
     }
 
     /** Provider has been moved to the global fulfilled queue and is awaiting reset. */
     private _toReset: boolean = false;
-    @inline public get toReset(): boolean {
-        this.ensureValues();
-        return this._toReset;
-    }
+    @inline public get toReset(): boolean { this.ensureValues(); return this._toReset; }
     public set toReset(value: boolean) {
         this.ensureValues();
-        if (this._toReset !== value) {
-            this._toReset = value;
-            this.stateChanged = true;
-        }
+        if (this._toReset !== value) { this._toReset = value; this.stateChanged = true; }
     }
 
     // ------------------------------------------------------------------------
@@ -85,16 +67,10 @@ export class ProviderData {
 
     /** The tick this provider is listed at. Set by listLiquidity / createPool / updateListing. */
     private _priceTick: i32 = 0;
-    @inline public get priceTick(): i32 {
-        this.ensureValues();
-        return this._priceTick;
-    }
+    @inline public get priceTick(): i32 { this.ensureValues(); return this._priceTick; }
     public set priceTick(value: i32) {
         this.ensureValues();
-        if (this._priceTick !== value) {
-            this._priceTick = value;
-            this.stateChanged = true;
-        }
+        if (this._priceTick !== value) { this._priceTick = value; this.stateChanged = true; }
     }
 
     /**
@@ -102,36 +78,20 @@ export class ProviderData {
      * Kept as `queueIndex` getter/setter alias for compatibility.
      */
     private _tickFifoIndex: u32 = INDEX_NOT_SET_VALUE;
-    @inline public get tickFifoIndex(): u32 {
-        this.ensureValues();
-        return this._tickFifoIndex;
-    }
+    @inline public get tickFifoIndex(): u32 { this.ensureValues(); return this._tickFifoIndex; }
     public set tickFifoIndex(value: u32) {
         this.ensureValues();
-        if (this._tickFifoIndex !== value) {
-            this._tickFifoIndex = value;
-            this.stateChanged = true;
-        }
+        if (this._tickFifoIndex !== value) { this._tickFifoIndex = value; this.stateChanged = true; }
     }
-    @inline public get queueIndex(): u32 {
-        return this.tickFifoIndex;
-    }
-    public set queueIndex(value: u32) {
-        this.tickFifoIndex = value;
-    }
+    @inline public get queueIndex(): u32 { return this.tickFifoIndex; }
+    public set queueIndex(value: u32) { this.tickFifoIndex = value; }
 
     /** Position inside purged[priceTick] sub-queue. INDEX_NOT_SET_VALUE if not purged. */
     private _purgedIndex: u32 = INDEX_NOT_SET_VALUE;
-    @inline public get purgedIndex(): u32 {
-        this.ensureValues();
-        return this._purgedIndex;
-    }
+    @inline public get purgedIndex(): u32 { this.ensureValues(); return this._purgedIndex; }
     public set purgedIndex(value: u32) {
         this.ensureValues();
-        if (this._purgedIndex !== value) {
-            this._purgedIndex = value;
-            this.stateChanged = true;
-        }
+        if (this._purgedIndex !== value) { this._purgedIndex = value; this.stateChanged = true; }
     }
 
     // ------------------------------------------------------------------------
@@ -161,10 +121,7 @@ export class ProviderData {
     // ------------------------------------------------------------------------
 
     private _listedTokenAtBlock: u64 = BLOCK_NOT_SET_VALUE;
-    @inline public get listedTokenAtBlock(): u64 {
-        this.ensureValues();
-        return this._listedTokenAtBlock;
-    }
+    @inline public get listedTokenAtBlock(): u64 { this.ensureValues(); return this._listedTokenAtBlock; }
     public set listedTokenAtBlock(value: u64) {
         this.ensureValues();
         if (this._listedTokenAtBlock !== value) {
@@ -178,10 +135,7 @@ export class ProviderData {
     // ------------------------------------------------------------------------
 
     private _liquidityAmount: u128 = u128.Zero;
-    @inline public get liquidityAmount(): u128 {
-        this.ensureAmount();
-        return this._liquidityAmount;
-    }
+    @inline public get liquidityAmount(): u128 { this.ensureAmount(); return this._liquidityAmount; }
     public set liquidityAmount(value: u128) {
         this.ensureAmount();
         if (!u128.eq(this._liquidityAmount, value)) {
@@ -191,10 +145,7 @@ export class ProviderData {
     }
 
     private _reservedAmount: u128 = u128.Zero;
-    @inline public get reservedAmount(): u128 {
-        this.ensureAmount();
-        return this._reservedAmount;
-    }
+    @inline public get reservedAmount(): u128 { this.ensureAmount(); return this._reservedAmount; }
     public set reservedAmount(value: u128) {
         this.ensureAmount();
         if (!u128.eq(this._reservedAmount, value)) {
@@ -278,16 +229,13 @@ export class ProviderData {
      */
     private packValues(): Uint8Array {
         const writer: BytesWriter = new BytesWriter(
-            U8_BYTE_LENGTH +
-                U32_BYTE_LENGTH +
-                U32_BYTE_LENGTH +
-                U32_BYTE_LENGTH +
-                U64_BYTE_LENGTH +
-                U64_BYTE_LENGTH,
+            U8_BYTE_LENGTH + U32_BYTE_LENGTH + U32_BYTE_LENGTH + U32_BYTE_LENGTH + U64_BYTE_LENGTH + U64_BYTE_LENGTH,
         );
 
         const flag: u8 =
-            (this._active ? 1 : 0) | ((this._purged ? 1 : 0) << 1) | ((this._toReset ? 1 : 0) << 2);
+            (this._active ? 1 : 0) |
+            ((this._purged ? 1 : 0) << 1) |
+            ((this._toReset ? 1 : 0) << 2);
 
         writer.writeU8(flag);
         writer.writeU32(this._tickFifoIndex);

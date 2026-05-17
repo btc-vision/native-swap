@@ -1,5 +1,8 @@
 import { Address, SafeMath, StoredMapU256 } from '@btc-vision/btc-runtime/runtime';
-import { LIQUIDITY_RESERVED_POINTER, TOTAL_RESERVES_POINTER } from '../constants/StoredPointers';
+import {
+    LIQUIDITY_RESERVED_POINTER,
+    TOTAL_RESERVES_POINTER,
+} from '../constants/StoredPointers';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { ILiquidityQueueReserve } from '../managers/interfaces/ILiquidityQueueReserve';
 

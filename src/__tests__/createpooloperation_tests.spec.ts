@@ -1,6 +1,6 @@
 import { clearCachedProviders, getProvider } from '../models/Provider';
 import { Blockchain, BytesWriter } from '@btc-vision/btc-runtime/runtime';
-import { CreatePoolOperation, PEG_UPDATED_AT_SELECTOR } from '../operations/CreatePoolOperation';
+import { CreatePoolOperation } from '../operations/CreatePoolOperation';
 import {
     createLiquidityQueue,
     createProviderId,
@@ -12,7 +12,6 @@ import {
     tokenIdUint8Array1,
 } from './test_helper';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { POOL_TYPE_STABLE } from '../constants/Contract';
 
 describe('CreatePoolOperation tests', () => {
     beforeEach(() => {
@@ -37,14 +36,12 @@ describe('CreatePoolOperation tests', () => {
 
                 const operation = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    u256.fromU64(100),
+                    tokenAddress1,
                     u256.fromU64(100),
                     u128.fromU64(100),
+                    0, // initialTick (was floorPrice=u256.fromU64(100))
                     receiverAddress1,
                     'wjdhwe9dy9w08h29w',
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 operation.execute();
@@ -60,14 +57,12 @@ describe('CreatePoolOperation tests', () => {
 
                 const operation = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    u256.Zero,
+                    tokenAddress1,
                     u256.fromU64(100),
                     u128.fromU64(100),
+                    0, // initialTick (was floorPrice=u256.Zero)
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 operation.execute();
@@ -83,14 +78,12 @@ describe('CreatePoolOperation tests', () => {
 
                 const operation = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    u256.fromU64(100),
+                    tokenAddress1,
                     u256.fromU64(100),
                     u128.Zero,
+                    0, // initialTick (was floorPrice=u256.fromU64(100))
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 operation.execute();
@@ -106,14 +99,12 @@ describe('CreatePoolOperation tests', () => {
 
                 const operation = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    u256.fromU64(100),
+                    tokenAddress1,
                     u256.fromU64(100),
                     u128.fromU64(100),
+                    0, // initialTick (was floorPrice=u256.fromU64(100))
                     receiverAddress1,
                     receiverAddress1CSV,
-                    10,
-                    u256.Zero,
-                    5,
                 );
 
                 operation.execute();
@@ -129,14 +120,12 @@ describe('CreatePoolOperation tests', () => {
 
                 const operation = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    u256.fromU64(100),
+                    tokenAddress1,
                     u256.fromU64(100),
                     u128.fromU64(100),
+                    0, // initialTick (was floorPrice=u256.fromU64(100))
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 operation.execute();
@@ -146,14 +135,12 @@ describe('CreatePoolOperation tests', () => {
 
                 const operation2 = new CreatePoolOperation(
                     queue2.liquidityQueue,
-                    u256.fromU64(100),
+                    tokenAddress1,
                     u256.fromU64(100),
                     u128.fromU64(100),
+                    0, // initialTick (was floorPrice=u256.fromU64(100))
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    5,
                 );
 
                 operation2.execute();
@@ -169,121 +156,18 @@ describe('CreatePoolOperation tests', () => {
 
                 const operation = new CreatePoolOperation(
                     queue.liquidityQueue,
-                    u256.fromU64(100),
+                    tokenAddress1,
                     u256.fromU64(100),
                     u128.fromU64(100000),
+                    0, // initialTick (was floorPrice=u256.fromU64(100))
                     receiverAddress1,
                     receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    115,
                 );
 
                 operation.execute();
             }).toThrow();
         });
 
-        it('should revert if pool type is invalid', () => {
-            setBlockchainEnvironment(100);
-            Blockchain.mockValidateBitcoinAddressResult(true);
-
-            expect(() => {
-                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-                const operation = new CreatePoolOperation(
-                    queue.liquidityQueue,
-                    u256.fromU64(100),
-                    u256.fromU64(100),
-                    u128.fromU64(100000),
-                    receiverAddress1,
-                    receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    10,
-                    3,
-                );
-
-                operation.execute();
-            }).toThrow();
-        });
-
-        it('should revert if amplification is < 1', () => {
-            setBlockchainEnvironment(100);
-            Blockchain.mockValidateBitcoinAddressResult(true);
-
-            expect(() => {
-                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-                const operation = new CreatePoolOperation(
-                    queue.liquidityQueue,
-                    u256.fromU64(100),
-                    u256.fromU64(100),
-                    u128.fromU64(100000),
-                    receiverAddress1,
-                    receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    10,
-                    POOL_TYPE_STABLE,
-                    0,
-                );
-
-                operation.execute();
-            }).toThrow();
-        });
-
-        it('should revert if amplification is > 10000', () => {
-            setBlockchainEnvironment(100);
-            Blockchain.mockValidateBitcoinAddressResult(true);
-
-            expect(() => {
-                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-                const operation = new CreatePoolOperation(
-                    queue.liquidityQueue,
-                    u256.fromU64(100),
-                    u256.fromU64(100),
-                    u128.fromU64(100000),
-                    receiverAddress1,
-                    receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    10,
-                    POOL_TYPE_STABLE,
-                    10001,
-                );
-
-                operation.execute();
-            }).toThrow();
-        });
-
-        it('should revert if pool is stable but token does not implements IOP20Stable', () => {
-            setBlockchainEnvironment(100);
-            Blockchain.mockValidateBitcoinAddressResult(true);
-
-            expect(() => {
-                const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-                const calldata = new BytesWriter(4);
-                calldata.writeSelector(PEG_UPDATED_AT_SELECTOR);
-                Blockchain.mockCallResult(tokenAddress1, calldata, false, new Uint8Array(0));
-
-                const operation = new CreatePoolOperation(
-                    queue.liquidityQueue,
-                    u256.fromU64(100),
-                    u256.fromU64(100),
-                    u128.fromU64(100000),
-                    receiverAddress1,
-                    receiverAddress1CSV,
-                    0,
-                    u256.Zero,
-                    10,
-                    POOL_TYPE_STABLE,
-                );
-
-                operation.execute();
-            }).toThrow();
-        });
     });
 
     describe('CreatePoolOperation execute', () => {
@@ -301,16 +185,14 @@ describe('CreatePoolOperation tests', () => {
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
             const operation = new CreatePoolOperation(
-                queue.liquidityQueue,
-                u256.fromU64(100),
-                initialProviderId,
-                u128.fromU64(1000000),
-                receiverAddress1,
-                receiverAddress1CSV,
-                10,
-                u256.fromU32(20),
-                5,
-            );
+                    queue.liquidityQueue,
+                    tokenAddress1,
+                    initialProviderId,
+                    u128.fromU64(1000000),
+                    0, // initialTick (was floorPrice=u256.fromU64(100))
+                    receiverAddress1,
+                    receiverAddress1CSV,
+                );
 
             operation.execute();
             queue.liquidityQueue.save();
@@ -319,70 +201,18 @@ describe('CreatePoolOperation tests', () => {
             const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const provider = getProvider(initialProviderId);
 
-            expect(queue2.liquidityQueue.initialLiquidityProviderId).toStrictEqual(
-                initialProviderId,
-            );
-            expect(queue2.liquidityQueue.virtualSatoshisReserve).toStrictEqual(10000);
-            expect(queue2.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(1000000));
+            // initialLiquidityProviderId removed in refactor (no privileged initial-LP slot).
+            // Virtual reserves, antibot, maxTokensPerReservation, maxReserves5BlockPercent
+            // all gone — see plan. We assert only what the new arch still exposes.
             expect(queue2.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(1000000));
-            expect(queue2.liquidityQueue.maxReserves5BlockPercent).toStrictEqual(5);
-            expect(queue2.liquidityQueue.antiBotExpirationBlock).toStrictEqual(110);
-            expect(queue2.liquidityQueue.maxTokensPerReservation).toStrictEqual(u256.fromU64(20));
-            expect(queue2.providerManager.normalQueueLength).toStrictEqual(0);
-            expect(queue2.providerManager.priorityQueueLength).toStrictEqual(0);
+            expect<bool>(queue2.liquidityQueue.isPoolRegistered()).toBe(true);
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(1000000));
             expect(provider.getReservedAmount()).toStrictEqual(u128.Zero);
             expect(provider.getBtcReceiver()).toStrictEqual(receiverAddress1CSV);
             expect(provider.isActive()).toBeTruthy();
-            expect(provider.isPriority()).toBeFalsy();
         });
 
-        it('should set anti bot fields when anti bot is enabled', () => {
-            setBlockchainEnvironment(100);
-            Blockchain.mockValidateBitcoinAddressResult(true);
-
-            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-            const operation = new CreatePoolOperation(
-                queue.liquidityQueue,
-                u256.fromU64(100),
-                u256.fromU64(100),
-                u128.fromU64(100),
-                receiverAddress1,
-                receiverAddress1CSV,
-                10,
-                u256.fromU32(20),
-                5,
-            );
-
-            operation.execute();
-
-            expect(queue.liquidityQueue.antiBotExpirationBlock).toStrictEqual(100 + 10);
-            expect(queue.liquidityQueue.maxTokensPerReservation).toStrictEqual(u256.fromU32(20));
-        });
-
-        it('should not set anti bot when anti bot is disabled', () => {
-            setBlockchainEnvironment(100);
-            Blockchain.mockValidateBitcoinAddressResult(true);
-
-            const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-
-            const operation = new CreatePoolOperation(
-                queue.liquidityQueue,
-                u256.fromU64(100),
-                u256.fromU64(100),
-                u128.fromU64(100),
-                receiverAddress1,
-                receiverAddress1CSV,
-                0,
-                u256.fromU32(20),
-                5,
-            );
-
-            operation.execute();
-
-            expect(queue.liquidityQueue.antiBotExpirationBlock).toStrictEqual(0);
-            expect(queue.liquidityQueue.maxTokensPerReservation).toStrictEqual(u256.Zero);
-        });
+        // Antibot tests removed — antibot/cap concept was AMM-era and is gone in the refactor.
+        // The 0.3% swap fee + per-tick pricing are the new spam-resistance mechanism.
     });
 });

@@ -1,11 +1,19 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Blockchain, Revert, SafeMath } from '@btc-vision/btc-runtime/runtime';
-import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
+import {
+    addAmountToStakingContract,
+    getProvider,
+    Provider,
+} from '../models/Provider';
 import { Reservation } from '../models/Reservation';
 import { CompletedTrade } from '../models/CompletedTrade';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { ProviderConsumedEvent } from '../events/ProviderConsumedEvent';
-import { EMIT_PROVIDERCONSUMED_EVENTS, SWAP_FEE_BPS, SWAP_FEE_DENOM } from '../constants/Contract';
+import {
+    EMIT_PROVIDERCONSUMED_EVENTS,
+    SWAP_FEE_BPS,
+    SWAP_FEE_DENOM,
+} from '../constants/Contract';
 import { ITradeManager } from './interfaces/ITradeManager';
 import { ITickBitmapManager } from './interfaces/ITickBitmapManager';
 import { ILiquidityQueueReserve } from './interfaces/ILiquidityQueueReserve';
@@ -115,39 +123,6 @@ export class TradeManager implements ITradeManager {
     // Per-provider execution
     // ========================================================================
 
-    /** Sum BTC outputs paid to `address` in this txn, accounting for already-consumed sats. */
-    protected getSatoshisSent(address: string): u64 {
-        let totalSatoshis: u64 = 0;
-        const outputs = Blockchain.tx.outputs;
-        for (let i = 0; i < outputs.length; i++) {
-            const output = outputs[i];
-            if (output.to === address) {
-                totalSatoshis = SafeMath.add64(totalSatoshis, output.value);
-            }
-        }
-
-        const consumedSatoshis: u64 = this.consumedOutputsFromUTXOs.has(address)
-            ? this.consumedOutputsFromUTXOs.get(address)
-            : 0;
-
-        if (totalSatoshis < consumedSatoshis) {
-            throw new Revert('Impossible state: Double spend detected.');
-        }
-        return totalSatoshis - consumedSatoshis;
-    }
-
-    // ========================================================================
-    // Helpers
-    // ========================================================================
-
-    /** Track sats already consumed against an address (so subsequent providers don't double-count). */
-    protected reportUTXOUsed(address: string, value: u64): void {
-        const consumedAlready: u64 = this.consumedOutputsFromUTXOs.has(address)
-            ? this.consumedOutputsFromUTXOs.get(address)
-            : 0;
-        this.consumedOutputsFromUTXOs.set(address, SafeMath.add64(value, consumedAlready));
-    }
-
     private executeProviderTrade(
         provider: Provider,
         data: ReservationProviderData,
@@ -187,7 +162,10 @@ export class TradeManager implements ITradeManager {
             Blockchain.emit(new ProviderConsumedEvent(provider.getId(), actualTokens));
         }
 
-        this.totalTokensPurchased = SafeMath.add(this.totalTokensPurchased, actualTokens.toU256());
+        this.totalTokensPurchased = SafeMath.add(
+            this.totalTokensPurchased,
+            actualTokens.toU256(),
+        );
         this.totalSatoshisSpent = SafeMath.add64(this.totalSatoshisSpent, actualSats);
         this.totalTokensReserved = SafeMath.add(
             this.totalTokensReserved,
@@ -200,6 +178,10 @@ export class TradeManager implements ITradeManager {
         }
     }
 
+    // ========================================================================
+    // Helpers
+    // ========================================================================
+
     private restoreReservedLiquidityForProvider(provider: Provider, value: u128): void {
         if (value.isZero()) return;
         provider.subtractFromReservedAmount(value);
@@ -209,6 +191,35 @@ export class TradeManager implements ITradeManager {
     private addProviderToPurgeQueue(provider: Provider): void {
         if (!provider.isActive()) return;
         this.tickBitmapManager.addToTickPurged(provider, provider.getPriceTick());
+    }
+
+    /** Sum BTC outputs paid to `address` in this txn, accounting for already-consumed sats. */
+    protected getSatoshisSent(address: string): u64 {
+        let totalSatoshis: u64 = 0;
+        const outputs = Blockchain.tx.outputs;
+        for (let i = 0; i < outputs.length; i++) {
+            const output = outputs[i];
+            if (output.to === address) {
+                totalSatoshis = SafeMath.add64(totalSatoshis, output.value);
+            }
+        }
+
+        const consumedSatoshis: u64 = this.consumedOutputsFromUTXOs.has(address)
+            ? this.consumedOutputsFromUTXOs.get(address)
+            : 0;
+
+        if (totalSatoshis < consumedSatoshis) {
+            throw new Revert('Impossible state: Double spend detected.');
+        }
+        return totalSatoshis - consumedSatoshis;
+    }
+
+    /** Track sats already consumed against an address (so subsequent providers don't double-count). */
+    protected reportUTXOUsed(address: string, value: u64): void {
+        const consumedAlready: u64 = this.consumedOutputsFromUTXOs.has(address)
+            ? this.consumedOutputsFromUTXOs.get(address)
+            : 0;
+        this.consumedOutputsFromUTXOs.set(address, SafeMath.add64(value, consumedAlready));
     }
 
     private deactivateReservation(reservation: Reservation): void {

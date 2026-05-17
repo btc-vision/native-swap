@@ -1,11 +1,12 @@
 import {
+    Address,
     ADDRESS_BYTE_LENGTH,
     Blockchain,
     BytesWriter,
     ExtendedAddress,
     TransferHelper,
 } from '@btc-vision/btc-runtime/runtime';
-import { ripemd160, sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
+import { sha256, ripemd160 } from '@btc-vision/btc-runtime/runtime/env/global';
 import { clearCachedProviders } from '../models/Provider';
 import { Reservation } from '../models/Reservation';
 import { tokenAddress1 } from './test_helper';
@@ -408,14 +409,14 @@ describe('Reservation ID Generation Tests', () => {
 
         // Simulate what ripemd160f does
         const len0 = buf0.length;
-        const padLength0 = <i32>((56 - ((len0 + 1) % 64) + 64) % 64);
+        const padLength0 = <i32>((56 - (len0 + 1) % 64 + 64) % 64);
         const totalLength0 = len0 + 1 + padLength0 + 8;
 
         const msg0 = new Uint8Array(totalLength0);
         msg0.set(buf0, 0);
 
         const len73 = buf73.length;
-        const padLength73 = <i32>((56 - ((len73 + 1) % 64) + 64) % 64);
+        const padLength73 = <i32>((56 - (len73 + 1) % 64 + 64) % 64);
         const totalLength73 = len73 + 1 + padLength73 + 8;
 
         const msg73 = new Uint8Array(totalLength73);
@@ -470,9 +471,7 @@ describe('Reservation ID Generation Tests', () => {
         // They should match each other but be different between accounts
         let same = true;
         for (let i: i32 = 0; i < 32; i++) {
-            if (
-                load<u8>(account0.dataStart + <usize>i) != load<u8>(account73.dataStart + <usize>i)
-            ) {
+            if (load<u8>(account0.dataStart + <usize>i) != load<u8>(account73.dataStart + <usize>i)) {
                 same = false;
                 break;
             }
@@ -498,15 +497,15 @@ describe('Reservation ID Generation Tests', () => {
 
         // Simulate what ripemd160f does
         const len0 = buf0.length;
-        const padLength0 = <i32>((56 - ((len0 + 1) % 64) + 64) % 64);
+        const padLength0 = <i32>((56 - (len0 + 1) % 64 + 64) % 64);
         const totalLength0 = len0 + 1 + padLength0 + 8;
 
         const msg0 = new Uint8Array(totalLength0);
         msg0.set(buf0, 0);
-        msg0[len0] = 0x80; // PADDING_BYTE
+        msg0[len0] = 0x80;  // PADDING_BYTE
 
         const len73 = buf73.length;
-        const padLength73 = <i32>((56 - ((len73 + 1) % 64) + 64) % 64);
+        const padLength73 = <i32>((56 - (len73 + 1) % 64 + 64) % 64);
         const totalLength73 = len73 + 1 + padLength73 + 8;
 
         const msg73 = new Uint8Array(totalLength73);
@@ -514,7 +513,7 @@ describe('Reservation ID Generation Tests', () => {
         msg73[len73] = 0x80;
 
         // Add length bytes (simulating what ripemd160f does)
-        const bitLen = (<u64>64) << 3;
+        const bitLen = <u64>64 << 3;
         const bitLenLow = <u32>(bitLen & 0xffffffff);
         msg0[totalLength0 - 8] = <u8>(bitLenLow & 0xff);
         msg0[totalLength0 - 7] = <u8>((bitLenLow >>> 8) & 0xff);
@@ -541,15 +540,15 @@ describe('Reservation ID Generation Tests', () => {
         for (let i = 0; i < 16; i++) {
             const j = offset + (i << 2);
             const val0 =
-                (<u32>msg0[j]) |
-                ((<u32>msg0[j + 1]) << 8) |
-                ((<u32>msg0[j + 2]) << 16) |
-                ((<u32>msg0[j + 3]) << 24);
+                <u32>msg0[j] |
+                (<u32>msg0[j + 1] << 8) |
+                (<u32>msg0[j + 2] << 16) |
+                (<u32>msg0[j + 3] << 24);
             const val73 =
-                (<u32>msg73[j]) |
-                ((<u32>msg73[j + 1]) << 8) |
-                ((<u32>msg73[j + 2]) << 16) |
-                ((<u32>msg73[j + 3]) << 24);
+                <u32>msg73[j] |
+                (<u32>msg73[j + 1] << 8) |
+                (<u32>msg73[j + 2] << 16) |
+                (<u32>msg73[j + 3] << 24);
             x0Vals += val0.toString() + '-';
             x73Vals += val73.toString() + '-';
         }
@@ -561,15 +560,15 @@ describe('Reservation ID Generation Tests', () => {
         for (let i = 8; i < 16; i++) {
             const j = offset + (i << 2);
             const val0 =
-                (<u32>msg0[j]) |
-                ((<u32>msg0[j + 1]) << 8) |
-                ((<u32>msg0[j + 2]) << 16) |
-                ((<u32>msg0[j + 3]) << 24);
+                <u32>msg0[j] |
+                (<u32>msg0[j + 1] << 8) |
+                (<u32>msg0[j + 2] << 16) |
+                (<u32>msg0[j + 3] << 24);
             const val73 =
-                (<u32>msg73[j]) |
-                ((<u32>msg73[j + 1]) << 8) |
-                ((<u32>msg73[j + 2]) << 16) |
-                ((<u32>msg73[j + 3]) << 24);
+                <u32>msg73[j] |
+                (<u32>msg73[j + 1] << 8) |
+                (<u32>msg73[j + 2] << 16) |
+                (<u32>msg73[j + 3] << 24);
             if (val0 != val73) {
                 same = false;
                 break;
