@@ -1,4 +1,4 @@
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Provider } from '../../models/Provider';
 import { ReservationProviderData } from '../../models/ReservationProdiverData';
 

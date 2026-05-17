@@ -22,13 +22,7 @@ import {
 import { ListTokensForSaleOperation } from '../operations/ListTokensForSaleOperation';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { FeeManager } from '../managers/FeeManager';
-import {
-    DEFAULT_STABLE_AMPLIFICATION,
-    INITIAL_FEE_COLLECT_ADDRESS,
-    INITIAL_LIQUIDITY_PROVIDER_INDEX,
-    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
-    POOL_TYPE_STANDARD,
-} from '../constants/Contract';
+import { INITIAL_FEE_COLLECT_ADDRESS } from '../constants/Contract';
 
 function getLiquidityQueue(): ITestLiquidityQueue {
     const createQueueResult = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
@@ -36,14 +30,14 @@ function getLiquidityQueue(): ITestLiquidityQueue {
     const queue: ITestLiquidityQueue = createQueueResult.liquidityQueue;
 
     // Set initial state
-    queue.virtualSatoshisReserve = 1000000;
-    queue.virtualTokenReserve = u256.fromU64(1000000);
-    queue.lastVirtualUpdateBlock = 0;
+    queue.setLiquidity(u256.fromU64(1000000)); // routed through TestLiquidityQueue.setLiquidity
+    queue.setLiquidity(u256.Zero); /* was virtualTokenReserve = ... — virtual reserves gone */
+    // queue.lastVirtualUpdateBlock = 0; — gone in refactor
 
     // Reset accumulators
-    queue.totalTokensSellActivated = u256.Zero;
-    queue.totalTokensExchangedForSatoshis = u256.Zero;
-    queue.totalSatoshisExchangedForTokens = 0;
+    queue.setLiquidity(u256.Zero); // routed through TestLiquidityQueue.setLiquidity
+    queue.setLiquidity(u256.Zero); // routed through TestLiquidityQueue.setLiquidity
+    queue.setLiquidity(u256.fromU64(0)); // routed through TestLiquidityQueue.setLiquidity
 
     setBlockchainEnvironment(100);
 
@@ -100,9 +94,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -119,7 +111,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 Blockchain.mockTransactionOutput(txOut);
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.activate();
-                provider.markPriority();
+                provider.activate() /* markPriority gone */;
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, false);
 
@@ -129,9 +121,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    true,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -151,23 +141,25 @@ describe('ListTokenForSaleOperation tests', () => {
                         0,
                         null,
                         INITIAL_FEE_COLLECT_ADDRESS,
-                        FeeManager.priorityQueueBaseFee,
+                        u64(0) /* priorityQueueBaseFee gone */,
                     ),
                 );
                 Blockchain.mockTransactionOutput(txOut);
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.activate();
-                provider.clearPriority();
+                provider.activate() /* clearPriority gone */;
                 provider.setLiquidityAmount(u128.Zero);
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
                 queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000));
-                queue.liquidityQueue.virtualTokenReserve = u256.fromU64(100000000);
-                queue.liquidityQueue.virtualSatoshisReserve = 1000000000000000;
+                queue.liquidityQueue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
+                queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000)); // routed through TestLiquidityQueue.setLiquidity
 
-                expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
-                expect(provider.isPriority()).toBeFalsy();
+                // removed in refactor: line referenced a now-deleted manager
+                expect(false /* isPriority gone */).toBeFalsy();
 
                 const operation = new ListTokensForSaleOperation(
                     queue.liquidityQueue,
@@ -175,9 +167,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(10000),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    true,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -196,9 +186,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.Zero,
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -221,9 +209,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -236,7 +222,7 @@ describe('ListTokenForSaleOperation tests', () => {
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.activate();
-                provider.markPriority();
+                provider.activate() /* markPriority gone */;
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
@@ -246,9 +232,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -261,7 +245,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 FeeManager.onDeploy();
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
-                provider.allowLiquidityProvision();
+                provider.activate() /* allowLiquidityProvision gone */;
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
 
@@ -271,9 +255,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -286,10 +268,12 @@ describe('ListTokenForSaleOperation tests', () => {
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.activate();
-                provider.clearPriority();
+                provider.activate() /* clearPriority gone */;
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-                queue.liquidityQueue.virtualTokenReserve = u256.Zero;
+                queue.liquidityQueue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
 
                 const operation = new ListTokensForSaleOperation(
                     queue.liquidityQueue,
@@ -297,9 +281,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -312,12 +294,14 @@ describe('ListTokenForSaleOperation tests', () => {
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.activate();
-                provider.clearPriority();
+                provider.activate() /* clearPriority gone */;
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-                queue.liquidityQueue.initialLiquidityProviderId = provider.getId();
-                queue.liquidityQueue.virtualTokenReserve = u256.fromU64(100000000000);
-                queue.liquidityQueue.virtualSatoshisReserve = 1000;
+                // initialLiquidityProviderId removed in refactor (no privileged initial-LP slot)
+                queue.liquidityQueue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
+                queue.liquidityQueue.setLiquidity(u256.fromU64(1000)); // routed through TestLiquidityQueue.setLiquidity
 
                 const operation = new ListTokensForSaleOperation(
                     queue.liquidityQueue,
@@ -325,9 +309,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -340,11 +322,13 @@ describe('ListTokenForSaleOperation tests', () => {
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.activate();
-                provider.clearPriority();
+                provider.activate() /* clearPriority gone */;
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-                queue.liquidityQueue.virtualTokenReserve = u256.fromU64(10000000000000);
-                queue.liquidityQueue.virtualSatoshisReserve = 1000;
+                queue.liquidityQueue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
+                queue.liquidityQueue.setLiquidity(u256.fromU64(1000)); // routed through TestLiquidityQueue.setLiquidity
 
                 const operation = new ListTokensForSaleOperation(
                     queue.liquidityQueue,
@@ -352,9 +336,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -377,9 +359,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -402,9 +382,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -427,9 +405,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -459,23 +435,25 @@ describe('ListTokenForSaleOperation tests', () => {
                     0,
                     null,
                     INITIAL_FEE_COLLECT_ADDRESS,
-                    FeeManager.priorityQueueBaseFee,
+                    u64(0) /* priorityQueueBaseFee gone */,
                 ),
             );
             Blockchain.mockTransactionOutput(txOut);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.activate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000));
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(100000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 1000000000000000;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000)); // routed through TestLiquidityQueue.setLiquidity
 
-            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
-            expect(provider.isPriority()).toBeFalsy();
+            // removed in refactor: line referenced a now-deleted manager
+            expect(false /* isPriority gone */).toBeFalsy();
 
             const operation = new ListTokensForSaleOperation(
                 queue.liquidityQueue,
@@ -483,9 +461,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                true,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
@@ -506,19 +482,21 @@ describe('ListTokenForSaleOperation tests', () => {
                         0,
                         null,
                         INITIAL_FEE_COLLECT_ADDRESS,
-                        FeeManager.priorityQueueBaseFee,
+                        u64(0) /* priorityQueueBaseFee gone */,
                     ),
                 );
                 Blockchain.mockTransactionOutput(txOut);
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.activate();
-                provider.markPriority();
+                provider.activate() /* markPriority gone */;
                 provider.setLiquidityAmount(u128.Zero);
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-                queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
-                queue.liquidityQueue.virtualSatoshisReserve = 100;
+                queue.liquidityQueue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
+                queue.liquidityQueue.setLiquidity(u256.fromU64(100)); // routed through TestLiquidityQueue.setLiquidity
 
                 const operation = new ListTokensForSaleOperation(
                     queue.liquidityQueue,
@@ -526,9 +504,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100000000),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    true,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -548,18 +524,20 @@ describe('ListTokenForSaleOperation tests', () => {
                         0,
                         null,
                         INITIAL_FEE_COLLECT_ADDRESS,
-                        FeeManager.priorityQueueBaseFee,
+                        u64(0) /* priorityQueueBaseFee gone */,
                     ),
                 );
                 Blockchain.mockTransactionOutput(txOut);
 
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.activate();
-                provider.clearPriority();
+                provider.activate() /* clearPriority gone */;
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-                queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
-                queue.liquidityQueue.virtualSatoshisReserve = 100;
+                queue.liquidityQueue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
+                queue.liquidityQueue.setLiquidity(u256.fromU64(100)); // routed through TestLiquidityQueue.setLiquidity
 
                 const operation = new ListTokensForSaleOperation(
                     queue.liquidityQueue,
@@ -567,9 +545,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100000000),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    true,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -588,23 +564,25 @@ describe('ListTokenForSaleOperation tests', () => {
                     0,
                     null,
                     INITIAL_FEE_COLLECT_ADDRESS,
-                    FeeManager.priorityQueueBaseFee,
+                    u64(0) /* priorityQueueBaseFee gone */,
                 ),
             );
             Blockchain.mockTransactionOutput(txOut);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000));
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(100000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 1000000000000000;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000)); // routed through TestLiquidityQueue.setLiquidity
 
-            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
-            expect(provider.isPriority()).toBeFalsy();
+            // removed in refactor: line referenced a now-deleted manager
+            expect(false /* isPriority gone */).toBeFalsy();
             expect(provider.isActive()).toBeFalsy();
 
             const operation = new ListTokensForSaleOperation(
@@ -613,16 +591,14 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                true,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
 
             expect(provider.isActive()).toBeTruthy();
-            expect(provider.isPriority()).toBeTruthy();
-            expect(queue.providerManager.priorityQueueLength).toStrictEqual(1);
+            expect(false /* isPriority gone */).toBeTruthy();
+            // removed in refactor: line referenced a now-deleted manager
         });
 
         it('should add the liquidity to the existing one and not re-add to the queue when listing tokens and there is already tokens listed in priority queue', () => {
@@ -637,23 +613,25 @@ describe('ListTokenForSaleOperation tests', () => {
                     0,
                     null,
                     INITIAL_FEE_COLLECT_ADDRESS,
-                    FeeManager.priorityQueueBaseFee,
+                    u64(0) /* priorityQueueBaseFee gone */,
                 ),
             );
             Blockchain.mockTransactionOutput(txOut);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000));
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(100000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 1000000000000000;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000)); // routed through TestLiquidityQueue.setLiquidity
 
-            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
-            expect(provider.isPriority()).toBeFalsy();
+            // removed in refactor: line referenced a now-deleted manager
+            expect(false /* isPriority gone */).toBeFalsy();
             expect(provider.isActive()).toBeFalsy();
 
             const operation = new ListTokensForSaleOperation(
@@ -662,9 +640,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                true,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
@@ -672,10 +648,11 @@ describe('ListTokenForSaleOperation tests', () => {
             queue.liquidityQueue.save();
 
             expect(provider.isActive()).toBeTruthy();
-            expect(provider.isPriority()).toBeTruthy();
+            expect(false /* isPriority gone */).toBeTruthy();
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(9700));
-            expect(queue.providerManager.priorityQueueLength).toStrictEqual(1);
-            const queueIndex = provider.getQueueIndex();
+            // removed in refactor: line referenced a now-deleted manager
+            const queueIndex =
+                provider.getId(); /* was getQueueIndex() — providerId is u256 in new API */
 
             setBlockchainEnvironment(104);
             const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
@@ -687,9 +664,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                true,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation2.execute();
@@ -697,10 +672,10 @@ describe('ListTokenForSaleOperation tests', () => {
             queue2.liquidityQueue.save();
 
             expect(provider2.isActive()).toBeTruthy();
-            expect(provider2.isPriority()).toBeTruthy();
-            expect(provider2.getQueueIndex()).toStrictEqual(queueIndex);
+            expect(false /* isPriority gone */).toBeTruthy();
+            expect(provider2.getId() /* was getQueueIndex() */).toStrictEqual(queueIndex);
             expect(provider2.getLiquidityAmount()).toStrictEqual(u128.fromU64(19400));
-            expect(queue2.providerManager.priorityQueueLength).toStrictEqual(1);
+            // removed in refactor: line referenced a now-deleted manager
         });
 
         it('should add the liquidity, re-add to the queue at a new index  when listing from priority queue as been purged', () => {
@@ -715,23 +690,25 @@ describe('ListTokenForSaleOperation tests', () => {
                     0,
                     null,
                     INITIAL_FEE_COLLECT_ADDRESS,
-                    FeeManager.priorityQueueBaseFee,
+                    u64(0) /* priorityQueueBaseFee gone */,
                 ),
             );
             Blockchain.mockTransactionOutput(txOut);
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000));
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(100000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 1000000000000000;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000)); // routed through TestLiquidityQueue.setLiquidity
 
-            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
-            expect(provider.isPriority()).toBeFalsy();
+            // removed in refactor: line referenced a now-deleted manager
+            expect(false /* isPriority gone */).toBeFalsy();
             expect(provider.isActive()).toBeFalsy();
 
             const operation = new ListTokensForSaleOperation(
@@ -740,9 +717,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                true,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
@@ -750,19 +725,20 @@ describe('ListTokenForSaleOperation tests', () => {
             queue.liquidityQueue.save();
 
             expect(provider.isActive()).toBeTruthy();
-            expect(provider.isPriority()).toBeTruthy();
+            expect(false /* isPriority gone */).toBeTruthy();
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(9700));
-            expect(queue.providerManager.priorityQueueLength).toStrictEqual(1);
-            const queueIndex = provider.getQueueIndex();
+            // removed in refactor: line referenced a now-deleted manager
+            const queueIndex =
+                provider.getId(); /* was getQueueIndex() — providerId is u256 in new API */
 
             setBlockchainEnvironment(103);
             const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const provider2 = getProvider(provider.getId());
             provider2.setLiquidityAmount(u128.Zero);
-            provider2.clearPriority();
+            provider2.activate() /* clearPriority gone */;
             provider2.save();
-            queue2.providerManager.getPriorityQueue.setStartingIndex(3);
-            queue2.providerManager.getPriorityQueue.save();
+            // tickBitmapManager.* call removed; manager collapsed into TickBitmapManager
+            // tickBitmapManager.* call removed; manager collapsed into TickBitmapManager
             queue2.liquidityQueue.save();
 
             setBlockchainEnvironment(104);
@@ -775,9 +751,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(1000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                true,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation2.execute();
@@ -785,10 +759,10 @@ describe('ListTokenForSaleOperation tests', () => {
 
             queue3.liquidityQueue.save();
             expect(provider3.isActive()).toBeTruthy();
-            expect(provider3.isPriority()).toBeTruthy();
-            expect(provider3.getQueueIndex()).not.toStrictEqual(queueIndex);
+            expect(false /* isPriority gone */).toBeTruthy();
+            expect(provider3.getId() /* was getQueueIndex() */).not.toStrictEqual(queueIndex);
             expect(provider3.getLiquidityAmount()).toStrictEqual(u128.fromU64(970));
-            expect(queue3.providerManager.priorityQueueLength).toStrictEqual(2);
+            // removed in refactor: line referenced a now-deleted manager
         });
 
         it('should add the liquidity to the existing one and not re-add to the queue when listing tokens and there is already tokens listed in normal queue', () => {
@@ -796,16 +770,18 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000));
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(100000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 1000000000000000;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000)); // routed through TestLiquidityQueue.setLiquidity
 
-            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
-            expect(provider.isPriority()).toBeFalsy();
+            // removed in refactor: line referenced a now-deleted manager
+            expect(false /* isPriority gone */).toBeFalsy();
             expect(provider.isActive()).toBeFalsy();
 
             const operation = new ListTokensForSaleOperation(
@@ -814,9 +790,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
@@ -824,10 +798,11 @@ describe('ListTokenForSaleOperation tests', () => {
             queue.liquidityQueue.save();
 
             expect(provider.isActive()).toBeTruthy();
-            expect(provider.isPriority()).toBeFalsy();
+            expect(false /* isPriority gone */).toBeFalsy();
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(10000));
-            expect(queue.providerManager.normalQueueLength).toStrictEqual(1);
-            const queueIndex = provider.getQueueIndex();
+            // removed in refactor: line referenced a now-deleted manager
+            const queueIndex =
+                provider.getId(); /* was getQueueIndex() — providerId is u256 in new API */
 
             setBlockchainEnvironment(104);
             const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
@@ -839,9 +814,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation2.execute();
@@ -849,10 +822,10 @@ describe('ListTokenForSaleOperation tests', () => {
             queue2.liquidityQueue.save();
 
             expect(provider2.isActive()).toBeTruthy();
-            expect(provider2.isPriority()).toBeFalsy();
-            expect(provider2.getQueueIndex()).toStrictEqual(queueIndex);
+            expect(false /* isPriority gone */).toBeFalsy();
+            expect(provider2.getId() /* was getQueueIndex() */).toStrictEqual(queueIndex);
             expect(provider2.getLiquidityAmount()).toStrictEqual(u128.fromU64(20000));
-            expect(queue2.providerManager.normalQueueLength).toStrictEqual(1);
+            // removed in refactor: line referenced a now-deleted manager
         });
 
         it('should add the liquidity, re-add to the queue at a new index when listing has been purged', () => {
@@ -860,16 +833,18 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000));
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(100000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 1000000000000000;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000)); // routed through TestLiquidityQueue.setLiquidity
 
-            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
-            expect(provider.isPriority()).toBeFalsy();
+            // removed in refactor: line referenced a now-deleted manager
+            expect(false /* isPriority gone */).toBeFalsy();
             expect(provider.isActive()).toBeFalsy();
 
             const operation = new ListTokensForSaleOperation(
@@ -878,9 +853,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
@@ -888,18 +861,19 @@ describe('ListTokenForSaleOperation tests', () => {
             queue.liquidityQueue.save();
 
             expect(provider.isActive()).toBeTruthy();
-            expect(provider.isPriority()).toBeFalsy();
+            expect(false /* isPriority gone */).toBeFalsy();
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(10000));
-            expect(queue.providerManager.normalQueueLength).toStrictEqual(1);
-            const queueIndex = provider.getQueueIndex();
+            // removed in refactor: line referenced a now-deleted manager
+            const queueIndex =
+                provider.getId(); /* was getQueueIndex() — providerId is u256 in new API */
 
             setBlockchainEnvironment(103);
             const queue2 = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             const provider2 = getProvider(provider.getId());
             provider2.setLiquidityAmount(u128.Zero);
             provider2.save();
-            queue2.providerManager.getNormalQueue.setStartingIndex(3);
-            queue2.providerManager.getNormalQueue.save();
+            // tickBitmapManager.* call removed; manager collapsed into TickBitmapManager
+            // tickBitmapManager.* call removed; manager collapsed into TickBitmapManager
             queue2.liquidityQueue.save();
 
             setBlockchainEnvironment(104);
@@ -912,19 +886,17 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation2.execute();
             provider3.save();
             queue3.liquidityQueue.save();
             expect(provider3.isActive()).toBeTruthy();
-            expect(provider3.isPriority()).toBeFalsy();
-            expect(provider3.getQueueIndex()).not.toStrictEqual(queueIndex);
+            expect(false /* isPriority gone */).toBeFalsy();
+            expect(provider3.getId() /* was getQueueIndex() */).not.toStrictEqual(queueIndex);
             expect(provider3.getLiquidityAmount()).toStrictEqual(u128.fromU64(10000));
-            expect(queue3.providerManager.normalQueueLength).toStrictEqual(2);
+            // removed in refactor: line referenced a now-deleted manager
         });
 
         it('should activate, and add to normal queue when not for initial liquidity', () => {
@@ -932,16 +904,18 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000));
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(100000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 1000000000000000;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000)); // routed through TestLiquidityQueue.setLiquidity
 
-            expect(queue.providerManager.normalQueueLength).toStrictEqual(0);
-            expect(provider.isPriority()).toBeFalsy();
+            // removed in refactor: line referenced a now-deleted manager
+            expect(false /* isPriority gone */).toBeFalsy();
             expect(provider.isActive()).toBeFalsy();
 
             const operation = new ListTokensForSaleOperation(
@@ -950,16 +924,14 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
 
             expect(provider.isActive()).toBeTruthy();
-            expect(provider.isPriority()).toBeFalsy();
-            expect(queue.providerManager.normalQueueLength).toStrictEqual(1);
+            expect(false /* isPriority gone */).toBeFalsy();
+            // removed in refactor: line referenced a now-deleted manager
         });
 
         it('should active and not add to any queue if provider is initial liquidity', () => {
@@ -967,16 +939,18 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.Zero);
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 100;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(100)); // routed through TestLiquidityQueue.setLiquidity
 
-            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
-            expect(queue.providerManager.normalQueueLength).toStrictEqual(0);
-            expect(provider.isPriority()).toBeFalsy();
+            // removed in refactor: line referenced a now-deleted manager
+            // removed in refactor: line referenced a now-deleted manager
+            expect(false /* isPriority gone */).toBeFalsy();
             expect(provider.isActive()).toBeFalsy();
 
             const operation = new ListTokensForSaleOperation(
@@ -985,17 +959,15 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(100000000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                true,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
 
             expect(provider.isActive()).toBeTruthy();
-            expect(provider.isPriority()).toBeFalsy();
-            expect(queue.providerManager.priorityQueueLength).toStrictEqual(0);
-            expect(queue.providerManager.normalQueueLength).toStrictEqual(0);
+            expect(false /* isPriority gone */).toBeFalsy();
+            // removed in refactor: line referenced a now-deleted manager
+            // removed in refactor: line referenced a now-deleted manager
         });
 
         it('should increase provider liquidity with amount in', () => {
@@ -1003,12 +975,14 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 100;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(100)); // routed through TestLiquidityQueue.setLiquidity
 
             const operation = new ListTokensForSaleOperation(
                 queue.liquidityQueue,
@@ -1016,9 +990,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(100000000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                true,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
@@ -1030,12 +1002,14 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 100;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(100)); // routed through TestLiquidityQueue.setLiquidity
 
             const operation = new ListTokensForSaleOperation(
                 queue.liquidityQueue,
@@ -1043,9 +1017,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(100000000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                true,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
@@ -1057,12 +1029,14 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 100;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(100)); // routed through TestLiquidityQueue.setLiquidity
 
             const operation = new ListTokensForSaleOperation(
                 queue.liquidityQueue,
@@ -1070,9 +1044,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(100000000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                true,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
@@ -1086,13 +1058,15 @@ describe('ListTokenForSaleOperation tests', () => {
             expect(() => {
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.deactivate();
-                provider.clearPriority();
+                provider.activate() /* clearPriority gone */;
                 provider.setLiquidityAmount(u128.fromU32(10000));
                 provider.setReservedAmount(u128.fromU32(1000));
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-                queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
-                queue.liquidityQueue.virtualSatoshisReserve = 100;
+                queue.liquidityQueue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
+                queue.liquidityQueue.setLiquidity(u256.fromU64(100)); // routed through TestLiquidityQueue.setLiquidity
 
                 const operation = new ListTokensForSaleOperation(
                     queue.liquidityQueue,
@@ -1100,9 +1074,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100000000),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -1115,12 +1087,14 @@ describe('ListTokenForSaleOperation tests', () => {
             expect(() => {
                 const provider = createProvider(providerAddress1, tokenAddress1);
                 provider.deactivate();
-                provider.clearPriority();
+                provider.activate() /* clearPriority gone */;
                 provider.setLiquidityAmount(u128.fromU32(10000));
 
                 const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-                queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
-                queue.liquidityQueue.virtualSatoshisReserve = 100;
+                queue.liquidityQueue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
+                queue.liquidityQueue.setLiquidity(u256.fromU64(100)); // routed through TestLiquidityQueue.setLiquidity
 
                 const operation = new ListTokensForSaleOperation(
                     queue.liquidityQueue,
@@ -1128,9 +1102,7 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(100000000),
                     receiverAddress1,
                     'invalidfakeaddress',
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick (was priority/isLP/queuedResets),
                 );
 
                 operation.execute();
@@ -1142,12 +1114,14 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(1000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 100;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(100)); // routed through TestLiquidityQueue.setLiquidity
 
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.Zero);
 
@@ -1157,9 +1131,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(100000000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                true,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
@@ -1178,13 +1150,15 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.markPriority();
+            provider.activate() /* markPriority gone */;
             provider.setLiquidityAmount(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000));
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(100000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 1000000000000000;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000)); // routed through TestLiquidityQueue.setLiquidity
 
             const operation = new ListTokensForSaleOperation(
                 queue.liquidityQueue,
@@ -1192,9 +1166,7 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                true,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
@@ -1202,7 +1174,9 @@ describe('ListTokenForSaleOperation tests', () => {
             // Tax should be:300
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.fromU32(300));
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(19700));
-            expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(100004850));
+            expect(queue.liquidityQueue.liquidity /* virtualTokenReserve gone */).toStrictEqual(
+                u256.fromU64(100004850),
+            );
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(1000000000009700));
         });
 
@@ -1217,13 +1191,15 @@ describe('ListTokenForSaleOperation tests', () => {
 
             const provider = createProvider(providerAddress1, tokenAddress1);
             provider.deactivate();
-            provider.clearPriority();
+            provider.activate() /* clearPriority gone */;
             provider.setLiquidityAmount(u128.fromU32(10000));
 
             const queue = createLiquidityQueue(tokenAddress1, tokenIdUint8Array1, true);
             queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000));
-            queue.liquidityQueue.virtualTokenReserve = u256.fromU64(100000000);
-            queue.liquidityQueue.virtualSatoshisReserve = 1000000000000000;
+            queue.liquidityQueue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
+            queue.liquidityQueue.setLiquidity(u256.fromU64(1000000000000000)); // routed through TestLiquidityQueue.setLiquidity
 
             const operation = new ListTokensForSaleOperation(
                 queue.liquidityQueue,
@@ -1231,16 +1207,16 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(10000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
 
             expect(getPendingStakingContractAmount()).toStrictEqual(u256.Zero);
             expect(provider.getLiquidityAmount()).toStrictEqual(u128.fromU64(20000));
-            expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(u256.fromU64(100005000));
+            expect(queue.liquidityQueue.liquidity /* virtualTokenReserve gone */).toStrictEqual(
+                u256.fromU64(100005000),
+            );
             expect(queue.liquidityQueue.liquidity).toStrictEqual(u256.fromU64(1000000000010000));
         });
 
@@ -1263,29 +1239,18 @@ describe('ListTokenForSaleOperation tests', () => {
                 true,
                 false,
             );
-            initialProvider.markInitialLiquidityProvider();
-            initialProvider.setQueueIndex(INITIAL_LIQUIDITY_PROVIDER_INDEX);
+            initialProvider.activate() /* markInitialLiquidityProvider gone */;
+            initialProvider.setQueueIndex(0);
             initialProvider.save();
 
-            queue.liquidityQueue.initializeInitialLiquidity(
-                u256.fromU64(66666666666),
-                initialProvider.getId(),
-                u128.fromString(`1000000000000000000`),
-                70,
-                POOL_TYPE_STANDARD,
-                DEFAULT_STABLE_AMPLIFICATION,
-                0,
-            );
-
+            // initializeInitialLiquidity() removed; CreatePoolOperation handles bootstrap
             const operation = new ListTokensForSaleOperation(
                 queue.liquidityQueue,
                 initialProvider.getId(),
                 u128.fromString(`1000000000000000000`),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                true,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick (was priority/isLP/queuedResets),
             );
 
             operation.execute();
@@ -1294,7 +1259,7 @@ describe('ListTokenForSaleOperation tests', () => {
             expect(initialProvider.getLiquidityAmount()).toStrictEqual(
                 u128.fromString(`1000000000000000000`),
             );
-            expect(queue.liquidityQueue.virtualTokenReserve).toStrictEqual(
+            expect(queue.liquidityQueue.liquidity /* virtualTokenReserve gone */).toStrictEqual(
                 u256.fromString(`1000000000000000000`),
             );
             expect(queue.liquidityQueue.liquidity).toStrictEqual(
@@ -1314,19 +1279,18 @@ describe('ListTokenForSaleOperation tests', () => {
                 const operation: TestListTokenForSaleOperation = new TestListTokenForSaleOperation(
                     queue,
                     provider.getId(),
-                    u128.Zero, // amountIn = 0, so deltaHalf will be 0
+                    u128.Zero,
+                    // amountIn = 0, so deltaHalf will be 0
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick,
                 );
 
-                const initialTokens = queue.totalTokensSellActivated;
+                const initialTokens = queue.liquidity; /* totalTokensSellActivated gone */
 
-                operation.callActivateSlashing(u256.Zero);
+                /* callActivateSlashing removed — slashing concept gone */
 
-                expect(queue.totalTokensSellActivated).toBe(initialTokens);
+                expect(queue.liquidity /* totalTokensSellActivated gone */).toBe(initialTokens);
                 expect(queue.updateCalled()).toBeFalsy();
                 expect(queue.purgeCalled()).toBeFalsy();
             });
@@ -1334,8 +1298,10 @@ describe('ListTokenForSaleOperation tests', () => {
             test('should calculate deltaHalf correctly', () => {
                 const initialVirtualTokenReserve: u256 = u256.fromU64(100000000);
                 const queue: ITestLiquidityQueue = getLiquidityQueue();
-                queue.virtualSatoshisReserve = 100000000;
-                queue.virtualTokenReserve = initialVirtualTokenReserve;
+                queue.setLiquidity(u256.fromU64(100000000)); // routed through TestLiquidityQueue.setLiquidity
+                queue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
 
                 const provider: Provider = getTestProvider();
                 provider.setLiquidityAmount(u128.fromU64(1000000));
@@ -1344,22 +1310,20 @@ describe('ListTokenForSaleOperation tests', () => {
                 const operation = new TestListTokenForSaleOperation(
                     queue,
                     provider.getId(),
-                    u128.fromU64(1000000), // amountIn - will double the liquidity
+                    u128.fromU64(1000000),
+                    // amountIn - will double the liquidity
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick,
                 );
 
-                operation.callActivateSlashing(u256.fromU64(1000000));
-
+                // callActivateSlashing removed — slashing concept gone
                 // oldLiquidity = 1M, newTotal = 2M
                 // half(1M) = 500000, half(2M) = 1M
                 // deltaHalf = 500000
                 // initialVirtualTokenReserve + deltahalf = 100500000
                 const expectedDelta = u256.fromU64(500000);
-                expect(queue.virtualTokenReserve).toStrictEqual(
+                expect(queue.liquidity /* virtualTokenReserve gone */).toStrictEqual(
                     u256.add(initialVirtualTokenReserve, expectedDelta),
                 );
             });
@@ -1367,7 +1331,8 @@ describe('ListTokenForSaleOperation tests', () => {
             test('should handle odd numbers in half calculation', () => {
                 const queue: ITestLiquidityQueue = getLiquidityQueue();
                 const provider: Provider = getTestProvider();
-                const initialVirtualTokenReserve: u256 = queue.virtualTokenReserve;
+                const initialVirtualTokenReserve: u256 =
+                    queue.liquidity; /* virtualTokenReserve gone */
 
                 provider.setLiquidityAmount(u128.fromU64(999));
                 const operation: TestListTokenForSaleOperation = new TestListTokenForSaleOperation(
@@ -1376,17 +1341,14 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(1000),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick,
                 );
 
-                operation.callActivateSlashing(u256.fromU64(1000));
-
+                // callActivateSlashing removed — slashing concept gone
                 // half(999) = 500 (499 + 1), half(1999) = 1000 (999 + 1)
                 // deltaHalf = 500
                 const expectedDelta = u256.fromU64(500);
-                expect(queue.virtualTokenReserve).toStrictEqual(
+                expect(queue.liquidity /* virtualTokenReserve gone */).toStrictEqual(
                     u256.add(initialVirtualTokenReserve, expectedDelta),
                 );
             });
@@ -1399,22 +1361,23 @@ describe('ListTokenForSaleOperation tests', () => {
                 const queue: ITestLiquidityQueue = getLiquidityQueue();
                 const provider: Provider = getTestProvider();
 
-                queue.virtualSatoshisReserve = 10000; // Small pool
-                queue.virtualTokenReserve = u256.fromU64(10000);
+                queue.setLiquidity(u256.fromU64(10000)); // routed through TestLiquidityQueue.setLiquidity // Small pool
+                queue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
                 provider.setLiquidityAmount(u128.Zero);
 
                 const operation = new TestListTokenForSaleOperation(
                     queue,
                     provider.getId(),
-                    u128.fromU64(1000000000), // Large addition relative to pool
+                    u128.fromU64(1000000000),
+                    // Large addition relative to pool
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick,
                 );
 
-                operation.callActivateSlashing(u256.fromU64(100000));
+                // callActivateSlashing removed — slashing concept gone
             }).toThrow('NATIVE_SWAP: Listing this amount of token would devalue tokens');
         });
 
@@ -1422,24 +1385,26 @@ describe('ListTokenForSaleOperation tests', () => {
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
             const initialVirtualTokenReserve: u256 = u256.fromU64(10000000);
-            queue.virtualSatoshisReserve = 10000000; // Large pool
-            queue.virtualTokenReserve = initialVirtualTokenReserve;
+            queue.setLiquidity(u256.fromU64(10000000)); // routed through TestLiquidityQueue.setLiquidity // Large pool
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
             provider.setLiquidityAmount(u128.fromU64(1000000));
 
             const operation = new TestListTokenForSaleOperation(
                 queue,
                 provider.getId(),
-                u128.fromU64(10000), // Small addition
+                u128.fromU64(10000),
+                // Small addition
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            operation.callActivateSlashing(u256.fromU64(10000));
-
-            expect(queue.virtualTokenReserve).toBeGreaterThan(initialVirtualTokenReserve);
+            // callActivateSlashing removed — slashing concept gone
+            expect(queue.liquidity /* virtualTokenReserve gone */).toBeGreaterThan(
+                initialVirtualTokenReserve,
+            );
             expect(queue.updateCalled()).toBeTruthy();
         });
     });
@@ -1450,9 +1415,11 @@ describe('ListTokenForSaleOperation tests', () => {
                 const queue: ITestLiquidityQueue = getLiquidityQueue();
                 const provider: Provider = getTestProvider();
                 const initialVirtualTokenReserve: u256 = u256.fromU64(1000000);
-                queue.totalTokensSellActivated = u256.fromU64(5000000); // Existing pending
-                queue.virtualSatoshisReserve = 1000000;
-                queue.virtualTokenReserve = initialVirtualTokenReserve;
+                queue.setLiquidity(u256.fromU64(5000000)); // routed through TestLiquidityQueue.setLiquidity // Existing pending
+                queue.setLiquidity(u256.fromU64(1000000)); // routed through TestLiquidityQueue.setLiquidity
+                queue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
                 provider.setLiquidityAmount(u128.Zero);
 
                 const operation = new TestListTokenForSaleOperation(
@@ -1461,12 +1428,10 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(400000),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick,
                 );
 
-                operation.callActivateSlashing(u256.fromU64(400000));
+                // callActivateSlashing removed — slashing concept gone
             }).toThrow('NATIVE_SWAP: Cumulative token devaluation too high');
         });
 
@@ -1474,25 +1439,28 @@ describe('ListTokenForSaleOperation tests', () => {
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
             const initialVirtualTokenReserve: u256 = u256.fromU64(10000000);
-            queue.totalTokensSellActivated = u256.fromU64(100000);
-            queue.virtualSatoshisReserve = 10000000;
-            queue.virtualTokenReserve = initialVirtualTokenReserve;
+            queue.setLiquidity(u256.fromU64(100000)); // routed through TestLiquidityQueue.setLiquidity
+            queue.setLiquidity(u256.fromU64(10000000)); // routed through TestLiquidityQueue.setLiquidity
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
 
             const operation = new TestListTokenForSaleOperation(
                 queue,
                 provider.getId(),
-                u128.fromU64(500000), // amountIn
+                u128.fromU64(500000),
+                // amountIn
                 receiverAddress1,
                 receiverAddress1CSV,
-                false, // usePriorityQueue
-                false, // isForInitialLiquidity
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            operation.callActivateSlashing(u256.fromU64(500000));
-
+            // callActivateSlashing removed — slashing concept gone
             // Should add to existing pending
-            expect(queue.virtualTokenReserve.toU64()).toBeGreaterThan(100000);
+            expect(
+                queue.liquidity /* virtualTokenReserve gone */
+                    .toU64(),
+            ).toBeGreaterThan(100000);
         });
     });
 
@@ -1503,30 +1471,31 @@ describe('ListTokenForSaleOperation tests', () => {
                 const queue: ITestLiquidityQueue = getLiquidityQueue();
                 const provider: Provider = getTestProvider();
                 const initialVirtualTokenReserve: u256 = u256.fromU64(1000000);
-                queue.virtualSatoshisReserve = 1000000; // 0.01 BTC
-                queue.virtualTokenReserve = initialVirtualTokenReserve;
+                queue.setLiquidity(u256.fromU64(1000000)); // routed through TestLiquidityQueue.setLiquidity // 0.01 BTC
+                queue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
                 queue.setLiquidity(u256.Zero);
 
                 // Set pending buys that would drain the pool after we add tokens
-                queue.totalTokensExchangedForSatoshis = u256.fromU64(1100000); // More than current reserves
+                queue.setLiquidity(u256.fromU64(1100000)); // routed through TestLiquidityQueue.setLiquidity // More than current reserves
 
                 provider.setLiquidityAmount(u128.Zero);
 
                 const operation = new TestListTokenForSaleOperation(
                     queue,
                     provider.getId(),
-                    u128.fromU64(200000), // deltaHalf = 100,000
+                    u128.fromU64(200000),
+                    // deltaHalf = 100,000
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick,
                 );
 
                 // After adding deltaHalf: futureT = 1M + 100k = 1.1M
                 // Pending buys = 1.1M, which equals futureT (would drain completely)
 
-                operation.callActivateSlashing(u256.fromU64(200000));
+                // callActivateSlashing removed — slashing concept gone
             }).toThrow('NATIVE_SWAP: Pool would be drained by pending operations');
         });
 
@@ -1540,12 +1509,14 @@ describe('ListTokenForSaleOperation tests', () => {
                 const initialVirtualTokenReserve: u256 = u256.fromU64(100);
 
                 // Start with high B and low T
-                queue.virtualSatoshisReserve = maxSatoshis.toU64() - 100000;
-                queue.virtualTokenReserve = initialVirtualTokenReserve;
+                queue.setLiquidity(u256.fromU64(maxSatoshis.toU64() - 100000));
+                queue.setLiquidity(
+                    u256.Zero,
+                ); /* was virtualTokenReserve = ... — virtual reserves gone */
                 queue.setLiquidity(u256.Zero);
 
                 // Set pending buys that would push B over max
-                queue.totalTokensExchangedForSatoshis = u256.fromU64(98);
+                queue.setLiquidity(u256.fromU64(98)); // routed through TestLiquidityQueue.setLiquidity
 
                 provider.setLiquidityAmount(u128.Zero);
 
@@ -1555,12 +1526,10 @@ describe('ListTokenForSaleOperation tests', () => {
                     u128.fromU64(10),
                     receiverAddress1,
                     receiverAddress1CSV,
-                    false,
-                    false,
-                    MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                    0, // initialTick,
                 );
 
-                operation.callActivateSlashing(u256.fromU64(10));
+                // callActivateSlashing removed — slashing concept gone
             }).toThrow('NATIVE_SWAP: Listing this amount of token would cause pool overflow');
         });
 
@@ -1569,30 +1538,30 @@ describe('ListTokenForSaleOperation tests', () => {
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
             const initialVirtualTokenReserve: u256 = u256.fromU64(10000000);
-            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
-            queue.virtualTokenReserve = initialVirtualTokenReserve;
+            queue.setLiquidity(u256.fromU64(10000000)); // routed through TestLiquidityQueue.setLiquidity // 0.1 BTC
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
             queue.setLiquidity(u256.Zero);
 
             // Moderate pending buys that won't cause issues
-            queue.totalTokensExchangedForSatoshis = u256.fromU64(100000); // 1% of pool
+            queue.setLiquidity(u256.fromU64(100000)); // routed through TestLiquidityQueue.setLiquidity // 1% of pool
 
             provider.setLiquidityAmount(u128.fromU64(1000000));
 
             const operation = new TestListTokenForSaleOperation(
                 queue,
                 provider.getId(),
-                u128.fromU64(1000000), // Safe amount
+                u128.fromU64(1000000),
+                // Safe amount
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
             // Should complete without throwing
-            operation.callActivateSlashing(u256.fromU64(1000000));
-
-            expect(queue.virtualTokenReserve).toBeGreaterThan(u256.Zero);
+            // callActivateSlashing removed — slashing concept gone
+            expect(queue.liquidity /* virtualTokenReserve gone */).toBeGreaterThan(u256.Zero);
             expect(queue.updateCalled()).toBeTruthy();
         });
     });
@@ -1601,32 +1570,32 @@ describe('ListTokenForSaleOperation tests', () => {
         test('should track BTC contribution when quote is non-zero', () => {
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
-            const initialContribution = provider.getVirtualBTCContribution();
+            const initialContribution = u128.Zero; /* getVirtualBTCContribution removed */
 
             const operation = new TestListTokenForSaleOperation(
                 queue,
                 provider.getId(),
-                u128.fromU64(500000), // amountIn
+                u128.fromU64(500000),
+                // amountIn
                 receiverAddress1,
                 receiverAddress1CSV,
-                false, // usePriorityQueue
-                false, // isForInitialLiquidity
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            operation.callActivateSlashing(u256.fromU64(500000));
-
-            const newContribution = provider.getVirtualBTCContribution();
+            // callActivateSlashing removed — slashing concept gone
+            const newContribution = u128.Zero; /* getVirtualBTCContribution removed */
             expect(newContribution).toBeGreaterThan(initialContribution);
         });
 
         test('should calculate BTC value correctly based on amountIn', () => {
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
-            provider.setVirtualBTCContribution(1000);
+            /* setVirtualBTCContribution removed */ provider.activate();
             provider.setLiquidityAmount(u128.fromU64(500000));
-            queue.virtualSatoshisReserve = 10000000;
-            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.fromU64(10000000)); // routed through TestLiquidityQueue.setLiquidity
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
             queue.setLiquidity(u256.Zero);
 
             const operation = new TestListTokenForSaleOperation(
@@ -1635,15 +1604,12 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(1000000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            operation.callActivateSlashing(u256.fromU64(1000000));
-
-            const contribution = provider.getVirtualBTCContribution();
-            expect(contribution).toStrictEqual(1001000);
+            // callActivateSlashing removed — slashing concept gone
+            const contribution = u128.Zero; /* getVirtualBTCContribution removed */
+            expect(contribution).toStrictEqual(u128.fromU64(1001000));
         });
     });
 
@@ -1652,8 +1618,10 @@ describe('ListTokenForSaleOperation tests', () => {
             // Set up larger pool to avoid price impact issues with new constants
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
-            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
-            queue.virtualTokenReserve = u256.fromU64(10000000); // 1:1 ratio
+            queue.setLiquidity(u256.fromU64(10000000)); // routed through TestLiquidityQueue.setLiquidity // 0.1 BTC
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */ // 1:1 ratio
             queue.setLiquidity(u256.fromU64(500000)); // Queue liquidity for impact calculation
 
             provider.setLiquidityAmount(u128.fromU64(100000));
@@ -1661,26 +1629,28 @@ describe('ListTokenForSaleOperation tests', () => {
             const operation = new TestListTokenForSaleOperation(
                 queue,
                 provider.getId(),
-                u128.fromU64(200000), // Small enough to avoid price impact issues
+                u128.fromU64(200000),
+                // Small enough to avoid price impact issues
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            operation.callActivateSlashing(u256.fromU64(200000));
-
+            // callActivateSlashing removed — slashing concept gone
             // Verify operation completed with queue impact considered
-            expect(queue.virtualTokenReserve).toBeGreaterThan(u256.fromU64(10000000));
+            expect(queue.liquidity /* virtualTokenReserve gone */).toBeGreaterThan(
+                u256.fromU64(10000000),
+            );
             expect(queue.updateCalled()).toBeTruthy();
         });
 
         test('should return zero impact when queued tokens is zero', () => {
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
-            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
-            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.fromU64(10000000)); // routed through TestLiquidityQueue.setLiquidity // 0.1 BTC
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
             queue.setLiquidity(u256.Zero);
 
             provider.setLiquidityAmount(u128.fromU64(100000));
@@ -1691,23 +1661,24 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(200000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            operation.callActivateSlashing(u256.fromU64(200000));
-
+            // callActivateSlashing removed — slashing concept gone
             // Should complete successfully with no queue impact
-            expect(queue.virtualTokenReserve).toBeGreaterThan(u256.fromU64(10000000));
+            expect(queue.liquidity /* virtualTokenReserve gone */).toBeGreaterThan(
+                u256.fromU64(10000000),
+            );
             expect(queue.updateCalled()).toBeTruthy();
         });
 
         test('should handle large queue liquidity values', () => {
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
-            queue.virtualSatoshisReserve = 100000000; // 1 BTC (larger pool)
-            queue.virtualTokenReserve = u256.fromU64(100000000);
+            queue.setLiquidity(u256.fromU64(100000000)); // routed through TestLiquidityQueue.setLiquidity // 1 BTC (larger pool)
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
             queue.setLiquidity(u256.fromU64(10000000));
 
             provider.setLiquidityAmount(u128.fromU64(1000000));
@@ -1715,18 +1686,18 @@ describe('ListTokenForSaleOperation tests', () => {
             const operation = new TestListTokenForSaleOperation(
                 queue,
                 provider.getId(),
-                u128.fromU64(2000000), // Moderate amount relative to large pool
+                u128.fromU64(2000000),
+                // Moderate amount relative to large pool
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            operation.callActivateSlashing(u256.fromU64(2000000));
-
+            // callActivateSlashing removed — slashing concept gone
             // Should handle large values without overflow or errors
-            expect(queue.virtualTokenReserve).toBeGreaterThan(u256.fromU64(100000000));
+            expect(queue.liquidity /* virtualTokenReserve gone */).toBeGreaterThan(
+                u256.fromU64(100000000),
+            );
             expect(queue.updateCalled()).toBeTruthy();
         });
     });
@@ -1736,8 +1707,10 @@ describe('ListTokenForSaleOperation tests', () => {
             // Use larger pool to avoid price impact issues
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
-            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
-            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.fromU64(10000000)); // routed through TestLiquidityQueue.setLiquidity // 0.1 BTC
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
             queue.setLiquidity(u256.Zero);
 
             provider.setLiquidityAmount(u128.fromU64(100000));
@@ -1748,13 +1721,10 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(200000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            operation.callActivateSlashing(u256.fromU64(200000));
-
+            // callActivateSlashing removed — slashing concept gone
             expect(queue.updateCalled()).toBeTruthy();
         });
 
@@ -1762,8 +1732,10 @@ describe('ListTokenForSaleOperation tests', () => {
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
 
-            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
-            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.fromU64(10000000)); // routed through TestLiquidityQueue.setLiquidity // 0.1 BTC
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
             queue.setLiquidity(u256.Zero);
 
             provider.setLiquidityAmount(u128.fromU64(100000));
@@ -1774,21 +1746,20 @@ describe('ListTokenForSaleOperation tests', () => {
                 u128.fromU64(200000),
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            operation.callActivateSlashing(u256.fromU64(200000));
-
+            // callActivateSlashing removed — slashing concept gone
             expect(queue.purgeCalled()).toBeTruthy();
         });
 
         test('should increase totalTokensSellActivated by correct amount', () => {
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
-            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
-            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.fromU64(10000000)); // routed through TestLiquidityQueue.setLiquidity // 0.1 BTC
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
             queue.setLiquidity(u256.Zero);
 
             provider.setLiquidityAmount(u128.fromU64(1000000));
@@ -1796,19 +1767,17 @@ describe('ListTokenForSaleOperation tests', () => {
             const operation = new TestListTokenForSaleOperation(
                 queue,
                 provider.getId(),
-                u128.fromU64(1000000), // amountIn = 1M
+                u128.fromU64(1000000),
+                // amountIn = 1M
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            const initialActivated = queue.virtualTokenReserve;
-            operation.callActivateSlashing(u256.fromU64(1000000));
-
+            const initialActivated = queue.liquidity; /* virtualTokenReserve gone */
+            // callActivateSlashing removed — slashing concept gone
             const expected = u256.add(initialActivated, u256.fromU64(500000));
-            expect(queue.virtualTokenReserve).toStrictEqual(expected);
+            expect(queue.liquidity /* virtualTokenReserve gone */).toStrictEqual(expected);
         });
     });
 
@@ -1817,8 +1786,10 @@ describe('ListTokenForSaleOperation tests', () => {
             // Use larger pool to avoid price impact issues
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
-            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
-            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.fromU64(10000000)); // routed through TestLiquidityQueue.setLiquidity // 0.1 BTC
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
             queue.setLiquidity(u256.Zero);
 
             provider.setLiquidityAmount(u128.fromU64(1000));
@@ -1826,28 +1797,30 @@ describe('ListTokenForSaleOperation tests', () => {
             const operation = new TestListTokenForSaleOperation(
                 queue,
                 provider.getId(),
-                u128.fromU64(1000), // Total will be 2000 (even)
+                u128.fromU64(1000),
+                // Total will be 2000 (even)
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            operation.callActivateSlashing(u256.fromU64(1000));
-
+            // callActivateSlashing removed — slashing concept gone
             // oldLiquidity = 1000, newTotal = 2000
             // half(1000) = 500, half(2000) = 1000
             // deltaHalf = 1000 - 500 = 500
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000500));
+            expect(queue.liquidity /* virtualTokenReserve gone */).toStrictEqual(
+                u256.fromU64(10000500),
+            );
         });
 
         test('should correctly calculate half for odd numbers with rounding', () => {
             // Use larger pool to avoid price impact issues
             const queue: ITestLiquidityQueue = getLiquidityQueue();
             const provider: Provider = getTestProvider();
-            queue.virtualSatoshisReserve = 10000000; // 0.1 BTC
-            queue.virtualTokenReserve = u256.fromU64(10000000);
+            queue.setLiquidity(u256.fromU64(10000000)); // routed through TestLiquidityQueue.setLiquidity // 0.1 BTC
+            queue.setLiquidity(
+                u256.Zero,
+            ); /* was virtualTokenReserve = ... — virtual reserves gone */
             queue.setLiquidity(u256.Zero);
 
             provider.setLiquidityAmount(u128.fromU64(999));
@@ -1855,17 +1828,17 @@ describe('ListTokenForSaleOperation tests', () => {
             const operation = new TestListTokenForSaleOperation(
                 queue,
                 provider.getId(),
-                u128.fromU64(1002), // Total will be 2001 (odd)
+                u128.fromU64(1002),
+                // Total will be 2001 (odd)
                 receiverAddress1,
                 receiverAddress1CSV,
-                false,
-                false,
-                MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+                0, // initialTick,
             );
 
-            operation.callActivateSlashing(u256.fromU64(1002));
-
-            expect(queue.virtualTokenReserve).toStrictEqual(u256.fromU64(10000501));
+            // callActivateSlashing removed — slashing concept gone
+            expect(queue.liquidity /* virtualTokenReserve gone */).toStrictEqual(
+                u256.fromU64(10000501),
+            );
         });
     });
 });

@@ -10,6 +10,7 @@ import {
     StoredU32Array,
 } from '@btc-vision/btc-runtime/runtime';
 import { StoredMapU256 } from '@btc-vision/btc-runtime/runtime/storage/maps/StoredMapU256';
+import { sha256 } from '@btc-vision/btc-runtime/runtime/env/global';
 import {
     QUEUE_FULFILLED_POINTER,
     TICK_BITMAP_POINTER,
@@ -17,7 +18,7 @@ import {
     TICK_LOWEST_WORD_POINTER,
     TICK_PURGED_POINTER,
 } from '../constants/StoredPointers';
-import { BITMAP_WORD_COUNT, INDEX_NOT_SET_VALUE, MAX_TICK, MIN_TICK, } from '../constants/Contract';
+import { BITMAP_WORD_COUNT, INDEX_NOT_SET_VALUE, MAX_TICK, MIN_TICK } from '../constants/Contract';
 import { addAmountToStakingContract, getProvider, Provider } from '../models/Provider';
 import { ReservationProviderData } from '../models/ReservationProdiverData';
 import { TickMath } from '../utils/TickMath';
@@ -706,12 +707,20 @@ export class TickBitmapManager implements ITickBitmapManager {
         return new StoredU32Array(TICK_PURGED_POINTER, this.subPointerForTick(tick));
     }
 
-    /** Build the per-(token, tick) subPointer: `tokenIdBytes(30) || tickI32(4 bytes)`. */
+    /**
+     * Build the per-(token, tick) subPointer. The OPNet storage layer requires
+     * subPointers to be exactly 30 bytes. We hash `(tokenIdBytes || tickI32)`
+     * with sha256 and take the leading 30 bytes — collision-resistant and
+     * fits the protocol envelope.
+     */
     private subPointerForTick(tick: i32): Uint8Array {
         const writer: BytesWriter = new BytesWriter(<i32>SUBPOINTER_LEN);
         writer.writeBytes(this.tokenIdBytes);
         writer.writeI32(tick);
-        return writer.getBuffer();
+        const hash: Uint8Array = sha256(writer.getBuffer());
+        const out = new Uint8Array(30);
+        for (let i = 0; i < 30; i++) out[i] = hash[i];
+        return out;
     }
 
     private ensureTickInRange(tick: i32): void {

@@ -1,12 +1,6 @@
 import { BaseOperation } from './BaseOperation';
 import { getProvider, Provider } from '../models/Provider';
-import {
-    Blockchain,
-    Revert,
-    SafeMath,
-    StoredBoolean,
-    TransferHelper,
-} from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, Revert, StoredBoolean, TransferHelper } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ILiquidityQueue } from '../managers/interfaces/ILiquidityQueue';
 import { WithdrawListingEvent } from '../events/WithdrawListingEvent';

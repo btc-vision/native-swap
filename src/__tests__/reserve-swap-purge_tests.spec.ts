@@ -61,14 +61,12 @@ function createPool(): Provider {
 
     const createPoolOp = new CreatePoolOperation(
         lq1.liquidityQueue,
-        floorPrice,
+        tokenAddress1,
         initialProvider,
         initialLiq,
+        0, // initialTick (was floorPrice=floorPrice)
         receiverAddress1,
         receiverAddress1CSV,
-        0,
-        u256.Zero,
-        100,
     );
 
     createPoolOp.execute();
@@ -91,9 +89,7 @@ function listTokenForSale(
         expand(amount, tokenDec),
         receiverAddress,
         receiverAddressStr,
-        priority,
-        false,
-        MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+        0, // initialTick (was priority/isLP/queuedResets),
     );
 
     listLiquidityOp.execute();
@@ -115,6 +111,7 @@ function reserve(amount: u64): u256 {
         0,
         MAXIMUM_PROVIDER_PER_RESERVATIONS,
         MAXIMUM_NUMBER_OF_QUEUED_PROVIDER_TO_RESETS,
+        receiverAddress1, // sender (new in refactor),
     );
 
     reserveOp.execute();
@@ -159,11 +156,13 @@ function logProvider(provider: Provider, name: string = 'Provider'): void {
     Blockchain.log(`getLiquidityAmount: ${provider.getLiquidityAmount()}`);
     Blockchain.log(`getReservedAmount: ${provider.getReservedAmount()}`);
     Blockchain.log(`getAvailableLiquidityAmount: ${provider.getAvailableLiquidityAmount()}`);
-    Blockchain.log(`getQueueIndex: ${provider.getQueueIndex()}`);
+    Blockchain.log(
+        `getQueueIndex: ${provider.getId() /* was getQueueIndex() — providerId is u256 in new API */}`,
+    );
     Blockchain.log(`getPurgedIndex: ${provider.getPurgedIndex()}`);
     Blockchain.log(`isActive: ${provider.isActive()}`);
     Blockchain.log(`isPurged: ${provider.isPurged()}`);
-    Blockchain.log(`isPriority: ${provider.isPriority()}`);
+    Blockchain.log(`isPriority: ${false /* isPriority gone */}`);
 }
 
 describe('Reserve, swap and purge tests', () => {
@@ -1213,7 +1212,7 @@ describe('Reserve, swap and purge tests', () => {
             u128.fromString(`970000000000000000000`),
         );
         expect(liquidityProvider3.getReservedAmount()).toStrictEqual(u128.Zero);
-        expect(liquidityProvider3.isPriority()).toBeTruthy();
+        expect(false /* isPriority gone */).toBeTruthy();
 
         Blockchain.mockTransactionOutput([]);
 

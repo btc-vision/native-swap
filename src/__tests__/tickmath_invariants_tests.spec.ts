@@ -1,6 +1,6 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { TickMath } from '../utils/TickMath';
-import { BITMAP_WORD_COUNT, FP_SHIFT, MAX_TICK, MIN_TICK, ratioAtBit, } from '../constants/Contract';
+import { BITMAP_WORD_COUNT, FP_SHIFT, MAX_TICK, MIN_TICK, ratioAtBit } from '../constants/Contract';
 
 /**
  * Pure-math invariants for TickMath. None of these tests touch storage or any
